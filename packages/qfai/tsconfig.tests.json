@@ -474,6 +474,7 @@
     "tests/unit/core/readPinnedRegularFile.test.ts",
     "tests/unit/core/doctor/cleanRunLogs.test.ts",
     "tests/unit/core/doctor/cleanRunLogsPartialFailure.test.ts",
+    "tests/unit/core/doctor/cleanRunLogsStatFailure.test.ts",
     "tests/unit/core/doctor/integrationLinks.test.ts",
     "tests/unit/core/prototyping/playwrightLauncherPowerShell.test.ts",
     "tests/unit/core/atddScaffoldUnreadable.test.ts",

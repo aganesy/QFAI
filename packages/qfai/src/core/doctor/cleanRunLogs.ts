@@ -229,7 +229,8 @@ function compareByRecency(a: CleanRunLogEntry, b: CleanRunLogEntry): number {
  * `ENOTDIR` on an `outDir` that is really a file, an I/O error) is
  * propagated instead — reporting `pruned run logs=0` for a directory
  * that could not even be listed would tell the operator the cleanup
- * succeeded when nothing was examined at all.
+ * succeeded when nothing was examined at all. The same holds for a
+ * listed run whose `stat` fails with anything but `ENOENT`.
  */
 async function listRunLogDirs(reportRoot: string): Promise<CleanRunLogEntry[]> {
   let names: string[];
@@ -248,18 +249,27 @@ async function listRunLogDirs(reportRoot: string): Promise<CleanRunLogEntry[]> {
   for (const name of names) {
     if (!RUN_LOG_DIR_RE.test(name)) continue;
     const dirPath = path.join(reportRoot, name);
+    let stats: Awaited<ReturnType<typeof stat>>;
     try {
-      const stats = await stat(dirPath);
-      if (!stats.isDirectory()) continue;
-      results.push({
-        runId: name,
-        dirPath,
-        mtimeMs: stats.mtimeMs,
-        startedAtMs: await readRunStartedAtMs(dirPath),
-      });
-    } catch {
-      continue;
+      stats = await stat(dirPath);
+    } catch (error) {
+      // A run removed between `readdir` and `stat` is simply gone. Any
+      // other failure leaves the run's age unknown, and dropping it would
+      // also shift the keep-latest window onto older runs, so it aborts
+      // the pass before the first removal, naming the run.
+      if (isEnoent(error)) continue;
+      throw new Error(
+        `failed to stat run log ${name} in ${reportRoot}: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
     }
+    if (!stats.isDirectory()) continue;
+    results.push({
+      runId: name,
+      dirPath,
+      mtimeMs: stats.mtimeMs,
+      startedAtMs: await readRunStartedAtMs(dirPath),
+    });
   }
   return results.sort(compareByRecency);
 }
