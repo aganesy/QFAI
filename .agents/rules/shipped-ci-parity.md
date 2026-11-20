@@ -19,6 +19,7 @@ answer is written down.
 | `.github/workflows/**`                        | Every change that moves a line carrying meaning      |
 | `.github/actions/**`                          | The same                                             |
 | `scripts/run-lint-checks.sh`                  | The same — the lane grouping lives there             |
+| `scripts/run-aggregate-checks.sh`             | The same — each aggregate lane's check list is there |
 | The `ci:*` entries of the root `package.json` | When an entry's command list changes                 |
 | `packages/qfai/assets/init/root/.github/**`   | Not watched — changing it is the answer, not the ask |
 
