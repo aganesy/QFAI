@@ -416,6 +416,28 @@ describe("shipped entry-point templates carry the section the writer appends", (
   );
 });
 
+describe("an installed entry point states the scratch-directory precedence of its master", () => {
+  // The master sends a scratch file to the host's session scratch directory first and
+  // keeps `tmp/` for the fallback, so a one-line summary of `tmp/` alone contradicts it.
+  const master = ".agents/rules/temporary-files.md";
+  const bulletIn = (text: string): string | undefined =>
+    text.split("\n").find((line) => line.startsWith("- ") && line.includes(master));
+
+  it.each([...AGENT_ENTRY_POINT_FILES, ".github/copilot-instructions.md"])(
+    "%s names the host's scratch directory before tmp/",
+    async (name) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const bullet = bulletIn(await readEntryPoint(root, name)) ?? "";
+        expect(bullet, `${name} does not cite ${master}`).not.toBe("");
+        const host = bullet.indexOf("scratch directory the host names");
+        expect(host, bullet).toBeGreaterThan(-1);
+        expect(bullet.indexOf("`tmp/`"), bullet).toBeGreaterThan(host);
+      });
+    },
+  );
+});
+
 /**
  * A rule shipped after the section was written.
  *
