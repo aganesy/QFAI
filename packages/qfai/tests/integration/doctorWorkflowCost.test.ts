@@ -110,4 +110,70 @@ describe("qfai doctor reports the jobs the shipped workflows start per pull requ
     expect(check?.message).toContain("qfai-tests.yml could not be counted");
     expect(check?.message).not.toContain("qfai-tests.yml starts");
   });
+
+  // QFAI:EX-0003-0011-27
+  it("counts a matrix job once per combination of its axes", async () => {
+    // QFAI:AC-0003-0011-12
+    const root = await project({
+      "qfai-docs.yml": await docsWithMatrix(["check: [shape, mermaid]", "node: [20, 22, 24]"]),
+    });
+
+    const check = await costCheck(root);
+
+    expect(check?.message).toContain(
+      "qfai-docs.yml starts 1 job when nothing is to run (scope) and up to 8 when its lane runs (scope, checks x6, docs)",
+    );
+  });
+
+  // QFAI:EX-0003-0011-27
+  it("removes the excluded combinations and adds an included one that extends none", async () => {
+    // QFAI:AC-0003-0011-12
+    const root = await project({
+      "qfai-docs.yml": await docsWithMatrix([
+        "check: [shape, mermaid]",
+        "os: [ubuntu-latest, windows-latest]",
+        "exclude:",
+        "  - check: mermaid",
+        "    os: windows-latest",
+        "include:",
+        "  - check: shape",
+        "    os: ubuntu-latest",
+        "    node: 22",
+        "  - check: links",
+      ]),
+    });
+
+    const check = await costCheck(root);
+
+    expect(check?.message).toContain("up to 6 when its lane runs (scope, checks x4, docs)");
+  });
+
+  // QFAI:EX-0003-0011-28
+  it("names a workflow whose matrix is an expression instead of guessing a count", async () => {
+    // QFAI:AC-0003-0011-12
+    for (const lines of [
+      ["check: [shape, mermaid]", "include: ${{ fromJSON(vars.EXTRA_CHECKS) }}"],
+      ["${{ fromJSON(vars.CHECKS) }}"],
+    ]) {
+      const root = await project({ "qfai-docs.yml": await docsWithMatrix(lines) });
+
+      const check = await costCheck(root);
+
+      expect(check?.message).toContain("qfai-docs.yml could not be counted");
+      expect(check?.message).not.toContain("qfai-docs.yml starts");
+    }
+  });
 });
+
+/** The shipped docs workflow with the matrix of its `checks` job replaced by the given lines. */
+async function docsWithMatrix(lines: readonly string[]): Promise<string> {
+  const docs = await packagedText("qfai-docs.yml");
+  const [first, ...rest] = lines;
+  const replacement =
+    rest.length === 0 && first?.startsWith("${{") === true
+      ? `      matrix: ${first}`
+      : ["      matrix:", ...lines.map((line) => `        ${line}`)].join("\n");
+  const edited = docs.replace(/^ {6}matrix:\n {8}check: \[shape, mermaid\]$/m, replacement);
+  expect(edited).not.toBe(docs);
+  return edited;
+}

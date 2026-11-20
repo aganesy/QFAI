@@ -507,6 +507,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
+  shipped workflow edited to run a job on two operating systems and three
+  Node versions was reported as three runner allocations instead of six,
+  because only the widest axis was counted, and `include` and `exclude` were
+  read as axes. The count is now every combination of the axes, less each
+  `exclude` match, plus each `include` entry that extends no remaining
+  combination. A matrix, `include` or `exclude` given as an expression is
+  named as not counted. Closes #4780.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
