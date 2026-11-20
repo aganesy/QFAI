@@ -5,7 +5,7 @@ import { isEnoent } from "../../core/fs/errno.js";
 import { extractH2Sections, parseHeadings } from "../../core/parse/markdown.js";
 import { escapeTableCell, parseAllMarkdownTables } from "../../core/specPackParsers.js";
 import { parseRecordTable } from "../../core/storyTree/tables.js";
-import { readStoryTreeModel } from "../../core/storyTree/tree.js";
+import { readStoryTreeModel, type StoryTreeModel } from "../../core/storyTree/tree.js";
 import {
   MigrationInputError,
   type MigrationContext,
@@ -326,16 +326,10 @@ async function retiredPackRecords(context: MigrationContext): Promise<OldRecord[
 }
 
 /**
- * The first input step 2 has not merged, or null once it has run: a source
- * file it merges, or a retired pack with no decision row yet. A later step
- * moves those packs' files away, and step 2 could no longer read them.
+ * The story tree under the migration's effective spec and contract paths,
+ * refused unless its decision register was read in full.
  */
-export async function pendingMergeInput(context: MigrationContext): Promise<string | null> {
-  for (const candidate of await mergeCandidates(context)) {
-    if ((await readIfPresent(path.join(context.root, candidate.source))) !== null) {
-      return candidate.source;
-    }
-  }
+export async function readCompleteRegisterTree(context: MigrationContext): Promise<StoryTreeModel> {
   const tree = await readStoryTreeModel(context.root, {
     ...context.config,
     paths: {
@@ -350,6 +344,21 @@ export async function pendingMergeInput(context: MigrationContext): Promise<stri
         .map(({ file, message }) => `${file}: ${message}`)
         .join("; ")}`,
     );
+  return tree;
+}
+
+/**
+ * The first input step 2 has not merged, or null once it has run: a source
+ * file it merges, or a retired pack with no decision row yet. A later step
+ * moves those packs' files away, and step 2 could no longer read them.
+ */
+export async function pendingMergeInput(context: MigrationContext): Promise<string | null> {
+  for (const candidate of await mergeCandidates(context)) {
+    if ((await readIfPresent(path.join(context.root, candidate.source))) !== null) {
+      return candidate.source;
+    }
+  }
+  const tree = await readCompleteRegisterTree(context);
   const decisions = (tree.decisions?.rows ?? [])
     .map((row) => `${row.content} ${row.approach}`)
     .join("\n");
@@ -402,20 +411,7 @@ export const step02: MigrationStep = {
     const questionsOriginal =
       (await readIfPresent(path.join(context.root, questionsTarget))) ??
       "# Open Questions\n\n## Open Questions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
-    const tree = await readStoryTreeModel(context.root, {
-      ...context.config,
-      paths: {
-        ...context.config.paths,
-        specsDir: context.specsDir,
-        contractsDir: context.contractsDir,
-      },
-    });
-    if (!tree.decisionRegisterComplete)
-      throw new MigrationInputError(
-        `The complete decision register is unavailable: ${tree.decisionRegisterErrors
-          .map(({ file, message }) => `${file}: ${message}`)
-          .join("; ")}`,
-      );
+    const tree = await readCompleteRegisterTree(context);
     const existingDecisions = tree.decisions ?? parseRecordTable(decisionsOriginal, "decisions");
     const existingQuestions = parseRecordTable(questionsOriginal, "open-questions");
     if (existingDecisions.errors.length > 0 || existingQuestions.errors.length > 0) {
