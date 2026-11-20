@@ -513,8 +513,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   because only the widest axis was counted, and `include` and `exclude` were
   read as axes. The count is now every combination of the axes, less each
   `exclude` match, plus each `include` entry that extends no remaining
-  combination. A matrix, `include` or `exclude` given as an expression is
-  named as not counted. Closes #4780.
+  combination. A `strategy`, matrix, `include` or `exclude` given as an
+  expression, an `exclude` key that is not an axis, and a written-out matrix
+  with no leg, which GitHub rejects, are named as not counted. Closes #4780.
 
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project

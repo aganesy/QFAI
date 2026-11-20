@@ -109,7 +109,8 @@ function sameValue(left: unknown, right: unknown): boolean {
 /**
  * The legs of a matrix whose axes are all written out, the way GitHub expands it: every
  * combination of the axes, less each one an `exclude` entry matches, plus one leg for each
- * `include` entry that would change an original axis value of every remaining combination.
+ * `include` entry that would change an original axis value of every remaining combination, or
+ * `undefined` when an `exclude` key is not an axis or the matrix has no leg.
  */
 function expandMatrix(
   axes: Readonly<Record<string, readonly unknown[]>>,
@@ -138,7 +139,9 @@ function expandMatrix(
         ([key, value]) => !names.includes(key) || sameValue(combination[key], value),
       ),
     );
-  return kept.length + include.filter((entry) => !extendsOne(entry)).length;
+  const legs = kept.length + include.filter((entry) => !extendsOne(entry)).length;
+  // GitHub rejects a written-out matrix with no leg rather than skipping the job.
+  return legs === 0 ? undefined : legs;
 }
 
 /**
@@ -165,6 +168,7 @@ function instancesOf(
   for (const [name, axis] of Object.entries(matrix)) {
     if (name === "include" || name === "exclude") continue;
     if (Array.isArray(axis)) {
+      if (axis.length === 0) return undefined;
       axes[name] = axis;
     } else if (typeof axis === "string" && axis.includes("needs.detection.outputs.selected")) {
       layerAxes += 1;
@@ -190,7 +194,7 @@ function jobsStarted(
     const starts = jobStarts(job, scenario);
     const instances = instancesOf(job, scenario);
     if (starts === undefined || instances === undefined) return undefined;
-    // A matrix with no leg starts no job.
+    // A layer axis with no declared layer starts no job.
     if (!starts || instances === 0) continue;
     const runner = job["runs-on"];
     started.push({ id, instances, runner: typeof runner === "string" ? runner : "" });
