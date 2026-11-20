@@ -536,6 +536,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `webResearch.allowlist`. The templates still
   default to the cloud API.
 
+- **The policy check no longer asks a question under `--auto`.** When policy
+  information could not be verified, the policy check in
+  `.qfai/assistant/rule/workflow.md` told the agent to ask the user in every
+  mode, while the constitution forbids any question under `--auto`. It still
+  records the open question, and now asks only as Articles VI and X allow:
+  under `--auto` it asks nothing, and a needed `hard-required` input stops the
+  run.
+
 - **The leakage guard catches a `schemaVersion` whose colon is on the next
   line** (#4743). The guard's pattern allows any whitespace between the field
   name and its colon, but grep read each file one line at a time, so a valid
