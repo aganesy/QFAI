@@ -637,6 +637,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The entry is now moved aside first and put back when the link fails, and
   removed only once the link stands.
 
+- **`qfai db-drift` no longer calls a comparison equal when a SQL file failed
+  to apply.** With a failed file and no differences among the files that did
+  apply, the text output listed the failed file and then said both sides
+  declare the same columns, though the failed file may hold every missing
+  column. The output now says the comparison is incomplete, and states
+  equality only when every file applied.
+
 - **The README states what the Claude Code launcher permission allows.** It
   said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
   entries `qfai init` writes trust the launcher the project installs. Claude
