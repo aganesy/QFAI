@@ -53,9 +53,9 @@ decision. It is derived from `issues` and cannot disagree with it.
 - `true`: the profile's own validators ran, and `issues` holds what they found.
 - `false`: they did not run. The run stopped first, at a story tree in the old
   layout (`QFAI-LAYOUT-001`) or at a path those validators walk that cannot be
-  walked (`QFAI-LINK-001`), and `issues` holds only what the run found before it stopped. No error
-  for a gate of the profile is not a pass for that gate: repair what the
-  findings name and run again.
+  walked (`QFAI-LINK-001`), and `issues` holds only what the run found before
+  it stopped. No error for a gate of the profile is not a pass for that gate:
+  repair what the findings name and run again.
 - absent: the file makes no claim either way. A file written by a qfai from
   before the field existed does not carry it, nor does a run that could not
   finish, whose `QFAI-SCAN-002` error already fails it. Read absence as "not
