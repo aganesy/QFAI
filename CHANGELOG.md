@@ -618,6 +618,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   only a missing file means no waivers, and any other error is reported with
   the file's path and the cause. Closes #4866.
 
+- **The `/qfai-implement` test runner recipes define `statePath` and finish
+  every account cleanup.** The Playwright setup, fixture and teardown called a
+  storage-state helper that no recipe defined, and the first failed
+  `deleteAccount` stopped the cleanup loop, skipped removing the cached
+  sessions and storage states, and lost the IDs still to remove. The shared
+  session module now exports `statePath` and every site imports it; the
+  cleanup tries every ID, writes the IDs left behind to an ID-only recovery
+  record outside the session directory, and fails with an `AggregateError`,
+  while the cached sessions and storage states are removed either way.
+  Closes #4929. Closes #4931.
+
 - **`qfai sdd preflight` keeps a carry-over entry that starts with `<`.** A
   flagless re-run dropped every recorded entry opening with a less-than sign,
   such as a tag or a comparison, as if it were the template's placeholder.
