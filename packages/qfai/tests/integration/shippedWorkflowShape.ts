@@ -889,10 +889,19 @@ const CLOSE_GATE = "github.event.action != 'closed'";
 
 /**
  * The clause a lane may carry beside the close gate when the adopter can turn the
- * default-branch push run off. A job that has started is billed, so the decision
- * is the job's own condition and not a step in it.
+ * default-branch push run off. It also declines a push to any other branch, which
+ * a push filter cannot exclude by name. A job that has started is billed, so the
+ * decision is the job's own condition and not a step in it.
  */
-const PUSH_POLICY_GATE = "(github.event_name != 'push' || vars.QFAI_CI_PUSH_POLICY != 'none')";
+const PUSH_POLICY_GATE =
+  "(github.event_name != 'push' || (github.ref_name == github.event.repository.default_branch && vars.QFAI_CI_PUSH_POLICY != 'none'))";
+
+/**
+ * The clause an aggregate carries beside the close gate: a push filter cannot name the default
+ * branch, so every branch push starts a run, and the aggregate declines a push to any other branch.
+ */
+const BRANCH_GATE =
+  "(github.event_name != 'push' || github.ref_name == github.event.repository.default_branch)";
 
 /** A condition with its `${{ … }}` wrapper removed, so it can be compared. */
 function conditionText(condition: unknown): string {
@@ -943,7 +952,7 @@ function laneInertnessPins(): ShapePin[] {
       clauses.push(
         `never inert, deletion is the opt-out: ${alwaysUnlessPushOff.join(", ")} ${
           alwaysUnlessPushOff.length === 1 ? "declares" : "declare"
-        } no gating if: beyond the close gate and the clause that declines a push the adopter turned off`,
+        } no gating if: beyond the close gate and the clause that declines a push to another branch or one the adopter turned off`,
       );
     }
     for (const lane of file.lanes) {
@@ -951,7 +960,7 @@ function laneInertnessPins(): ShapePin[] {
         clauses.push(
           lane.startsWhen === undefined
             ? `${lane.jobId}: always(), optionally with the close gate, and needs: ${lane.needs.join(", ")}`
-            : `${lane.jobId}: always() with the close gate, starting only when ${lane.startsWhen}, and needs: ${lane.needs.join(", ")}`,
+            : `${lane.jobId}: always() with the close gate and the branch gate, starting only when ${lane.startsWhen}, and needs: ${lane.needs.join(", ")}`,
         );
       }
     }
@@ -1007,12 +1016,12 @@ function laneInertnessViolations(file: FileExpectation, found: WorkflowFile): st
       const accepted =
         lane.startsWhen === undefined
           ? ["always()", `always() && ${CLOSE_GATE}`]
-          : [`always() && ${CLOSE_GATE} && ${lane.startsWhen}`];
+          : [`always() && ${CLOSE_GATE} && ${BRANCH_GATE} && ${lane.startsWhen}`];
       if (!accepted.includes(normalized)) {
         problems.push(
           lane.startsWhen === undefined
             ? `${lane.jobId}: aggregate does not declare always()`
-            : `${lane.jobId}: aggregate does not declare always() with the close gate and ${lane.startsWhen}`,
+            : `${lane.jobId}: aggregate does not declare always() with the close gate, the branch gate and ${lane.startsWhen}`,
         );
       }
       const needs = job["needs"];

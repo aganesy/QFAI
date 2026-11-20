@@ -188,21 +188,44 @@ describe("what the cost reader refuses", () => {
 
 describe("what the cost reader makes of the conditions that decline an idle event", () => {
   const closeGate = "github.event.action != 'closed'";
+  const branchGate =
+    "(github.event_name != 'push' || github.ref_name == github.event.repository.default_branch)";
+  const entry = { if: `\${{ ${closeGate} && ${branchGate} }}` };
   const scopeAggregate = {
-    if: `\${{ always() && ${closeGate} && needs.scope.outputs.run != 'false' }}`,
+    if: `\${{ always() && ${closeGate} && ${branchGate} && needs.scope.outputs.run != 'false' }}`,
   };
   const scoped = {
     if: `\${{ needs.scope.outputs.run == 'true' && ${closeGate} }}`,
   };
   const verdict = {
-    if: `\${{ always() && ${closeGate} && needs.detection.outputs.selected != '[]' }}`,
+    if: `\${{ always() && ${closeGate} && ${branchGate} && needs.detection.outputs.selected != '[]' }}`,
   };
   const selected = {
     if: "${{ needs.detection.outputs.selected != '[]' && needs.detection.outputs.selected != '' }}",
   };
   const validation = {
-    if: `\${{ ${closeGate} && (github.event_name != 'push' || vars.QFAI_CI_PUSH_POLICY != 'none') }}`,
+    if: `\${{ ${closeGate} && (github.event_name != 'push' || (github.ref_name == github.event.repository.default_branch && vars.QFAI_CI_PUSH_POLICY != 'none')) }}`,
   };
+
+  it("reads a push to another branch as starting no job", () => {
+    // Every root job and aggregate declines it, and the lanes read outputs nothing published.
+    const other = COST_PATHS.find((spec) => spec.event === "push" && spec.otherBranch === true);
+    const plain = COST_PATHS.find(
+      (spec) => spec.event === "push" && spec.otherBranch !== true && spec.pushPolicy === undefined,
+    );
+    expect(other, "a push to another branch is declared").toBeDefined();
+    expect(plain, "a default-branch push is declared").toBeDefined();
+    if (other === undefined || plain === undefined) return;
+
+    for (const job of [entry, scopeAggregate, scoped, verdict, selected, validation]) {
+      expect(jobRuns(job, other), String(job.if)).toBe(false);
+    }
+    expect(jobRuns(entry, plain)).toBe(true);
+    expect(jobRuns(validation, plain)).toBe(true);
+    expect(
+      allShippedCostFigures(repoRoot).find((figure) => figure.path === other.id)?.jobs,
+    ).toEqual([]);
+  });
 
   it("starts each aggregate on exactly the paths where the lane it reports on runs", () => {
     // An aggregate that starts when its lane does not would be costed as a job nobody pays for,

@@ -104,6 +104,15 @@
       "billableFloorMinutes": 12
     },
     {
+      "path": "other-branch-push",
+      "what": "a push to a branch other than the default",
+      "jobs": [],
+      "runnerJobs": 0,
+      "runners": [],
+      "timeoutMinutesSum": 0,
+      "billableFloorMinutes": 0
+    },
+    {
       "path": "protected-default-branch-push",
       "what": "a push to the default branch where the adopter declares the protected push policy",
       "jobs": ["qfai-docs.yml#scope", "qfai-tests.yml#detection", "qfai-validate.yml#validate"],

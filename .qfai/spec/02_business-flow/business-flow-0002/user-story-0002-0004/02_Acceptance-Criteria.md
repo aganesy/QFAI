@@ -24,4 +24,12 @@ Feature: Shipped change detection and a green-on-skip verdict
     When the probe reads a package.json that is not valid JSON, is not an object, has a scripts field that is not an object or declares a layer-named script that is not a string or is blank, and the selection reads a script list or a lane list that is unset, is not a JSON array or names something other than the five layers
     Then each step exits non-zero with an error annotation and publishes no output, so the verdict is red
     And a repository without a package.json, a package.json without scripts and a scripts object without a layer-named script are valid empty sets that publish an empty selection
+
+  # AC-0002-0004-04
+  Scenario: Only a push to the repository's own default branch runs the shipped workflows
+    Given the shipped workflow set, and a push to a branch that is the repository's default branch or is not
+    When the push trigger and the condition of each job are evaluated against the pushed branch and the repository's default branch
+    Then every shipped workflow starts on a push to any branch and on no tag push
+    And a push to a branch other than the default starts no job, even when that branch is called `main`
+    And a push to the default branch starts the same jobs whatever the branch is called, under the configured push policy
 ```

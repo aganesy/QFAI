@@ -125,18 +125,20 @@ async function runStep(body: string, cwd: string, env: NodeJS.ProcessEnv = {}): 
 
 /**
  * What the document aggregate declares: `always()` outlives the cancellation, so it declines a
- * closed pull request, and it declines to start when the scope said, explicitly, that nothing a
- * document check reads changed. A skipped job satisfies a required check.
+ * closed pull request and a push to a branch other than the default, and it declines to start
+ * when the scope said, explicitly, that nothing a document check reads changed. A skipped job
+ * satisfies a required check.
  */
 const DOCS_AGGREGATE_CONDITION =
-  "${{ always() && github.event.action != 'closed' && needs.scope.outputs.run != 'false' }}";
+  "${{ always() && github.event.action != 'closed' && (github.event_name != 'push' || github.ref_name == github.event.repository.default_branch) && needs.scope.outputs.run != 'false' }}";
 
 /**
- * What the validation job declares: the close gate, and a default-branch push the adopter turned
- * off. The decision is the job's own condition because a job that has started is billed.
+ * What the validation job declares: the close gate, and a push to a branch other than the default
+ * or one the adopter turned off. The decision is the job's own condition because a job that has
+ * started is billed.
  */
 const VALIDATE_JOB_CONDITION =
-  "${{ github.event.action != 'closed' && (github.event_name != 'push' || vars.QFAI_CI_PUSH_POLICY != 'none') }}";
+  "${{ github.event.action != 'closed' && (github.event_name != 'push' || (github.ref_name == github.event.repository.default_branch && vars.QFAI_CI_PUSH_POLICY != 'none')) }}";
 
 /**
  * What the drift step declares: it runs after a failing full profile so one run reports both, and

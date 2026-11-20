@@ -94,7 +94,13 @@ name: qfai docs
 
 on:
   push:
-    branches: [main, master]
+    # Every branch, and no tag: a filter cannot name the default branch, so the
+    # jobs below decline a push to any other branch by comparing the pushed branch
+    # with `github.event.repository.default_branch`. Listing `main` and `master`
+    # here instead missed a default branch called anything else, and checked a
+    # branch called `main` that was not the default. A push to another branch
+    # starts a run whose jobs are all skipped, which uses no runner minutes.
+    branches: ["**"]
   pull_request:
     # `closed` is here to end work, not to start it. A closed pull request
     # starts a run in the same concurrency group as the one still testing its
@@ -115,7 +121,10 @@ concurrency:
 jobs:
   scope:
     name: change scope
-    if: ${{ github.event.action != 'closed' }}
+    # Declines a closed pull request and a push to a branch other than the
+    # default. The last job repeats the condition: a skipped scope publishes no
+    # answer, and that job would run red on it.
+    if: ${{ github.event.action != 'closed' && (github.event_name != 'push' || github.ref_name == github.event.repository.default_branch) }}
     runs-on: ${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # Reads the repository only; the name-only diff writes nothing back.
     permissions:
@@ -743,7 +752,7 @@ jobs:
     # reads changed: the scope has already said so in a notice, and a skipped job
     # satisfies a required check. A scope that failed publishes no answer, so
     # this job runs and is red.
-    if: ${{ always() && github.event.action != 'closed' && needs.scope.outputs.run != 'false' }}
+    if: ${{ always() && github.event.action != 'closed' && (github.event_name != 'push' || github.ref_name == github.event.repository.default_branch) && needs.scope.outputs.run != 'false' }}
     runs-on: ${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     permissions: {}
     timeout-minutes: 5

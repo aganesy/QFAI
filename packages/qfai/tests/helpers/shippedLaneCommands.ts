@@ -1186,22 +1186,22 @@ export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
 export const ALLOWED_WORKFLOW_SHAPE: ReadonlyMap<string, string> = new Map([
   [
     "qfai-tests.yml",
-    '{"name":"qfai tests","on":{"push":{"branches":["main","master"]},"pull_request":{"types":["opened","synchronize","reopened","closed"]}},"concurrency":{"group":"${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}","cancel-in-progress":true}}',
+    '{"name":"qfai tests","on":{"push":{"branches":["**"]},"pull_request":{"types":["opened","synchronize","reopened","closed"]}},"concurrency":{"group":"${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}","cancel-in-progress":true}}',
   ],
   [
     "qfai-validate.yml",
-    '{"name":"qfai validate","on":{"push":{"branches":["main","master"]},"pull_request":{"types":["opened","synchronize","reopened","closed"]}},"concurrency":{"group":"${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}","cancel-in-progress":true}}',
+    '{"name":"qfai validate","on":{"push":{"branches":["**"]},"pull_request":{"types":["opened","synchronize","reopened","closed"]}},"concurrency":{"group":"${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}","cancel-in-progress":true}}',
   ],
   [
     "qfai-docs.yml",
-    '{"name":"qfai docs","on":{"push":{"branches":["main","master"]},"pull_request":{"types":["opened","synchronize","reopened","closed"]}},"concurrency":{"group":"${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}","cancel-in-progress":true}}',
+    '{"name":"qfai docs","on":{"push":{"branches":["**"]},"pull_request":{"types":["opened","synchronize","reopened","closed"]}},"concurrency":{"group":"${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}","cancel-in-progress":true}}',
   ],
 ]);
 
 export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   [
     "qfai-docs.yml#scope",
-    '{"name":"change scope","if":"${{ github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"run":"${{ steps.diff.outputs.run }}"}}',
+    '{"name":"change scope","if":"${{ github.event.action != \'closed\' && (github.event_name != \'push\' || github.ref_name == github.event.repository.default_branch) }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"run":"${{ steps.diff.outputs.run }}"}}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -1209,11 +1209,11 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":["scope","checks"],"if":"${{ always() && github.event.action != \'closed\' && needs.scope.outputs.run != \'false\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":["scope","checks"],"if":"${{ always() && github.event.action != \'closed\' && (github.event_name != \'push\' || github.ref_name == github.event.repository.default_branch) && needs.scope.outputs.run != \'false\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"change detection","if":"${{ github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"lanes":"${{ steps.diff.outputs.lanes }}","scripts":"${{ steps.scripts.outputs.scripts }}","selected":"${{ steps.selected.outputs.selected }}"}}',
+    '{"name":"change detection","if":"${{ github.event.action != \'closed\' && (github.event_name != \'push\' || github.ref_name == github.event.repository.default_branch) }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"lanes":"${{ steps.diff.outputs.lanes }}","scripts":"${{ steps.scripts.outputs.scripts }}","selected":"${{ steps.selected.outputs.selected }}"}}',
   ],
   [
     "qfai-tests.yml#tests",
@@ -1221,11 +1221,11 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "qfai-tests.yml#verdict",
-    '{"name":"verdict","needs":["detection","tests"],"if":"${{ always() && github.event.action != \'closed\' && needs.detection.outputs.selected != \'[]\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"verdict","needs":["detection","tests"],"if":"${{ always() && github.event.action != \'closed\' && (github.event_name != \'push\' || github.ref_name == github.event.repository.default_branch) && needs.detection.outputs.selected != \'[]\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate (full profile, fail on error)","if":"${{ github.event.action != \'closed\' && (github.event_name != \'push\' || vars.QFAI_CI_PUSH_POLICY != \'none\') }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
+    '{"name":"qfai validate (full profile, fail on error)","if":"${{ github.event.action != \'closed\' && (github.event_name != \'push\' || (github.ref_name == github.event.repository.default_branch && vars.QFAI_CI_PUSH_POLICY != \'none\')) }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
   ],
 ]);
 
@@ -1249,9 +1249,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "698f93291a942562a5449dd4cead0cfa0e6111f13b7bd7b6b0de6af098b20cfa"],
-  ["qfai-tests.yml", "a5367dce9a0a9c8e093b40ac407397ad2ea4379fd6f3b489edb359368f61651f"],
-  ["qfai-validate.yml", "b7edb0a89723c10822fba833a659a502eb8a3297559f97610d355f51e823b468"],
+  ["qfai-docs.yml", "6a9392399439a12f0b7889319645b76ad92314830fe14b28655bc91dce4977e0"],
+  ["qfai-tests.yml", "d7f1184043cf9af2bd408de3e0a3c46c1704707c5da2d932e28e7449d5818836"],
+  ["qfai-validate.yml", "e4cb3a8c50ad6543438e1d1de9d6f33448aa3e1b74fcfb6a68246cd3595e5307"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */

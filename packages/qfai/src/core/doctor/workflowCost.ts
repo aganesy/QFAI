@@ -51,12 +51,14 @@ export type WorkflowJobCounts = {
 };
 
 const CLOSE_GATE = "github.event.action != 'closed'";
-const PUSH_POLICY_GATE = `${CLOSE_GATE} && (github.event_name != 'push' || vars.QFAI_CI_PUSH_POLICY != 'none')`;
+/** Declines a push to a branch other than the default, which a pull request event never is. */
+const ENTRY_GATE = `${CLOSE_GATE} && (github.event_name != 'push' || github.ref_name == github.event.repository.default_branch)`;
+const PUSH_POLICY_GATE = `${CLOSE_GATE} && (github.event_name != 'push' || (github.ref_name == github.event.repository.default_branch && vars.QFAI_CI_PUSH_POLICY != 'none'))`;
 const SCOPE_GATE = "needs.scope.outputs.run == 'true' && github.event.action != 'closed'";
 const SELECTED_GATE =
   "needs.detection.outputs.selected != '[]' && needs.detection.outputs.selected != ''";
-const SCOPE_AGGREGATE = `always() && ${CLOSE_GATE} && needs.scope.outputs.run != 'false'`;
-const SELECTED_AGGREGATE = `always() && ${CLOSE_GATE} && needs.detection.outputs.selected != '[]'`;
+const SCOPE_AGGREGATE = `always() && ${ENTRY_GATE} && needs.scope.outputs.run != 'false'`;
+const SELECTED_AGGREGATE = `always() && ${ENTRY_GATE} && needs.detection.outputs.selected != '[]'`;
 
 /** A condition with its `${{ }}` wrapper removed. */
 function conditionText(condition: unknown): string {
@@ -79,7 +81,9 @@ function jobStarts(
   scenario: PullRequestScenario,
 ): boolean | undefined {
   const text = conditionText(job["if"]);
-  if (text === "" || text === CLOSE_GATE || text === PUSH_POLICY_GATE) return true;
+  if (text === "" || text === CLOSE_GATE || text === ENTRY_GATE || text === PUSH_POLICY_GATE) {
+    return true;
+  }
   if (text === `always() && ${CLOSE_GATE}` || text === "always()") return true;
   if (text === SCOPE_GATE || text === SCOPE_AGGREGATE) return scenario.documentsTouched;
   if (text === SELECTED_GATE || text === SELECTED_AGGREGATE) {

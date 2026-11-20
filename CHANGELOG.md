@@ -609,6 +609,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
 
+- **The shipped workflows check pushes to your real default branch.** The
+  three workflows `qfai init` writes listed `main` and `master` as the branches
+  a push runs on. A project whose default branch is called anything else, such
+  as `trunk`, got no post-merge check, and a branch called `main` that was not
+  the default was checked as if it were. Each workflow now starts on a push to
+  any branch, and its jobs decline a push whose branch is not the repository's
+  default branch, so that push uses no runner minutes. `QFAI_CI_PUSH_POLICY`
+  still applies to a push to the default branch. Workflows already in your
+  repository keep the old list until you replace them, and until then
+  `qfai doctor` says it cannot count their jobs per pull request event.
+
 - **A rejected release version or tag no longer reaches the Actions log as a
   workflow command.** The manual prepare-release and release workflows put
   the value they refused inside their error annotation, so a value carrying a

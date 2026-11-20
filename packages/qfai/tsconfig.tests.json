@@ -345,6 +345,7 @@
     "tests/integration/shippedDocsLaneInstall.test.ts",
     "tests/integration/shippedWorkflowCheckIndependence.test.ts",
     "tests/integration/shippedWorkflowCloseCancels.test.ts",
+    "tests/integration/shippedWorkflowDefaultBranch.test.ts",
     "tests/integration/shippedWorkflowDetection.test.ts",
     "tests/integration/shippedWorkflowInertness.test.ts",
     "tests/integration/shippedWorkflowJobCounts.test.ts",

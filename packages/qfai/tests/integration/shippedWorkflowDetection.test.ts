@@ -660,6 +660,18 @@ async function jobCondition(file: string, jobId: string): Promise<unknown> {
   return job["if"];
 }
 
+/**
+ * The event and branch an action arrives with: no action is a push, here to the default branch,
+ * and any action is a pull request, which the branch gate never declines.
+ */
+function onDefaultBranch(action: string): Record<string, string> {
+  return {
+    "github.event_name": action === "" ? "push" : "pull_request",
+    "github.ref_name": "main",
+    "github.event.repository.default_branch": "main",
+  };
+}
+
 // QFAI:AC-0002-0004-02
 // QFAI:EX-0002-0004-05
 describe("an event with nothing for the test lanes to run starts one job", () => {
@@ -669,6 +681,7 @@ describe("an event with nothing for the test lanes to run starts one job", () =>
   const starts = async (action: string, selected: string): Promise<boolean> =>
     evaluateCondition(await jobCondition(ORCHESTRATOR, "verdict"), {
       "github.event.action": action,
+      ...onDefaultBranch(action),
       "needs.detection.outputs.selected": selected,
     });
 
@@ -722,6 +735,7 @@ describe("an event with nothing for the document checks to read starts one job",
   const starts = async (action: string, run: string): Promise<boolean> =>
     evaluateCondition(await jobCondition("qfai-docs.yml", "docs"), {
       "github.event.action": action,
+      ...onDefaultBranch(action),
       "needs.scope.outputs.run": run,
     });
 
@@ -754,6 +768,8 @@ describe("the validation job declines a default-branch push only under the none 
     evaluateCondition(await jobCondition(VALIDATE_FILE, "validate"), {
       "github.event.action": action,
       "github.event_name": event,
+      "github.ref_name": "main",
+      "github.event.repository.default_branch": "main",
       "vars.QFAI_CI_PUSH_POLICY": policy,
     });
 

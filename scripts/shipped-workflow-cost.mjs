@@ -20,7 +20,7 @@
  * the per-job floor costs before any work happens. That last figure is the one the adopter's
  * evidence turned on — a job that runs for four seconds is billed as a minute.
  *
- * ## The eight paths
+ * ## The nine paths
  *
  * Each names the facts that decide which jobs run. They are declared rather than inferred,
  * because a path is a claim about an adopter's repository — whether their `package.json`
@@ -60,7 +60,8 @@ export const BILLABLE_JOB_FLOOR_MINUTES = 1;
  * declares, the opt-in the test lanes read through the detection job's outputs. `pushPolicy` is the
  * adopter's `QFAI_CI_PUSH_POLICY`: `protected` declares that every merge passed a pull request's
  * checks first, so a push runs no lane and no document check, and `none` also declines the
- * validation job.
+ * validation job. `otherBranch` marks a push to a branch other than the default, which every
+ * root job and every aggregate declines, so it starts no job.
  */
 export const COST_PATHS = [
   {
@@ -115,6 +116,15 @@ export const COST_PATHS = [
     testScripts: ["unit", "component", "integration", "api", "e2e"],
   },
   {
+    id: "other-branch-push",
+    what: "a push to a branch other than the default",
+    event: "push",
+    otherBranch: true,
+    documentsOnly: false,
+    documentsTouched: true,
+    testScripts: ["unit", "component", "integration", "api", "e2e"],
+  },
+  {
     id: "protected-default-branch-push",
     what: "a push to the default branch where the adopter declares the protected push policy",
     event: "push",
@@ -145,6 +155,16 @@ function conditionText(condition) {
 }
 
 const CLOSE_GATE = "github.event.action != 'closed'";
+
+/**
+ * A push filter cannot name the default branch, so every branch push starts a run, and each root
+ * job and aggregate declines a push to any other branch with this clause.
+ */
+const BRANCH_GATE =
+  "(github.event_name != 'push' || github.ref_name == github.event.repository.default_branch)";
+
+/** The document scope and the test detection: the close gate and the branch gate. */
+const ENTRY_GATE = `${CLOSE_GATE} && ${BRANCH_GATE}`;
 const LANE_GATE =
   /^contains\(needs\.detection\.outputs\.scripts, '([a-z0-9]+)'\) && contains\(needs\.detection\.outputs\.lanes, '\1'\)$/;
 
@@ -164,11 +184,11 @@ const SELECTED_GATE =
  * run. The document aggregate reads the scope's answer and the test verdict reads the selection, so
  * each starts on exactly the paths where the lane it reports on runs.
  */
-const SCOPE_AGGREGATE = `always() && ${CLOSE_GATE} && needs.scope.outputs.run != 'false'`;
-const SELECTED_AGGREGATE = `always() && ${CLOSE_GATE} && needs.detection.outputs.selected != '[]'`;
+const SCOPE_AGGREGATE = `always() && ${ENTRY_GATE} && needs.scope.outputs.run != 'false'`;
+const SELECTED_AGGREGATE = `always() && ${ENTRY_GATE} && needs.detection.outputs.selected != '[]'`;
 
-/** The validation job: the close gate, and a push the adopter turned off. */
-const PUSH_POLICY_GATE = `${CLOSE_GATE} && (github.event_name != 'push' || vars.QFAI_CI_PUSH_POLICY != 'none')`;
+/** The validation job: the close gate, and a push to another branch or one the adopter turned off. */
+const PUSH_POLICY_GATE = `${CLOSE_GATE} && (github.event_name != 'push' || (github.ref_name == github.event.repository.default_branch && vars.QFAI_CI_PUSH_POLICY != 'none'))`;
 
 /**
  * Whether a job allocates a runner on this path.
@@ -177,39 +197,42 @@ const PUSH_POLICY_GATE = `${CLOSE_GATE} && (github.event_name != 'push' || vars.
  * and a cost figure that over- or under-counts is worse than none.
  */
 export function jobRuns(job, pathSpec) {
-  const closed = pathSpec.action === "closed";
+  // A closed pull request, and a push to another branch: every root job and aggregate declines
+  // both, and a lane reads the outputs of a job that was skipped.
+  const declined = pathSpec.action === "closed" || pathSpec.otherBranch === true;
   // The scope and detection bodies answer "run nothing" for this push before they read the diff.
   const coveredPush =
     pathSpec.event === "push" &&
     (pathSpec.pushPolicy === "protected" || pathSpec.pushPolicy === "none");
   const text = conditionText(isRecord(job) ? job["if"] : undefined);
   if (text === "") return true;
-  if (text === CLOSE_GATE) return !closed;
-  if (text === `always() && ${CLOSE_GATE}`) return !closed;
+  if (text === CLOSE_GATE) return pathSpec.action !== "closed";
+  if (text === ENTRY_GATE) return !declined;
+  if (text === `always() && ${CLOSE_GATE}`) return pathSpec.action !== "closed";
   if (text === "always()") return true;
   if (text === PUSH_POLICY_GATE) {
-    return !closed && !(pathSpec.event === "push" && pathSpec.pushPolicy === "none");
+    return !declined && !(pathSpec.event === "push" && pathSpec.pushPolicy === "none");
   }
   if (text === SCOPE_AGGREGATE) {
     // Starts exactly when the scope did not answer false, which is when the checks run.
-    return !closed && !coveredPush && pathSpec.documentsTouched === true;
+    return !declined && !coveredPush && pathSpec.documentsTouched === true;
   }
   if (text === SELECTED_AGGREGATE) {
     // Starts exactly when the selection is not empty, which is when the test lane runs.
-    return !closed && !coveredPush && !pathSpec.documentsOnly && pathSpec.testScripts.length > 0;
+    return !declined && !coveredPush && !pathSpec.documentsOnly && pathSpec.testScripts.length > 0;
   }
   if (text === SCOPE_GATE) {
     // The document lane runs when its scope found a change a document check reads.
-    return !closed && !coveredPush && pathSpec.documentsTouched === true;
+    return !declined && !coveredPush && pathSpec.documentsTouched === true;
   }
   if (text === SELECTED_GATE) {
     // The same two halves the per-layer gate read, asked once: a documents-only change selects no
     // lane, and a path declaring no test script has nothing for the axis to hold.
-    return !closed && !coveredPush && !pathSpec.documentsOnly && pathSpec.testScripts.length > 0;
+    return !declined && !coveredPush && !pathSpec.documentsOnly && pathSpec.testScripts.length > 0;
   }
   const lane = LANE_GATE.exec(text);
   if (lane !== null) {
-    if (closed) return false;
+    if (declined) return false;
     const layer = lane[1];
     // The detection job selects a lane from the diff, and the manifest declares the script. A
     // documents-only change selects no test lane, so the two halves are read together.
