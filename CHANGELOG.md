@@ -577,6 +577,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   expression, an `exclude` key that is not an axis, and a written-out matrix
   with no leg, which GitHub rejects, are named as not counted. Closes #4780.
 
+- **The shared workflow rule names the RED exception by its installed path.**
+  It pointed at `references/red-not-observable.md`, which the rule's own
+  directory does not hold, so a reader entering from any stage other than
+  implementation found no file. It now cites
+  `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`, as
+  the `implement-tdd` step does. Closes #4965.
+
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
   20,000 files, so a large tree could run out of file descriptors and fail

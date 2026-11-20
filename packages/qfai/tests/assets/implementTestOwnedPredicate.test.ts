@@ -34,6 +34,13 @@ describe.each(trees)("%s — implementation RED evidence", (tree) => {
     expect(probe).toContain("Record both revisions and outputs as falsifiability evidence");
   });
 
+  it("cites the RED exception by its installed path in the shared workflow rule", async () => {
+    const rule = await read(tree, "assistant/rule/workflow.md");
+    expect(rule).toContain(
+      "`.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`",
+    );
+  });
+
   it("rejects a mutation of the test's own checker or fixture as behavior proof", async () => {
     const probe = await read(
       tree,
