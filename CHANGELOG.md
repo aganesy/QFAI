@@ -595,6 +595,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the new script stop with an error at the first skip in that file, so rewrite
   each count as the names of the tests it covered.
 
+- **`qfai atdd scaffold` reads vitest only from a script that runs it.**
+  A `package.json` script that only named `vitest` as an argument, such as
+  `echo vitest`, made the command write a vitest skeleton for a project that
+  runs `node --test`, so the test imported a package the project does not
+  have. Now `vitest` counts only as the command a script runs, directly or
+  through `npx`, `pnpm exec`, `pnpm dlx`, `yarn`, `npm exec`, `bunx` or
+  `cross-env`.
+
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
   dropped one and ran as if it had not been given, so

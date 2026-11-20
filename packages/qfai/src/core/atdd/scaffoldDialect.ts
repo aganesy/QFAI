@@ -191,6 +191,72 @@ function scriptWords(script: string): string[] {
     .filter((word) => word !== "");
 }
 
+/** Package runners that run their first non-option word as the command. */
+const PACKAGE_RUNNERS: ReadonlySet<string> = new Set([
+  "npx",
+  "pnpx",
+  "bunx",
+  "cross-env",
+  "cross-env-shell",
+]);
+
+/** Package managers and the subcommands after them that run the next word as a command. */
+const PACKAGE_MANAGER_EXEC: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ["pnpm", new Set(["exec", "dlx"])],
+  ["yarn", new Set(["exec", "dlx"])],
+  ["npm", new Set(["exec", "x"])],
+  ["bun", new Set(["x"])],
+]);
+
+/** Package managers that run an installed binary named straight after them, as `pnpm vitest` does. */
+const BARE_BINARY_MANAGERS: ReadonlySet<string> = new Set(["pnpm", "yarn"]);
+
+/** A leading `NAME=value` environment assignment before a command. */
+const ENV_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
+
+/** The index of the first word from `index` that is neither an option nor `--`. */
+function skipOptions(words: readonly string[], index: number): number {
+  let next = index;
+  while ((words[next] ?? "").startsWith("-")) next += 1;
+  return next;
+}
+
+/**
+ * The command word of each command in a script: the first word of each part
+ * between shell operators, after environment assignments and the package
+ * runners above. `npx vitest` and `pnpm exec vitest` yield `vitest`;
+ * `echo vitest` and `npm run vitest` yield `echo` and `npm`.
+ */
+function commandWords(script: string): string[] {
+  const commands: string[] = [];
+  for (const part of script.split(/[;&|()]+/)) {
+    const words = scriptWords(part);
+    let index = 0;
+    for (;;) {
+      while (ENV_ASSIGNMENT.test(words[index] ?? "")) index += 1;
+      const word = words[index] ?? "";
+      if (PACKAGE_RUNNERS.has(word)) {
+        index = skipOptions(words, index + 1);
+        continue;
+      }
+      const subcommand = words[index + 1];
+      if (subcommand === undefined) break;
+      if (PACKAGE_MANAGER_EXEC.get(word)?.has(subcommand) === true) {
+        index = skipOptions(words, index + 2);
+        continue;
+      }
+      if (BARE_BINARY_MANAGERS.has(word) && !subcommand.startsWith("-") && subcommand !== "run") {
+        index += 1;
+        continue;
+      }
+      break;
+    }
+    const command = words[index];
+    if (command !== undefined) commands.push(command);
+  }
+  return commands;
+}
+
 /**
  * Whether a script runs `node --test`: a `node` command word followed by
  * `--test` with only options before it. A script or file argument ends the
@@ -226,7 +292,7 @@ export function detectJsTestRunner(manifest: unknown): JsTestRunner {
   const texts = scripts.filter((script) => typeof script === "string");
   if (
     declares("vitest") ||
-    texts.some((script) => scriptWords(script).some((word) => VITEST_COMMAND.test(word)))
+    texts.some((script) => commandWords(script).some((word) => VITEST_COMMAND.test(word)))
   ) {
     return "vitest";
   }
