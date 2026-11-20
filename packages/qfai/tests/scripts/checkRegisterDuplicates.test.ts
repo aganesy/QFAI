@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
+import { aggregateChecks } from "../helpers/aggregateChecks.js";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -338,12 +339,8 @@ describe("check-register-duplicates", () => {
   });
 
   // QFAI:EX-0002-0025-24
-  it("runs in the scans lane of the pull request lint job", async () => {
-    const manifest = JSON.parse(await readFile(path.join(repoRoot, "package.json"), "utf-8")) as {
-      scripts: Record<string, string>;
-    };
-
-    expect(manifest.scripts["ci:lint:scans"]).toContain(
+  it("runs in the scans lane of the pull request lint job", () => {
+    expect(aggregateChecks(repoRoot, "ci:lint:scans")).toContain(
       "node ./scripts/check-register-duplicates.mjs",
     );
   });

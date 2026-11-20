@@ -2321,8 +2321,11 @@ describe("rule overlays", () => {
     {
       file: "distributed-surface.local.md",
       clauses: [
-        // The surface, and which of the three guards reads it.
+        // The surface, and which of the three guards reads it. The list
+        // itself is read from the manifest, never copied here, so it cannot
+        // fall behind a path the manifest adds.
         "package.json#files",
+        "Read the list from the manifest",
         "Only the post-build guard follows `files`",
         // The identifier shapes, one token each for the two that no other
         // clause names.

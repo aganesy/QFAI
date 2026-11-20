@@ -13,6 +13,7 @@ import {
   REPO_ROOT,
   runLane,
 } from "../scripts/helpers/hygieneTree.js";
+import { aggregateChecks } from "../helpers/aggregateChecks.js";
 
 const WORKFLOWS_DIR = path.join(REPO_ROOT, ".github", "workflows");
 const ACTIONS_DIR = path.join(REPO_ROOT, ".github", "actions");
@@ -272,7 +273,9 @@ describe("BF-0002 workflow hygiene acceptance", () => {
       `vitest run ${gate}`,
     );
     const rootScripts = scripts(path.join(REPO_ROOT, "package.json"));
-    expect(String(rootScripts["ci:lint:structure"])).toContain("lint:workflow-shape");
+    expect(aggregateChecks(REPO_ROOT, "ci:lint:structure")).toContain(
+      "pnpm -C packages/qfai lint:workflow-shape",
+    );
     expect(String(rootScripts["ci:lint"])).toContain("run-lint-checks.sh");
     expect(readFileSync(path.join(WORKFLOWS_DIR, "ci.yml"), "utf8")).toContain("run: pnpm ci:lint");
 

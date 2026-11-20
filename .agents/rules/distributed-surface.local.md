@@ -6,9 +6,9 @@ the surface, the identifier shapes, and the guards, for this repository only.
 ## The surface
 
 Every file `npm pack` publishes from `packages/qfai`: the paths
-`packages/qfai/package.json#files` declares — today `dist/`, `assets/`,
-`README.md` and `LICENSE` — and `package.json`, which npm adds to every package
-whatever that list says.
+`packages/qfai/package.json#files` declares, and `package.json`, which npm adds
+to every package whatever that list says. Read the list from the manifest; this
+file does not repeat it.
 
 Only the post-build guard follows `files`, by asking `npm pack --dry-run` for
 the list. The other two scan targets of their own, so a path added to `files`

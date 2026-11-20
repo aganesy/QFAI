@@ -15,6 +15,7 @@ import { runInit } from "../helpers/legacyInit.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { isRecord } from "../helpers/shippedWorkflowFixtures.js";
 import { STORY_ID_BOUNDARIES, scanDistributedSurface } from "../helpers/distributedSurfaceScan.js";
+import { aggregateChecks } from "../helpers/aggregateChecks.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const guardScript = path.join(packageRoot, "scripts/check-no-internal-version-leakage.sh");
@@ -339,6 +340,8 @@ describe("BF-0002 distributed-surface guard parity", () => {
     const scripts = isRecord(manifest) ? manifest["scripts"] : undefined;
     if (!isRecord(scripts)) throw new Error("the root manifest declares no scripts");
     expect(scripts["ci:lint"]).toContain("run-lint-checks.sh");
-    expect(scripts["ci:lint:structure"]).toContain("lint:shipping");
+    expect(aggregateChecks(path.resolve(packageRoot, "../.."), "ci:lint:structure")).toContain(
+      "pnpm -C packages/qfai lint:shipping",
+    );
   });
 });

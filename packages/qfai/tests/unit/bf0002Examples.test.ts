@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { editWorkflow, plantedTree, runLane } from "../scripts/helpers/hygieneTree.js";
+import { aggregateChecks } from "../helpers/aggregateChecks.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const workflowPath = path.join(root, ".github/workflows/ci.yml");
@@ -218,8 +219,10 @@ describe("BF-0002 CI verdict examples", () => {
     const lintScript = readFileSync(path.join(root, "scripts/run-lint-checks.sh"), "utf8");
     expect(lintScript).toContain("pnpm format:check");
     expect(lintScript).toContain("pnpm ci:lint:structure");
-    expect(scripts["ci:lint:structure"]).toContain("pnpm lint:md");
-    expect(scripts["ci:lint:scans"]).toContain("check-tracked-symlinks.mjs");
+    expect(aggregateChecks(root, "ci:lint:structure")).toContain("pnpm lint:md");
+    expect(aggregateChecks(root, "ci:lint:scans")).toContain(
+      "node ./scripts/check-tracked-symlinks.mjs",
+    );
   });
 
   // QFAI:EX-0002-0016-04
