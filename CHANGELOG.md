@@ -529,6 +529,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **`qfai doctor` reads a shipped workflow's `on:` before counting its jobs in
+  `workflows.cost`.** A shipped workflow edited to run on `push` alone was still
+  reported as starting jobs on each pull request. A workflow whose `on:` starts
+  it on no pull request other than a close is now reported as starting no job.
+  A `pull_request` trigger with a branch or path filter, a `pull_request_target`
+  trigger, a missing `on:` and a trigger shape that is not an event name, a list
+  of names or a mapping are named as not counted. Closes #4783.
+
 - **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
   with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
   `Set-Content -Encoding UTF8`, and both commands refused such a file as

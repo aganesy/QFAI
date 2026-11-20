@@ -284,7 +284,7 @@ describe("qfai doctor reads the triggers of the shipped workflows before countin
       "on:\n  pull_request:\n    paths-ignore: ['docs/**']",
       "on:\n  pull_request_target:",
       "on: [pull_request_target]",
-      "on:\n  pull_request:\n    types: ${{ vars.TYPES }}",
+      "on:\n  pull_request:\n    types: {opened: true}",
       "on: [push, {pull_request: null}]",
       "on: 1",
       "run-name: no trigger",
