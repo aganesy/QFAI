@@ -5,6 +5,7 @@ import { access, lstat, open, readdir, readlink, realpath, stat } from "node:fs/
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
+import { readHandleWithin } from "../../shared/boundedRead.js";
 import type { Issue } from "../types.js";
 import { isInside, issue } from "./utils.js";
 import { isEperm } from "../fs/errno.js";
@@ -789,7 +790,8 @@ async function readPinnedFile(filePath: string, maxBytes: number): Promise<strin
     handle = await open(filePath, OPEN_READ_FLAGS);
     const stats = await handle.stat();
     if (!stats.isFile() || stats.size > maxBytes) return null;
-    return await readFully(handle, maxBytes);
+    const content = await readHandleWithin(handle, maxBytes);
+    return content === undefined ? null : content.toString("utf-8");
   } catch (error) {
     if (isMissing(error)) return null;
     const code = (error as NodeJS.ErrnoException | null)?.code;
@@ -801,38 +803,6 @@ async function readPinnedFile(filePath: string, maxBytes: number): Promise<strin
   } finally {
     await handle?.close();
   }
-}
-
-/**
- * The whole file, however many reads that takes.
- *
- * `read` may return fewer bytes than asked for — a network filesystem is the
- * usual reason — and a single call left the tail of the buffer as NUL. A
- * flattened wrapper or the one surviving marker then failed its signature
- * comparison, and an initialised project read as never initialised, so its
- * broken surface went unchecked.
- */
-/**
- * The whole file, or `null` when it runs past `maxBytes`.
- *
- * Read to `maxBytes + 1`, not to the size just measured. Another process
- * holding this inode can append after the `fstat`, and stopping at the old
- * size returned a **prefix** — which, matching a canonical-shaped target, had a
- * file with its own content after it reported as a qfai wrapper, failing every
- * profile and telling the operator to delete it. One byte past the ceiling is
- * what separates "this is the whole file" from "this is as much as I asked
- * for".
- */
-async function readFully(handle: FileHandle, maxBytes: number): Promise<string | null> {
-  const buffer = Buffer.alloc(maxBytes + 1);
-  let filled = 0;
-  while (filled < buffer.length) {
-    const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
-    if (bytesRead === 0) break;
-    filled += bytesRead;
-  }
-  if (filled > maxBytes) return null;
-  return buffer.subarray(0, filled).toString("utf-8");
 }
 
 /** Whether the record at `filePath` is one `qfai init` wrote. */
