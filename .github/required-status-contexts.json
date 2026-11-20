@@ -242,6 +242,7 @@
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
         "scripts/lib/npm-failure.mjs": "cdd3fd00a1ffb02be1b7f4059c96f4a2cb9220d8474336ee276434d85a499413",
         "scripts/lib/pack-github-topology.mjs": "9d41d310d32bc59c6712be5b74610f9de4655f76cc6c29e76fa99c9682a88679",
+        "scripts/lib/pack-skill-set.mjs": "e93aeefbdfabfd0c099a0e60d75c5c0b70c20c5086a876990d83f4b71b741a45",
         "scripts/lib/pin-cost.mjs": "68c1c68351fce620f61d73b550ca3b92beecd5a150f720723730bab931c0ab43",
         "scripts/lib/pnpm-command.mjs": "6acb3af5721d6211e78f5a2fff303b6c3de7a418c084742f12441c7d0bc978a9",
         "scripts/lib/require-installed.mjs": "2c79bb9af309abf57b513d4b9f25614c081ab4606bf4bc06dfbbb8ff71223522",
@@ -267,7 +268,7 @@
         "scripts/story-ids.mjs": "5679e37825d0ff970f0f5a34cc781c5ff9b6f3c8d48142816b114705cb0706c4",
         "scripts/sync-init-to-root.mjs": "51b70ddf5dba655ff6fc0509e67daa93ca2f8ef4cc4da48477cdae75a7f0c9a1",
         "scripts/sync-mdschema-version.mjs": "cab5dc15baaa9ce5581a29c49bdaa5bbfec763b2498ccf27723c37997dced8bd",
-        "scripts/verify-pack.mjs": "5bb41d010268ba5577c0e37c650a602a08b48c1f09a5aa0000096e22cd6530f2"
+        "scripts/verify-pack.mjs": "be78543442876519c3642af3de59073f1279bf5e3c35deb90249ec33c71bbe10"
       },
       "pinnedBytesNote": [
         "The bytes of every local composite action and every guard program, pinned by path.",
@@ -413,9 +414,9 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "810c6e4eb7fbe80d",
-        "Verify the toolchain action before running it": "8542d7574634d2d6",
+        "Verify the toolchain action before running it": "22b334dab8a8a76a",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
-        "Run build & pack verification": "99ec5e46f5e62e26",
+        "Run build & pack verification": "4e1c94497dc6f58d",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "c660aaa773071813",
         "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)": "08febeb8aa3e904b",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
