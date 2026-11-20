@@ -313,6 +313,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to implementation with no design or prototype stage. A new feature with no
   settled record is covered by `visual-open`.
 
+- **The README says what you approve and which update Renovate holds.** The
+  operating model now says the session asks you to make decisions only you can
+  make and to approve each release. The Renovate section's first sentence now
+  says the preset automerges every dependency update except `qfai` itself, so
+  you know up front which pull request needs your action.
+
 - **The parts of a business screen outrank the minimal-scope article.**
   Article VII of the shipped constitution now names the list under
   `## What a business screen always has` in `interface-clarity.md` among what
