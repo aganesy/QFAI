@@ -61,8 +61,8 @@ const SCOPE_AGGREGATE = `always() && ${CLOSE_GATE} && needs.scope.outputs.run !=
 const SELECTED_AGGREGATE = `always() && ${CLOSE_GATE} && needs.detection.outputs.selected != '[]'`;
 
 /** A condition with its `${{ }}` wrapper removed. */
-function conditionText(condition: unknown): string {
-  return (typeof condition === "string" ? condition : "")
+function conditionText(condition: string): string {
+  return condition
     .trim()
     .replace(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/, "$1")
     .trim();
@@ -70,8 +70,9 @@ function conditionText(condition: unknown): string {
 
 /**
  * Whether a pull request event that is not a close starts the job, or `undefined` for a condition
- * this does not recognise. Only the forms the shipped templates use are read: a count taken from a
- * condition that was guessed would be a figure nobody can check.
+ * this does not recognise. Only the forms the shipped templates use are read, plus a condition
+ * YAML parses as a boolean: `true` starts the job as no condition does and `false` never starts it.
+ * A count taken from a condition that was guessed would be a figure nobody can check.
  *
  * SIMPLIFIED: compares the condition text with the shipped forms instead of evaluating it.
  * Lift when: a shipped template gains a condition form, which the job-count test reports.
@@ -80,7 +81,10 @@ function jobStarts(
   job: Record<string, unknown>,
   scenario: PullRequestScenario,
 ): boolean | undefined {
-  const text = conditionText(job["if"]);
+  const condition = job["if"];
+  if (condition === undefined || typeof condition === "boolean") return condition !== false;
+  if (typeof condition !== "string") return undefined;
+  const text = conditionText(condition);
   if (text === "" || text === CLOSE_GATE || text === PUSH_POLICY_GATE) return true;
   if (text === `always() && ${CLOSE_GATE}` || text === "always()") return true;
   if (text === SCOPE_GATE || text === SCOPE_AGGREGATE) return scenario.documentsTouched;
@@ -300,12 +304,19 @@ function describeWorkflow(counts: WorkflowJobCounts): string {
   if (!counts.triggered) {
     return `${counts.file} starts no job on a pull request event: its \`on:\` does not start it on one.`;
   }
+  if (counts.laneRuns.length === 0) {
+    return `${counts.file} starts no job on a pull request event: the \`if:\` of each of its jobs is false.`;
+  }
   const idle = describeJobs(counts.idle);
   const lane = describeJobs(counts.laneRuns);
+  const idleJobs =
+    counts.idle.length === 0
+      ? "no job when nothing is to run"
+      : `${pluralJobs(totalInstances(counts.idle))} when nothing is to run (${idle})`;
   const started =
     idle === lane
       ? `${counts.file} starts ${pluralJobs(totalInstances(counts.laneRuns))} (${lane})`
-      : `${counts.file} starts ${pluralJobs(totalInstances(counts.idle))} when nothing is to run (${idle}) and up to ${totalInstances(counts.laneRuns)} when its lane runs (${lane})`;
+      : `${counts.file} starts ${idleJobs} and up to ${totalInstances(counts.laneRuns)} when its lane runs (${lane})`;
   return `${started}, with ${describeRunners(counts.laneRuns)}.`;
 }
 

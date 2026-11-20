@@ -558,6 +558,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Only the template's exact
   placeholder is now read as no carry-over. Closes #4864.
 
+- **`qfai doctor` reads a boolean job `if:` in `workflows.cost`.** YAML parses
+  `if: false` as a boolean, and the count read it as no condition, so a job
+  disabled that way was counted as starting on every pull request. A `false`
+  condition is now a job that never starts and `true` is read as no condition;
+  a workflow whose every job is `false` is reported as starting no job, and a
+  condition that is a number, a list, a mapping or empty is named as not
+  counted. Closes #4787.
+
 - **`qfai session-review --since` accepts a date with a year below 0100.** The
   calendar check read years 0000 through 0099 as 1900 through 1999, so a valid
   date such as `0099-09-09` was refused. The check now keeps the year as
