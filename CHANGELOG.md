@@ -585,6 +585,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports `QFAI-SKILLS-016` for it as a `requires:` that is not a list. An
   omitted `requires:` still counts as empty.
 
+- **An escaped pipe at the end of a table row's last cell is kept.** Every
+  table `qfai validate` reads dropped the `|` of a last cell ending in `\|`
+  and kept the backslash, so `| x | text\|` read `text\`. It now reads
+  `text|`, with or without a closing `|`. Closes #4712.
+
 - **The README's skipped-test check now names each allowed skip.** The
   example script allowed a number of skipped tests per file, so one test's
   skip could stand in for another's, and it read whatever report was on disk,
