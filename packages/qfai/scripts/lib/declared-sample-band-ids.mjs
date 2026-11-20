@@ -29,24 +29,39 @@ export function repoRootFromHere() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 }
 
-function walk(dir, visit) {
+/**
+ * Visits every file under `dir`. Only a root that is not there is an empty
+ * scan; any other listing failure, and any failure below the root, throws
+ * naming the directory, because a directory passed over would drop its
+ * declarations from every guard.
+ */
+function walk(dir, visit, isRoot = true) {
   let entries;
   try {
     entries = readdirSync(dir);
-  } catch {
-    return;
+  } catch (error) {
+    if (isRoot && isEnoent(error)) return;
+    throw new Error(
+      `cannot list contract directory ${dir}: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
   }
   for (const entry of entries) {
     const full = path.join(dir, entry);
-    if (statSync(full).isDirectory()) walk(full, visit);
+    if (statSync(full).isDirectory()) walk(full, visit, false);
     else visit(full, entry);
   }
+}
+
+function isEnoent(error) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
 
 /**
  * Declared sample-band business-rule IDs and contract names under
  * `<repoRoot>/.qfai/spec/03_contract`. Both lists are empty when that
- * directory does not exist, as in a package checked out on its own.
+ * directory does not exist, as in a package checked out on its own. A
+ * directory that exists but cannot be listed throws, naming it.
  *
  * @param {string} repoRoot
  * @returns {{ businessRules: string[]; contractNames: string[] }}
