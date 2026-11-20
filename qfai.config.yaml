@@ -3,7 +3,7 @@ paths:
   contractsDir: .qfai/spec/03_contract
   outDir: .qfai/report
   skillsDir: .qfai/assistant/skill
-  srcDir: src
+  srcDir: packages/qfai/src
   testsDir: tests
 validation:
   failOn: error
