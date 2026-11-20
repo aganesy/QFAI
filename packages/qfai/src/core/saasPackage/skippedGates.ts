@@ -58,7 +58,7 @@ export const SAAS_PACKAGE_SKIPPED_GATE_FAMILIES: Record<SaasPackageSkippedGate, 
 /** Deduped, order-preserving code families the saas-package profile skips. */
 export function saasPackageSkippedGateFamilies(): string[] {
   // A `Set` iterates in insertion order, so it both dedupes and keeps the
-  // first-seen order across the three gates.
+  // first-seen order across the skipped gates.
   return [
     ...new Set(
       SAAS_PACKAGE_SKIPPED_GATES.flatMap((gate) => SAAS_PACKAGE_SKIPPED_GATE_FAMILIES[gate]),
