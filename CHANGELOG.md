@@ -661,6 +661,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   expression that wraps a literal boolean, such as `${{ false }}`, is read as
   that boolean. Closes #4790.
 
+- **The prototyping skill names the files a `restyle` run edits outside
+  `.qfai/prototype/`.** `qfai-prototyping` said every file the loop writes stays
+  under `.qfai/prototype/` and then had a `restyle` loop edit application
+  files, so a literal reading either blocked a supported restyle or hid its
+  write scope. The folder rule now covers ordinary prototyping runs, and a
+  `restyle` run edits only the stylesheet and motion entry points its
+  `final/handoff.json` lists under `entryPoints`. Closes #4935.
+
 - **`qfai --help` lists `sdd preflight --format <text|json>` and says what
   `--fail-on never` does to a blocked preflight.** The options table left the
   preflight output formats out although the parser accepts both, and the
