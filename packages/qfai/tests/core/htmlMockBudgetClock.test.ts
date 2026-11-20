@@ -17,32 +17,51 @@
  *
  * Measured by MOCKING the module with a slow factory rather than by timing the real jsdom. A
  * stopwatch on the real thing measures the module cache: by the time this file runs another test has
- * usually loaded jsdom already, the import is free, and the row passes whatever the code does. A
- * factory that sleeps costs its time on the first import in this file's module registry, every run.
+ * usually loaded jsdom already, the import is free, and the row passes whatever the code does.
+ *
+ * And the slowness is a CONTROLLED clock, not a sleep. `performance.now` is stubbed to read a
+ * counter that only the mocked loader and parser advance, by amounts distinct enough to tell apart.
+ * A real sleep for the load still left the parse on the wall clock, so a scheduling pause on a
+ * loaded runner pushed an instant parse over the budget and failed the row although the loader was
+ * correctly excluded. Here a reading is exactly what the code under test charged to it.
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /** How long the mocked module takes to load — jsdom's own cost is ~910 ms; this is enough to see. */
 const LOAD_MS = 250;
 
-/** The budget under test: comfortably less than the load, comfortably more than the parse. */
+/** The budget under test: comfortably less than the load. */
 const BUDGET_MS = 60;
 
-vi.mock("../../src/core/uiux/htmlMockDom.js", async () => {
-  await new Promise((resolve) => setTimeout(resolve, LOAD_MS));
+/**
+ * What one parse costs on the controlled clock: just inside the budget, so a parse clock that also
+ * caught any part of the load would be over it, and above zero, so the clock is seen to move.
+ */
+const PARSE_MS = BUDGET_MS - 1;
+
+/** The controlled clock `performance.now` reads; hoisted so the mock factory below can reach it. */
+const clock = vi.hoisted(() => ({ now: 0 }));
+
+vi.mock("../../src/core/uiux/htmlMockDom.js", () => {
+  // The first import in this file's module registry costs its load, like the real one does.
+  clock.now += LOAD_MS;
   return {
     // The real module defers its DOM library until the first parse; the validator must pull that
     // load forward, ahead of the parse clock, so it is slow here too.
-    loadJsdom: () => new Promise((resolve) => setTimeout(resolve, LOAD_MS)),
-    // An empty result, so the PARSE costs nothing and the only thing that could exceed the budget
-    // is the load above. That is the whole point of the row: a parse this fast must never trip it.
-    parseHtmlMock: () =>
-      Promise.resolve({
+    loadJsdom: () => {
+      clock.now += LOAD_MS;
+      return Promise.resolve();
+    },
+    // An empty result, so the parse finds nothing; it costs PARSE_MS and nothing else, and the only
+    // thing that could exceed the budget is the load above. That is the whole point of the row.
+    parseHtmlMock: () => {
+      clock.now += PARSE_MS;
+      return Promise.resolve({
         parseErrors: [],
         externalUrls: [],
         localRefs: [],
@@ -53,7 +72,8 @@ vi.mock("../../src/core/uiux/htmlMockDom.js", async () => {
         stateAttributes: [],
         colorPairs: [],
         inlineDimensions: [],
-      }),
+      });
+    },
   };
 });
 
@@ -63,7 +83,13 @@ import type { QfaiConfig } from "../../src/core/config.js";
 
 const dirs: string[] = [];
 
+beforeEach(() => {
+  clock.now = 1000;
+  vi.spyOn(performance, "now").mockImplementation(() => clock.now);
+});
+
 afterEach(async () => {
+  vi.restoreAllMocks();
   while (dirs.length > 0) {
     const dir = dirs.pop();
     if (dir) await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
@@ -125,7 +151,8 @@ describe("the mock budget measures parsing, not the parser's load", () => {
     const timing: HtmlMockTiming = { parseMs: -1, loadMs: -1 };
     await validateHtmlMock(await treeWithOneMock(), "web", config(), timing);
 
-    // Timers may fire a millisecond early, so the bound is a little under the sleep.
+    // The load is charged in full, and more on this file's first import, which also runs the
+    // module factory; the bound only asks for at least the load.
     expect(timing.loadMs).toBeGreaterThanOrEqual(LOAD_MS - 10);
   });
 
