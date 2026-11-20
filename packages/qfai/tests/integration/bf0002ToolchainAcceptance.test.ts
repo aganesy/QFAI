@@ -41,6 +41,7 @@ import {
   workflowJobs,
 } from "../helpers/spec0017WorkflowSurfaces.js";
 import {
+  expectWindowsPreflightRefusal,
   FULL_FLOW_TITLE,
   namedFixture,
   namedGit,
@@ -2067,14 +2068,14 @@ describe("the optional Windows full-suite acceptance", () => {
     const fixture = namedFixture();
     try {
       expect(runWindowsPreflight(fixture).status).toBe(0);
-      expect(runWindowsPreflight(fixture, { PR_NUMBER: "" }).status).not.toBe(0);
-      expect(runWindowsPreflight(fixture, { EXPECTED_SHA: "short" }).status).not.toBe(0);
+      expectWindowsPreflightRefusal(runWindowsPreflight(fixture, { PR_NUMBER: "" }));
+      expectWindowsPreflightRefusal(runWindowsPreflight(fixture, { EXPECTED_SHA: "short" }));
       namedGit(fixture.root, "commit", "--allow-empty", "-m", "Advanced live fixture head");
       namedGit(fixture.root, "push", "origin", "HEAD:refs/pull/37/head");
       namedGit(fixture.root, "checkout", "--detach", fixture.sha);
-      expect(runWindowsPreflight(fixture).status).not.toBe(0);
+      expectWindowsPreflightRefusal(runWindowsPreflight(fixture));
       namedGit(fixture.root, "remote", "remove", "origin");
-      expect(runWindowsPreflight(fixture).status).not.toBe(0);
+      expectWindowsPreflightRefusal(runWindowsPreflight(fixture));
     } finally {
       await removeTempTree(fixture.root);
     }
@@ -2118,7 +2119,7 @@ describe("the optional Windows full-suite acceptance", () => {
         { DISPATCH_REF: "refs/heads/topic" },
       ];
       for (const changes of invalidRequests) {
-        expect(runWindowsPreflight(fixture, changes).status).not.toBe(0);
+        expectWindowsPreflightRefusal(runWindowsPreflight(fixture, changes));
       }
     } finally {
       await removeTempTree(fixture.root);

@@ -86,6 +86,7 @@ import {
   recordedCutoff,
 } from "../../../../scripts/check-release-notes.mjs";
 import {
+  expectWindowsPreflightRefusal,
   FULL_FLOW_TITLE,
   namedFixture,
   namedGit,
@@ -5353,7 +5354,7 @@ describe("the Windows diagnostic's actual Node programs", () => {
   it.each(invalidRequests)("refuses invalid identity or a non-default dispatch: %j", (changes) => {
     const fixture = namedFixture();
     try {
-      expect(runWindowsPreflight(fixture, changes).status).not.toBe(0);
+      expectWindowsPreflightRefusal(runWindowsPreflight(fixture, changes));
     } finally {
       rmSync(fixture.root, { recursive: true, force: true });
     }
@@ -5379,9 +5380,7 @@ describe("the Windows diagnostic's actual Node programs", () => {
             namedGit(fixture.root, "checkout", "--detach", fixture.sha);
           }
         }
-        const result = runWindowsPreflight(fixture);
-        expect(result.status).not.toBe(0);
-        expect(result.stderr).toContain("identity is invalid, changed or unavailable");
+        expectWindowsPreflightRefusal(runWindowsPreflight(fixture));
       } finally {
         rmSync(fixture.root, { recursive: true, force: true });
       }
