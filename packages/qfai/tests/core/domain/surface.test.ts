@@ -4,6 +4,8 @@ import {
   CANONICAL_PROTOTYPING_SURFACES,
   assertCanonicalPrototypingSurface,
   isCanonicalPrototypingSurface,
+  isDiscussionUiBearingPrototypingSurface,
+  requiresVisualBrowserEvidenceSurface,
 } from "../../../src/core/domain/surface.js";
 
 describe("canonical prototyping surfaces", () => {
@@ -20,5 +22,19 @@ describe("canonical prototyping surfaces", () => {
       expect(isCanonicalPrototypingSurface(surface)).toBe(false);
       expect(() => assertCanonicalPrototypingSurface(surface)).toThrow();
     }
+  });
+
+  it("treats every canonical surface as discussion UI-bearing", () => {
+    const uiBearing = CANONICAL_PROTOTYPING_SURFACES.filter((surface) =>
+      isDiscussionUiBearingPrototypingSurface(surface),
+    );
+    expect(uiBearing).toEqual([...CANONICAL_PROTOTYPING_SURFACES]);
+  });
+
+  it("requires visual/browser evidence for every canonical surface except cli", () => {
+    const visual = CANONICAL_PROTOTYPING_SURFACES.filter((surface) =>
+      requiresVisualBrowserEvidenceSurface(surface),
+    );
+    expect(visual).toEqual(["web", "mobile", "desktop", "mixed"]);
   });
 });
