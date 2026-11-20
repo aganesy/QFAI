@@ -25,19 +25,43 @@ the README called it internal and not a stable contract, and no shipped file
 named a single key — so an agent looking for the findings array guessed
 `findings` and got `undefined` from a file whose array is `issues`.
 
+## Contents
+
+- Top level
+- `issues[]`
+- What is stable, and what is not
+- Reading it
+- Related
+
 ## Top level
 
-| key           | type                       | notes                                                         |
-| ------------- | -------------------------- | ------------------------------------------------------------- |
-| `toolVersion` | `string`                   | the qfai that produced the run                                |
-| `generatedAt` | `string?`                  | ISO-8601. Absent from a file written before the field existed |
-| `profile`     | `string?`                  | the `--profile` the run used; `full` for the default          |
-| `issues`      | `Issue[]`                  | **the findings array. It is `issues`, not `findings`**        |
-| `counts`      | `{ info, warning, error }` | all three always present, all numbers                         |
-| `waivers`     | object?                    | present only when `.qfai/waivers.yml` was read                |
+| key                    | type                       | notes                                                         |
+| ---------------------- | -------------------------- | ------------------------------------------------------------- |
+| `toolVersion`          | `string`                   | the qfai that produced the run                                |
+| `generatedAt`          | `string?`                  | ISO-8601. Absent from a file written before the field existed |
+| `profile`              | `string?`                  | the `--profile` the run used; `full` for the default          |
+| `profileValidatorsRan` | `boolean?`                 | whether the profile's own validators ran; see below           |
+| `issues`               | `Issue[]`                  | **the findings array. It is `issues`, not `findings`**        |
+| `counts`               | `{ info, warning, error }` | all three always present, all numbers                         |
+| `waivers`              | object?                    | present only when `.qfai/waivers.yml` was read                |
 
 `counts` is what `--fail-on` compares, so it is the field to read for a pass/fail
 decision. It is derived from `issues` and cannot disagree with it.
+
+`profileValidatorsRan` says whether `issues` can describe the profile's gates:
+
+- `true`: the profile's own validators ran, and `issues` holds what they found.
+- `false`: they did not run. The run stopped first, at a story tree in the old
+  layout (`QFAI-LAYOUT-001`) or at a path those validators walk that cannot be
+  walked (`QFAI-LINK-001`), and `issues` holds only what the run found before
+  it stopped. No error for a gate of the profile is not a pass for that gate:
+  repair what the findings name and run again.
+- absent: the file makes no claim either way. A file written by a qfai from
+  before the field existed does not carry it, nor does a run that could not
+  finish. That run reports a `QFAI-SCAN-002` error and fails under every
+  `--fail-on` except `never`; under `never` it still exits 0, so read its
+  result as incomplete whatever the exit code. Read absence as "not known",
+  not as `true`.
 
 BF, AC, and EX test obligations appear in `issues` as `QFAI-STORY-006` through
 `QFAI-STORY-009` findings. There is no separate traceability summary field.

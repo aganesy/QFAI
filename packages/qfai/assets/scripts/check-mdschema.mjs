@@ -331,8 +331,9 @@ export function configuredPaths(root) {
 /**
  * Reads the manifest's `documents:` list.
  *
- * The manifest is a fixed two-key-per-entry shape authored in this repository,
- * so a line scanner reads it.
+ * The manifest is a fixed shape authored in this repository, so a line scanner
+ * reads it: each entry has the three keys `id`, `schema` and `pattern`, and an
+ * entry missing any of them is left out of the result.
  *
  * @returns {{ id: string, schema: string, pattern: string }[]}
  */
@@ -1179,7 +1180,7 @@ function documentUniverse(root, paths) {
 /**
  * Whether a finding names the pattern that failed, as `mdschema` prints it,
  * rather than the rule the pattern enforces. Set by `--show-patterns`, for the
- * author of a schema.
+ * author of a schema, for the one {@link main} run that parsed it.
  */
 let showPatterns = false;
 
@@ -2007,7 +2008,25 @@ function parseArgs(argv) {
   };
 }
 
+/**
+ * Runs the lane over `process.argv` and returns its exit code.
+ *
+ * `--show-patterns` sets {@link showPatterns} for this run only: the setting
+ * held before the run is restored when it returns or throws, so a later run or
+ * `checkDocuments` call in the same process reports what it asked for.
+ *
+ * @returns {number}
+ */
 export function main() {
+  const before = showPatterns;
+  try {
+    return runLane();
+  } finally {
+    showPatterns = before;
+  }
+}
+
+function runLane() {
   const options = parseArgs(process.argv.slice(2));
   if (typeof options === "number") {
     return options;

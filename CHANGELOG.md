@@ -571,6 +571,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   notice naming the files only `--force` brings up to date. It is now
   compared like a file that was already there. Closes #4703.
 
+- **`--show-patterns` on the shipped document-schema checker now applies to
+  the run that asked for it only.** A run with the flag left it set for the
+  rest of the process, so a later run, or a `qfai validate` document-schema
+  check in the same process, printed raw patterns it never asked for. Each
+  run now restores the setting it started with. Closes #4726.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that
@@ -667,6 +673,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the new script stop with an error at the first skip in that file, so rewrite
   each count as the names of the tests it covered.
 
+- **The Mermaid check now fails on a directory it cannot read.** The shipped
+  `check-mermaid.mjs` passed over any directory it could not list, so a tree
+  it never read could report "no Mermaid diagrams found" and exit 0. It now
+  exits 2 and names the directory, as it already did for an unreadable file. A
+  directory removed while the check runs is still passed over. Closes #4717.
+
 - **`qfai atdd scaffold` reads vitest only from a script that runs it.**
   A `package.json` script that only named `vitest` as an argument, such as
   `echo vitest`, made the command write a vitest skeleton for a project that
@@ -735,6 +747,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reported an unterminated string or split a statement at a `;` inside the
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
+
+- **The `validate.json` guide documents `profileValidatorsRan`.** The key is
+  in every result of a `qfai validate` run that finishes, but the guide to
+  the file did not name it, so a consumer could read a run that stopped
+  before the profile's checks as a clean pass. The guide now says that `false` means those checks
+  did not run, and that an absent key, from an older qfai or a run that could
+  not finish, means "not known" rather than `true`.
 
 - **The package self-governance checks report an input they cannot read.**
   `QFAI-MANIFEST-001` and `QFAI-HANDOFF-001` skipped a source file that was
