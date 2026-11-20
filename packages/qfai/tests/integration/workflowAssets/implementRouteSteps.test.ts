@@ -101,7 +101,10 @@ describe("the steps the routes add to qfai-implement", () => {
   it("states each step's own obligation", async () => {
     const bisect = flat(await stepText("implement-bisect"));
     expect(bisect).toMatch(/report `branch: \{ outcome: "revert" \}` when all three hold/i);
-    expect(bisect).toMatch(/run `git bisect reset`/i);
+    expect(bisect).toMatch(/run `git bisect reset` on every exit path/i);
+    expect(bisect).toMatch(/start the session with `git bisect start <bad> <good>`/i);
+    expect(bisect).toMatch(/125 when the revision cannot be built or started/i);
+    expect(bisect).toMatch(/report the result as inconclusive with the candidate set/i);
 
     const refactor = flat(await stepText("implement-refactor"));
     expect(refactor).toMatch(/adds no example and runs no RED/i);

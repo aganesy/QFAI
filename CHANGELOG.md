@@ -583,6 +583,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   declaration list's `const` flag, so a `let`, `var` or `using` binding is not
   listed however it is exported.
 
+- **The bisection step starts the session and skips untestable revisions.**
+  `implement-bisect` told the agent to run `git bisect run` between two
+  revisions, though that command takes only the test command and cannot start
+  the session, and a build failure in the command counted as a bad revision.
+  The step now starts with `git bisect start <bad> <good>`, has the runner
+  script exit 125 for a revision that cannot be built or started, runs
+  `git bisect reset` on every exit path, and reports an inconclusive candidate
+  set when skipped revisions prevent naming one change.
+
 - **The policy check no longer asks a question under `--auto`.** When policy
   information could not be verified, the policy check in
   `.qfai/assistant/rule/workflow.md` told the agent to ask the user in every
