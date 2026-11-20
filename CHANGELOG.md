@@ -598,6 +598,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The `schemaVersion` pass now reads each file as a whole and names every file
   that holds the field.
 
+- **`qfai session-review` reads each item of a mixed Codex message by its own
+  kind** (#4833). A user message holding typed text beside an injected
+  instruction counted both as one typed turn, so the instruction's words could
+  show as a correction, and a developer message with one hook item recorded
+  every item as hook context. Each content item now counts only under the kind
+  declared at its own index.
+
 - **`qfai doctor --profile prototyping` probes Playwright from the inspected
   project** (#4765). The launcher probe ran in the directory doctor was started
   from, so with `--root` naming another checkout, `npx` looked for Playwright

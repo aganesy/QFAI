@@ -344,6 +344,37 @@ describe("what a Codex rollout shows", () => {
     expect(signals.typedTurns).toBe(2);
     expect(signals.corrections).toEqual([{ turn: 2, words: ["revert", "stop"] }]);
   });
+
+  it("reads each content item of a mixed message by the kind declared at its own index", () => {
+    const events = emptyEvents();
+    const message = (role: string, texts: string[], kinds: unknown[]) =>
+      readCodexRecord(
+        {
+          type: "response_item",
+          payload: {
+            type: "message",
+            role,
+            content: texts.map((text) => ({ type: "input_text", text })),
+            internal_chat_message_metadata_passthrough: { content_item_kinds: kinds },
+          },
+        },
+        events,
+      );
+    message(
+      "user",
+      ["Run the checks.", "Stop, revert that."],
+      ["user.text", "generic.developer_instructions"],
+    );
+    message(
+      "developer",
+      ["QFAI API budget (.agents/rules/api-budget.md).", "Project instructions."],
+      ["hooks.additional_context", "generic.developer_instructions"],
+    );
+    // A kind that is no string still holds its index, so the next item keeps its own kind.
+    message("user", ["Ignored.", "Go on."], [null, "user.text"]);
+    expect(events.userTurns).toEqual(["Run the checks.", "Go on."]);
+    expect(events.hookContexts).toEqual(["QFAI API budget (.agents/rules/api-budget.md)."]);
+  });
 });
 
 // QFAI:EX-0001-0294-09
