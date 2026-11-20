@@ -232,8 +232,10 @@ export async function graphCorpusChanged(
 }
 
 /**
- * In `write` mode, mirrors the corpus into `destination` and returns false. In `compare` mode it
- * writes nothing and returns true at the first entry a mirror would add, replace or remove.
+ * In `write` mode, mirrors the corpus into `destination` and returns false; a file whose bytes
+ * already match its source is left untouched, so a repeated mirror of an unchanged corpus writes
+ * nothing. In `compare` mode it writes nothing and returns true at the first entry a mirror would
+ * add, replace or remove.
  */
 async function walkGraphCorpus(
   root: string,
@@ -278,15 +280,15 @@ async function walkGraphCorpus(
         const source = path.join(root, ...next.split("/"));
         const stats = await lstat(source);
         if (!stats.isFile() || stats.nlink > 1) continue;
+        files.add(next);
+        if (await sameFile(source, target)) continue;
         if (mode === "compare") {
-          if (!(await sameFile(source, target))) changed = true;
-          files.add(next);
+          changed = true;
           continue;
         }
         await replaceOtherEntryType(target, false);
         await mkdir(path.dirname(target), { recursive: true });
         await copyFile(source, target);
-        files.add(next);
       }
     }
   }

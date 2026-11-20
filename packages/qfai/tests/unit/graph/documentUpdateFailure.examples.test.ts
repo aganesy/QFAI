@@ -61,7 +61,9 @@ it("retains prior document graph when the selected local backend cannot update c
       status: "failed",
       failure: "Graphify analysis preparation failed.",
     });
-    expect(managed.output).toContain("selected local model");
+    expect(managed.output).toContain(
+      "selected ollama backend and model selected-local-model at http://127.0.0.1:11434",
+    );
     expect(managed.output).toContain("repair Graphify document analysis");
     expect(managed.failures).toBe(1);
     expect(

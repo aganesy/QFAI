@@ -243,6 +243,42 @@ it("requires human approval of the exact external destination and document scope
   }
 });
 
+// Mutation: packages/qfai/src/core/graph/documents.ts `${processing.model} at ${selected.origin}` -> `${processing.model}` fails "names the selected external backend, model and service when document extraction fails"
+it("names the selected external backend, model and service when document extraction fails", async () => {
+  const fixture = await documentAnalysisFixture();
+  const previousKey = process.env.QFAI_TEST_SELECTED_KEY;
+  try {
+    process.env.QFAI_TEST_SELECTED_KEY = "fixture-selected-key";
+    await writeFile(
+      path.join(fixture.root, ".qfai", "graph-processing.json"),
+      JSON.stringify({
+        backend: "openai",
+        model: "selected-external-model",
+        endpoint: "https://selected.example.invalid/v1",
+        scope: ["rationale.md"],
+        credentialEnv: "QFAI_TEST_SELECTED_KEY",
+      }),
+    );
+    const extraction = graphifyExtractionFixture(fixture);
+    const run: GraphProcess = (command, args, options) =>
+      args.includes("extract")
+        ? Promise.resolve({ exitCode: 1, stdout: "" })
+        : extraction(command, args, options);
+    const result = await prepareDocumentAnalysis(fixture.root, run, () => Promise.resolve(true));
+    expect(result).toEqual({
+      status: "failed",
+      recovery:
+        "Check the selected openai backend and model selected-external-model at https://selected.example.invalid, then repair Graphify document analysis.",
+    });
+    expect(JSON.stringify(result)).not.toContain("local");
+    expect(JSON.stringify(result)).not.toContain("fixture-selected-key");
+  } finally {
+    if (previousKey === undefined) delete process.env.QFAI_TEST_SELECTED_KEY;
+    else process.env.QFAI_TEST_SELECTED_KEY = previousKey;
+    await fixture.dispose();
+  }
+});
+
 // QFAI:EX-0001-0234-25
 // Mutation: packages/qfai/src/core/graph/documents.ts `if (backend === "openai" && !credential) {` -> `if (false) {` fails "requires a named credential for an openai backend before extraction"
 it("requires a named credential for an openai backend before extraction", async () => {
