@@ -644,6 +644,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `git bisect reset` on every exit path, and reports an inconclusive candidate
   set when skipped revisions prevent naming one change.
 
+- **`qfai session-review` reads Codex rollouts only from date directories.**
+  Discovery descended into every directory three levels under `sessions`, so a
+  rollout copied to `sessions/backup/old/copy` was reported as another session
+  and could become the default when the copy was newest. Only
+  `sessions/YYYY/MM/DD/` directories naming a day the calendar has are now
+  read, and a matching name that is not a regular file is skipped before it is
+  opened.
+
 - **The policy check no longer asks a question under `--auto`.** When policy
   information could not be verified, the policy check in
   `.qfai/assistant/rule/workflow.md` told the agent to ask the user in every
