@@ -35,7 +35,11 @@ import {
   readWorkflowMode,
   resolvePath,
 } from "../../core/config.js";
-import { CONTRACT_KIND_DIRS, hasLegacySpecPackEntries } from "../../core/storyTree/layout.js";
+import {
+  CONTRACT_KIND_DIRS,
+  hasLegacySpecPackEntries,
+  STORY_SEED_PATHS,
+} from "../../core/storyTree/layout.js";
 import { deriveTestFileGlobs, withDerivedTestFileGlobs } from "../../core/testGlobDerivation.js";
 import {
   CODEX_AGENT_WRAPPER_DIR,
@@ -138,19 +142,6 @@ const AGENT_RESTART_NOTE =
  */
 const CLAUDE_MD_NOTE =
   "If this project has a CLAUDE.md or CLAUDE.local.md, add the line @AGENTS.md to it: Claude Code reads that file instead of AGENTS.md, and qfai init does not write either.";
-
-const STORY_SEED_PATHS = [
-  "decisions.md",
-  "open-questions.md",
-  "01_policy/objective.md",
-  "01_policy/initiative.md",
-  "01_policy/principle.md",
-  "01_policy/glossary.md",
-  "01_policy/constraint.md",
-  "02_business-flow/business-flows.md",
-  "03_contract/contracts.md",
-  "03_contract/tech.md",
-] as const;
 
 async function legacySpecLayoutPath(root: string): Promise<string | undefined> {
   const { config } = await loadConfig(root);

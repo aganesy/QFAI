@@ -4,29 +4,7 @@ import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { isEnoent } from "../fs/errno.js";
 import { resolvePath, type QfaiConfig } from "../config.js";
-
-const SEED_FILES = [
-  "decisions.md",
-  "open-questions.md",
-  "01_policy/objective.md",
-  "01_policy/initiative.md",
-  "01_policy/principle.md",
-  "01_policy/glossary.md",
-  "01_policy/constraint.md",
-  "02_business-flow/business-flows.md",
-  "03_contract/contracts.md",
-  "03_contract/tech.md",
-] as const;
-
-const SEED_DIRS = [
-  "01_policy",
-  "02_business-flow",
-  "03_contract",
-  "03_contract/api",
-  "03_contract/db",
-  "03_contract/ui",
-  "03_contract/cli",
-] as const;
+import { STORY_SEED_DIRS, STORY_SEED_PATHS } from "./layout.js";
 
 /** True only while the story tree still has exactly the files written by init. */
 export async function isPristineStorySeed(root: string, config: QfaiConfig): Promise<boolean> {
@@ -46,8 +24,8 @@ export async function isPristineStorySeed(root: string, config: QfaiConfig): Pro
       "templates",
       "spec",
     );
-    const expectedDirs = new Set<string>(["", ...SEED_DIRS]);
-    const expectedFiles = new Set<string>(SEED_FILES);
+    const expectedDirs = new Set<string>(["", ...STORY_SEED_DIRS]);
+    const expectedFiles = new Set<string>(STORY_SEED_PATHS);
     for (const relativeDir of expectedDirs) {
       const dir = path.join(specDir, relativeDir);
       // A seed directory holding no file is absent from a clone. A missing one
@@ -63,7 +41,7 @@ export async function isPristineStorySeed(root: string, config: QfaiConfig): Pro
         return false;
       }
     }
-    for (const relative of SEED_FILES) {
+    for (const relative of STORY_SEED_PATHS) {
       const [actual, template] = await Promise.all([
         readFile(path.join(specDir, relative)),
         readFile(path.join(templateDir, relative)),
