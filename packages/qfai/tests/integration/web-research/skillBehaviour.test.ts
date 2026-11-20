@@ -424,7 +424,7 @@ describe("web-research skill behaviour", () => {
     const text = flatten(section);
     // An accessibility attribute alone never removes rendered content.
     expect(text).toContain(
-      'Removal follows rendered visibility: a rendered `aria-hidden` element stays.',
+      "Removal follows rendered visibility: a rendered `aria-hidden` element stays.",
     );
     expect(text).toContain("Legitimate visible content is preserved unchanged by the sanitizer.");
     expect(text).toContain(

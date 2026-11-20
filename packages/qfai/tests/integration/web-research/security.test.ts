@@ -52,7 +52,7 @@ describe("web-research security", () => {
   it("rendered aria-hidden content is kept", async () => {
     const content = await readSkill();
     expect(content).toContain(
-      'Removal follows rendered visibility: a rendered `aria-hidden` element stays.',
+      "Removal follows rendered visibility: a rendered `aria-hidden` element stays.",
     );
   });
 

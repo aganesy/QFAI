@@ -109,9 +109,7 @@ describe("web-research pipeline", () => {
   // QFAI:EX-0001-0176-08
   it("keys a response with neither ETag nor Last-Modified by the hash of its fetched bytes", async () => {
     const content = await readSkill();
-    expect(content).toContain(
-      "with neither header, the hash of the fetched bytes.",
-    );
+    expect(content).toContain("with neither header, the hash of the fetched bytes.");
     expect(content).toContain("URL, validator and fetch time stay as lookup metadata.");
   });
 
