@@ -459,6 +459,15 @@ export function isTableSeparator(line: string): boolean {
   return cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
 
+/**
+ * Strip the outer delimiters of a row. A trailing `|` that a backslash
+ * precedes is the escaped literal ending the last cell, not a delimiter, so it
+ * stays for the decoder.
+ */
 function trimEdgePipes(value: string): string {
-  return value.replace(/^\|+/, "").replace(/\|+$/, "");
+  let inner = value.replace(/^\|+/, "");
+  while (inner.endsWith("|") && !inner.endsWith("\\|")) {
+    inner = inner.slice(0, -1);
+  }
+  return inner;
 }
