@@ -929,7 +929,7 @@ function formatChoicesFor(command: string | null): string {
   if (command === "validate") {
     return "text|github";
   }
-  if (command === "doctor") {
+  if (command === "doctor" || command === "db-drift") {
     return "text|json";
   }
   if (command === "session-review") {
