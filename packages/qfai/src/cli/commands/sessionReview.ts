@@ -60,16 +60,25 @@ export async function runSessionReview(options: SessionReviewOptions): Promise<n
         : {}),
       ...(env.codexHome !== undefined ? { codexHome: path.resolve(env.codexHome) } : {}),
     });
+  const say = (text: string): string => oneLine(clean(text));
   try {
-    return await review(root, env, options, clean);
+    return await review(root, env, options, clean, say);
   } catch (cause) {
     // A transcript, the reminder file or the --out file that is there but cannot be read or
     // written ends the run; the message names its path only as the report would.
     if (!(cause instanceof Error)) throw cause;
     if (!(cause instanceof ReminderFileError) && !isFileSystemError(cause)) throw cause;
-    error(`qfai session-review: ${clean(cause.message)}`);
+    error(say(`qfai session-review: ${cause.message}`));
     return EXIT_CODES.findings;
   }
+}
+
+/**
+ * A diagnostic on one output line: a line break in a path or a session ID, kept by redaction,
+ * would otherwise start a line of its own.
+ */
+function oneLine(text: string): string {
+  return text.replace(/[\r\n\v\f\u0085\u2028\u2029]+/g, " ");
 }
 
 /** The project file that maps each reminder text to its key. */
@@ -83,6 +92,7 @@ async function review(
   env: LocateEnvironment,
   options: SessionReviewOptions,
   clean: (text: string) => string,
+  say: (text: string) => string,
 ): Promise<number> {
   const agents: Agent[] =
     options.agent === undefined || options.agent === "all" ? ["claude", "codex"] : [options.agent];
@@ -90,7 +100,7 @@ async function review(
   const chosen = choose(located, options);
   if (chosen === null) {
     error(
-      clean(
+      say(
         `qfai session-review: no transcript of session ${options.sessionId ?? ""} belongs to this project.`,
       ),
     );
@@ -128,7 +138,7 @@ async function review(
   const out = path.resolve(root, options.outPath);
   await mkdir(path.dirname(out), { recursive: true });
   await writeFile(out, rendered, "utf-8");
-  info(clean(`qfai session-review: wrote ${path.relative(root, out).split(path.sep).join("/")}`));
+  info(say(`qfai session-review: wrote ${path.relative(root, out).split(path.sep).join("/")}`));
   return EXIT_CODES.ok;
 }
 
