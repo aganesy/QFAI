@@ -21,8 +21,9 @@
  * for every project, so no future test has to remember.
  *
  * **Suppressed, not silenced.** The line is dropped from the runner's stdout
- * and counted, and the count is printed on exit as ordinary text. A filter
- * nobody can see is the next version of this defect.
+ * and counted, and each drop is reported on stderr as it happens: the first
+ * three in full, then a running count at every twentieth. A filter nobody can
+ * see is the next version of this defect.
  *
  * A `vi.spyOn(process.stdout, "write")` in a test replaces this wrapper for the
  * duration, so a test that ASSERTS on the emitted command still sees it — the
@@ -81,7 +82,13 @@ process.stdout.write = ((...args: WriteArgs): boolean => {
     }
     return true;
   }
-  return originalWrite(rebuilt);
+  // Only the chunk changes: the caller's encoding and completion callback go
+  // through as given, or code awaiting the flush waits forever. The chunk keeps
+  // its type, so a byte chunk stays bytes and an encoding argument beside it
+  // stays as inert as it was.
+  const [, ...rest] = args;
+  const replaced = typeof chunk === "string" ? rebuilt : Buffer.from(rebuilt, "utf-8");
+  return originalWrite(...([replaced, ...rest] as WriteArgs));
 }) as typeof process.stdout.write;
 
 // A marker the probe row reads: "the wrapper is installed" has to be
