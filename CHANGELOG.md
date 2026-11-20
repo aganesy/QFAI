@@ -631,6 +631,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   policy still applies, so a host that blocks scripts still reports the shim as
   not runnable.
 
+- **The `resolve-conflicts` route always leaves a merge for `verify-commit` to
+  conclude.** On a branch the base could fast-forward, `git merge --no-commit
+  <base>` moved the branch to the base and left no merge in progress, so
+  `verify-commit` had nothing to conclude or undo. The `maintain-edit` step now
+  starts the merge with `git merge --no-ff --no-commit <base>`. When git reports
+  `Already up to date.` and leaves no `MERGE_HEAD`, the branch already holds the
+  base: the step stops, reports the base as already merged and edits nothing.
+
 - **The `resolve-conflicts` route resumes a merge of the same base instead of
   starting a second one.** A branch still resolving an earlier merge of the
   base has `MERGE_HEAD`, so running `git merge --no-commit <base>` again failed
