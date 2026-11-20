@@ -801,13 +801,21 @@ jobs:
             console.log(`release notes: ${body.length} characters, within the limit`);
             process.exit(0);
           }
-          const footer =
+          // The footer records how many entries the cut kept, so the drift check
+          // (`scripts/check-release-notes.mjs`) can hold the body to exactly that many
+          // of the section's first entries, in order. Read from the body instead, a body
+          // cut down to its footer alone would cover nothing and so be missing nothing.
+          // SHIPPED-CI: not-applicable
+          // Because: the shipped templates carry no release workflow and no release-notes drift check.
+          const footerFor = (kept) =>
             "\n\n---\n\n**These notes are not the whole section.**\n\n" +
             `The \`[${version}]\` section of \`CHANGELOG.md\` runs to ${body.length} characters, ` +
             `past the ${LIMIT}-character limit on a release body. What is above is that same ` +
-            "section in document order, stopped at an entry boundary.\n\n" +
+            "section in document order, stopped at an entry boundary after its first " +
+            `${kept} ${kept === 1 ? "entry" : "entries"}.\n\n` +
             `Full section: https://github.com/${process.env.GITHUB_REPOSITORY}/blob/v${version}/CHANGELOG.md\n`;
-          const budget = LIMIT - footer.length - 200;
+          // Sized for the widest count the body could need: it has no more entries than lines.
+          const budget = LIMIT - footerFor(body.split("\n").length).length - 200;
           // An entry boundary, so the notes never end mid-sentence. A heading boundary was tried
           // first and kept a quarter of the section: the headings are few and the bodies between
           // them are enormous.
@@ -815,7 +823,22 @@ jobs:
           if (cut < 0) cut = body.lastIndexOf("\n- ", budget);
           if (cut < 0) cut = body.lastIndexOf("\n### ", budget);
           if (cut < 0) cut = budget;
-          writeFileSync(path, body.slice(0, cut).replace(/\n+$/, "") + footer, "utf8");
+          const notes = body.slice(0, cut).replace(/\n+$/, "");
+          // Counted the way the drift check reads entries: a top-level `- ` bullet's own
+          // line, outside a fenced block, which closes on its own character and at least
+          // its own length.
+          let kept = 0;
+          let fence = null;
+          for (const line of notes.split(/\r?\n/)) {
+            const run = /^\s{0,3}(`{3,}|~{3,})/.exec(line);
+            if (run !== null) {
+              if (fence === null) fence = run[1];
+              else if (run[1][0] === fence[0] && run[1].length >= fence.length) fence = null;
+              continue;
+            }
+            if (fence === null && /^-[ \t]+\S/.test(line)) kept += 1;
+          }
+          writeFileSync(path, notes + footerFor(kept), "utf8");
           console.log(
             `release notes: capped at ${cut} of ${body.length} characters ` +
               `(${Math.round((100 * cut) / body.length)}% of the section), with a link to the rest`,
@@ -1067,16 +1090,16 @@ jobs:
       # resolves to. What may build is named in the allow-list beside the composite action.
       - run: pnpm install --frozen-lockfile --ignore-scripts --ignore-pnpmfile
       - name: Build the dependencies permitted to run install scripts
+        # The verifier reads the allow-list first and refuses, with its own diagnostic, when it
+        # cannot, so a missing list never reaches the rebuild loop below.
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped templates have no release workflow.
         run: |
           set -euo pipefail
           list=".ci-actions/.github/actions/setup/dependency-builds.txt"
           # Where each permitted package comes from, before any of it runs. A name on the list
           # is a permission for that package, not for whatever the lockfile points the name at.
           node ".ci-actions/.github/actions/setup/verify-rebuild-sources.mjs" pnpm-lock.yaml "${list}"
-          if [ ! -f "${list}" ]; then
-            echo "::error::${list} is missing, so which dependencies may run install scripts is decided by nothing. Installation ran with --ignore-scripts; this step refuses rather than guessing."
-            exit 1
-          fi
           names=0
           while IFS= read -r name || [ -n "${name}" ]; do
             case "${name}" in "" | "#"*) continue ;; esac
@@ -1186,11 +1209,9 @@ jobs:
         # explicitly rather than relying on the documented default, because the
         # attestation is the point of publishing this way and a silent default
         # change would remove it without failing anything.
-        env:
-          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
-        # `./` is load-bearing. Without it npm reads `tmp/qfai-1.10.0.tgz` as the
-        # `owner/repo` GitHub shorthand and fails with EALLOWGIT, refusing to
-        # fetch "github:tmp/qfai-1.10.0.tgz" — a path that looks like a spec.
+        #
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped templates have no release workflow.
         run: npm publish --access public --provenance --ignore-scripts
         working-directory: tmp/packed/package
         shell: bash

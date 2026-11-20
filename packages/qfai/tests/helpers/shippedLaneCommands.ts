@@ -1249,9 +1249,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "bf3fe4f9816f8b3d4b5fe5173afd0decf0dd2ce4cf9fe6d0e30026dc0b7ed021"],
-  ["qfai-tests.yml", "d1d5ed3e34853884d6df58220b7cbde658e0fe74ae0cebdf6ce94c52b9389fb8"],
-  ["qfai-validate.yml", "d6a3d5d691f777509066a9be2c844f51dff4b242d2ae40cbb29f5fb1739ecb3b"],
+  ["qfai-docs.yml", "698f93291a942562a5449dd4cead0cfa0e6111f13b7bd7b6b0de6af098b20cfa"],
+  ["qfai-tests.yml", "a5367dce9a0a9c8e093b40ac407397ad2ea4379fd6f3b489edb359368f61651f"],
+  ["qfai-validate.yml", "b7edb0a89723c10822fba833a659a502eb8a3297559f97610d355f51e823b468"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -2126,7 +2126,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"Require every document check to succeed","env":{"CHECK_RESULT":"${{ needs.checks.result }}","DOCS_SCOPE":"${{ needs.scope.outputs.run }}"},"shell":"bash","run":"<body f871286b4f3baaadb4d3881e59b5a8ba212a79083202654ae20a054c303b0e86>"}',
+    '{"name":"Require every document check to succeed","env":{"CHECK_RESULT":"${{ needs.checks.result }}"},"shell":"bash","run":"<body 8e8c3a23f87d1f0cbe19cf75d718fee8047e478cd11a4cc88a581a7696666c8a>"}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -2178,7 +2178,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#verdict",
-    '{"name":"Report the test lane\'s conclusion","env":{"QFAI_TESTS_RESULT":"${{ needs.tests.result }}","QFAI_SELECTED":"${{ needs.detection.outputs.selected }}"},"shell":"bash","run":"<body 54317e3ede3b9bddf8e36d16e3ea324b3fb8ccea95ab294553988ee4fc366df7>"}',
+    '{"name":"Report the test lane\'s conclusion","env":{"QFAI_TESTS_RESULT":"${{ needs.tests.result }}"},"shell":"bash","run":"<body b8ceb3b1b4e52b8a0109473b71d061d71b1869c75e819741a3cb62b9120322d5>"}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -2523,10 +2523,6 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
  */
 export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   ["CHECK_RESULT", "${{ needs.checks.result }}"],
-  // Whether the document lane's scope job found a change a document check reads. The aggregate
-  // needs it to tell a skip it asked for from a skip it did not, and its value is one of two
-  // literals the scope body writes.
-  ["DOCS_SCOPE", "${{ needs.scope.outputs.run }}"],
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
   // The QFAI version Yarn resolves in a Plug'n'Play project. The resolving step writes it only after
   // its payload has checked it is one SemVer version and that version is installed, and the
@@ -2548,10 +2544,7 @@ export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   // The matrix leg's layer, which names the script the lane runs. Its value is a member of the
   // array above, so it is one of the five layer words and nothing else.
   ["QFAI_LAYER", "${{ matrix.layer }}"],
-  // What the verdict reads: the lane's conclusion, and the axis it was asked to run. The second
-  // is why a skip can be green — an empty axis is the adopter declaring no script — and it is
-  // the same output the lane's own condition reads.
-  ["QFAI_SELECTED", "${{ needs.detection.outputs.selected }}"],
+  // What the verdict reads: the lane's conclusion, one of GitHub's job results.
   ["QFAI_TESTS_RESULT", "${{ needs.tests.result }}"],
 ]);
 

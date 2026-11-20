@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { declaredContractId } from "../contractsDecl.js";
 import { parseHeadings } from "../parse/markdown.js";
-import { parseAllMarkdownTables } from "../specPackParsers.js";
+import { maskNonSpecRegions, parseAllMarkdownTables } from "../specPackParsers.js";
 import { extractFencedCodeBlocks } from "../validators/mermaidUtils.js";
 import { parseContractRules, type ContractRule } from "./contractRules.js";
 import { nextId, type StoryTreeIdKind } from "./ids.js";
@@ -74,8 +74,9 @@ function normalize(file: string): string {
   return file.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/$/, "");
 }
 
+/** Reads the first H1 Markdown renders, so a heading in a comment or raw HTML block declares nothing. */
 function firstH1Id(text: string, prefix: "BF" | "US"): string | null {
-  const heading = parseHeadings(text).find((item) => item.level === 1);
+  const heading = parseHeadings(maskNonSpecRegions(text)).find((item) => item.level === 1);
   return (
     new RegExp(`^(${prefix}-[A-Za-z0-9_-]+)(?::|\\s|$)`).exec(heading?.title ?? "")?.[1] ?? null
   );

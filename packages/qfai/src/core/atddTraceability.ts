@@ -724,15 +724,7 @@ export function atddAcceptanceLayerFilter(
   root: string,
   config: QfaiConfig,
 ): (relativePath: string) => boolean {
-  const testsRoot = resolvePath(root, config, "testsDir");
-  const roots = {
-    root,
-    testsDirName: testsDirName(root, config),
-    e2eRoot: path.join(testsRoot, "e2e"),
-    apiRoot: path.join(testsRoot, "api"),
-    integrationRoot: path.join(testsRoot, "integration"),
-    isPackageRoot: packageRootProbe(),
-  };
+  const roots = createTestLayerRoots(root, config);
   // The whole of `resolveTestKind`, not the path half. A layout rooted at the
   // repository (`testsDir: "."`) puts the layer directories at the top level,
   // where no test-root segment precedes them and only containment answers.

@@ -223,42 +223,14 @@ describe("delivered document checks run independently and require a complete res
         String(step["run"] ?? "").includes("CHECK_RESULT"),
       );
       expect(verdict, "the delivered docs workflow has no executable aggregate").toBeDefined();
-      expect(verdict?.["env"]).toEqual({
-        CHECK_RESULT: "${{ needs.checks.result }}",
-        DOCS_SCOPE: "${{ needs.scope.outputs.run }}",
-      });
-      // With no scope in hand, only a success is green: a skip nobody can
-      // account for is not a skip the scope asked for.
+      expect(verdict?.["env"]).toEqual({ CHECK_RESULT: "${{ needs.checks.result }}" });
+      // Only a success is green. A skip the scope asked for never reaches this
+      // step, because the job's own condition already declined to start it.
       const executed = await runStep(String(verdict?.["run"] ?? ""), await project(), {
         CHECK_RESULT: result,
       });
       expect(executed.skipped, "bash must execute the delivered aggregate").toBe(false);
       expect(executed.status).toBe(result === "success" ? 0 : 1);
-    },
-  );
-
-  // QFAI:EX-0002-0003-06
-  it.each([
-    ["skipped", "false", 0],
-    ["skipped", "true", 1],
-    ["failure", "false", 1],
-    ["success", "false", 0],
-  ] as const)(
-    "executes the delivered aggregate for matrix result %j under scope %j",
-    async (result, scope, status) => {
-      // The one green skip is the one the scope asked for. A skip while the
-      // scope said a document changed is a lane that should have run and did
-      // not, and a failure is a failure whatever the scope said.
-      const docs = (await jobsOf(DOCS))[`${DOCS}#docs`];
-      const verdict = collectJobSteps(docs ?? {}).find((step) =>
-        String(step["run"] ?? "").includes("CHECK_RESULT"),
-      );
-      const executed = await runStep(String(verdict?.["run"] ?? ""), await project(), {
-        CHECK_RESULT: result,
-        DOCS_SCOPE: scope,
-      });
-      expect(executed.skipped, "bash must execute the delivered aggregate").toBe(false);
-      expect(executed.status).toBe(status);
     },
   );
 });

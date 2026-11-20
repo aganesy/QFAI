@@ -2,14 +2,8 @@ import { constants as fsConstants } from "node:fs";
 import { copyFile, lstat, mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
-/** The `code` of a Node filesystem error, or `undefined` for anything else thrown. */
-function errorCode(error: unknown): string | undefined {
-  if (typeof error !== "object" || error === null) {
-    return undefined;
-  }
-  const code: unknown = Reflect.get(error, "code");
-  return typeof code === "string" ? code : undefined;
-}
+import { readBoundedRegularFile } from "../../shared/boundedRead.js";
+import { hasErrnoCode, isEnoent } from "./errno.js";
 
 export type CopyOptions = {
   force: boolean;
@@ -34,8 +28,8 @@ export type CopyResult = {
   /** Destinations not written because an entry above them is a link or not a directory. */
   refused: string[];
   /**
-   * The skipped destinations, among those a copy without `force` found already there, whose
-   * content is not the template's. A later release's template can differ from the one the
+   * The skipped destinations, among those a copy without `force` found already there or saw
+   * another writer create during the copy, whose content is not the template's. A later release's template can differ from the one the
    * project holds, and these are the files only `force` brings up to date.
    */
   kept: string[];
@@ -95,6 +89,13 @@ async function copyFiles(
     );
   };
 
+  // A destination found there before the copy and one created by another writer during it are the
+  // same outcome, so both are skipped and both are compared with the template.
+  const skipExisting = async (file: string, dest: string): Promise<void> => {
+    skipped.push(dest);
+    if ((await compareInstalled(file, dest)) === "different") kept.push(dest);
+  };
+
   const conflictPolicy = options.conflictPolicy ?? "error";
 
   if (!options.force && conflictPolicy === "error") {
@@ -134,13 +135,12 @@ async function copyFiles(
     }
 
     if (!(await shouldWrite(dest, options.force))) {
-      skipped.push(dest);
-      if (!(await holdsSameText(file, dest))) kept.push(dest);
+      await skipExisting(file, dest);
       continue;
     }
     // A forced copy over a file that already holds the template's bytes changes
     // nothing, so it is reported as skipped rather than written.
-    if (options.force && (await holdsSameBytes(file, dest))) {
+    if (options.force && (await compareInstalled(file, dest)) === "same-bytes") {
       skipped.push(dest);
       continue;
     }
@@ -169,8 +169,8 @@ async function copyFiles(
         try {
           await copyFile(file, dest, fsConstants.COPYFILE_EXCL);
         } catch (error) {
-          if (errorCode(error) === "EEXIST") {
-            skipped.push(dest);
+          if (hasErrnoCode(error) && error.code === "EEXIST") {
+            await skipExisting(file, dest);
             continue;
           }
           throw error;
@@ -186,31 +186,26 @@ async function copyFiles(
 }
 
 /**
- * Whether `dest` is a regular file, not a link and not shared by a hard link,
- * whose bytes equal `source`'s. A link or a shared inode is replaced as an
- * entry on a forced copy, so it counts as a change.
+ * How `dest` compares with `source`, each read once. `"same-text"` means equal once line endings
+ * are read as `\n`: a checkout that converts them is not an edit.
+ *
+ * A link, a shared inode or a file that is not regular is `"different"`: a forced copy replaces it
+ * as an entry, so it counts as a change. So is a destination the bounded reader refuses. Writing
+ * `\r\n` for every `\n` at most doubles the text, so a destination over twice the template's size
+ * cannot hold it and is not read past that bound.
  */
-async function holdsSameBytes(source: string, dest: string): Promise<boolean> {
+async function compareInstalled(
+  source: string,
+  dest: string,
+): Promise<"same-bytes" | "same-text" | "different"> {
   const existing = await lstatOrUndefined(dest);
-  if (existing === undefined || !existing.isFile() || existing.nlink > 1) {
-    return false;
-  }
-  const [wanted, present] = await Promise.all([readFile(source), readFile(dest)]);
-  return wanted.equals(present);
-}
-
-/**
- * Whether `dest` holds `source`'s text once line endings are read as `\n`: a checkout that
- * converts them is not an edit. A link, a shared inode or a file that is not regular counts as
- * different, as it does for a forced copy. Reads each skipped file once per plain run, which is
- * bounded by the size of the shipped tree.
- */
-async function holdsSameText(source: string, dest: string): Promise<boolean> {
-  if (await holdsSameBytes(source, dest)) return true;
-  const existing = await lstatOrUndefined(dest);
-  if (existing === undefined || !existing.isFile() || existing.nlink > 1) return false;
-  const [wanted, present] = await Promise.all([readFile(source, "utf-8"), readFile(dest, "utf-8")]);
-  return wanted.replace(/\r\n?/g, "\n") === present.replace(/\r\n?/g, "\n");
+  if (existing === undefined || !existing.isFile() || existing.nlink > 1) return "different";
+  const wanted = await readFile(source);
+  const present = await readBoundedRegularFile(dest, wanted.length * 2);
+  if (present === undefined) return "different";
+  if (wanted.equals(present)) return "same-bytes";
+  const normalize = (bytes: Buffer): string => bytes.toString("utf-8").replace(/\r\n?/g, "\n");
+  return normalize(wanted) === normalize(present) ? "same-text" : "different";
 }
 
 /** `lstat`, or `undefined` when nothing is at `target`. Other faults propagate. */
@@ -218,7 +213,7 @@ async function lstatOrUndefined(target: string) {
   try {
     return await lstat(target);
   } catch (error) {
-    if (errorCode(error) === "ENOENT") return undefined;
+    if (isEnoent(error)) return undefined;
     throw error;
   }
 }
@@ -326,6 +321,6 @@ async function exists(target: string): Promise<boolean> {
     await lstat(target);
     return true;
   } catch (error: unknown) {
-    return (error as NodeJS.ErrnoException | null)?.code !== "ENOENT";
+    return !isEnoent(error);
   }
 }

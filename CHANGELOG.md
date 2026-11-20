@@ -269,6 +269,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending tests for the implement stage. The
   scope question says so for that option. Other scopes are printed as before.
 
+- **The `web-research` skill ends with one completion checklist.** Its
+  completion contract and its two end checklists are now a single
+  `Completion Checklist` that keeps every distinct requirement: hard
+  constraints and security controls, the session log and evidence, cited
+  sources, open questions and risks, the smoke check, reviewer findings and the
+  completion message.
+
 - **Pending tests are promised only where a later stage writes them.** A
   scope that leaves out a stage which only repairs existing tests is not
   marked `testsPending`, so a missing test for an ID a record restatement
@@ -276,6 +283,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fix loop handles like any other. A free-text scope answer that stops before
   implementation runs no gate, like `narrow`, and its final report says the
   tests come with the implementation it left out.
+
+- **The graph exploration rule describes the graph CLI lifecycle once.** Its
+  opening now says the integration registers no graph MCP server and runs no
+  daemon or IPC, and one sentence after the command example says each CLI
+  prepares any needed analysis, queries it, and exits with a result or recovery
+  guidance, in place of the paragraph that restated both.
 
 - **A merge waits for every check of its head commit.** Step 3 of the shipped
   `triage-operate` step now says that the checks still running before a merge
@@ -358,6 +371,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stop with exit 1. A `workflow plan` refusal carries the new reason
   `stale-install`. The upgrade guide now tells every checkout and worktree to
   run its install after pulling a qfai upgrade.
+
+- **`qfai --help` lists the validation profiles in the order the parser
+  names them.** The `--profile` line for validate and report now reads
+  `discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift`, the
+  same order as the refusal for an unknown profile; it listed `saas-package`
+  before `full`. The set of profiles is unchanged. Closes #4637.
 
 - **A request for new screens plans the prototype loop.** `qfai-run` now sets
   the qualifier `visual-open` when a request adds a screen or a UI surface that
@@ -461,7 +480,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   no check reports any more, so both were always 0. The file now holds
   `schema_version` and `nodes` only.
 
+- **The shipped test verdict no longer has a green branch for an empty
+  selection.** The verdict job of `qfai-tests.yml` never starts when detection
+  selects no lane, so its step no longer reads `QFAI_SELECTED`: a verdict that
+  starts is green only over a passed lane. Closes #4669.
+
+- **The shipped `qfai-docs.yml` aggregate no longer reads the change scope.**
+  Its job already declines to start when the scope found nothing a document
+  check reads, so the step's branch that turned that skip green could never
+  run. The step loses that branch and its `DOCS_SCOPE` variable, and passes on
+  a successful check and fails on anything else, as before. Run `qfai init` to
+  refresh the workflow, or leave it: the removed branch never ran. Closes #4670.
+
 ### Fixed
+
+- **A failed document extraction names the backend that ran it.** The recovery
+  message told every project to check its local model, including a project
+  whose documents go to an approved external OpenAI-compatible service. It now
+  names the selected backend, the model and the origin of the service it
+  called.
 
 - **The Firecrawl integration now says where it processes data.** The
   `web-research` skill and the Codex Firecrawl template recommended a local
@@ -481,12 +518,66 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
   references now say the finding is an error, which it already was.
 
+- **A contract or spec directory that cannot be reached is now reported, not
+  read as empty.** A directory behind a parent this process may not open
+  dropped out of contract discovery and the diagram budget check without a
+  word, as if it held no files. Only a directory that does not exist is still
+  read as empty. Any other failure now stops the scan with its error, or is
+  reported as an unreadable directory where the check already reports those.
+- **The `web-research` skill now ships the HTTP transport templates it
+  describes.** Every Brave Search and Firecrawl template started a stdio
+  server, though the skill and its contract call for HTTP transport too.
+  `firecrawl-hosted/` connects Claude Code, Codex and Copilot CLI to
+  Firecrawl's hosted MCP server and sends the API key as a bearer token from
+  `FIRECRAWL_API_KEY`; the skill says to export it before the agent starts.
+  `brave-search-http/` connects them to a Brave Search server you start in
+  HTTP mode on loopback; the skill gives the command.
+
+- **`qfai init` now reports a file another writer creates during the copy
+  as kept when it differs from the template.** A file that appeared between
+  the existence check and the create was counted as skipped without being
+  compared, so an edit saved while `qfai init` ran was left out of the
+  notice naming the files only `--force` brings up to date. It is now
+  compared like a file that was already there. Closes #4703.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that
   could be applied. It now reports `QFAI-CONTRACT-021` at the line of each
   such `)`. A `)` inside a string, quoted identifier, comment or
   dollar-quoted body is still not counted.
+
+- **The 1.x migration reports every old-path line of a file with very many
+  of them.** The migration's last step lists each line of a tracked project
+  file that still names a 1.x path. A file with hundreds of thousands of
+  such lines, such as a generated or vendored one, ended the migration with
+  `RangeError: Maximum call stack size exceeded` before the report was
+  written. The report now lists every such line.
+
+- **The release-notes drift check holds a cut body to its kept entries, in
+  order.** When a changelog section is too long for a GitHub Release body,
+  the release workflow cuts it and appends a note. The check compared such a
+  body as a set and took its cut from the entries it still carried, so it
+  accepted reordered entries and a body emptied down to the note. The note now
+  records how many entries the cut kept, and the check requires that many of
+  the section's first entries in the section's order. It reports a kept
+  entry the body lacks as missing and one it carries elsewhere as out of
+  order, and passes over a line added by hand. A cut body whose note records
+  no count is held to the whole section.
+
+- **The design token drift audit reads mocks under an absolute
+  `paths.contractsDir`.** `QFAI-AUD-004` joined the override to the project
+  root, found no `ui/` directory there and stopped without a finding, though
+  the screen scan before it had read the screens at the override. Both now
+  resolve the same directory, so raw color literals in those mocks are
+  counted.
+
+- **A YAML or JSON contract whose top level is not a mapping is reported.**
+  An API contract holding only its declaration line, or a body that is
+  `null`, a list or a scalar, stopped `qfai validate` with an exception
+  instead of a finding. It is now reported as `QFAI-CONTRACT-021`, and the
+  other contracts are still checked. A UI contract with such a top level is
+  reported the same way.
 
 - **The README states what the Claude Code launcher permission allows.** It
   said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
@@ -496,11 +587,49 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout or one downloaded from the npm registry without asking. The README
   now says so. Closes #4622.
 
+- **A heading inside an HTML comment no longer names a flow or a story.** The
+  story tree took the first level-one heading of `business-flow.md` or
+  `01_User-story.md` as its ID even when that heading sat in an HTML comment or
+  a `<pre>` block, so a hidden draft such as `# BF-9999: sample` replaced the
+  real `# BF-0001` and broke every link to it. The story tree now reads only
+  headings Markdown renders, as contract IDs already did. Closes #4710.
+
+- **The business rules of a JSON contract with a `// QFAI-CONTRACT-ID` line
+  are read.** Contract validation accepted such a file, but the story tree
+  read it before removing that line, which is not JSON, so it found no rules
+  and reported `Invalid structured contract`. The declaration line is now
+  removed first, and the rest is read as JSON. Closes #4707.
+
 - **A null `requires:` is no longer read as an empty step list.** In a
   step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
   `requires: null`, or a `requires:` with no value, as `requires: []`. It now
   reports `QFAI-SKILLS-016` for it as a `requires:` that is not a list. An
   omitted `requires:` still counts as empty.
+
+- **An escaped pipe at the end of a table row's last cell is kept.** Every
+  table `qfai validate` reads dropped the `|` of a last cell ending in `\|`
+  and kept the backslash, so `| x | text\|` read `text\`. It now reads
+  `text|`, with or without a closing `|`. Closes #4712.
+
+- **The README's skipped-test check now names each allowed skip.** The
+  example script allowed a number of skipped tests per file, so one test's
+  skip could stand in for another's, and it read whatever report was on disk,
+  including one left by an earlier run. It now runs the test command itself,
+  removes any old report first, fails when the run writes none, and fails each
+  test that did not run unless `allowed-skips.json` lists its file and full
+  name. An allowlist written for the old script, with a count per file, makes
+  the new script stop with an error at the first skip in that file, so rewrite
+  each count as the names of the tests it covered.
+
+- **Design token references resolve the same way in any declaration order.**
+  A chain of more than ten references raised `QFAI-DT-002` and kept a
+  `{...}` placeholder when the file declared the first token before the
+  last, and resolved with no finding when it declared them the other way
+  round. The depth limit now applies to the whole chain under each token,
+  so such a token raises the finding in either order. A token whose
+  reference fails no longer keeps a half-substituted value, and nor does any
+  token that references it, so the mock fallback check compares only values
+  that fully resolved.
 
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
@@ -520,6 +649,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.qfai/assistant/prompt` as the `prompt/` layer and reported nothing. It
   now reports `QFAI-ASSISTANT-002` at info saying the path is not a
   directory, as it already does for a layer that is missing.
+
+- **The validate JSON guide now counts errors under `--fail-on warning`.**
+  It told a consumer to read `counts.warning` alone, so an error-only result
+  looked like a pass although the run fails it. The guide now states the
+  check the run makes: `counts.error + counts.warning > 0`.
 
 - **A `.sql` contract with a PostgreSQL escape string now parses.** Inside
   `E'…'` a backslash escapes the next character, but the statement splitter
@@ -543,6 +677,44 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check is incomplete. A file that is absent is still skipped, so a project
   without the qfai package source is unaffected.
 
+- **A document graph keeps a nested scope written with backslashes.** A
+  `scope` entry in `.qfai/graph-processing.json` such as
+  `docs\nested\rationale.md` was read as `docs/nested/rationale.md` when the
+  document graph was built, but as written when the next query checked it, so
+  that check matched no document and dropped the scope's documents from the
+  graph. Both now read the scope with forward slashes.
+
+- **A UI marker written in a JavaScript module file counts as rendered.**
+  `QFAI-CONTRACT-037` looked for a contract's `data-qfai` marker in `.js` and
+  `.ts` files under `paths.srcDir` but not in `.mjs`, `.cjs`, `.mts` or `.cts`
+  files, so a marker kept only in such a module was reported as missing and
+  blocked validation. Those four extensions are now read as well.
+
+- **A dependency lockfile no longer blocks graph reuse or a document query.**
+  The completed-analysis check treated every `.lock` or `.pid` file at any
+  depth as a run still in progress, so a project with a `Cargo.lock`,
+  `yarn.lock` or `poetry.lock` in scope could neither publish its graph to the
+  shared cache nor answer a local Graphify document query. Only such a file
+  inside the engine's own storage directory now counts as a live run.
+
+- **The verify gate reads the result its own validate run wrote.** The
+  `verify-qfai-gate` step told agents to read `.qfai/report/validate.json` and
+  then ran `qfai report` with no profile. That file is only the default path,
+  the project can configure it, and it holds whichever repository-wide run
+  finished last. The step now reads the configured `output.validateJsonPath`
+  with the run's `-<profile>` suffix, uses it only when its `profile` and
+  `generatedAt` show the current command wrote it, and runs
+  `qfai report --profile <profile>`. The `validate.json` schema reference now
+  lists the file each kind of run writes, and `qfai-configure` inspects the
+  result its own validate run wrote.
+
+- **A documents graph query with no match keeps Graphify's message.**
+  Graphify's `query` exits with code 4 when the graph holds no matching nodes,
+  and the documents query reads that code as a no-match answer. The process
+  runner discarded the output of every non-zero exit, so the answer arrived
+  empty. The runner now keeps the output of an exit code its caller names as an
+  answer, and the documents query names only Graphify's no-match code.
+
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`
   took the opening `---` as the diagram's declaration and skipped the
@@ -552,12 +724,44 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   budget check counts from, and report its file line; a `-->` in the front
   matter is not read as a transition.
 
+- **A document query restores a shared completed analysis without a
+  processing configuration.** A worktree with no document analysis and no
+  `.qfai/graph-processing.json` answered "not ready" before it looked in the
+  shared completed-analysis cache. It now first restores a compatible
+  snapshot made with the default processing: the local Ollama backend at its
+  default endpoint, over the whole document corpus, with no credential.
+  Restoring calls no backend. A snapshot made with a document scope, another
+  endpoint or a credential is not restored in such a worktree, and a malformed
+  configuration blocks restoration. When nothing is restored, the query asks
+  for a configuration as before.
+
 - **Graph queries reject a `qfai.config.yaml` or `paths` set to null.** A
   config file holding only `~` or `null`, or a `paths:` key with no value or
   `null`, was read as if it were left out, so the graph used the default
   deliberation directory. The query now fails with the configuration error, as
   it already did for any other value that is not a mapping. Defaults still
   apply when the file or the `paths` key is absent.
+
+- **A repeated code query no longer rewrites the whole code corpus.** Every
+  code query copied each project file into the local CodeGraph corpus again
+  before checking freshness, so an unchanged repository paid a write per file
+  on every query. A file whose bytes already match its copy is now left as it
+  stands; an uncommitted edit, an added file or a removed file is still
+  reconciled before the freshness check.
+
+- **The review-cycle gate no longer reads as asking for a second re-review.**
+  The completion step and the gate of `common-review-cycle` said every
+  behaviour fix must be re-reviewed, which also covered fixes made for findings
+  of the one focused re-review. They now name the behaviour fixes made for
+  findings of the first review, and the gate points to the review convergence
+  rule: a fix made for a finding of the re-review gets no further re-review.
+
+- **`QFAI-CONTRACT-037` names a required element however its keys are
+  written.** The unrendered-marker finding said `required: true` only when a
+  UI contract element wrote `required` on a line after its `id`. An element
+  that put `required` first, or was written as a flow mapping such as
+  `{ required: true, id: submit }`, lost the mention. The flag is now read
+  from each parsed element.
 
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
@@ -585,6 +789,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   definition, and every step receives the one parsed URL.
   Closes #4585.
 
+- **The migration skill no longer offers `design/` as a contract for an old
+  business rule.** Its plan instructions named `design/` beside `cli/`,
+  `api/`, `db/` and `ui/`, although step 4 refuses a rule placed there and
+  step 3 removes that directory. They now name only the four contract kind
+  directories, as the placement guide does. Closes #4627.
+
+- **`qfai init` reads an installed file once, and only within a bound, when it
+  compares it with the template.** A plain run read a kept file in full twice,
+  as bytes and then as text, however large it was. It now reads each file once
+  and stops at twice the template's size, since a file larger than that cannot
+  hold the template with converted line endings. Closes #4638.
+
 - **Story ID commands no longer answer from a partial or shared set of pull
   request heads.** `scripts/story-ids.mjs` read each head's commit from the
   shared `FETCH_HEAD`, so a fetch another process ran at the same time could
@@ -607,6 +823,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a program that loaded a configuration and changed it changed the defaults
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
+
+- **`scripts/pr-threads.mjs list` counts every review thread and comment.** It
+  read only the newest 100 threads and the first 100 comments of a pull
+  request, so a longer one could show fewer unresolved threads or Codex review
+  comments than it had. It now reads every page of both. When a call fails or
+  the budget reserve stops it before the last page of comments, it says the
+  Codex comment count is incomplete (#4609).
 
 - **Graph preparation says when a step ran out of time or printed too much.**
   Runtime downloads and full code and document analysis ran under the same

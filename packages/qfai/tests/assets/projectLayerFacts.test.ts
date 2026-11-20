@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -147,6 +148,28 @@ describe("the project layer describes the repository it is in", () => {
       stated.filter((floor) => floor !== engines),
       `the declared Node range is ${String(engines)}`,
     ).toEqual([]);
+  });
+
+  // The publish job authenticates through OIDC, and the guide forbids a hand
+  // publish. It still asked a manual releaser for an npm login, which sent
+  // someone who can push the tag looking for a credential nothing uses.
+  it("asks a release operator for no npm credentials the publish job does not use", async () => {
+    // Parsed, so a comment that mentions the permission cannot stand in for it.
+    const workflow: unknown = parseYaml(
+      await readFile(path.join(repoRoot, ".github", "workflows", "release.yml"), "utf-8"),
+    );
+    expect(workflow, "the publish job no longer holds `id-token: write`").toMatchObject({
+      jobs: { publish: { permissions: { "id-token": "write" } } },
+    });
+
+    // The whole guide, fenced blocks included: a shell block is where a command
+    // is most likely to come back. A command counts in a code span or at the
+    // start of a line, so prose saying no npm login is needed does not.
+    const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
+    const askedFor = [
+      ...guide.matchAll(/`npm (?:whoami|login)\b[^`]*`|^\s*npm (?:whoami|login)\b|NPM_TOKEN/gm),
+    ].map(([match]) => match.trim());
+    expect(askedFor).toEqual([]);
   });
 
   // `git tag vX.Y.Z` tags whatever the local checkout has as HEAD, and

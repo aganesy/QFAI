@@ -25,6 +25,7 @@ import {
   resolveToolVersion,
 } from "../core/version.js";
 import { isFileSystemError } from "../core/fs.js";
+import { VALIDATION_PROFILE_CHOICES } from "../core/validationProfiles.js";
 
 /**
  * Exit code for a command name nothing recognizes.
@@ -537,7 +538,7 @@ Options:
   --session <id>               session-review: the session to report, instead of the latest of each agent
   --since <date>               session-review: every session whose transcript changed at or after this ISO 8601 date (midnight UTC) or date and time with Z or an offset
   --strict                     validate/report: exit 1 on warning or worse
-  --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full|drift>  validate/report: select the validation profile
+  --profile <${VALIDATION_PROFILE_CHOICES}>  validate/report: select the validation profile
                                 drift runs the drift guard alone: the same gate tdd carries, without the completion obligations
   --profile <prototyping|<skill>>  doctor: prototyping-specific preflight diagnosis, or a skill manifest runtimeDependencies probe
   --fail-on <error|warning|never>  validate/report: failure threshold (takes precedence over --strict)

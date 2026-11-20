@@ -27,6 +27,7 @@
  */
 import type { Stats } from "node:fs";
 import { constants as fsConstants } from "node:fs";
+import type { FileHandle } from "node:fs/promises";
 import { lstat, open } from "node:fs/promises";
 
 /** `O_RDONLY`, plus the two flags that matter where the platform has them. */
@@ -74,6 +75,48 @@ export function sameObject(inspected: ObjectIdentity, opened: ObjectIdentity): b
 }
 
 /**
+ * Steps 1 to 4 of the posture, then `use` on the descriptor they settled. The
+ * ceiling in step 3 is left to `use`, because the two readers bound differently.
+ *
+ * `use` runs only on a regular file that is the object `lstat` inspected, and
+ * the descriptor is closed whatever it answers. Every refusal, and anything
+ * `use` throws, answers `refused`: each reader keeps its own outcome for a file
+ * it could not read, and its own byte limits inside `use`.
+ */
+async function withCheckedRegularFile<T>(
+  filePath: string,
+  refused: T,
+  use: (handle: FileHandle, stats: Stats) => Promise<T>,
+): Promise<T> {
+  let inspected;
+  try {
+    inspected = await lstat(filePath);
+  } catch {
+    return refused;
+  }
+  if (inspected.isSymbolicLink() || !inspected.isFile()) {
+    return refused;
+  }
+
+  let handle;
+  try {
+    handle = await open(filePath, readOnlyNoFollowFlags());
+  } catch {
+    return refused;
+  }
+  try {
+    const stats = await handle.stat();
+    if (!stats.isFile()) return refused;
+    if (!sameObject(inspected, stats)) return refused;
+    return await use(handle, stats);
+  } catch {
+    return refused;
+  } finally {
+    await handle.close().catch(() => undefined);
+  }
+}
+
+/**
  * The bytes of a regular file at `filePath`, or `undefined` for anything else.
  *
  * "Anything else" is deliberately wide: absent, a symlink, a FIFO, a device, a directory, larger than
@@ -83,28 +126,8 @@ export async function readBoundedRegularFile(
   filePath: string,
   maxBytes: number,
 ): Promise<Buffer | undefined> {
-  let inspected;
-  try {
-    inspected = await lstat(filePath);
-  } catch {
-    return undefined;
-  }
-  if (inspected.isSymbolicLink() || !inspected.isFile()) {
-    return undefined;
-  }
-
-  let handle;
-  try {
-    handle = await open(filePath, readOnlyNoFollowFlags());
-  } catch {
-    return undefined;
-  }
-  try {
-    const stats = await handle.stat();
-    if (!stats.isFile() || stats.size > maxBytes) {
-      return undefined;
-    }
-    if (!sameObject(inspected, stats)) {
+  return withCheckedRegularFile<Buffer | undefined>(filePath, undefined, async (handle, stats) => {
+    if (stats.size > maxBytes) {
       return undefined;
     }
     const ceiling = Math.min(stats.size, maxBytes);
@@ -118,15 +141,14 @@ export async function readBoundedRegularFile(
       filled += bytesRead;
     }
     return filled > ceiling ? undefined : buffer.subarray(0, filled);
-  } catch {
-    return undefined;
-  } finally {
-    await handle.close().catch(() => undefined);
-  }
+  });
 }
 
 /** How much of a streamed file is held at once. */
 const SCAN_CHUNK_BYTES = 64 * 1024;
+
+/** How a scan ended; see {@link scanBoundedRegularFile}. */
+type ScanOutcome = "read" | "stopped" | "unfinished" | "refused";
 
 /**
  * A regular file's bytes handed to `onChunk` a block at a time, under the same
@@ -158,27 +180,8 @@ export async function scanBoundedRegularFile(
   filePath: string,
   maxBytes: number,
   onChunk: (chunk: Buffer) => "continue" | "stop",
-): Promise<"read" | "stopped" | "unfinished" | "refused"> {
-  let inspected;
-  try {
-    inspected = await lstat(filePath);
-  } catch {
-    return "refused";
-  }
-  if (inspected.isSymbolicLink() || !inspected.isFile()) {
-    return "refused";
-  }
-
-  let handle;
-  try {
-    handle = await open(filePath, readOnlyNoFollowFlags());
-  } catch {
-    return "refused";
-  }
-  try {
-    const stats = await handle.stat();
-    if (!stats.isFile()) return "refused";
-    if (!sameObject(inspected, stats)) return "refused";
+): Promise<ScanOutcome> {
+  return withCheckedRegularFile<ScanOutcome>(filePath, "refused", async (handle, stats) => {
     const buffer = Buffer.alloc(SCAN_CHUNK_BYTES);
     const ceiling = Math.min(stats.size, Math.max(0, maxBytes));
     let scanned = 0;
@@ -192,9 +195,5 @@ export async function scanBoundedRegularFile(
       if (onChunk(buffer.subarray(0, bytesRead)) === "stop") return "stopped";
     }
     return ceiling < stats.size ? "unfinished" : "read";
-  } catch {
-    return "refused";
-  } finally {
-    await handle.close().catch(() => undefined);
-  }
+  });
 }

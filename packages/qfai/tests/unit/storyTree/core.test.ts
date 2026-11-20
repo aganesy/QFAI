@@ -3,7 +3,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
-import { flowScopeContainsFile, resolveFlowScope } from "../../../src/core/flowScope.js";
+import {
+  flowScopeContainsFile,
+  flowScopeContainsId,
+  resolveFlowScope,
+} from "../../../src/core/flowScope.js";
 import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
 import {
   isStoryTreeId,
@@ -247,6 +251,21 @@ describe("story-tree core", () => {
     ]);
   });
 
+  it("identifies a flow and a story by the first H1 outside comments and raw HTML", () => {
+    const files = new Map(storyFiles);
+    files.set(
+      ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md",
+      "<!--\n# BF-9999: sample\n-->\n\n# BF-0001: Checkout\n",
+    );
+    files.set(
+      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md",
+      "<!-- # US-0001-9999: sample -->\n<pre>\n# US-0001-9998: sample\n</pre>\n\n# US-0001-0001: Buy\n",
+    );
+    const model = buildStoryTreeModel(files);
+    expect(model.flows.map((flow) => flow.id)).toEqual(["BF-0001"]);
+    expect(model.stories.map((story) => story.id)).toEqual(["US-0001-0001"]);
+  });
+
   it("reads rules from the contract layer's tech file", () => {
     const files = new Map(storyFiles);
     files.delete(".qfai/spec/03_contract/api/pay.yaml");
@@ -295,13 +314,13 @@ describe("story-tree core", () => {
     expect(
       parseContractRules(
         "a.json",
-        JSON.stringify({
+        `// QFAI-CONTRACT-ID: API-0001\n${JSON.stringify({
           "x-qfai-rules": [
             { id: "BR-API-0001-0004", statement: "Keep", examples: ["EX-0001-0001-01"] },
           ],
-        }),
-      ).rules.map((rule) => rule.id),
-    ).toEqual(["BR-API-0001-0004"]);
+        })}\n`,
+      ),
+    ).toMatchObject({ rules: [{ id: "BR-API-0001-0004" }], errors: [] });
     expect(
       parseContractRules("a.sql", "-- Rule BR-DB-0001-0005: Missing examples\nSELECT 1;\n").rules[0]
         ?.examples,
@@ -474,6 +493,19 @@ describe("story-tree core", () => {
       storyIds: ["US-0001-0001"],
       ruleIds: ["BR-API-0001-0001"],
     });
+    const scope = resolveFlowScope(["BF-0001"], model);
+    for (const id of [
+      "BF-0001",
+      "US-0001-0001",
+      ...scope.acceptanceCriteriaIds,
+      ...scope.exampleIds,
+      "BR-API-0001-0001",
+    ]) {
+      expect(flowScopeContainsId(scope, id)).toBe(true);
+    }
+    for (const id of ["BF-0002", "US-0002-0001", "EX-0002-0001-01", "BR-API-0002-0001"]) {
+      expect(flowScopeContainsId(scope, id)).toBe(false);
+    }
   });
 
   it("matches a root-relative finding path against an absolute story model", () => {

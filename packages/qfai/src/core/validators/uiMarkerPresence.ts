@@ -40,6 +40,8 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { parseAllDocuments } from "yaml";
+
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectUiContractFiles } from "../discovery.js";
@@ -71,8 +73,26 @@ export const UI_MARKER_NOT_RENDERED_RULE_ID = "QFAI-CONTRACT-037";
  */
 const MARKER_RE = /data-qfai\s*=\s*(?:(['"])([^'"]+)\1|([^\s'"\]>,}]+))/g;
 
-/** The extensions a marker can be written in on the implementation side. */
-const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".vue", ".svelte", ".html"];
+/**
+ * The extensions a marker can be written in on the implementation side.
+ *
+ * The module variants are listed beside `.js` and `.ts`: a marker kept in an
+ * `.mjs` or `.cts` file is as rendered as one kept in a `.js` file, and leaving
+ * them out reported it as missing.
+ */
+const SOURCE_EXTENSIONS = [
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".vue",
+  ".svelte",
+  ".html",
+];
 
 /** Every `data-qfai` value a text carries, in the order it writes them. */
 function markersIn(text: string): string[] {
@@ -92,23 +112,50 @@ function markersIn(text: string): string[] {
  */
 function requiredElementIds(text: string): Set<string> {
   const required = new Set<string>();
-  // Read line by line rather than by parsing the document: `elements[]` sits at
-  // a different depth per contract, and a `required: true` under an element's
-  // `id:` is the only shape this needs. A parse would also fail the whole file
-  // on a contract another rule already reports as unparseable.
-  let currentId: string | null = null;
-  for (const line of text.split(/\r?\n/)) {
-    const id = /^\s*-?\s*id:\s*["']?([A-Za-z0-9_-]+)["']?\s*$/.exec(line);
-    if (id?.[1] !== undefined) {
-      currentId = id[1];
+  // The flag is read from each parsed mapping, so key order and flow style do
+  // not matter: a line scan that remembered the last `id:` lost a `required`
+  // written before it or on the same line. `elements[]` sits at a different
+  // depth per contract, so every mapping is visited. Each document of a
+  // multi-document file is read on its own. A document that does not parse —
+  // including one with a duplicate key — states no flag here; its markers are
+  // still read from the text, and another rule reports the parse failure. A
+  // `<<` merge key is not expanded (YAML 1.2 has none), so a `required` that
+  // only arrives through one is not seen.
+  for (const document of parseAllDocuments(text)) {
+    if (document.errors.length > 0) continue;
+    let parsed: unknown;
+    try {
+      parsed = document.toJS();
+    } catch {
       continue;
     }
-    if (currentId !== null && /^\s*required:\s*true\s*$/.test(line)) {
-      required.add(currentId);
-      currentId = null;
-    }
+    collectRequiredIds(parsed, required, new WeakSet());
   }
   return required;
+}
+
+/**
+ * Adds the `id` of every mapping under `node` that sets `required: true`.
+ *
+ * An anchor may refer to the node that holds it, so the parsed value can be
+ * circular; `seen` keeps the walk from visiting a node twice.
+ */
+function collectRequiredIds(node: unknown, into: Set<string>, seen: WeakSet<object>): void {
+  if (node === null || typeof node !== "object" || seen.has(node)) {
+    return;
+  }
+  seen.add(node);
+  if (Array.isArray(node)) {
+    for (const item of node) collectRequiredIds(item, into, seen);
+    return;
+  }
+  const id: unknown = Reflect.get(node, "id");
+  const idText =
+    typeof id === "string" ? id : typeof id === "number" && Number.isFinite(id) ? String(id) : null;
+  if (idText !== null && Reflect.get(node, "required") === true) {
+    into.add(idText);
+  }
+  for (const value of Object.values(node)) collectRequiredIds(value, into, seen);
 }
 
 /** The element half of a canonical `CONTRACT_ID:ELEMENT_ID` marker. */

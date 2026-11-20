@@ -21,8 +21,6 @@
  * fault), and from "manifest unparseable". It also reports whether the
  * skills root itself exists, so callers can tell an uninitialized
  * project from a typo'd `--profile <skill>`.
- * `probeSkillManifestRuntimeDeps` stays as the findings-only
- * convenience wrapper.
  */
 
 import { access, readFile, stat } from "node:fs/promises";
@@ -355,20 +353,6 @@ export async function probeSkillManifest(
     });
   }
   return { manifest: "found", ...location, findings };
-}
-
-/**
- * Findings-only convenience wrapper over {@link probeSkillManifest}.
- * Prefer the full result whenever the caller reports on whether the
- * manifest exists.
- */
-export async function probeSkillManifestRuntimeDeps(
-  root: string,
-  skill: string,
-  options?: SkillManifestProbeOptions,
-): Promise<readonly SkillManifestProbeFinding[]> {
-  const result = await probeSkillManifest(root, skill, options);
-  return result.findings;
 }
 
 /**

@@ -1,3 +1,5 @@
+import type { ValidationProfile } from "./validationProfiles.js";
+
 export type IssueSeverity = "info" | "warning" | "error";
 
 export type IssueCategory = "canonical" | "change";
@@ -51,19 +53,7 @@ export type ValidationCounts = {
   error: number;
 };
 
-export type ValidationProfile =
-  | "discussion"
-  | "sdd"
-  | "prototyping"
-  | "atdd"
-  | "tdd"
-  | "verify"
-  | "full"
-  | "saas-package"
-  // Runs the drift guard alone. `tdd` evaluates it too, and is also the
-  // completion gate, so a run that only wants the drift answer had to accept
-  // every completion obligation with it.
-  | "drift";
+export type { ValidationProfile };
 
 export type ValidationWaiverMatch = {
   paths?: string[];

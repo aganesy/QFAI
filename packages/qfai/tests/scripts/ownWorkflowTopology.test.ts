@@ -81,6 +81,11 @@ import {
   type ReleaseNeeds,
 } from "../helpers/spec0017Release.js";
 import {
+  entryDrift,
+  entryTitles,
+  recordedCutoff,
+} from "../../../../scripts/check-release-notes.mjs";
+import {
   FULL_FLOW_TITLE,
   namedFixture,
   namedGit,
@@ -3625,6 +3630,16 @@ describe("release automation performs decisions rather than making them", () => 
 - **`),
       "the cut must land on an entry boundary, never inside one",
     ).toBe(true);
+
+    // The footer records how many entries it kept, counted the way the drift check reads
+    // entries, and the drift check reads the capped body as agreeing with its section.
+    expect(recordedCutoff(notes), "the footer must record how many entries it kept").toBe(
+      entryTitles(kept).length,
+    );
+    expect(entryDrift(section, notes), "the drift check must accept the cap").toMatchObject({
+      missing: [],
+      outOfOrder: [],
+    });
 
     expect(notes, "and must say where the rest is").toContain(
       "https://github.com/aganesy/QFAI/blob/v9.9.9/CHANGELOG.md",

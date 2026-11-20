@@ -32,9 +32,9 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { readUiContractDocuments } from "../contracts/screenContracts.js";
+import { readUiContractDocuments, type UiContractDocument } from "../contracts/screenContracts.js";
 import type { Issue } from "../types.js";
-import { screenSurfaceOf } from "./uiScreenSurface.js";
+import { isMapping, screenSurfaceOf, screensOf } from "./uiScreenSurface.js";
 import { issue } from "./utils.js";
 
 export const UI_SCREEN_PATTERN_RULE_ID = "QFAI-CONTRACT-056";
@@ -68,19 +68,6 @@ export function screenPatternOf(
     return null;
   }
   return isScreenPattern(value) ? value : undefined;
-}
-
-function isMapping(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** The `screens` list of a parsed contract, or nothing when it holds none. */
-function screensOf(parsed: unknown): unknown[] {
-  if (!isMapping(parsed)) {
-    return [];
-  }
-  const screens = parsed.screens;
-  return Array.isArray(screens) ? screens : [];
 }
 
 /**
@@ -121,10 +108,15 @@ function reportedPatternsIn(parsed: unknown, file: string): ReportedPattern[] {
   });
 }
 
-export async function validateUiScreenPattern(root: string, config: QfaiConfig): Promise<Issue[]> {
+/** `uiDocuments` is the walk of the UI contract folder a caller has already read. */
+export async function validateUiScreenPattern(
+  root: string,
+  config: QfaiConfig,
+  uiDocuments?: readonly UiContractDocument[],
+): Promise<Issue[]> {
   // The same walk `QFAI-CONTRACT-042` and the surface rule use.
   const uiDir = path.resolve(root, config.paths.contractsDir, "ui");
-  const documents = (await readUiContractDocuments(uiDir, root))
+  const documents = (uiDocuments ?? (await readUiContractDocuments(uiDir, root)))
     .slice()
     .sort((a, b) => a.relativePath.localeCompare(b.relativePath));
   const reported = documents.flatMap(({ relativePath, parsed }) =>

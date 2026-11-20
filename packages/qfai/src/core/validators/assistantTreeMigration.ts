@@ -2,16 +2,12 @@ import type { Dirent } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig } from "../config.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { ASSISTANT_LAYERS, joinAssistantLayer, isAssistantLayer } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
-export async function validateAssistantTreeMigration(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateAssistantTreeMigration(root: string): Promise<Issue[]> {
   const issues: Issue[] = [];
 
   // 1. Canonical assistant-layer enum guard.

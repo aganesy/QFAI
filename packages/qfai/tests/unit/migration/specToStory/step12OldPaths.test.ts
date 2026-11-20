@@ -128,6 +128,20 @@ describe("step 12 project-file scan", () => {
     ]);
   });
 
+  it("lists every line of a file with more matching lines than one call takes as arguments", async () => {
+    const context = await trackedProject(".qfai/spec", ".qfai/spec/03_contract");
+    // 500,000 arguments overflow the call stack, so spreading the hits into one push would throw.
+    const lines = 500_000;
+    await writeFile(path.join(context.root, "docs", "vendored.md"), ".qfai/specs\n".repeat(lines));
+    execFileSync("git", ["add", "."], { cwd: context.root });
+    const scan = await scanOldPaths(context);
+    expect(scan.items).toHaveLength(lines + 1);
+    expect(scan.items.at(-1)).toBe(
+      `old-path: docs/vendored.md:${String(lines)}: still names 1.x paths: \`.qfai/specs\``,
+    );
+    expect(scan.scanned).toEqual(["files checked for 1.x paths: 2"]);
+  });
+
   it("writes a control character of a file name as an escape and keeps other characters", () => {
     expect(reportableName("a\nb\u001b[31m.md")).toBe("a\\x0ab\\x1b[31m.md");
     expect(reportableName("café/α.md")).toBe("café/α.md");

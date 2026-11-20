@@ -4,7 +4,7 @@ import { access, lstat, open, readFile, stat } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
-import { isEnoent } from "../fs/errno.js";
+import { hasErrnoCode, isEnoent, isEperm } from "../fs/errno.js";
 
 /**
  * The first component of `target` at or below `destRoot` that is a symbolic
@@ -46,8 +46,9 @@ export async function exists(target: string): Promise<boolean> {
 }
 
 /**
- * The bytes of a regular file no larger than `maxBytes`, read from the inode
- * the size was measured on, or `null` when the entry is not one.
+ * The text of a regular file no larger than `maxBytes`, read from the inode
+ * the size was measured on and decoded as UTF-8, or `null` when the entry is
+ * not one. `readPinnedRegularFileBytes` does the read.
  *
  * **The ceiling binds the entry that is read**, not the one a previous
  * `lstat` saw. Those are two pathname operations, and between them another
@@ -64,42 +65,8 @@ export async function readPinnedRegularFile(
   filePath: string,
   maxBytes: number,
 ): Promise<string | null> {
-  let handle: FileHandle | undefined;
-  try {
-    handle = await open(filePath, OPEN_READ_FLAGS);
-    const pinned = await handle.stat();
-    if (!pinned.isFile() || pinned.size > maxBytes) {
-      return null;
-    }
-    // Read to the end, not once: `read` may return fewer bytes than asked for,
-    // and the unfilled tail stayed NUL — a correct flattened wrapper then
-    // failed its own signature comparison and was left in place.
-    //
-    // And to `maxBytes + 1`, not to the size just measured. Another process
-    // holding this inode from before the rename can append after the `fstat`,
-    // and stopping at the old size read a **prefix** — which still matched the
-    // target, so the repair went ahead and the cleanup deleted the sidecar with
-    // the appended bytes in it. One byte past the ceiling is what distinguishes
-    // "this is the whole file" from "this is as much as I asked for".
-    const buffer = Buffer.alloc(maxBytes + 1);
-    let filled = 0;
-    while (filled < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
-      if (bytesRead === 0) break;
-      filled += bytesRead;
-    }
-    if (filled > maxBytes) return null;
-    return buffer.subarray(0, filled).toString("utf-8");
-  } catch (error: unknown) {
-    const code = (error as NodeJS.ErrnoException | null)?.code;
-    // `ENXIO` is what `O_NONBLOCK` returns for a FIFO with no writer, in place
-    // of blocking. Neither it nor a directory is a bounded regular file, and
-    // `open` is simply where that shows up instead of `fstat`.
-    if (code === "ENXIO" || code === "EISDIR") return null;
-    throw error;
-  } finally {
-    await handle?.close();
-  }
+  const read = await readPinnedRegularFileBytes(filePath, maxBytes);
+  return read === null ? null : read.content.toString("utf-8");
 }
 
 /**
@@ -139,6 +106,16 @@ export async function readPinnedRegularFileBytes(
     handle = await open(filePath, OPEN_READ_FLAGS);
     const pinned = await handle.stat();
     if (!pinned.isFile() || pinned.size > maxBytes) return null;
+    // Read to the end, not once: `read` may return fewer bytes than asked for,
+    // and the unfilled tail stayed NUL — a correct flattened wrapper then
+    // failed its own signature comparison and was left in place.
+    //
+    // And to `maxBytes + 1`, not to the size just measured. Another process
+    // holding this inode from before the rename can append after the `fstat`,
+    // and stopping at the old size read a **prefix** — which still matched the
+    // target, so the repair went ahead and the cleanup deleted the sidecar with
+    // the appended bytes in it. One byte past the ceiling is what distinguishes
+    // "this is the whole file" from "this is as much as I asked for".
     const buffer = Buffer.alloc(maxBytes + 1);
     let filled = 0;
     while (filled < buffer.length) {
@@ -160,7 +137,10 @@ export async function readPinnedRegularFileBytes(
       ino: pinned.ino,
     };
   } catch (error: unknown) {
-    const code = (error as NodeJS.ErrnoException | null)?.code;
+    const code = hasErrnoCode(error) ? error.code : undefined;
+    // `ENXIO` is what `O_NONBLOCK` returns for a FIFO with no writer, in place
+    // of blocking. Neither it nor a directory is a bounded regular file, and
+    // `open` is simply where that shows up instead of `fstat`.
     if (code === "ENXIO" || code === "EISDIR") return null;
     throw error;
   } finally {
@@ -186,13 +166,7 @@ export function describeError(err: unknown): string {
 }
 
 export function isEpermOnWindows(err: unknown, platform = process.platform): boolean {
-  return (
-    platform === "win32" &&
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    (err as { code: string }).code === "EPERM"
-  );
+  return platform === "win32" && isEperm(err);
 }
 
 export async function safeLstat(target: string): Promise<Stats | undefined> {

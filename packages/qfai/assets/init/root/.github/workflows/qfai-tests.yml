@@ -675,7 +675,7 @@ jobs:
           # version file when they have one, else the documented fallback
           # (Node 20, matching the package `engines: ">=20.19.0"` floor).
           node-version: ${{ steps.node-version.outputs.version }}
-          # setup-node@v4's `cache:` accepts a single package-manager value, and the step above
+          # setup-node's `cache:` accepts a single package-manager value, and the step above
           # decides it — an expression cannot ask whether the package manager is on PATH, and
           # asking for a cache setup-node cannot resolve fails the step outright.
           #
@@ -774,26 +774,12 @@ jobs:
       - name: Report the test lane's conclusion
         env:
           QFAI_TESTS_RESULT: ${{ needs.tests.result }}
-          QFAI_SELECTED: ${{ needs.detection.outputs.selected }}
         shell: bash
         run: |
-          # The lane's own result decides, and the selection says whether a
-          # skip was asked for. A lane that ran is green only on success. A
-          # lane that never ran is green only where the axis was empty, which
-          # is the adopter declaring no layer-named test script. Everything
-          # else - a failed install, a cancelled run, a lane skipped with work
-          # on the axis - is red.
-          #
-          # The selection has to be EXPLICITLY empty. Absent, it says nothing
-          # about why the lane did not run, and a verdict reading absence as
-          # "nothing was asked for" would report green over a lane that was
-          # stopped.
+          # The lane's own result decides: green only on success. Everything
+          # else - a failed install, a cancelled run, a skipped lane - is red.
           if [ "$QFAI_TESTS_RESULT" = "success" ]; then
             echo "qfai tests verdict: green - every selected lane passed"
-            exit 0
-          fi
-          if [ "$QFAI_TESTS_RESULT" = "skipped" ] && [ "$QFAI_SELECTED" = "[]" ]; then
-            echo "qfai tests verdict: green over nothing - no layer-named test script was selected"
             exit 0
           fi
           echo "::error::qfai tests: the test lane concluded ${QFAI_TESTS_RESULT:-missing}"

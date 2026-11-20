@@ -1,7 +1,7 @@
 import path from "node:path";
 
-import { parse as parseYaml } from "yaml";
-
+import { ContractRootError, parseStructuredContract } from "../contracts.js";
+import { stripContractDeclarationLines } from "../contractsDecl.js";
 import { extractH2Sections, headingText, parseHeadings } from "../parse/markdown.js";
 import { maskNonSpecRegions, parseAllMarkdownTables } from "../specPackParsers.js";
 
@@ -41,13 +41,17 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
   const extension = path.extname(file).toLowerCase();
 
   if (extension === ".yaml" || extension === ".yml" || extension === ".json") {
-    let parsed: unknown;
+    let parsed: Record<string, unknown>;
+    // A JSON contract's `// QFAI-CONTRACT-ID` line is not JSON, so it goes before parsing.
     try {
-      parsed = parseYaml(text);
-    } catch {
+      parsed = parseStructuredContract(file, stripContractDeclarationLines(text));
+    } catch (error) {
+      // A top level that is no mapping declares no rules, and QFAI-CONTRACT-021
+      // reports it; an error here would also mark the file unloaded and switch
+      // the uncited-example check off for the whole project.
+      if (error instanceof ContractRootError) return { rules, errors };
       return { rules, errors: [`Invalid structured contract: ${file}`] };
     }
-    if (!isRecord(parsed)) return { rules, errors };
     if ("x-qfai-rules" in parsed && !Array.isArray(parsed["x-qfai-rules"])) {
       errors.push(`Invalid x-qfai-rules list in ${file}`);
     }

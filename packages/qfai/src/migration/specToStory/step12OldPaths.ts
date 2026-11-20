@@ -242,8 +242,8 @@ export function reportableName(file: string): string {
   }).join("");
 }
 
-function oldPathItems(file: string, text: string): string[] {
-  const items: string[] = [];
+/** Appends one item to `items` per line of `text` that names a 1.x path, so no call takes every hit as arguments. */
+function addOldPathItems(items: string[], file: string, text: string): void {
   for (const [at, line] of text.split(/\r?\n/).entries()) {
     const labels = OLD_PATHS.filter((oldPath) => oldPath.names(line)).map(
       (oldPath) => `\`${oldPath.label}\``,
@@ -254,7 +254,6 @@ function oldPathItems(file: string, text: string): string[] {
       );
     }
   }
-  return items;
 }
 
 /**
@@ -284,7 +283,7 @@ export async function scanOldPaths(context: MigrationContext): Promise<OldPathSc
       continue;
     }
     checked += 1;
-    items.push(...oldPathItems(entry.file, read.text));
+    addOldPathItems(items, entry.file, read.text);
   }
   return { items, scanned: [`files checked for 1.x paths: ${String(checked)}`, ...unchecked] };
 }

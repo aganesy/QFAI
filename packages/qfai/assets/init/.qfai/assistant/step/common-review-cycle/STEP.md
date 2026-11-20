@@ -116,9 +116,9 @@ them; it is the procedure that applies them.
    nothing else. Fix or answer each finding of that re-review as step 3 says, with no further
    re-review. A fix that changes wording only gets no re-review. No other
    reviewer is rerun.
-5. **Complete** once every reviewer has responded, each behaviour fix has had
-   its one re-review, and every finding is fixed or
-   answered. A finding the author cannot fix goes in the stage's final report;
+5. **Complete** once every reviewer has responded, each behaviour fix made
+   for a finding of the first review has had its one re-review, and every
+   finding is fixed or answered. A finding the author cannot fix goes in the stage's final report;
    a critical decision goes to the user
    (`.qfai/assistant/rule/review-convergence.md#one-review`).
 
@@ -134,11 +134,12 @@ them; it is the procedure that applies them.
 
 ## Gate
 
-Every required reviewer responded once, each behaviour fix had its one focused
-re-review, every finding is fixed or answered, and
-the stage report names each verdict and each answer, or says why the review
-dispatched no reviewer. Each response accounted for every Domain
-Responsibility of the reviewer's card. No review is `PENDING` for missing
+Every required reviewer responded once, each behaviour fix made for a finding
+of the first review had its one focused re-review, every finding is fixed or
+answered, and the stage report names each verdict and each answer, or says why
+the review dispatched no reviewer. A fix made for a finding of that re-review
+gets none (`.qfai/assistant/rule/review-convergence.md#one-review`). Each
+response accounted for every Domain Responsibility of the reviewer's card. No review is `PENDING` for missing
 captures. For a code review skipped as a small literal-only
 change, the stage report names the skip, the changed lines and why, and records
 the skip for the final report. A finding the author

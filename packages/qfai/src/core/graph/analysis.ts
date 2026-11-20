@@ -205,12 +205,20 @@ export function excludedGraphInput(relative: string, deliberationDir: string): b
   );
 }
 
+/**
+ * `checked` says the caller has just walked `destination` with a check that refuses every shared
+ * file and link `assertIndependentAnalysis` refuses, such as `safeDocumentCopy`, so the walk is
+ * not repeated. Any other caller leaves it `unchecked`.
+ */
+export type DestinationIndependence = "unchecked" | "checked";
+
 export async function mirrorGraphCorpus(
   root: string,
   destination: string,
   scope?: readonly string[],
+  independence: DestinationIndependence = "unchecked",
 ): Promise<void> {
-  await walkGraphCorpus(root, destination, scope, "write");
+  await walkGraphCorpus(root, destination, scope, "write", independence);
 }
 
 /** Whether mirroring the corpus into `destination` would change any file there. Writes nothing. */
@@ -218,22 +226,26 @@ export async function graphCorpusChanged(
   root: string,
   destination: string,
   scope?: readonly string[],
+  independence: DestinationIndependence = "unchecked",
 ): Promise<boolean> {
-  return walkGraphCorpus(root, destination, scope, "compare");
+  return walkGraphCorpus(root, destination, scope, "compare", independence);
 }
 
 /**
- * In `write` mode, mirrors the corpus into `destination` and returns false. In `compare` mode it
- * writes nothing and returns true at the first entry a mirror would add, replace or remove.
+ * In `write` mode, mirrors the corpus into `destination` and returns false; a file whose bytes
+ * already match its source is left untouched, so a repeated mirror of an unchanged corpus writes
+ * nothing. In `compare` mode it writes nothing and returns true at the first entry a mirror would
+ * add, replace or remove.
  */
 async function walkGraphCorpus(
   root: string,
   destination: string,
   scope: readonly string[] | undefined,
   mode: "write" | "compare",
+  independence: DestinationIndependence,
 ): Promise<boolean> {
   await assertGraphStoragePath(root, destination);
-  await assertIndependentAnalysis(destination);
+  if (independence === "unchecked") await assertIndependentAnalysis(destination);
   const files = new Set<string>();
   const deliberationDir = await graphDeliberationDir(root);
   let changed = false;
@@ -268,15 +280,15 @@ async function walkGraphCorpus(
         const source = path.join(root, ...next.split("/"));
         const stats = await lstat(source);
         if (!stats.isFile() || stats.nlink > 1) continue;
+        files.add(next);
+        if (await sameFile(source, target)) continue;
         if (mode === "compare") {
-          if (!(await sameFile(source, target))) changed = true;
-          files.add(next);
+          changed = true;
           continue;
         }
         await replaceOtherEntryType(target, false);
         await mkdir(path.dirname(target), { recursive: true });
         await copyFile(source, target);
-        files.add(next);
       }
     }
   }

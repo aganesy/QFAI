@@ -26,7 +26,7 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { readUiContractDocuments } from "../contracts/screenContracts.js";
+import { readUiContractDocuments, type UiContractDocument } from "../contracts/screenContracts.js";
 import type { Issue } from "../types.js";
 import { isMapping, screensOf } from "./uiScreenSurface.js";
 import { issue } from "./utils.js";
@@ -76,11 +76,16 @@ function omittedDefectsIn(parsed: unknown, file: string): OmittedDefect[] {
   });
 }
 
-export async function validateUiScreenOmitted(root: string, config: QfaiConfig): Promise<Issue[]> {
+/** `uiDocuments` is the walk of the UI contract folder a caller has already read. */
+export async function validateUiScreenOmitted(
+  root: string,
+  config: QfaiConfig,
+  uiDocuments?: readonly UiContractDocument[],
+): Promise<Issue[]> {
   // The same walk `QFAI-CONTRACT-042` and the surface check use, so this rule
   // sees exactly the contract files they see.
   const uiDir = path.resolve(root, config.paths.contractsDir, "ui");
-  const documents = (await readUiContractDocuments(uiDir, root))
+  const documents = (uiDocuments ?? (await readUiContractDocuments(uiDir, root)))
     .slice()
     .sort((a, b) => a.relativePath.localeCompare(b.relativePath));
   const defects = documents.flatMap(({ relativePath, parsed }) =>

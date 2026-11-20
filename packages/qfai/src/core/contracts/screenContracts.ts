@@ -47,19 +47,10 @@ export async function readUiContractScreenContracts(
   root: string,
   contractsDirRelative = ".qfai/contracts",
 ): Promise<CanonicalScreenContract[]> {
-  // `path.resolve`, not `path.join`, for consistency with `specDirExists`
-  // (specsDir) and `readPerSpecScreens` (per-spec contractsDir). This
-  // project-wide screen reader runs in parallel with the per-spec reader;
-  // `path.join` here would have the two paths produce different discovery
-  // results when `qfai.config.yaml` carries an absolute `paths.contractsDir`
-  // override — a least-astonishment violation that would silently
-  // break certify's per-(spec × screen) gate.
-  // Other call sites (lockAbs, designContractReadiness, designToken,
-  // designAudit, doctor) still use
-  // `path.join` and remain a deferred follow-up. This site is fixed here
-  // because it directly partners with `readPerSpecScreens` and would
-  // otherwise produce divergent contract-discovery behaviour between CLI
-  // paths.
+  // `path.resolve`, as `resolvePath` in `config.ts` does: an absolute
+  // `paths.contractsDir` replaces `root`, and a relative one is read from
+  // `root`. `path.join` would append an absolute override to `root` and
+  // name a folder that does not exist, so no screen would be found.
   const uiDir = path.resolve(root, contractsDirRelative, "ui");
   // Accept both `.yaml` and `.yml` extensions. Pre-fix the glob only matched `.yaml`, so repositories
   // that author UI contracts with the `.yml` extension auto-derived
@@ -82,23 +73,27 @@ export async function readUiContractScreenContracts(
   );
 }
 
+/** A UI contract file, repository-relative, with its text and its parsed content. */
+export type UiContractDocument = { relativePath: string; raw: string; parsed: unknown };
+
 /**
  * Every UI contract file under `uiDir`, parsed, in the order the walk returns
  * them. A file that cannot be read or does not parse contributes nothing.
  *
  * One walk for the screen reader, the report of the entries it leaves out and
- * the surface check, so the three agree on which files are contracts and the
- * first two on which entry of a repeated `id` is the first.
+ * the screen checks, so they agree on which files are contracts and the first
+ * two on which entry of a repeated `id` is the first. A caller that runs
+ * several of them reads the list once and hands it to each.
  */
 export async function readUiContractDocuments(
   uiDir: string,
   root: string,
-): Promise<Array<{ relativePath: string; raw: string; parsed: unknown }>> {
+): Promise<UiContractDocument[]> {
   // The directory is the walk's `cwd` rather than part of the pattern: a project
   // under `/tmp/build[1]` holds a literal `[`, which a pattern reads as syntax,
   // and the walk then found no contract at all.
   const files = await fg("**/*.{yaml,yml}", { cwd: uiDir, absolute: true });
-  const documents: Array<{ relativePath: string; raw: string; parsed: unknown }> = [];
+  const documents: UiContractDocument[] = [];
   for (const filePath of files) {
     const raw = await readSafe(filePath);
     if (!raw) continue;
@@ -212,10 +207,14 @@ export type UnreadScreenEntry = {
  * `id` or no `route`, for every consumer at once. That keeps one reading of a
  * contract, and leaves whatever a dropped entry states checked by nothing, so
  * the dropped entries are named here instead of passing in silence.
+ *
+ * `documents` is the walk of that directory a caller has already read; without
+ * it the directory is walked here.
  */
 export async function findUnreadUiScreenEntries(
   root: string,
   contractsDirRelative = ".qfai/contracts",
+  documents?: readonly UiContractDocument[],
 ): Promise<UnreadScreenEntry[]> {
   const uiDir = path.resolve(root, contractsDirRelative, "ui");
   const unread: UnreadScreenEntry[] = [];
@@ -223,20 +222,20 @@ export async function findUnreadUiScreenEntries(
   // The project-wide screen list keeps one entry per `id` across every
   // contract. The prototyping loop captures from it and the design audit reads it.
   const firstAnywhere = new Map<string, { file: string; index: number; reading: ScreenReading }>();
-  const documents = (await readUiContractDocuments(uiDir, root)).map((document) => ({
+  const scoped = (documents ?? (await readUiContractDocuments(uiDir, root))).map((document) => ({
     ...document,
     scope: specScopeOf(toPosix(path.relative(uiDir, path.resolve(root, document.relativePath)))),
   }));
   // Every `id` each contract uses, readable entry or not: an entry missing its
   // route whose `id` another entry also has collides as soon as it gets one.
   const idUses = new Map<string, number>();
-  for (const { parsed, scope } of documents) {
+  for (const { parsed, scope } of scoped) {
     for (const screenId of screenIdsOf(parsed)) {
       const key = JSON.stringify([scope, screenId]);
       idUses.set(key, (idUses.get(key) ?? 0) + 1);
     }
   }
-  for (const { relativePath, parsed, scope } of documents) {
+  for (const { relativePath, parsed, scope } of scoped) {
     if (!parsed || typeof parsed !== "object" || !("screens" in parsed)) continue;
     const screens = parsed.screens;
     // An empty `screens:` states nothing. A mapping or a scalar in its place

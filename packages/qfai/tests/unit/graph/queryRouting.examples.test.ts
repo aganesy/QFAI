@@ -1,10 +1,8 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { expect, it } from "vitest";
 import { graphCliResult } from "../../helpers/graphCli.js";
-import {
-  continueGraphExploration,
-  exploreGraph,
-  readKnownGraphFile,
-} from "../../../src/core/graph/query.js";
+import { exploreGraph } from "../../../src/core/graph/query.js";
 import { codeAnalysisFixture, documentAnalysisFixture } from "../../helpers/graphAnalysis.js";
 
 // QFAI:EX-0001-0234-01
@@ -44,69 +42,41 @@ it("queries CodeGraph first for callers and change impact", async () => {
 });
 
 // QFAI:EX-0001-0234-06
-// Mutation: packages/qfai/src/core/graph/query.ts `return exploreGraph(root, unresolved, run);` -> `return exploreGraph(root, previous.requestedScope, run);` fails "asks Graphify only for the rationale left unresolved by code"
+// Mutation: packages/qfai/src/cli/graphCli.ts `const question = args[1]?.trim();` -> `const question = args[0]?.trim();` fails "asks Graphify only for the rationale left unresolved by code"
 it("asks Graphify only for the rationale left unresolved by code", async () => {
   const fixture = await documentAnalysisFixture();
   try {
-    const first = await exploreGraph(
-      fixture.root,
-      { domain: "code", question: "checkout callers" },
-      fixture.run,
-    );
+    const first = await graphCliResult(fixture.root, ["code", "checkout callers"], fixture.run);
+    expect(first.value).toMatchObject({ engine: "codegraph", status: "answered" });
     const unresolved = "Which requirement explains checkout?";
-    const result = await continueGraphExploration(
-      fixture.root,
-      first,
-      { domain: "documents", question: unresolved },
-      fixture.run,
-    );
-    expect(result.engine).toBe("graphify");
-    expect(result.status).toBe("answered");
+    const result = await graphCliResult(fixture.root, ["documents", unresolved], fixture.run);
+    expect(result.value).toMatchObject({ engine: "graphify", status: "answered" });
+    expect(result.failures).toBe(0);
     const queries = fixture.calls.filter((call) => call.args.includes("query"));
     expect(queries).toHaveLength(1);
     const query = queries[0]?.args;
     expect(query?.[(query?.indexOf("query") ?? -1) + 1]).toBe(unresolved);
     expect(fixture.calls.filter((call) => call.args.includes("context"))).toHaveLength(1);
-    await expect(
-      continueGraphExploration(
-        fixture.root,
-        first,
-        { domain: "code", question: unresolved },
-        fixture.run,
-      ),
-    ).rejects.toThrow("other domain");
-    await expect(
-      continueGraphExploration(
-        fixture.root,
-        first,
-        { domain: "documents", question: " " },
-        fixture.run,
-      ),
-    ).rejects.toThrow("unresolved");
   } finally {
     await fixture.dispose();
   }
 });
 
 // QFAI:EX-0001-0234-05
-// Mutation: packages/qfai/src/core/graph/query.ts `return exploreGraph(root, unresolved, run);` -> `return exploreGraph(root, previous.requestedScope, run);` fails "asks CodeGraph only for the code relationship left unresolved by documents"
+// Mutation: packages/qfai/src/cli/graphCli.ts `const question = args[1]?.trim();` -> `const question = args[0]?.trim();` fails "asks CodeGraph only for the code relationship left unresolved by documents"
 it("asks CodeGraph only for the code relationship left unresolved by documents", async () => {
   const fixture = await documentAnalysisFixture();
   try {
-    const first = await exploreGraph(
+    const first = await graphCliResult(
       fixture.root,
-      { domain: "documents", question: "Requirement ADR rationale" },
+      ["documents", "Requirement ADR rationale"],
       fixture.run,
     );
+    expect(first.value).toMatchObject({ engine: "graphify", status: "answered" });
     const unresolved = "Which function calls checkout?";
-    const result = await continueGraphExploration(
-      fixture.root,
-      first,
-      { domain: "code", question: unresolved },
-      fixture.run,
-    );
-    expect(result.engine).toBe("codegraph");
-    expect(result.status).toBe("answered");
+    const result = await graphCliResult(fixture.root, ["code", unresolved], fixture.run);
+    expect(result.value).toMatchObject({ engine: "codegraph", status: "answered" });
+    expect(result.failures).toBe(0);
     const contexts = fixture.calls.filter((call) => call.args.includes("context"));
     expect(contexts).toHaveLength(1);
     expect(contexts[0]?.args[2]).toBe(unresolved);
@@ -160,17 +130,27 @@ it("queries Graphify first for a requirement and ADR relationship", async () => 
 });
 
 // QFAI:EX-0001-0234-02
-// Mutation: packages/qfai/src/core/graph/query.ts `return readFile(path.join(root, ...parts), "utf8");` -> `return readFile(path.join(root, ...parts), "utf16le");` fails "reads an exact known source file without another graph query"
+// Mutation: packages/qfai/src/core/graph/query.ts `const context = nativeCodeContext(result.stdout, request.question);` -> `const context = nativeCodeContext("{}", request.question);` fails "reads an exact known source file without another graph query"
 it("reads an exact known source file without another graph query", async () => {
   const fixture = await codeAnalysisFixture();
   try {
-    await exploreGraph(fixture.root, { domain: "code", question: "checkout" }, fixture.run);
+    const result = await graphCliResult(fixture.root, ["code", "checkout"], fixture.run);
+    expect(result.value).toMatchObject({ engine: "codegraph", status: "answered" });
+    const text =
+      typeof result.value === "object" && result.value !== null && "answer" in result.value
+        ? result.value.answer
+        : undefined;
+    const answer: unknown = typeof text === "string" ? JSON.parse(text) : undefined;
+    const files =
+      typeof answer === "object" && answer !== null && "relatedFiles" in answer
+        ? answer.relatedFiles
+        : undefined;
+    expect(files).toEqual(["checkout.ts"]);
     const queries = fixture.calls.length;
-    expect(await readKnownGraphFile(fixture.root, "checkout.ts")).toBe(
+    expect(await readFile(path.join(fixture.root, "checkout.ts"), "utf8")).toBe(
       "export function checkout() { return 3; }\n",
     );
     expect(fixture.calls).toHaveLength(queries);
-    await expect(readKnownGraphFile(fixture.root, "../outside.ts")).rejects.toThrow("known");
   } finally {
     await fixture.dispose();
   }

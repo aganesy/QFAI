@@ -1,4 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -253,6 +255,121 @@ describe("README facts", () => {
       expect(note, readmePath).toMatch(/yarn refuses it [^.]*`preinstall` guard/);
       expect(note, readmePath).not.toMatch(/npm and yarn refuse/i);
     }
+  });
+
+  // The skipped-test check is a program an adopter copies, so it is run here
+  // rather than read: against a stand-in runner that writes a report from a
+  // fixture, the way Jest and Vitest write theirs.
+  describe("the skipped-test check an adopter copies", () => {
+    const FAKE_RUNNER = [
+      'import { existsSync, readFileSync, writeFileSync } from "node:fs";',
+      'import path from "node:path";',
+      'if (existsSync("fixture.json")) {',
+      '  const files = JSON.parse(readFileSync("fixture.json", "utf8"));',
+      "  const testResults = files.map((file) => ({",
+      "    name: path.join(process.cwd(), file.name),",
+      "    assertionResults: file.tests,",
+      "  }));",
+      '  writeFileSync("test-report.json", JSON.stringify({ testResults }));',
+      "}",
+      "process.exit(Number(process.argv[2] ?? 0));",
+    ].join("\n");
+    const ORDERS = "tests/orders.test.ts";
+    const allowedSkip = { fullName: "orders refunds a cancelled order", status: "skipped" };
+    const passing = { fullName: "orders creates an order", status: "passed" };
+
+    async function runCheck(
+      readmePath: string,
+      fixture: unknown,
+      staleReport: unknown,
+      runnerExitCode = 0,
+    ): Promise<{ status: number | null; stderr: string }> {
+      const readme = await readFile(readmePath, "utf-8");
+      const anchor = readme.search(/save this script as `scripts\/check-skipped-tests\.mjs`/i);
+      expect(anchor, readmePath).toBeGreaterThanOrEqual(0);
+      const program = /```js\r?\n([\s\S]*?)```/.exec(readme.slice(anchor))?.[1];
+      expect(program, readmePath).toBeDefined();
+
+      const dir = await mkdtemp(path.join(tmpdir(), "qfai-skip-check-"));
+      try {
+        await mkdir(path.join(dir, "scripts"));
+        await writeFile(path.join(dir, "scripts", "check-skipped-tests.mjs"), program ?? "");
+        await writeFile(path.join(dir, "fake-runner.mjs"), FAKE_RUNNER);
+        await writeFile(
+          path.join(dir, "allowed-skips.json"),
+          JSON.stringify({ [ORDERS]: [allowedSkip.fullName] }),
+        );
+        if (fixture !== undefined) {
+          await writeFile(path.join(dir, "fixture.json"), JSON.stringify(fixture));
+        }
+        if (staleReport !== undefined) {
+          await writeFile(path.join(dir, "test-report.json"), JSON.stringify(staleReport));
+        }
+        const run = spawnSync(
+          process.execPath,
+          [
+            path.join("scripts", "check-skipped-tests.mjs"),
+            "node",
+            "fake-runner.mjs",
+            String(runnerExitCode),
+          ],
+          { cwd: dir, encoding: "utf-8" },
+        );
+        return { status: run.status, stderr: run.stderr };
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    }
+
+    it.each(READMES)("passes a skip the allowlist names (%s)", async (readmePath) => {
+      const result = await runCheck(
+        readmePath,
+        [{ name: ORDERS, tests: [passing, allowedSkip] }],
+        undefined,
+      );
+      expect(result.stderr).not.toContain("did not run");
+      expect(result.status).toBe(0);
+    });
+
+    it.each(READMES)(
+      "fails when the test command fails, though its report has no unlisted skip (%s)",
+      async (readmePath) => {
+        const result = await runCheck(
+          readmePath,
+          [{ name: ORDERS, tests: [passing, allowedSkip] }],
+          undefined,
+          3,
+        );
+        expect(result.stderr).not.toContain("did not run");
+        expect(result.status).toBe(1);
+      },
+    );
+
+    it.each(READMES)(
+      "fails a skip the allowlist does not name, in a file that has an allowed one (%s)",
+      async (readmePath) => {
+        const unlisted = { fullName: "orders charges a card", status: "skipped" };
+        const result = await runCheck(
+          readmePath,
+          [{ name: ORDERS, tests: [unlisted, passing] }],
+          undefined,
+        );
+        expect(result.stderr).toContain(`${ORDERS}: "orders charges a card"`);
+        expect(result.status).toBe(1);
+      },
+    );
+
+    it.each(READMES)(
+      "fails when this run wrote no report, even with one left from an earlier run (%s)",
+      async (readmePath) => {
+        const stale = {
+          testResults: [{ name: ORDERS, assertionResults: [passing] }],
+        };
+        const result = await runCheck(readmePath, undefined, stale);
+        expect(result.stderr).toContain("test-report.json");
+        expect(result.status).toBe(1);
+      },
+    );
   });
 
   // The allow entries match the command a session types, never the package it resolves to.

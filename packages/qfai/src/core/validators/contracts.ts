@@ -4,6 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { parseStructuredContract } from "../contracts.js";
+import { readUiContractDocuments } from "../contracts/screenContracts.js";
 import { buildContractIndex, type ContractIndex } from "../contractIndex.js";
 import {
   extractDeclaredContractIds,
@@ -119,21 +120,24 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   // marker rule checks the selectors under `prototype`, this one the word
   // beside them.
   issues.push(...(await validateUiPrototypeMode(root, config)));
+  // The screen checks below read the same UI contract files, so the folder is
+  // walked and parsed once here and the list handed to each.
+  const uiDocuments = await readUiContractDocuments(uiRoot, root);
   // The entries every consumer reads past: a screen with no `id` or `route`, and
   // the second entry for an `id`.
-  issues.push(...(await validateUiScreenEntries(root, config)));
+  issues.push(...(await validateUiScreenEntries(root, config, uiDocuments)));
   // The surface kind decides which pattern list a screen is built and reviewed
   // against, so a word outside the vocabulary points at a list that does not exist.
-  issues.push(...(await validateUiScreenSurface(root, config)));
+  issues.push(...(await validateUiScreenSurface(root, config, uiDocuments)));
   // A reviewer reads `omitted` to tell a deliberate omission from a missing
   // part, so an entry without a part or a reason records nothing it can read.
-  issues.push(...(await validateUiScreenOmitted(root, config)));
+  issues.push(...(await validateUiScreenOmitted(root, config, uiDocuments)));
   // A screen built from a contract that names no states or no navigation is
   // built without them.
-  issues.push(...(await validateUiScreenCompleteness(root, config)));
+  issues.push(...(await validateUiScreenCompleteness(root, config, uiDocuments)));
   // The screen type names the entry of the business pattern reference a screen
   // is built and reviewed against, so an unknown ID points at no entry.
-  issues.push(...(await validateUiScreenPattern(root, config)));
+  issues.push(...(await validateUiScreenPattern(root, config, uiDocuments)));
 
   return issues;
 }

@@ -147,6 +147,21 @@ describe("validate and the pattern key", () => {
     expect(finding?.message).toContain('`pattern: ["list"]`');
   });
 
+  it("leaves a screens that is not a list, and an entry that is not a mapping, to the screen shape check", async () => {
+    const notAList = await rootWithContract("  orders:", "    pattern: table");
+    const notAMapping = await rootWithContract(
+      "  - table",
+      "  - id: orders",
+      "    route: /orders",
+      "    pattern: table",
+    );
+
+    expect(await validateUiScreenPattern(notAList, defaultConfig)).toEqual([]);
+    const issues = await validateUiScreenPattern(notAMapping, defaultConfig);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("screen 'orders' (`screens[1]`)");
+  });
+
   // QFAI:EX-0001-0039-55
   it("reports a filled pattern on a marketing screen once, and passes one without", async () => {
     const root = await rootWithContract(

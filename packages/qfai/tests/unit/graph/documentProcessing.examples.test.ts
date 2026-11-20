@@ -118,6 +118,38 @@ it("queries a current completed document graph without a model or backend call",
   }
 });
 
+// QFAI:EX-0001-0234-11
+// Mutation: packages/qfai/src/core/graph/documents.ts `? slashScope(processing.scope)` -> `? processing.scope` fails "queries a document graph prepared for a backslash-separated nested scope without dropping its documents"
+it("queries a document graph prepared for a backslash-separated nested scope without dropping its documents", async () => {
+  const fixture = await documentAnalysisFixture();
+  try {
+    await mkdir(path.join(fixture.root, "docs", "nested"), { recursive: true });
+    await writeFile(
+      path.join(fixture.root, "docs", "nested", "rationale.md"),
+      "# Nested requirement rationale\n",
+    );
+    await writeFile(
+      path.join(fixture.root, ".qfai", "graph-processing.json"),
+      JSON.stringify({ ...fixture.processing, scope: ["docs\\nested\\rationale.md"] }),
+    );
+    const run = graphifyExtractionFixture(fixture);
+    expect((await prepareDocumentAnalysis(fixture.root, run)).status).toBe("prepared");
+    const mirrored = path.join(fixture.documentAnalysis, "docs", "nested", "rationale.md");
+    expect(await readFile(mirrored, "utf8")).toBe("# Nested requirement rationale\n");
+    fixture.calls.length = 0;
+    const result = await exploreGraph(
+      fixture.root,
+      { domain: "documents", question: "Nested requirement rationale" },
+      run,
+    );
+    expect(result.status).toBe("answered");
+    expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(false);
+    expect(await readFile(mirrored, "utf8")).toBe("# Nested requirement rationale\n");
+  } finally {
+    await fixture.dispose();
+  }
+});
+
 // QFAI:EX-0001-0234-10
 // Mutation: packages/qfai/src/core/graph/documents.ts `"--code-only",` -> `"--no-cluster",` fails "allows local Graphify code analysis without claiming document readiness"
 it("allows local Graphify code analysis without claiming document readiness", async () => {
@@ -204,6 +236,42 @@ it("requires human approval of the exact external destination and document scope
     expect(await readFile(path.join(fixture.root, "outside.md"), "utf8")).toBe(
       "Unapproved document.\n",
     );
+  } finally {
+    if (previousKey === undefined) delete process.env.QFAI_TEST_SELECTED_KEY;
+    else process.env.QFAI_TEST_SELECTED_KEY = previousKey;
+    await fixture.dispose();
+  }
+});
+
+// Mutation: packages/qfai/src/core/graph/documents.ts `${processing.model} at ${selected.origin}` -> `${processing.model}` fails "names the selected external backend, model and service when document extraction fails"
+it("names the selected external backend, model and service when document extraction fails", async () => {
+  const fixture = await documentAnalysisFixture();
+  const previousKey = process.env.QFAI_TEST_SELECTED_KEY;
+  try {
+    process.env.QFAI_TEST_SELECTED_KEY = "fixture-selected-key";
+    await writeFile(
+      path.join(fixture.root, ".qfai", "graph-processing.json"),
+      JSON.stringify({
+        backend: "openai",
+        model: "selected-external-model",
+        endpoint: "https://selected.example.invalid/v1",
+        scope: ["rationale.md"],
+        credentialEnv: "QFAI_TEST_SELECTED_KEY",
+      }),
+    );
+    const extraction = graphifyExtractionFixture(fixture);
+    const run: GraphProcess = (command, args, options) =>
+      args.includes("extract")
+        ? Promise.resolve({ exitCode: 1, stdout: "" })
+        : extraction(command, args, options);
+    const result = await prepareDocumentAnalysis(fixture.root, run, () => Promise.resolve(true));
+    expect(result).toEqual({
+      status: "failed",
+      recovery:
+        "Check the selected openai backend and model selected-external-model at https://selected.example.invalid, then repair Graphify document analysis.",
+    });
+    expect(JSON.stringify(result)).not.toContain("local");
+    expect(JSON.stringify(result)).not.toContain("fixture-selected-key");
   } finally {
     if (previousKey === undefined) delete process.env.QFAI_TEST_SELECTED_KEY;
     else process.env.QFAI_TEST_SELECTED_KEY = previousKey;

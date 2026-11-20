@@ -3,7 +3,11 @@ import { exploreGraph } from "../../../src/core/graph/query.js";
 import { documentAnalysisFixture } from "../../helpers/graphAnalysis.js";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { GRAPH_PROCESS_LIMITS, type GraphProcess } from "../../../src/core/graph/process.js";
+import {
+  GRAPH_PROCESS_LIMITS,
+  runGraphProcess,
+  type GraphProcess,
+} from "../../../src/core/graph/process.js";
 import { graphCliResult } from "../../helpers/graphCli.js";
 
 // QFAI:EX-0001-0234-13
@@ -76,6 +80,34 @@ it("distinguishes unsupported and unreadable scope from no matches", async () =>
     expect(
       fixture.calls.some((call) => call.args.includes("grep") || call.args.includes("rg")),
     ).toBe(false);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+// QFAI:EX-0001-0234-13
+// Mutation: packages/qfai/src/core/graph/query.ts `answerExitCodes: [GRAPHIFY_NO_MATCH_EXIT],` -> `` fails "keeps Graphify's no-match message when the real query process exits with its no-match code"
+it("keeps Graphify's no-match message when the real query process exits with its no-match code", async () => {
+  const fixture = await documentAnalysisFixture();
+  try {
+    const run: GraphProcess = (command, args, options) =>
+      args.includes("query")
+        ? runGraphProcess(
+            process.execPath,
+            ["-e", "process.stdout.write('The graph has no matching nodes.'); process.exit(4)"],
+            options,
+          )
+        : fixture.run(command, args, options);
+    const result = await exploreGraph(
+      fixture.root,
+      { domain: "documents", question: "unknown concept" },
+      run,
+    );
+    expect(result).toMatchObject({
+      engine: "graphify",
+      status: "no-match",
+      answer: "The graph has no matching nodes.",
+    });
   } finally {
     await fixture.dispose();
   }

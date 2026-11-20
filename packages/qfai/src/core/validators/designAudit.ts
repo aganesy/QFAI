@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig } from "../config.js";
+import { resolvePath, type QfaiConfig } from "../config.js";
 import {
   readUiContractScreenContracts,
   type CanonicalScreenContract,
@@ -130,22 +130,6 @@ export function findingToIssue(
 }
 
 // ---------------------------------------------------------------------------
-// Section Extraction
-// ---------------------------------------------------------------------------
-
-function _extractSection(content: string, heading: string): string | null {
-  const idx = content.indexOf(heading);
-  if (idx === -1) return null;
-  const start = idx + heading.length;
-  const headingLevel = heading.match(/^#+/)?.[0]?.length ?? 3;
-  const rest = content.slice(start);
-  const headingPattern = new RegExp(`^#{1,${headingLevel}} `, "m");
-  const nextHeadingMatch = headingPattern.exec(rest);
-  const sectionContent = nextHeadingMatch ? rest.slice(0, nextHeadingMatch.index) : rest;
-  return sectionContent.trim() || null;
-}
-
-// ---------------------------------------------------------------------------
 // Contracts / Selected Direction Checks
 // ---------------------------------------------------------------------------
 
@@ -171,10 +155,7 @@ function bandFindingFor(
   };
 }
 
-function checkContractHierarchyFromScreens(
-  screens: CanonicalScreenContract[],
-  _auditConfig: DesignAuditConfig,
-): DesignFinding[] {
+function checkContractHierarchyFromScreens(screens: CanonicalScreenContract[]): DesignFinding[] {
   const findings: DesignFinding[] = [];
   for (const screen of screens) {
     if (screen.primaryTasks.length === 0) {
@@ -291,7 +272,8 @@ async function checkTokenDrift(
   }
   if (!hasTokenFiles) return findings;
 
-  const contractsUiDir = path.join(root, cfg.paths.contractsDir, "ui");
+  // Resolved as `readUiContractScreenContracts` resolves it, so an absolute override reads the same directory
+  const contractsUiDir = path.join(resolvePath(root, cfg, "contractsDir"), "ui");
   let htmlFiles: string[];
   try {
     const entries = await readdir(contractsUiDir);
@@ -343,9 +325,7 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
   const uiContractScreens = await readUiContractScreenContracts(root, config.paths.contractsDir);
   if (uiContractScreens.length === 0) return [];
 
-  const findings: DesignFinding[] = [
-    ...checkContractHierarchyFromScreens(uiContractScreens, auditConfig),
-  ];
+  const findings: DesignFinding[] = [...checkContractHierarchyFromScreens(uiContractScreens)];
 
   // Token drift check
   findings.push(...(await checkTokenDrift(root, auditConfig, config)));

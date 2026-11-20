@@ -493,7 +493,7 @@ jobs:
           # version file when they have one, else the documented fallback
           # (Node 20, matching the package `engines: ">=20.19.0"` floor).
           node-version: ${{ steps.node-version.outputs.version }}
-          # setup-node@v4's `cache:` accepts a single package-manager value, and the step above
+          # setup-node's `cache:` accepts a single package-manager value, and the step above
           # decides it — an expression cannot ask whether the package manager is on PATH, and
           # asking for a cache setup-node cannot resolve fails the step outright.
           #
@@ -751,16 +751,8 @@ jobs:
       - name: Require every document check to succeed
         env:
           CHECK_RESULT: ${{ needs.checks.result }}
-          DOCS_SCOPE: ${{ needs.scope.outputs.run }}
         shell: bash
         run: |
-          # A skip is green only where the scope said, explicitly, that nothing a
-          # document check reads changed. An absent scope says nothing about why
-          # the checks did not run, so it cannot make a skip green.
-          if [ "${CHECK_RESULT}" = "skipped" ] && [ "${DOCS_SCOPE:-}" = "false" ]; then
-            echo "qfai docs: no document could have changed - checks skipped"
-            exit 0
-          fi
           if [ "${CHECK_RESULT}" != "success" ]; then
             echo "::error::qfai docs: document checks concluded ${CHECK_RESULT:-missing}"
             exit 1
