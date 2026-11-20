@@ -236,6 +236,70 @@ async function replaceLinkThroughHold(
   note: Note,
   held = target,
   createSymlink: typeof symlink = symlink,
+  refusal: Refusal = (err) => err,
+): Promise<"created" | "skipped"> {
+  return await replaceThroughHold(
+    linkPath,
+    target,
+    type,
+    note,
+    createSymlink,
+    (sidecar) => movedLinkNamesTarget(sidecar, held),
+    refusal,
+  );
+}
+
+/**
+ * Replaces a project-owned file or directory with the link, under `--force`.
+ *
+ * Removing the entry and then creating the link failed independently: a
+ * refused `symlink` left the path empty and the project's wrapper, with
+ * everything in it, gone. The entry goes into a hold instead, and back when
+ * the link cannot be written, as {@link replaceLinkThroughHold} does for a
+ * link. Whatever moved is replaced, because `--force` is the operator's
+ * consent to replace whatever is there.
+ */
+async function replaceEntryThroughHold(
+  linkPath: string,
+  target: string,
+  type: "dir" | "file",
+  note: Note,
+  createSymlink: typeof symlink,
+  refusal: Refusal,
+): Promise<"created" | "skipped"> {
+  return await replaceThroughHold(
+    linkPath,
+    target,
+    type,
+    note,
+    createSymlink,
+    () => Promise.resolve(true),
+    refusal,
+  );
+}
+
+/**
+ * What a refused link write is raised as. Only the write goes through it: a
+ * failure to claim the hold or to move the entry is not a refused symlink,
+ * and reporting a locked file on Windows as missing Developer Mode sends the
+ * operator to the wrong setting.
+ */
+type Refusal = (err: unknown) => unknown;
+
+/**
+ * Moves the entry at `linkPath` into a fresh hold, writes the link, and puts
+ * the entry back when the link cannot be written. `accepts` decides, on what
+ * actually moved, whether the replacement goes ahead, and `refusal` shapes the
+ * error a refused link write raises.
+ */
+async function replaceThroughHold(
+  linkPath: string,
+  target: string,
+  type: "dir" | "file",
+  note: Note,
+  createSymlink: typeof symlink,
+  accepts: (sidecar: string) => Promise<boolean>,
+  refusal: Refusal,
 ): Promise<"created" | "skipped"> {
   const hold = await claimHoldDir(linkPath);
   const sidecar = path.join(hold, path.basename(linkPath));
@@ -248,7 +312,7 @@ async function replaceLinkThroughHold(
     await rm(hold, { recursive: true, force: true }).catch(() => undefined);
     throw renameErr;
   }
-  if (!(await movedLinkNamesTarget(sidecar, held))) {
+  if (!(await accepts(sidecar))) {
     // Not the entry this repair was authorised to replace. It goes back by the
     // same atomic claim the rollback uses, and the repair declines rather than
     // recreating something over a path somebody else owns.
@@ -259,7 +323,7 @@ async function replaceLinkThroughHold(
     await createSymlink(target, linkPath, type);
   } catch (error: unknown) {
     await restoreHeldLink({ hold, sidecar, linkPath, type, note, createSymlink, cause: error });
-    throw error;
+    throw refusal(error);
   }
   await discardHold(hold, linkPath, note);
   return "created";
@@ -535,18 +599,15 @@ async function writeManagedLink(
         // repoint that fails puts it back, and one that stops part-way leaves
         // the hold as the record that this repair emptied the path.
         if (options.dryRun) return "created";
-        try {
-          return await replaceLinkThroughHold(
-            linkPath,
-            target,
-            type,
-            note,
-            currentTarget,
-            createSymlink,
-          );
-        } catch (err: unknown) {
-          throw symlinkFailure(err, options.platform);
-        }
+        return await replaceLinkThroughHold(
+          linkPath,
+          target,
+          type,
+          note,
+          currentTarget,
+          createSymlink,
+          (err) => symlinkFailure(err, options.platform),
+        );
       }
       if (
         !options.force &&
@@ -555,18 +616,15 @@ async function writeManagedLink(
         // A working link spelt differently from the gate's form is rewritten
         // through a hold too, so a refused write leaves it working.
         if (options.dryRun) return "created";
-        try {
-          return await replaceLinkThroughHold(
-            linkPath,
-            target,
-            type,
-            note,
-            currentTarget,
-            createSymlink,
-          );
-        } catch (err: unknown) {
-          throw symlinkFailure(err, options.platform);
-        }
+        return await replaceLinkThroughHold(
+          linkPath,
+          target,
+          type,
+          note,
+          currentTarget,
+          createSymlink,
+          (err) => symlinkFailure(err, options.platform),
+        );
       }
       // Broken or --force → remove and recreate
       if (!options.dryRun) {
@@ -606,13 +664,14 @@ async function writeManagedLink(
     } else {
       // Regular file or directory with content of its own — a customised agent
       // wrapper, or a generated link replaced by a real directory. Preserve it
-      // unless `--force`.
+      // unless `--force`, and keep it when the link replacing it cannot be written.
       if (!options.force) {
         return "skipped";
       }
-      if (!options.dryRun) {
-        await rm(linkPath, { recursive: true, force: true });
-      }
+      if (options.dryRun) return "created";
+      return await replaceEntryThroughHold(linkPath, target, type, note, createSymlink, (err) =>
+        symlinkFailure(err, options.platform),
+      );
     }
   }
 
