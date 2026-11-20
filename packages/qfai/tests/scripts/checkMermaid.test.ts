@@ -8,7 +8,7 @@
  *   - a fence inside a block quote or list item      -> a diagram, ending with its container
  *   - a backtick run with a backtick after it        -> inline code, never a fence
  *   - `<!-- mermaid-lint:ignore -->` above a fence   -> that block is skipped
- *   - unknown flag / unreadable path                 -> exit 2
+ *   - unknown flag / unreadable path or directory    -> exit 2
  *   - a directory holding its own `.git`             -> not scanned (another checkout)
  *
  * Spawned rather than imported: the exit code is half the contract, and a lane
@@ -21,7 +21,7 @@ import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -44,8 +44,8 @@ interface RunResult {
   stderr: string;
 }
 
-function runLane(args: string[]): RunResult {
-  const child = spawnSync("node", [SCRIPT, ...args], {
+function runLane(args: string[], nodeArgs: string[] = []): RunResult {
+  const child = spawnSync("node", [...nodeArgs, SCRIPT, ...args], {
     cwd: REPO_ROOT,
     encoding: "utf-8",
     // Mermaid boots a jsdom window and registers every diagram type, which is
@@ -71,6 +71,35 @@ afterEach(async () => {
     }
   }
 });
+
+/**
+ * Node options that make `readdir` fail for the directories named in `failures`,
+ * keyed by base name, with the error code given.
+ *
+ * A mocked failure rather than a directory with its permissions removed: Windows
+ * has no `chmod 000`, and a process running as root lists such a directory
+ * anyway, so a permission-based case would prove nothing on either.
+ */
+async function failReaddir(failures: Record<string, string>): Promise<string[]> {
+  const preload = path.join(await newTempDir(), "fail-readdir.mjs");
+  const source = [
+    'import path from "node:path";',
+    'import { createRequire, syncBuiltinESMExports } from "node:module";',
+    'const fsp = createRequire(import.meta.url)("node:fs/promises");',
+    `const failures = ${JSON.stringify(failures)};`,
+    "const real = fsp.readdir;",
+    "fsp.readdir = async (dir, options) => {",
+    "  const code = failures[path.basename(String(dir))];",
+    "  if (code === undefined) return real(dir, options);",
+    // The message leaves the directory out, so naming it is the lane's own work.
+    "  throw Object.assign(new Error(`${code}: mocked failure`), { code, path: String(dir) });",
+    "};",
+    "syncBuiltinESMExports();",
+    "",
+  ].join("\n");
+  await writeFile(preload, source, "utf-8");
+  return ["--import", pathToFileURL(preload).href];
+}
 
 const GOOD_DIAGRAM = ["```mermaid", "flowchart TD", "  A[Start] --> B[End]", "```"].join("\n");
 
@@ -190,6 +219,44 @@ describe("check-mermaid lane", () => {
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("cannot read");
+  });
+
+  it("exits 2 and names the directory when a subtree cannot be listed", async () => {
+    // A directory the lane cannot list may hold a broken diagram. Passing over it
+    // printed "no Mermaid diagrams found" and exited 0 for a tree it never read.
+    const dir = await newTempDir();
+    const locked = path.join(dir, "locked");
+    await mkdir(locked);
+    await writeFile(path.join(locked, "broken.md"), `# B\n\n${BROKEN_DIAGRAM}\n`, "utf-8");
+
+    const result = runLane([dir], await failReaddir({ locked: "EACCES" }));
+
+    expect(result.status, result.stdout + result.stderr).toBe(2);
+    expect(result.stderr).toContain("cannot read");
+    expect(result.stderr).toContain("locked");
+    expect(result.stderr).toContain("EACCES");
+  });
+
+  it("exits 2 when the named directory itself cannot be listed", async () => {
+    const dir = await newTempDir();
+    await writeFile(path.join(dir, "ok.md"), `# Fine\n\n${GOOD_DIAGRAM}\n`, "utf-8");
+
+    const result = runLane([dir], await failReaddir({ [path.basename(dir)]: "EIO" }));
+
+    expect(result.status, result.stdout + result.stderr).toBe(2);
+    expect(result.stderr).toContain("cannot read");
+    expect(result.stderr).toContain("EIO");
+  });
+
+  it("passes over a directory that vanished while the tree was walked", async () => {
+    const dir = await newTempDir();
+    await writeFile(path.join(dir, "ok.md"), `# Fine\n\n${GOOD_DIAGRAM}\n`, "utf-8");
+    await mkdir(path.join(dir, "gone"));
+
+    const result = runLane([dir], await failReaddir({ gone: "ENOENT" }));
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("1 diagram(s) parsed");
   });
 
   it("counts one diagram when the same file is named twice", async () => {
