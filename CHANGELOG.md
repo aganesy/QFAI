@@ -694,6 +694,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `FOO=1 cat <path>`, whose command name now comes after its `NAME=value`
   assignments.
 
+- **`qfai session-review` keeps each error on one line.** Redaction kept the
+  line breaks in a file-system error or a `--session` ID, so an `--out` path
+  holding a newline, or such an ID, could print further lines on standard
+  error. Line breaks in these messages, and in the line naming the written
+  `--out` file, now become a space after redaction.
+
 - **The `fullstack-engineer` card no longer rejects a file-level text reason.**
   Its own copy of the plain-text rule said a text with no reason directly
   before it is always an error, so a worker could reject a valid

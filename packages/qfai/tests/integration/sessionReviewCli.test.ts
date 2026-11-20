@@ -221,6 +221,19 @@ describe("qfai session-review chooses the sessions and the destination", () => {
     expect(parseArgs(["validate", "--since", "2026-11-01"], setup.root).invalid).toBe(true);
   });
 
+  it("keeps the usage error on one line when the --session ID holds a line break", async () => {
+    const setup = await project();
+    await sessions(setup);
+    const result = await cli(
+      ["session-review", "--root", setup.root, "--session", "nope\r\nqfai session-review: forged"],
+      setup.root,
+    );
+    expect(result.code).toBe(2);
+    expect(result.err).toBe(
+      "qfai session-review: no transcript of session nope qfai session-review: forged belongs to this project.\n",
+    );
+  });
+
   it("says so in one line and exits 0 when no transcript belongs to the root", async () => {
     const setup = await project();
     const result = await cli(["session-review", "--root", setup.root], setup.root);
@@ -304,6 +317,21 @@ describe("qfai session-review exits 1 when a file is there but cannot be used", 
     expect(result.code).toBe(1);
     expect(result.err).toContain(".agents/rules/reminders.json is not valid JSON");
   });
+
+  // A POSIX file name can hold a line break, and the error message quotes the path as it is.
+  it.skipIf(process.platform === "win32")(
+    "keeps the error on one line when the --out path that cannot be written holds a line break",
+    async () => {
+      const setup = await project();
+      await sessions(setup);
+      const name = "bad\r\nqfai session-review: forged\u2028line";
+      await mkdir(path.join(setup.root, name));
+      const result = await cli(["session-review", "--root", setup.root, "--out", name], setup.root);
+      expect(result.code).toBe(1);
+      expect(result.err).toMatch(/^qfai session-review: .*forged line.*\n$/);
+      expect(result.err.slice(0, -1)).not.toMatch(/[\r\n\v\f\u0085\u2028\u2029]/);
+    },
+  );
 });
 
 // QFAI:EX-0001-0294-09
