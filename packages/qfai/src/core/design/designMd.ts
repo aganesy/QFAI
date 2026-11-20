@@ -969,13 +969,18 @@ function plainDecimal(written: string): string {
   return decimals === "" ? integer : `${integer}.${decimals}`;
 }
 
+/** The paths of the font families, which the theme and the token file write as text. */
+const FONT_PATHS: ReadonlySet<string> = new Set(FONT_KEYS.map((key) => `visual.typography.${key}`));
+
 /**
  * The first number the token file would state as no number at all, or not exactly: one written in a theme-bound
  * value too long to read, such as hundreds of digits, or a spacing step's length, the base times
- * the step, too large to compute. Every dimension the token file states is one of these.
+ * the step, too large to compute. Every dimension the token file states is one of these. A font
+ * family is written as text in both formats, so the digits in its name are no number.
  */
 function findOverflowingNumber(visual: DesignMd["visual"]): ParseError | null {
   for (const [at, text] of themeBoundValues(visual)) {
+    if (FONT_PATHS.has(at)) continue;
     const numbers = text.match(/\d*\.?\d+/g) ?? [];
     if (numbers.every(readsExactly)) continue;
     return {

@@ -1495,6 +1495,17 @@ describe("parseDesignMd: data_display", () => {
   });
 
   // QFAI:EX-0001-0312-04
+  it("accepts a font family whose name ends in more digits than a number reads exactly", () => {
+    const result = parseDesignMd(
+      withValue(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        '    family_mono:    "Brand9007199254740993, ui-monospace, monospace"',
+      ),
+    );
+    expect("error" in result).toBe(false);
+  });
+
+  // QFAI:EX-0001-0312-04
   it.each([
     ["breakpoints", "sm", "wide", false],
     ["content_max_width", "app", "auto", false],
