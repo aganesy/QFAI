@@ -605,6 +605,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read exactly, although both catalog formats write a family name as text. The
   precision check now reads only the fields that become numeric tokens.
 
+- **The Markdown report marks waived findings.** A finding a waiver
+  suppressed kept its severity in the `## Findings` list and read like an
+  active one, while the summary did not count it. Each such finding now shows
+  as, for example, `WARNING (waived)`; the JSON report is unchanged.
+
 - **`qfai session-review` counts a blank transcript line as malformed.** The
   JSONL reader skipped a blank or whitespace-only line without counting it, so
   the malformed count missed lines that are not JSON objects. It now counts
