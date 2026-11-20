@@ -69,9 +69,13 @@ describe("applyJsRunner", () => {
     ["cjs", "module", "require"],
     ["cts", "module", "require"],
     ["js", "commonjs", "require"],
+    ["js", "unset", "require"],
     ["js", "module", "import"],
     ["mjs", "commonjs", "import"],
-    ["ts", "commonjs", "import"],
+    ["ts", "commonjs", "require"],
+    ["ts", "unset", "import"],
+    ["ts", "module", "import"],
+    ["mts", "commonjs", "import"],
   ] as const)(
     "loads node:test in a .%s file of a %s package with %s",
     (extension, packageType, loads) => {
@@ -98,9 +102,10 @@ describe("applyJsRunner", () => {
   it.each([
     [{ type: "module" }, "module"],
     [{ type: "commonjs" }, "commonjs"],
-    [{}, "commonjs"],
-    [["module"], "commonjs"],
-    [null, "commonjs"],
+    [{}, "unset"],
+    [{ type: "esm" }, "unset"],
+    [["module"], "unset"],
+    [null, "unset"],
   ])("reads the package type of %j as %s", (manifest, packageType) => {
     expect(readPackageModuleType(manifest)).toBe(packageType);
   });

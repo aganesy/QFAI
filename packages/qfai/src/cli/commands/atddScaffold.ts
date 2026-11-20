@@ -71,7 +71,7 @@ async function readNearestPackageType(root: string, fromDir: string): Promise<Pa
   for (let dir = fromDir; ; dir = path.dirname(dir)) {
     const manifest = await readManifest(dir);
     if (manifest !== undefined) return readPackageModuleType(manifest.value);
-    if (path.relative(root, dir) === "" || path.dirname(dir) === dir) return "commonjs";
+    if (path.relative(root, dir) === "" || path.dirname(dir) === dir) return "unset";
   }
 }
 

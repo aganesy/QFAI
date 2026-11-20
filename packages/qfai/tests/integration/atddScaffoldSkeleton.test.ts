@@ -228,6 +228,29 @@ describe("atdd scaffold story-tree targets", () => {
     },
   );
 
+  // QFAI:EX-0001-0073-11
+  it.skipIf(!stripsTypeScriptTypes()).each([
+    ["a commonjs package", { type: "commonjs" }, "require"],
+    ["a package with no type", {}, "import"],
+  ] as const)(
+    "writes a .ts node:test skeleton that node --test runs, for %s",
+    async (_label, packageFields, loads) => {
+      await seedStory();
+      await writeNodeTestProject(
+        { ...packageFields, scripts: { test: "node --test tests/" } },
+        "ts",
+      );
+      expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
+      const file = path.join(root, "tests", "e2e", `${flowId}.test.ts`);
+      expect(await readFile(file, "utf8")).toContain(
+        loads === "require"
+          ? `const { describe, it } = require("node:test");`
+          : `import { describe, it } from "node:test";`,
+      );
+      expect((await runNodeTest(file)).stdout).toMatch(/^# pass 1$/m);
+    },
+  );
+
   it("reads the module type from the package.json nearest the destination", async () => {
     await seedStory();
     await writeNodeTestProject({ type: "module", scripts: { test: "node --test tests/" } }, "js");
@@ -417,6 +440,12 @@ async function writeNodeTestProject(
       "",
     ].join("\n"),
   );
+}
+
+/** Whether this Node strips TypeScript types without a flag: 22.18 and 23.6 onward. */
+function stripsTypeScriptTypes(): boolean {
+  const [major = 0, minor = 0] = process.versions.node.split(".").map(Number);
+  return major >= 24 || (major === 23 && minor >= 6) || (major === 22 && minor >= 18);
 }
 
 /** Run one test file with the Node test runner of the Node running this suite. */

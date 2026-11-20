@@ -585,7 +585,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `describe` and `it` with an `import` statement even in a `.cjs` file, and
   Node stopped with `Cannot use import statement outside a module`. A `.cjs`
   or `.cts` skeleton, and a `.js` one whose nearest `package.json` does not
-  set `"type": "module"`, now loads them with `require`. Closes #4708.
+  set `"type": "module"`, or a `.ts` one whose nearest `package.json` sets
+  `"type": "commonjs"`, now loads them with `require`. Closes #4708.
 
 - **The business rules of a JSON contract with a `// QFAI-CONTRACT-ID` line
   are read.** Contract validation accepted such a file, but the story tree

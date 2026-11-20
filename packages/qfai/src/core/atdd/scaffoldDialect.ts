@@ -120,25 +120,31 @@ const NODE_TEST_COMMONJS_DIALECT: ScaffoldDialectTemplate = {
 };
 
 /**
- * The module system the `type` field of a `package.json` gives a `.js` file:
- * `module` only when it says so, as Node reads it.
+ * The `type` field of a `package.json`: `module` or `commonjs` when it says
+ * so, and `unset` for anything else, which Node reads as no type at all.
  */
-export type PackageModuleType = "module" | "commonjs";
+export type PackageModuleType = "module" | "commonjs" | "unset";
 
 /** Read the `type` field from a parsed `package.json`. */
 export function readPackageModuleType(manifest: unknown): PackageModuleType {
-  return isRecord(manifest) && manifest["type"] === "module" ? "module" : "commonjs";
+  if (!isRecord(manifest)) return "unset";
+  const type = manifest["type"];
+  return type === "module" || type === "commonjs" ? type : "unset";
 }
 
 /**
- * Whether Node loads a skeleton with this extension as CommonJS. `.cjs` and
- * `.cts` always are, and `.js` is unless its package says `module`. `.ts` keeps
- * the `import` form whatever the package says: a TypeScript project compiles
- * or transforms it before Node runs it.
+ * Whether the skeleton takes the `require` form. `.cjs` and `.cts` always do,
+ * since Node loads them as CommonJS. `.js` does unless its package says
+ * `module`: with no type, Node loads a file without module syntax as
+ * CommonJS, and `require` runs either way. `.ts` does only when its package
+ * says `commonjs`, where Node's own type stripping loads it as CommonJS; with
+ * no type, a TypeScript project usually compiles or transforms the file, and
+ * Node detects the `import` form when it runs it directly.
  */
 function loadsAsCommonJs(extension: string, packageType: PackageModuleType): boolean {
   if (extension === "cjs" || extension === "cts") return true;
-  return extension === "js" && packageType === "commonjs";
+  if (extension === "js") return packageType !== "module";
+  return extension === "ts" && packageType === "commonjs";
 }
 
 const PYTHON_DIALECT: ScaffoldDialectTemplate = {
