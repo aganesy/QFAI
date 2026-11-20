@@ -29,7 +29,7 @@ nothing in and runs no browser, so nothing here is executed in this repository: 
 pattern to adopt, then prove it in your own suite with the adoption checklist at the end.
 
 The application supplies five adapters. QFAI ships none of them, and no recipe below assumes how
-they work inside:
+they work inside. The recipes import them from an `app-adapters.ts` module the application writes:
 
 | Adapter          | What it does                                                                          |
 | ---------------- | ------------------------------------------------------------------------------------- |
@@ -47,7 +47,9 @@ the business time section describes.
 Both runners share these helpers. The run's global setup creates one private directory and exports
 it as `TEST_SESSION_CACHE_DIR`; every worker reads that same directory. Each account the run
 creates is recorded by its ID in `created.jsonl`, which holds no secret, and the teardown deletes
-every recorded account, so an account made by a refresh is removed too.
+every recorded account, so an account made by a refresh is removed too. One failed removal does
+not stop the others: the teardown tries every ID, writes the IDs it could not remove to a recovery
+record outside the directory, which holds IDs only, and then fails with every error at once.
 
 ```ts
 // session-directory.ts
@@ -55,6 +57,7 @@ import { statSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { deleteAccount } from "./app-adapters";
 
 export async function createSessionDirectory(): Promise<string> {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "session-cache-"));
@@ -80,6 +83,12 @@ export async function recordCreated(directory: string, id: string): Promise<void
   });
 }
 
+/** The Playwright storage state of one worker slot; setup, fixture and teardown all use it. */
+export function statePath(directory: string, slot: number): string {
+  return path.join(directory, `storage-state-${slot}.json`);
+}
+
+/** Tries every recorded ID; the ones that fail go to a recovery record outside the directory. */
 export async function deleteCreatedAccounts(directory: string): Promise<void> {
   let lines: string[] = [];
   try {
@@ -87,16 +96,28 @@ export async function deleteCreatedAccounts(directory: string): Promise<void> {
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
   }
+  const failed: string[] = [];
+  const errors: unknown[] = [];
   for (const line of lines.filter((entry) => entry.trim() !== "")) {
     const { id }: { id: string } = JSON.parse(line);
-    await deleteAccount(id);
+    try {
+      await deleteAccount(id);
+    } catch (error) {
+      failed.push(id);
+      errors.push(error);
+    }
   }
+  if (failed.length === 0) return;
+  const recovery = path.join(os.tmpdir(), `${path.basename(directory)}-undeleted.json`);
+  await fs.writeFile(recovery, JSON.stringify({ ids: failed }), { mode: 0o600 });
+  throw new AggregateError(errors, `${failed.length} account(s) were not deleted: see ${recovery}`);
 }
 ```
 
 The directory is how both recipes meet the rule that binds the cache's lifetime to the worker's:
 here a worker is a pool slot or a parallel index, which lasts the whole run, and the run's teardown
-removes the directory with every cached session in it.
+removes the directory with every cached session in it. Each teardown below removes the cached
+sessions and storage states in a `finally` path, so they go even when an account removal fails.
 
 ## Vitest: one session per pool slot and actor
 
@@ -107,9 +128,11 @@ directory the run owns, the slot and the actor. In this recipe a worker is that 
 cache lives as long as the slot does: until the run's teardown removes the directory.
 
 ```ts
+// worker-session.ts
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { ownedSessionDirectory } from "./session-directory";
 
 type SessionOptions = {
   actor: string;
@@ -153,6 +176,11 @@ A file-local map validates each actor once per file registry, so a file does not
 about the same session for every test:
 
 ```ts
+// session-for.ts
+import { acceptsSession, createAccount, issueSession } from "./app-adapters";
+import { ownedSessionDirectory, recordCreated } from "./session-directory";
+import { workerSession } from "./worker-session";
+
 const sessions = new Map<string, Promise<string>>();
 
 export function sessionFor(actor: string): Promise<string> {
@@ -179,12 +207,16 @@ runs after a failed run too, deletes the recorded accounts and removes the direc
 ```ts
 // vitest.global-setup.ts
 import fs from "node:fs/promises";
+import { createSessionDirectory, deleteCreatedAccounts } from "./session-directory";
 
 export default async function setup() {
   const directory = await createSessionDirectory();
   return async () => {
-    await deleteCreatedAccounts(directory);
-    await fs.rm(directory, { recursive: true, force: true });
+    try {
+      await deleteCreatedAccounts(directory);
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true });
+    }
   };
 }
 ```
@@ -235,6 +267,7 @@ export default defineConfig({
 ```ts
 // global-setup.ts: the environment it sets reaches every worker
 import fs from "node:fs/promises";
+import { createSessionDirectory } from "./session-directory";
 
 export default async function globalSetup() {
   const directory = await createSessionDirectory();
@@ -248,6 +281,8 @@ export default async function globalSetup() {
 // auth.setup.ts
 import { chmod } from "node:fs/promises";
 import { test as setup } from "@playwright/test";
+import { createAccount, signIn } from "./app-adapters";
+import { ownedSessionDirectory, recordCreated, statePath } from "./session-directory";
 
 setup("sign in one account per worker", async ({ browser }) => {
   const directory = ownedSessionDirectory();
@@ -266,6 +301,7 @@ setup("sign in one account per worker", async ({ browser }) => {
 ```ts
 // fixtures.ts
 import { test as base } from "@playwright/test";
+import { ownedSessionDirectory, statePath } from "./session-directory";
 
 export const test = base.extend({
   storageState: async ({}, use, testInfo) => {
@@ -278,12 +314,16 @@ export const test = base.extend({
 // auth.teardown.ts
 import { rm } from "node:fs/promises";
 import { test as teardown } from "@playwright/test";
+import { deleteCreatedAccounts, ownedSessionDirectory, statePath } from "./session-directory";
 
 teardown("delete the run's accounts and storage states", async () => {
   const directory = ownedSessionDirectory();
-  await deleteCreatedAccounts(directory);
-  for (let slot = 0; slot < teardown.info().config.workers; slot++) {
-    await rm(statePath(directory, slot), { force: true });
+  try {
+    await deleteCreatedAccounts(directory);
+  } finally {
+    for (let slot = 0; slot < teardown.info().config.workers; slot++) {
+      await rm(statePath(directory, slot), { force: true });
+    }
   }
 });
 ```
@@ -495,5 +535,7 @@ source-mutation probes and their counts separately; a probe count is not a test 
 - The aggregate check fails when any required lane fails, is cancelled or is skipped unexpectedly.
 - No artifact holds a session, a storage state or an account secret, and no trace, HAR file or
   HTML report from an authenticated project is uploaded where it is public or kept long.
-- The teardown deletes every account recorded in `created.jsonl`, after a failed run too.
+- The teardown deletes every account recorded in `created.jsonl`, after a failed run too. When one
+  removal fails, the others still run, the recovery record lists only the IDs left behind, the
+  cached sessions and storage states are still removed, and the teardown fails with every error.
 - Parallel workers are bounded by shared-state exclusion; measure before claiming a speedup.

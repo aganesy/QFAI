@@ -324,10 +324,26 @@ describe("the optional test runner recipes ship beside the rule set", () => {
     );
     expect(directory).toContain("await deleteAccount(id);");
     expect(directory).toContain('"created.jsonl"');
+    // One failed removal must not stop the others or hide the IDs left behind.
+    expect(directory, "one failed removal stops the rest").toMatch(
+      /try \{\s+await deleteAccount\(id\);\s+\} catch \(error\) \{\s+failed\.push\(id\);/,
+    );
+    expect(directory, "the IDs left behind are not recorded").toContain(
+      "JSON.stringify({ ids: failed })",
+    );
+    expect(directory, "the failures are not surfaced together").toContain(
+      "throw new AggregateError(errors,",
+    );
+    expect(directory, "the storage-state path is not defined").toContain(
+      "export function statePath(directory: string, slot: number): string {",
+    );
     const vitest = section(recipes, "Vitest: one session per pool slot and actor");
     expect(vitest).toContain("const directory = ownedSessionDirectory();");
     expect(vitest).toContain("await recordCreated(ownedSessionDirectory(), account.id);");
     expect(vitest).toContain("await deleteCreatedAccounts(directory);");
+    expect(vitest, "a failed removal keeps the cached sessions").toMatch(
+      /try \{\s+await deleteCreatedAccounts\(directory\);\s+\} finally \{\s+await fs\.rm\(directory/,
+    );
     expect(vitest, "the recipe hides its reliance on start-up order").toMatch(
       /relies on that start-up order[\s\S]*`provide` and `inject`/,
     );
@@ -344,6 +360,14 @@ describe("the optional test runner recipes ship beside the rule set", () => {
     expect(playwright, "the teardown project does not delete the recorded accounts").toMatch(
       /\/\/ auth\.teardown\.ts[\s\S]*await deleteCreatedAccounts\(directory\);/,
     );
+    expect(playwright, "a failed removal keeps the storage states").toMatch(
+      /try \{\s+await deleteCreatedAccounts\(directory\);\s+\} finally \{\s+for \(let slot/,
+    );
+    // Setup, fixture and teardown all take statePath from the shared module.
+    const statePathImports = playwright.match(
+      /^import \{[^}]*\bstatePath\b[^}]*\} from "\.\/session-directory";$/gm,
+    );
+    expect(statePathImports, "a statePath call site does not import it").toHaveLength(3);
     expect(playwright).toContain('{ name: "exclusive", dependencies: ["setup"]');
     expect(playwright).toContain("/\\.exclusive\\.spec\\.ts/]");
     expect(playwright, "session subjects share the pooled actor").toMatch(
