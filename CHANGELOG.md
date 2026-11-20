@@ -636,6 +636,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check, so doctor reported the required lane installed although GitHub had
   no workflow there. The lane now counts only as a readable regular file.
 
+- **Verification reads its context from the configured spec and contract
+  directories.** The `verify-context` step read the policy, contracts and
+  `decisions.md` from the default `.qfai/spec` paths, and looked for gate
+  commands in the default `tech.md`, so a project that sets `paths.specsDir`
+  or `paths.contractsDir` could miss its rules or update the wrong file. The
+  step now resolves both directories from `qfai.config.yaml` once and uses
+  them for every read and write.
+
 - **`-h` and `-V` after a value-taking option are switches, not its value.**
   `qfai init --dir -h` initialized a directory named `-h`. An option's value
   now excludes `-h` and `-V` as it already excluded a `--` token, so they act

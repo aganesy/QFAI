@@ -12,12 +12,17 @@ sure each gate the scope needs has a command. It runs no gate.
 
 ## Reads
 
+Resolve `paths.specsDir` and `paths.contractsDir` from `qfai.config.yaml`
+once, before the first read. `<paths.specsDir>` and `<paths.contractsDir>`
+below are those resolved directories, used for every read and write of the
+run; a default path is never read in their place.
+
 In this order when unsure:
 
 1. The rules this step cites, the cards under `.qfai/assistant/agent/`,
-   and the project context under `.qfai/spec/01_policy/` and
-   `.qfai/spec/03_contract/`.
-2. `.qfai/spec/decisions.md`. When no decision applies, say "not applicable".
+   and the project context under `<paths.specsDir>/01_policy/` and
+   `<paths.contractsDir>/`.
+2. `<paths.specsDir>/decisions.md`. When no decision applies, say "not applicable".
 3. The business flows, stories, contracts, tests and evidence the change
    touches.
 
@@ -33,7 +38,7 @@ Verify reads normalized specs, contracts and evidence only. It opens no delibera
 
 - In the stage report: the declared scope and the inputs reviewed.
 - Gate commands found here, in
-  `.qfai/spec/03_contract/tech.md#standard-commands-copy-paste`.
+  `<paths.contractsDir>/tech.md#standard-commands-copy-paste`.
 
 ## Procedure
 
@@ -94,7 +99,7 @@ technical obstacle stops the work under Article IX of
 ## Gate commands
 
 Before any gate runs, check that each gate in scope has an entry in
-`.qfai/spec/03_contract/tech.md#standard-commands-copy-paste`, the section
+`<paths.contractsDir>/tech.md#standard-commands-copy-paste`, the section
 `common-gate-run` reads. Discover and record a missing one as
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#standard-commands`
 says. A gate still without an entry is UNRUN, and no PASS is claimed over it.
@@ -113,5 +118,5 @@ The step is done when:
 - the scope is fixed, matches its profile and is stated in the stage
   report;
 - every input the scope needs is resolved;
-- every gate in scope has a command in `tech.md`, or is named as UNRUN with
+- every gate in scope has a command in `<paths.contractsDir>/tech.md`, or is named as UNRUN with
   the missing command.

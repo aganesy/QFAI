@@ -61,7 +61,7 @@ describe("qfai-verify loads its inputs from the shipped assistant tree", () => {
   it("reads the rows of decisions.md, cites the ones it relied on and treats a declined row as a rejected option", async () => {
     const reads = await section(VERIFY_CONTEXT, "## Reads");
     expect(reads).toContain(
-      '`.qfai/spec/decisions.md`. When no decision applies, say "not applicable".',
+      '`<paths.specsDir>/decisions.md`. When no decision applies, say "not applicable".',
     );
     const completion = await section(VERIFY_SKILL, "## Completion");
     expect(completion).toContain('the decision IDs referenced, or "none" when no decision applies');
