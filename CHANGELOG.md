@@ -524,6 +524,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   word, as if it held no files. Only a directory that does not exist is still
   read as empty. Any other failure now stops the scan with its error, or is
   reported as an unreadable directory where the check already reports those.
+
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio
   server, though the skill and its contract call for HTTP transport too.
@@ -532,6 +533,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `FIRECRAWL_API_KEY`; the skill says to export it before the agent starts.
   `brave-search-http/` connects them to a Brave Search server you start in
   HTTP mode on loopback; the skill gives the command.
+
+- **`qfai init` now reports a file another writer creates during the copy
+  as kept when it differs from the template.** A file that appeared between
+  the existence check and the create was counted as skipped without being
+  compared, so an edit saved while `qfai init` ran was left out of the
+  notice naming the files only `--force` brings up to date. It is now
+  compared like a file that was already there. Closes #4703.
 
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
@@ -565,6 +573,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   resolve the same directory, so raw color literals in those mocks are
   counted.
 
+- **A YAML or JSON contract whose top level is not a mapping is reported.**
+  An API contract holding only its declaration line, or a body that is
+  `null`, a list or a scalar, stopped `qfai validate` with an exception
+  instead of a finding. It is now reported as `QFAI-CONTRACT-021`, and the
+  other contracts are still checked. A UI contract with such a top level is
+  reported the same way.
+
 - **`qfai init --force` keeps a project's own wrapper when the link replacing
   it cannot be written.** A file or directory of the project's at a skill or
   agent wrapper path was deleted before the link was created, so a refused
@@ -580,6 +595,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout or one downloaded from the npm registry without asking. The README
   now says so. Closes #4622.
 
+- **A heading inside an HTML comment no longer names a flow or a story.** The
+  story tree took the first level-one heading of `business-flow.md` or
+  `01_User-story.md` as its ID even when that heading sat in an HTML comment or
+  a `<pre>` block, so a hidden draft such as `# BF-9999: sample` replaced the
+  real `# BF-0001` and broke every link to it. The story tree now reads only
+  headings Markdown renders, as contract IDs already did. Closes #4710.
+
 - **The business rules of a JSON contract with a `// QFAI-CONTRACT-ID` line
   are read.** Contract validation accepted such a file, but the story tree
   read it before removing that line, which is not JSON, so it found no rules
@@ -591,6 +613,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `requires: null`, or a `requires:` with no value, as `requires: []`. It now
   reports `QFAI-SKILLS-016` for it as a `requires:` that is not a list. An
   omitted `requires:` still counts as empty.
+
+- **An escaped pipe at the end of a table row's last cell is kept.** Every
+  table `qfai validate` reads dropped the `|` of a last cell ending in `\|`
+  and kept the backslash, so `| x | text\|` read `text\`. It now reads
+  `text|`, with or without a closing `|`. Closes #4712.
 
 - **The README's skipped-test check now names each allowed skip.** The
   example script allowed a number of skipped tests per file, so one test's
@@ -687,6 +714,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   find the declaration after the front matter, the same line the diagram
   budget check counts from, and report its file line; a `-->` in the front
   matter is not read as a transition.
+
+- **A document query restores a shared completed analysis without a
+  processing configuration.** A worktree with no document analysis and no
+  `.qfai/graph-processing.json` answered "not ready" before it looked in the
+  shared completed-analysis cache. It now first restores a compatible
+  snapshot made with the default processing: the local Ollama backend at its
+  default endpoint, over the whole document corpus, with no credential.
+  Restoring calls no backend. A snapshot made with a document scope, another
+  endpoint or a credential is not restored in such a worktree, and a malformed
+  configuration blocks restoration. When nothing is restored, the query asks
+  for a configuration as before.
 
 - **Graph queries reject a `qfai.config.yaml` or `paths` set to null.** A
   config file holding only `~` or `null`, or a `paths:` key with no value or

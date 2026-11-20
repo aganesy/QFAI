@@ -28,8 +28,8 @@ export type CopyResult = {
   /** Destinations not written because an entry above them is a link or not a directory. */
   refused: string[];
   /**
-   * The skipped destinations, among those a copy without `force` found already there, whose
-   * content is not the template's. A later release's template can differ from the one the
+   * The skipped destinations, among those a copy without `force` found already there or saw
+   * another writer create during the copy, whose content is not the template's. A later release's template can differ from the one the
    * project holds, and these are the files only `force` brings up to date.
    */
   kept: string[];
@@ -89,6 +89,13 @@ async function copyFiles(
     );
   };
 
+  // A destination found there before the copy and one created by another writer during it are the
+  // same outcome, so both are skipped and both are compared with the template.
+  const skipExisting = async (file: string, dest: string): Promise<void> => {
+    skipped.push(dest);
+    if ((await compareInstalled(file, dest)) === "different") kept.push(dest);
+  };
+
   const conflictPolicy = options.conflictPolicy ?? "error";
 
   if (!options.force && conflictPolicy === "error") {
@@ -128,8 +135,7 @@ async function copyFiles(
     }
 
     if (!(await shouldWrite(dest, options.force))) {
-      skipped.push(dest);
-      if ((await compareInstalled(file, dest)) === "different") kept.push(dest);
+      await skipExisting(file, dest);
       continue;
     }
     // A forced copy over a file that already holds the template's bytes changes
@@ -164,7 +170,7 @@ async function copyFiles(
           await copyFile(file, dest, fsConstants.COPYFILE_EXCL);
         } catch (error) {
           if (hasErrnoCode(error) && error.code === "EEXIST") {
-            skipped.push(dest);
+            await skipExisting(file, dest);
             continue;
           }
           throw error;
