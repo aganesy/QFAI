@@ -73,31 +73,11 @@ specialization_tags:
 
 ## Plain text in UI source
 
-`npx qfai validate` reports, as an error, a plain text in UI source that no reason
-comment directly precedes. Plain text is a literal text node outside a heading,
-label, button, link, legend, table header, caption, option, summary, title,
-script, style and `role="alert"` or `role="status"`. Decide each text as
-`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md`
-`## Plain text in UI source` says: a text the user needs, such as a result, a
-cost, a consequence or an empty state's next step, stays with its reason,
-directly before the text or an element that holds it, one reason covering the
-whole element; any other text is first deleted,
-replaced or moved, and kept with a reason only when none of those works.
-
-```html
-<!-- qfai-text: why=the fee is charged only on this step; without=users pay a fee they never saw -->
-<p>A 2% fee applies to card payments.</p>
-```
-
-```tsx
-<section>
-  {/* qfai-text: why=the fee is charged only on this step; without=users pay a fee they never saw */}
-  <p>A 2% fee applies to card payments.</p>
-</section>
-```
-
-Both keys are required and say different things. "Helps the user" is not a
-reason.
+Give a plain text in UI source its reason, a `qfai-text: why=...; without=...`
+comment or a file's `qfai-text-file` comment, and decide each text, as
+`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#plain-text-in-ui-source`
+says. That section is the one copy of which texts count, where a reason stands,
+when a file reason is read and what is kept, deleted, replaced or moved.
 
 ## Inputs you must read
 

@@ -564,6 +564,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and reports the missing prerequisite, leaving the install to setup the user
   authorizes with the project's package manager.
 
+- **The `fullstack-engineer` card no longer rejects a file-level text reason.**
+  Its own copy of the plain-text rule said a text with no reason directly
+  before it is always an error, so a worker could reject a valid
+  `qfai-text-file` reason. The card now names both comments and links to the
+  `## Plain text in UI source` section of the implementation UI guidance,
+  the one copy of the rule and its exceptions.
+
 - **`qfai doctor` now names a shipped copy its drift checks cannot read.** The
   `workflows.drift` and `assistant.drift` checks read every read failure as a
   missing file, so an installed workflow or assistant file, or the packaged
