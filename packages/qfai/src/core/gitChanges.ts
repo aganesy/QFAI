@@ -62,10 +62,14 @@ export function readDecisionFilesAtRevision(
   if (names === null) throw new Error(`Git could not read the inventory at ${revision}`);
   const files = new Map<string, string>();
   for (const entry of names.split("\0").filter(Boolean)) {
-    const candidate = /^(\d+) (\w+) ([a-f0-9]+)\t(.+)$/.exec(entry);
-    if (!candidate?.[4])
+    // Under `-z` the name after the first tab is raw and may hold any byte but NUL, a newline
+    // included, so it is kept verbatim instead of matched.
+    const tab = entry.indexOf("\t");
+    const candidate = tab === -1 ? null : /^(\d+) (\w+) ([a-f0-9]+)$/.exec(entry.slice(0, tab));
+    const name = entry.slice(tab + 1);
+    if (!candidate || name === "")
       throw new Error(`Git returned an unreadable inventory entry: ${directory}`);
-    const file = normalizeRepoPath(candidate[4]);
+    const file = normalizeRepoPath(name);
     const pageDirectory = path.posix.join(directoryPath, "decisions");
     if (
       file !== path.posix.join(directoryPath, "decisions.md") &&

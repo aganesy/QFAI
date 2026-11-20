@@ -551,6 +551,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **`qfai validate` compares the decision register when a tracked name under
+  the specs directory contains a newline.** One such file anywhere beneath the
+  configured specs directory made the base inventory unreadable, and the drift
+  check failed with `QFAI-DRIFT-001` before it looked for the register. Each
+  name is now read verbatim after the first tab of its Git record.
+
 - **`qfai doctor` reads a shipped workflow's `on:` before counting its jobs in
   `workflows.cost`.** A shipped workflow edited to run on `push` alone was still
   reported as starting jobs on each pull request. A workflow whose `on:` starts
@@ -565,11 +571,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   invalid JSON. They now drop one leading mark before parsing, as the
   `package.json` reader of `qfai atdd scaffold` already did.
 
+- **`qfai validate` reports a `.qfai/waivers.yml` it cannot read.** An
+  existence probe that swallowed every error ran first, so a `.qfai` directory
+  that could not be traversed read as having no waiver file and the
+  `QFAI-WAIVER-001` read failure never fired. The file is now read directly:
+  only a missing file means no waivers, and any other error is reported with
+  the file's path and the cause. Closes #4866.
+
 - **`qfai sdd preflight` keeps a carry-over entry that starts with `<`.** A
   flagless re-run dropped every recorded entry opening with a less-than sign,
   such as a tag or a comparison, as if it were the template's placeholder.
   Only the template's exact
   placeholder is now read as no carry-over. Closes #4864.
+
+- **The stale-install check keeps lockfile precedence when a lockfile cannot
+  be read.** A `package-lock.json` that existed but failed to read, for example
+  for lack of permission, was passed over for a `pnpm-lock.yaml` or `yarn.lock`
+  behind it, so a command could warn or stop with another package manager's
+  install command. Only a missing lockfile now moves on to the next one; any
+  other read error ends the comparison. Closes #4887.
 
 - **`qfai doctor` reads a boolean job `if:` in `workflows.cost`.** YAML parses
   `if: false` as a boolean, and the count read it as no condition, so a job
@@ -591,6 +611,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `paths.contractsDir` elsewhere sent its reviewers to a missing or stale file,
   which they treat as absent evidence. They now name
   `<paths.contractsDir>/tech.md`.
+
+- **`qfai doctor` names a shipped workflow it cannot read in
+  `workflows.cost`.** The check skipped every read failure as if the workflow
+  were not installed, so an installed workflow that could not be read
+  disappeared from the count and from `details.unread`. Only a workflow that
+  does not exist is skipped now; one that cannot be read is named with its path
+  and the cause as not counted, and each `details.unread` entry gives the
+  workflow's path and why it was not counted. A job `if:` written as an
+  expression that wraps a literal boolean, such as `${{ false }}`, is read as
+  that boolean. Closes #4790.
 
 - **A pull-request merge fetches the pull request's own base and checks it
   again before merging.** The `triage-operate` step merged the local
@@ -669,6 +699,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   operands are now read as whole shell words, and any operand that is no
   option, no count, no leading `sed`, `awk` or `grep` script and no `echo`
   text leaves the bytes unknown.
+
+- **`qfai db-drift` uses the Postgres engine the inspected project installed.**
+  The engine was imported from qfai's own location, so with qfai run from
+  another tree (`npx`, a global install) installing `@electric-sql/pglite` in
+  the `--root` project, as the command's message says, changed nothing. The
+  engine is now resolved from the project root first, then from qfai, and the
+  same install message stands when neither has it.
 
 - **The prototyping preflight installs nothing.** Its step said to run
   `npm i -D playwright`, which could rewrite the manifest and lockfile of a

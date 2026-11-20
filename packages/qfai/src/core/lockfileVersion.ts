@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { isEnoent } from "./fs/errno.js";
 import { findOwnCopyProjectDir, resolveToolVersion } from "./version.js";
 
 /** The package manager a lockfile belongs to. */
@@ -37,15 +38,20 @@ export const INSTALL_COMMANDS: Readonly<Record<LockfileManager, string>> = {
  * The qfai version the lockfile in `dir` pins, or `null` when there is nothing
  * to compare: no lockfile, a lockfile that does not name qfai, a pin that is a
  * link or a workspace package rather than a version, or a lockfile that does
- * not parse.
+ * not parse, or a lockfile that is present but cannot be read.
+ *
+ * Only a missing lockfile moves on to the next one. A present one decides even
+ * when it cannot be read, so the comparison ends there rather than naming the
+ * install command of a package manager the project does not use.
  */
 export async function readLockfilePin(dir: string): Promise<LockfilePin | null> {
   for (const { file, manager, read } of LOCKFILES) {
     let text: string;
     try {
       text = await readFile(path.join(dir, file), "utf-8");
-    } catch {
-      continue;
+    } catch (error: unknown) {
+      if (isEnoent(error)) continue;
+      return null;
     }
     const version = read(text);
     return version === null ? null : { manager, file, version };

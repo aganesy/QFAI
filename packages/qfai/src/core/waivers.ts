@@ -9,6 +9,7 @@ import {
   POST_WAIVER_RULE_CODES,
   RULE_ID_ALIASES,
 } from "./emittedRuleCodes.js";
+import { isEnoent } from "./fs/errno.js";
 import { toRelativePath } from "./paths.js";
 import { escapeRegExp } from "./regex.js";
 import type {
@@ -134,18 +135,20 @@ async function loadWaivers(
     );
   }
 
-  if (!(await exists(waiverPath))) {
-    return {
-      activeWaivers: [],
-      applicableWaivers: [],
-      validationIssues,
-    };
-  }
-
+  // Read directly rather than probing first: a probe that swallows every error
+  // let an untraversable directory pass as "no waiver file", and a file removed
+  // between probe and read was reported as unreadable. Only ENOENT is absence.
   let rawText: string;
   try {
     rawText = await readFile(waiverPath, "utf-8");
   } catch (error) {
+    if (isEnoent(error)) {
+      return {
+        activeWaivers: [],
+        applicableWaivers: [],
+        validationIssues,
+      };
+    }
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",

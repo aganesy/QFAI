@@ -65,3 +65,5 @@ the next one against.
   Because: the removed `check-pack-locations` lane checked this repository's own discussion packs; no pack ships now, and shipped templates never ran it.
 - SHIPPED-CI: not-applicable for package.json
   Because: these aggregates now run every check after one fails, and the shipped templates run no lint aggregate.
+- SHIPPED-CI: not-applicable for package.json
+  Because: the aggregate entries now call a Bash helper that holds the same check lists, and the shipped templates run no lint aggregate.
