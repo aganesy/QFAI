@@ -4,7 +4,6 @@ import path from "node:path";
 import type { ConfigLoadResult, FailOn, QfaiConfig } from "../../core/config.js";
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
-import { normalizeValidationResult } from "../../core/normalize.js";
 import { writeReportFiles } from "../../core/runLog.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import {
@@ -22,7 +21,7 @@ import { isValidationProfile } from "../../core/validationProfiles.js";
 import { countIssues, validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
 import { error, info, warn } from "../../core/logger.js";
-import { appendIssue, scopedReportPath, validationResultPaths } from "./validate.js";
+import { finishValidationResult, scopedReportPath, validationResultPaths } from "./validate.js";
 
 export type ReportOptions = {
   root: string;
@@ -293,8 +292,7 @@ async function runValidateForReport(
     ...(options.profile ? { profile: options.profile } : {}),
     ...(flowIds.length > 0 ? { flowIds } : {}),
   });
-  const withCiIssue = ciProfileIssue ? appendIssue(validated, ciProfileIssue) : validated;
-  const normalized = normalizeValidationResult(root, withCiIssue);
+  const normalized = await finishValidationResult(root, validated, options.profile);
   const resultPaths = validationResultPaths(
     configResult.config.output.validateJsonPath,
     flowIds,

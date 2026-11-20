@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runReport } from "../../src/cli/commands/report.js";
+import { runValidate } from "../../src/cli/commands/validate.js";
 import type { Issue, ValidationResult } from "../../src/core/types.js";
 
 const roots: string[] = [];
@@ -231,6 +232,24 @@ describe("qfai report on a story tree", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+
+  // QFAI:EX-0001-0061-01
+  it("writes the same findings as validate, coverage notice included, when it runs validation", async () => {
+    const root = await storyRoot();
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const profileJson = path.join(root, ".qfai/report/validate-sdd.json");
+    const findings = async (): Promise<Issue[]> =>
+      (JSON.parse(await readFile(profileJson, "utf8")) as ValidationResult).issues;
+
+    await runValidate({ root, strict: false, format: "json", profile: "sdd", failOn: "never" });
+    const fromValidate = await findings();
+    await runReport({ root, format: "md", runValidate: true, profile: "sdd", failOn: "never" });
+    const fromReport = await findings();
+
+    expect(fromValidate.map((item) => item.code)).toContain("QFAI-PROFILE-001");
+    expect(fromReport).toEqual(fromValidate);
   });
 
   // QFAI:EX-0001-0066-04

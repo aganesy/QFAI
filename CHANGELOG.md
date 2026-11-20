@@ -591,6 +591,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `RangeError: Maximum call stack size exceeded` before the report was
   written. The report now lists every such line.
 
+- **`qfai report --run-validate` keeps the profile coverage notice.** On a
+  partial profile, `qfai validate --profile sdd` records `QFAI-PROFILE-001`,
+  which lists the checks the run did not evaluate. `qfai report --run-validate
+  --profile sdd` rewrote the same validation result without it, so the
+  information count dropped and the list was gone. Both commands now finish a
+  validation run the same way and write the same findings.
+
 - **The release-notes drift check holds a cut body to its kept entries, in
   order.** When a changelog section is too long for a GitHub Release body,
   the release workflow cuts it and appends a note. The check compared such a
