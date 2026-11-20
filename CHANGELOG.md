@@ -595,7 +595,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   failed in that job on the Release it had created, although the npm publish
   job beside it skips a version already on npm. The job now looks the
   Release up after the tag checks: a Release with this run's title and notes,
-  not a draft or prerelease, is reused; one that differs fails the job and
+  not a draft or prerelease, is reused once the tag, read again, still names
+  the verified commit; one that differs fails the job and
   is left as it is; and an answer other than "not found" fails the job
   instead of being read as no Release. Closes #4732.
 

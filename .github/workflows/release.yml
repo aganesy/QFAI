@@ -924,6 +924,9 @@ jobs:
           try {
             release = JSON.parse(readFileSync("tmp/existing-release.json", "utf8"));
           } catch {
+            release = null;
+          }
+          if (release === null || typeof release !== "object" || Array.isArray(release)) {
             console.log("its answer is not a Release");
             process.exit(1);
           }
@@ -942,6 +945,10 @@ jobs:
           }
           SAME
             then
+              # The tag can move during the lookup as it can during a create. This run did not
+              # create the Release, so it is never deleted here; the job only fails.
+              read_tag_commit || refuse "${REASON} while its Release was being looked up; the Release was left as it is, because this run did not create it"
+              [ "$TAG_COMMIT" = "$VERIFIED_SHA" ] || refuse "${RELEASE_TAG} moved to ${TAG_COMMIT} while its Release was being looked up, so it no longer names the verified commit ${VERIFIED_SHA}; the Release was left as it is, because this run did not create it"
               echo "release: ${RELEASE_TAG} already has the Release this run would create, at the verified commit ${VERIFIED_SHA}; reusing it"
               exit 0
             fi

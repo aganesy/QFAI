@@ -2379,9 +2379,13 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
     "    esac",
   ];
 
-  /** Runs the create step against a faked API; each table maps an API path to its reply. */
+  /**
+   * Runs the create step against a faked API; each table maps an API path to its reply.
+   * `looked` answers the calls after the Release lookup, `after` those after a create.
+   */
   const create = (run: {
     before: Record<string, string>;
+    looked?: Record<string, string>;
     after?: Record<string, string>;
     eventSha?: string;
     deleteFails?: boolean;
@@ -2401,7 +2405,10 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
       "  fi",
       '  if [ -n "${FAKE_CREATED:-}" ]; then',
       ...apiCases(run.after ?? run.before),
+      '  elif [ -n "${FAKE_LOOKED:-}" ]; then',
+      ...apiCases(run.looked ?? run.before),
       "  else",
+      '    case "$2" in */releases/tags/*) FAKE_LOOKED=1 ;; esac',
       ...apiCases(run.before),
       "  fi",
       "}",
@@ -2547,6 +2554,28 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
     });
     expect(moved.status, "a moved tag must stop the job before any Release is reused").not.toBe(0);
     expect(moved.output).not.toContain("reusing it");
+  });
+
+  it("refuses to reuse a Release when the tag moved while it was being looked up, deleting nothing", () => {
+    const raced = create({
+      before: { ...ANNOTATED, [RELEASE]: release() },
+      looked: { [REF]: `commit ${OTHER}` },
+    });
+    expect(raced.status, "a tag moved during the lookup must fail the job").not.toBe(0);
+    expect(raced.output).toContain(OTHER);
+    expect(raced.output).toContain("while its Release was being looked up");
+    expect(raced.output).not.toContain("reusing it");
+    expect(raced.output).not.toContain(CREATED);
+    expect(raced.output).not.toContain(DELETED);
+  });
+
+  it("refuses a lookup answer that is not a Release object, and creates nothing", () => {
+    for (const reply of ["null", "[]", '"text"', "not json"]) {
+      const odd = create({ before: { ...ANNOTATED, [RELEASE]: reply } });
+      expect(odd.status, `the lookup answer ${reply} must fail the job`).not.toBe(0);
+      expect(odd.output).toContain("its answer is not a Release");
+      expect(odd.output).not.toContain(CREATED);
+    }
   });
 
   it("creates the Release once, in that step, refusing to create a missing tag", () => {
