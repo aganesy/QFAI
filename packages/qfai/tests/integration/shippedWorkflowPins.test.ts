@@ -377,7 +377,7 @@ describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted convention
     // in between. (The INTERNAL_VERSION_RE literal feeding it is byte-pinned
     // by TDD-0031's SSOT-sync assertion above — referenced, not repeated.)
     expect(script).toContain(
-      'hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE|$STORY_ID_RE" "$target" 2>/dev/null || true)',
+      'hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE|$STORY_ID_RE" "$target" 2>"$grep_stderr") || grep_status=$?',
     );
     // No pragma support of any spelling has been added to the guard (the
     // `qfai-shipping:allow` pragma exists only in the pre-build src-comment
