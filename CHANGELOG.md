@@ -611,6 +611,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   looked for a historical winner. The strategy review now points at the
   comparison criteria instead.
 
+- **A release delegated while `triage-handoff` waits passes its gate**
+  (#4835). The step lets a user delegate the release while it waits, which
+  leaves no execution result to record, but its gate still asked for a
+  reported result in every case. The gate now also accepts the quoted
+  delegation with its source and the delegated release listed as the
+  follow-up that `triage-close` closes as `deferred`.
+
 - **`qfai doctor --profile prototyping` reports the Playwright probe command
   that ran** (#4769). The `displayCommand` of a direct `playwright` probe left
   out the `--help` argument the probe was run with, so rerunning the reported
