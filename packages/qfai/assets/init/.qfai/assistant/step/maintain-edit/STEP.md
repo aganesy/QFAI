@@ -43,8 +43,12 @@ In the `resolve-conflicts` route, the step merges the named base into the
 branch and keeps every record's meaning. `verify-commit` concludes the merge.
 
 1. Fetch the base (`git fetch`).
-2. Start or resume the merge with `git merge --no-commit <base>`. The union
-   merge resolves `decisions.md`, its pages and `open-questions.md` by keeping
+2. Check for a merge already in progress with
+   `git rev-parse -q --verify MERGE_HEAD`. When it prints nothing, start the
+   merge with `git merge --no-commit <base>`. When it prints the base's commit
+   (`git rev-parse <base>`), resume at step 3 and run no second merge. When it
+   prints any other commit, stop: report the in-progress merge and the commit
+   it names, and leave it in place. The union merge resolves `decisions.md`, its pages and `open-questions.md` by keeping
    both sides' rows. Edit, move and renumber no register row, except that a
    question row the union merge kept although one side deleted it is deleted
    again, since that deletion settled the question.
