@@ -79,9 +79,10 @@ const SKIP_DIRS = new Set(["node_modules", "dist", ".git", "tmp", "coverage", ".
  * The file extensions read as Markdown, compared without regard to case.
  *
  * The shipped document lane runs for a change to any of these, so a file the
- * scan skipped would pass the very check its change triggered.
+ * scan skipped would pass the very check its change triggered. Exported so a
+ * test can hold this set to the extensions that lane's change scope matches.
  */
-const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown", ".mdx"]);
+export const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown", ".mdx"]);
 
 /**
  * Whether a file name carries one of the Markdown extensions.
