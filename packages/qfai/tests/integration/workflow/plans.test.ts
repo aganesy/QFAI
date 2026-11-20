@@ -23,6 +23,7 @@ import {
   type WorkflowPlanFile,
 } from "../../../src/core/workflow/plans.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
+import { extraction } from "../../helpers/workflowExtraction.js";
 
 const roots: string[] = [];
 
@@ -483,5 +484,41 @@ it("A project whose sdd-story step is not installed", async () => {
         cause: "step-missing",
       },
     ],
+  });
+});
+
+it("A project whose sdd-triage step, run only by the added specification stage, is not installed", async () => {
+  const root = await project();
+  await rm(path.join(root, ".qfai", "assistant", "step", "sdd-triage"), { recursive: true });
+  const request = extraction({ intent: "ci", artifacts: ["spec", "ci"] });
+  const low = extraction({
+    intent: "ci",
+    artifacts: ["spec", "ci"],
+    confidence: "low",
+    alternatives: [{ intent: "refactor", entryFlags: [], qualifiers: [], signals: [] }],
+  });
+  const missing = (route: string) => ({
+    ok: false,
+    message: expect.any(String),
+    reasons: [
+      {
+        reason: "plan-invalid",
+        subject: "sdd-triage",
+        file: `${route}.yml`,
+        cause: "step-missing",
+      },
+    ],
+  });
+
+  expect({
+    direct: await planned(root, { extraction: request }),
+    named: await planned(root, { route: "change-tooling", extraction: request }),
+    candidates: await planned(root, { extraction: low }),
+    bare: (await planned(root, { route: "change-tooling" })).ok,
+  }).toEqual({
+    direct: missing("change-tooling"),
+    named: missing("change-tooling"),
+    candidates: missing("change-tooling"),
+    bare: true,
   });
 });
