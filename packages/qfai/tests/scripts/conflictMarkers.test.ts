@@ -12,12 +12,15 @@
  * counts as a marker, and where an example is allowed to look like one.
  */
 import { execFileSync } from "node:child_process";
+import { lstatSync, readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { run } from "../../../../scripts/check-conflict-markers.mjs";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -213,5 +216,75 @@ describe("a tree it cannot read", () => {
 
     expect(status).toBe(2);
     expect(output).toContain("nothing was scanned");
+  });
+});
+
+describe("a tracked file it cannot read", () => {
+  /** An error shaped like the one node:fs throws, with its `code`. */
+  function fsError(code: string): Error {
+    return Object.assign(new Error(`${code}: simulated`), { code });
+  }
+
+  /** Runs the scan in-process with one path's read or lstat replaced. */
+  function runWith(
+    root: string,
+    options: Parameters<typeof run>[1],
+  ): { status: number; errors: string } {
+    const errors: string[] = [];
+    const errorSpy = vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+      errors.push(args.map(String).join(" "));
+    });
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      return { status: run(root, options), errors: errors.join("\n") };
+    } finally {
+      errorSpy.mockRestore();
+      logSpy.mockRestore();
+    }
+  }
+
+  it("exits 2 and names the file when a read fails for access", async () => {
+    // The scan used to skip the file and print a clean count, so a run that
+    // never looked at `locked.md` read as a run that passed.
+    const root = await repoWith({ "locked.md": "=======\n", "open.md": "fine\n" });
+
+    const { status, errors } = runWith(root, {
+      read: (absolute) => {
+        if (path.basename(absolute) === "locked.md") throw fsError("EACCES");
+        return readFileSync(absolute, "utf-8");
+      },
+    });
+
+    expect(status).toBe(2);
+    expect(errors).toContain("locked.md");
+    expect(errors).toContain("EACCES");
+    expect(errors).toContain("incomplete");
+  });
+
+  it("exits 2 when the entry cannot be inspected for an I/O failure", async () => {
+    const root = await repoWith({ "broken.md": "fine\n" });
+
+    const { status, errors } = runWith(root, {
+      lstat: (absolute) => {
+        if (path.basename(absolute) === "broken.md") throw fsError("EIO");
+        return lstatSync(absolute);
+      },
+    });
+
+    expect(status).toBe(2);
+    expect(errors).toContain("broken.md");
+  });
+
+  it("still skips a file deleted between listing and reading", async () => {
+    const root = await repoWith({ "gone.md": "fine\n", "kept.md": "fine\n" });
+
+    const { status } = runWith(root, {
+      read: (absolute) => {
+        if (path.basename(absolute) === "gone.md") throw fsError("ENOENT");
+        return readFileSync(absolute, "utf-8");
+      },
+    });
+
+    expect(status).toBe(0);
   });
 });
