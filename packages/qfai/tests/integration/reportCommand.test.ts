@@ -136,6 +136,27 @@ describe("qfai report", () => {
     );
   });
 
+  // QFAI:AC-0001-0058-01
+  // QFAI:EX-0001-0058-02
+  it("marks a waived finding in the Markdown list and keeps it unmarked in JSON", async () => {
+    const root = await storyRoot();
+    const waived: Issue = { ...warning, suppressed: true };
+    await writeValidation(root, [waived, note]);
+
+    await cli(root, ["report", "--format", "md"]);
+
+    expect(
+      (await markdownLines(root)).filter((line) => /^- (INFO|WARNING|ERROR) /.test(line)),
+    ).toEqual([
+      "- WARNING (waived) QFAI-TEST-001: fixture warning (.qfai/spec/decisions.md)",
+      "- INFO QFAI-TEST-002: fixture note",
+    ]);
+
+    await cli(root, ["report", "--format", "json"]);
+    const data = JSON.parse(await readFile(path.join(root, ".qfai/report/report.json"), "utf8"));
+    expect(data.issues).toEqual([waived, note]);
+  });
+
   // QFAI:AC-0001-0059-01
   // QFAI:EX-0001-0059-01
   it("writes report.json with the structured data of the stored result", async () => {
