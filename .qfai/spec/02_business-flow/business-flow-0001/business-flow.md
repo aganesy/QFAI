@@ -46,9 +46,11 @@ flowchart TD
   finding. Completion is reported only after the relevant gate passes.
 - A free-text change request in mode `active` is planned by `qfai-run` with
   `npx qfai workflow plan`, and the session follows the planned stages with no
-  stage typed by the user. A critical decision, each change to the story tree
-  and each release wait for the user's approval. Text that is not a request, or
-  a mode of `off` or `shadow`, is not planned.
+  stage typed by the user. A critical decision and each release point wait for
+  the user's approval. An example a defect repair needs, which conflicts with
+  nothing in the specification, is appended under its existing criterion
+  without asking; one that would conflict waits for the user's answer. Text
+  that is not a request, or a mode of `off` or `shadow`, is not planned.
 - Fixed decision rules choose the route from the facts read out of the request.
   A request that needs no change runs a route that answers, closes, splits or
   hands it back and changes no product file. Its only tracked writes are the
