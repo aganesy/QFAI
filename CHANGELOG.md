@@ -627,6 +627,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   exits 2 and names the directory, as it already did for an unreadable file. A
   directory removed while the check runs is still passed over. Closes #4717.
 
+- **Design token references resolve the same way in any declaration order.**
+  A chain of more than ten references raised `QFAI-DT-002` and kept a
+  `{...}` placeholder when the file declared the first token before the
+  last, and resolved with no finding when it declared them the other way
+  round. The depth limit now applies to the whole chain under each token,
+  so such a token raises the finding in either order. A token whose
+  reference fails no longer keeps a half-substituted value, and nor does any
+  token that references it, so the mock fallback check compares only values
+  that fully resolved.
+
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
   dropped one and ran as if it had not been given, so
