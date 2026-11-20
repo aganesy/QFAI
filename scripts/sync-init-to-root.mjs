@@ -42,9 +42,9 @@
  *   node scripts/sync-init-to-root.mjs --check  # dry-run, exit 1 if missing or stale
  */
 
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { constants, copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath, URL } from "node:url";
+import { fileURLToPath, pathToFileURL, URL } from "node:url";
 
 /**
  * `fileURLToPath`, not `URL.pathname`: a checkout under a directory with a
@@ -53,8 +53,6 @@ import { fileURLToPath, URL } from "node:url";
  */
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const INIT = join(ROOT, "packages", "qfai", "assets", "init");
-
-const CHECK_ONLY = process.argv.includes("--check");
 
 /** Each entry is seeded from `from` to `to` only when `to` is absent. */
 const SEEDED = [
@@ -70,49 +68,83 @@ const SEEDED = [
   },
 ];
 
-let missing = 0;
-let seeded = 0;
-
-for (const { from, to, shown } of SEEDED) {
-  if (existsSync(to)) continue;
-  if (!existsSync(from)) {
-    console.error(`MISSING SOURCE: ${shown} has no init asset to seed from.`);
-    missing += 1;
-    continue;
-  }
-  if (CHECK_ONLY) {
-    console.error(`MISSING: ${shown}`);
-    missing += 1;
-    continue;
-  }
-  copyFileSync(from, to);
-  console.log(`Seeded ${shown} from the init assets.`);
-  seeded += 1;
-}
-
-const versionFile = join(ROOT, ".qfai", "assistant", "VERSION");
-const { version } = JSON.parse(
-  readFileSync(join(ROOT, "packages", "qfai", "package.json"), "utf-8"),
-);
-const versionText = `${version}\n`;
-const recorded = existsSync(versionFile) ? readFileSync(versionFile, "utf-8") : undefined;
-if (recorded !== versionText) {
-  if (CHECK_ONLY) {
-    console.error(`STALE: .qfai/assistant/VERSION does not record ${version}`);
-    missing += 1;
-  } else {
-    writeFileSync(versionFile, versionText, "utf-8");
-    console.log(`Wrote .qfai/assistant/VERSION (${version}).`);
+/**
+ * Copy `from` to `to` unless `to` exists, and say which happened.
+ *
+ * The caller checked that `to` was absent, but that answered a question about a
+ * moment that has passed: another process, or the maintainer's editor, can
+ * create the file between the check and this copy, and a plain copy replaces
+ * it. `COPYFILE_EXCL` makes the create itself the decision, and an `EEXIST`
+ * means the file is already present, which is the outcome the check intended.
+ *
+ * @param {string} from
+ * @param {string} to
+ * @returns {"seeded" | "present"}
+ */
+export function seedAbsent(from, to) {
+  try {
+    copyFileSync(from, to, constants.COPYFILE_EXCL);
+    return "seeded";
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "EEXIST") return "present";
+    throw error;
   }
 }
 
-if (missing > 0) {
-  console.error(`\n${missing} file(s) missing or stale. Run: pnpm sync:ssot`);
-  process.exit(1);
+/** @returns {number} the exit code */
+function main() {
+  const checkOnly = process.argv.includes("--check");
+  let missing = 0;
+  let seeded = 0;
+
+  for (const { from, to, shown } of SEEDED) {
+    if (existsSync(to)) continue;
+    if (!existsSync(from)) {
+      console.error(`MISSING SOURCE: ${shown} has no init asset to seed from.`);
+      missing += 1;
+      continue;
+    }
+    if (checkOnly) {
+      console.error(`MISSING: ${shown}`);
+      missing += 1;
+      continue;
+    }
+    if (seedAbsent(from, to) === "present") continue;
+    console.log(`Seeded ${shown} from the init assets.`);
+    seeded += 1;
+  }
+
+  const versionFile = join(ROOT, ".qfai", "assistant", "VERSION");
+  const { version } = JSON.parse(
+    readFileSync(join(ROOT, "packages", "qfai", "package.json"), "utf-8"),
+  );
+  const versionText = `${version}\n`;
+  const recorded = existsSync(versionFile) ? readFileSync(versionFile, "utf-8") : undefined;
+  if (recorded !== versionText) {
+    if (checkOnly) {
+      console.error(`STALE: .qfai/assistant/VERSION does not record ${version}`);
+      missing += 1;
+    } else {
+      writeFileSync(versionFile, versionText, "utf-8");
+      console.log(`Wrote .qfai/assistant/VERSION (${version}).`);
+    }
+  }
+
+  if (missing > 0) {
+    console.error(`\n${missing} file(s) missing or stale. Run: pnpm sync:ssot`);
+    process.exit(1);
+  }
+
+  console.log(
+    checkOnly
+      ? "Seeded files are present."
+      : `${seeded} file(s) seeded; the rest were already present.`,
+  );
+  return 0;
 }
 
-console.log(
-  CHECK_ONLY
-    ? "Seeded files are present."
-    : `${seeded} file(s) seeded; the rest were already present.`,
-);
+// `pathToFileURL`, not `file://` + the path, so the guard also fires on Windows.
+// The test imports `seedAbsent` and must not seed this repository by doing so.
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  process.exit(main());
+}
