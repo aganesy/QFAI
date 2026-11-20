@@ -14,12 +14,15 @@ const calls = vi.hoisted(() => ({
   issueAnswer: "",
   threadPages: [] as string[],
   commentPages: [] as string[],
+  failGh: undefined as ((args: string[]) => Error | undefined) | undefined,
 }));
 
 vi.mock("node:child_process", () => ({
   execFileSync: (command: string, args: string[]): string => {
     calls.list.push([command, ...args]);
     if (command === "git") return "https://github.com/aganesy/QFAI.git\n";
+    const failure = calls.failGh?.(args);
+    if (failure !== undefined) throw failure;
     if (args.some((arg) => arg.includes("reviewThreads(")))
       return calls.threadPages.shift() ?? "{}";
     if (args[1] === "-i") return calls.commentPages.shift() ?? "HTTP/2.0 404 Not Found\n\n{}";
@@ -455,6 +458,69 @@ describe("listing a pull request that holds more than one page", () => {
     expect(code).toBe(2);
     expect(out).toContain("Codex review comments: 100");
     expect(out).toContain("Incomplete: not every page of comments was read");
+  });
+});
+
+describe("a call to gh that fails", () => {
+  afterEach(() => {
+    calls.list.length = 0;
+    calls.failGh = undefined;
+    vi.restoreAllMocks();
+  });
+
+  const exited = (): Error =>
+    Object.assign(new Error("Command failed: gh api graphql"), {
+      status: 1,
+      stderr: "HTTP 502: Bad Gateway\n",
+    });
+
+  function errorOutput(argv: string[]): { code: number; text: string } {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const code = run(argv);
+    return { code, text: error.mock.calls.join(" ") };
+  }
+
+  it("returns 2 and names the operation when gh exits with an error", () => {
+    calls.failGh = exited;
+    const { code, text } = errorOutput(["resolve", "T1"]);
+    expect(code).toBe(2);
+    expect(text).toContain("`gh` exited with status 1 while resolving review thread T1.");
+  });
+
+  it("returns 2 and says gh could not be started when it is not installed", () => {
+    calls.failGh = (): Error => Object.assign(new Error("spawnSync gh ENOENT"), { code: "ENOENT" });
+    const { code, text } = errorOutput(["list", "12"]);
+    expect(code).toBe(2);
+    expect(text).toContain(
+      "`gh` could not be started (ENOENT) while reading the review threads of pull request 12.",
+    );
+  });
+
+  it("names the step of a deferral that failed", () => {
+    calls.threadAnswer = JSON.stringify({
+      data: {
+        node: {
+          id: "T1",
+          isResolved: false,
+          path: "src/a.ts",
+          line: 7,
+          pullRequest: { number: 12, repository: { nameWithOwner: "aganesy/QFAI" } },
+          comments: {
+            nodes: [{ url: "https://x/c/1", author: { login: "reviewer" }, body: "Cover it." }],
+          },
+          latest: { nodes: [] },
+        },
+      },
+    });
+    calls.issueAnswer = "";
+    calls.failGh = (args): Error | undefined =>
+      args.some((arg) => arg.includes("addPullRequestReviewThreadReply")) ? exited() : undefined;
+    const { code, text } = errorOutput(["defer", "12", "T1", "40"]);
+    expect(code).toBe(2);
+    expect(text).toContain("`gh` exited with status 1 while replying to review thread T1.");
+    const ghCalls = calls.list.filter(([command]) => command === "gh");
+    expect(ghCalls.some((call) => call.join(" ").includes("resolveReviewThread"))).toBe(false);
   });
 });
 

@@ -529,6 +529,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   looked for a historical winner. The strategy review now points at the
   comparison criteria instead.
 
+- **`qfai db-drift --format` with a wrong value now lists the formats it
+  accepts.** `qfai db-drift --format yaml` said "--format is not valid for this
+  command", although db-drift reads `--format`. It now says the value is
+  invalid and that `text|json` is expected.
+
 - **The UI open-questions review now follows the register's real lifecycle.**
   It asked reviewers to filter rows by a Status and a Severity and to
   downgrade them, but the register has only ID, Content and Approach, and its
@@ -544,6 +549,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the parsed contract, so the block and inline forms are treated alike. A
   contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
   references now say the finding is an error, which it already was.
+
+- **`-h` and `-V` after a value-taking option are switches, not its value.**
+  `qfai init --dir -h` initialized a directory named `-h`. An option's value
+  now excludes `-h` and `-V` as it already excluded a `--` token, so they act
+  as `--help` and `--version` do in that place: `-h` reports the missing value
+  with the usage text and exits 2, and `-V` prints the version. Any other value
+  that starts with a single `-` is still taken.
 
 - **The example waiver in a new `.qfai/waivers.yml` now points at evidence
   that opens.** Its `evidence` linked `decisions.md#DEC-0001`, but a decision
@@ -565,6 +577,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it, checked every document instead and printed no summary. It now leaves a
   following option alone, reports `--base needs a git ref` and exits 2, as it
   already did for `--tools`.
+
+- **`qfai report --in` refuses a malformed waiver suppression map.** A
+  `waivers.suppressed.byWaiver` or `byRule` that was `null`, an array, or an
+  object with a count that is not a number passed the input check and reached
+  the emitted report. The report now stops before writing and names the field,
+  such as `waivers.suppressed.byRule["QFAI-X"] must be a number`.
 
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio
@@ -651,6 +669,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   instead of a finding. It is now reported as `QFAI-CONTRACT-021`, and the
   other contracts are still checked. A UI contract with such a top level is
   reported the same way.
+
+- **`scripts/pr-threads.mjs` returns 2 when `gh` fails.** A GitHub API error
+  or a missing `gh` escaped as an exception, so the command printed a stack
+  trace and exited 1, the status it documents for a budget refusal. It now
+  prints one line naming the operation that failed, such as resolving a
+  given thread, and exits 2 (#4737).
 
 - **`qfai init --force` keeps a project's own wrapper when the link replacing
   it cannot be written.** A file or directory of the project's at a skill or

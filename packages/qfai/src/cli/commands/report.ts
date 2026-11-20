@@ -19,7 +19,7 @@ import { isStoryTreeProject } from "../../core/storyTree/layout.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { isValidationProfile } from "../../core/validationProfiles.js";
 import { countIssues } from "../../core/validate.js";
-import { shouldFail } from "../lib/failOn.js";
+import { resolveFailOn, shouldFail } from "../lib/failOn.js";
 import { isIncompleteRunResult } from "../lib/warnings.js";
 import { error, info, warn } from "../../core/logger.js";
 import {
@@ -320,16 +320,6 @@ async function runValidateForReport(
   return { validation: normalized, ranNarrowProfileInCi: ciProfileIssue !== null };
 }
 
-function resolveFailOn(options: ReportOptions, fallback: FailOn): FailOn {
-  if (options.failOn) {
-    return options.failOn;
-  }
-  if (options.strict) {
-    return "warning";
-  }
-  return fallback;
-}
-
 /**
  * Decide the input path on the reading side (without `--run-validate`).
  *
@@ -536,14 +526,25 @@ function validationResultShapeProblem(value: unknown): string | null {
     if (typeof Reflect.get(suppressed, "total") !== "number") {
       return "waivers.suppressed.total must be a number";
     }
-    if (typeof Reflect.get(suppressed, "byWaiver") !== "object") {
-      return "waivers.suppressed.byWaiver must be an object";
-    }
-    if (typeof Reflect.get(suppressed, "byRule") !== "object") {
-      return "waivers.suppressed.byRule must be an object";
+    for (const key of ["byWaiver", "byRule"]) {
+      const problem = countMapProblem(Reflect.get(suppressed, key));
+      if (problem !== null) return `waivers.suppressed.${key}${problem}`;
     }
   }
 
+  return null;
+}
+
+/**
+ * The problem with a suppression count map (`byWaiver`, `byRule`) as a suffix
+ * to its path, or `null` when it is a plain object of numbers. `null` and an
+ * array are both `typeof "object"`, so that test alone lets them through.
+ */
+function countMapProblem(map: unknown): string | null {
+  if (!map || typeof map !== "object" || Array.isArray(map)) return " must be an object";
+  for (const [key, count] of Object.entries(map)) {
+    if (typeof count !== "number") return `[${JSON.stringify(key)}] must be a number`;
+  }
   return null;
 }
 
