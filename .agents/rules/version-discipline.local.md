@@ -78,7 +78,10 @@ A branch named `<type>/v<X.Y.Z>[-<slug>]` carries a pin — `feature/v1.8.8`,
 The guard reads a pin from a `v` after `/`, `_`, `-`, or the start of the branch
 name. It refuses a pre-release suffix (`-rc`, `-alpha`, `-beta`, `-pre`,
 `-next`) or build metadata next to the version: it exits 1 rather than reading
-`1.9.0` out of `v1.9.0-rc.1`. Keep to
+`1.9.0` out of `v1.9.0-rc.1`. A suffix counts only as a whole token, optionally
+followed by digits, that ends the name or meets `.`, `/`, `_` or `-`: `-rc1`
+and `-beta-docs` are refused, while `-prepare-docs` and `-nextjs-upgrade` are
+slugs. Keep to
 `<type>/v<X.Y.Z>[-<slug>]` so the pin is unambiguous.
 
 The guard takes MAJOR.MINOR.PATCH only, so `feature/api-2024.10.05`,
