@@ -152,84 +152,116 @@ function resolveAllReferences(result: DesignTokenParseResult): void {
   for (const [key, val] of result.semantics) allTokens.set(key, val);
   for (const [key, val] of result.components) allTokens.set(key, val);
 
+  const outcomes = new Map<string, Outcome>();
   for (const [path] of allTokens) {
-    resolveTokenRef(path, allTokens, new Set(), 0, result);
+    resolveTokenRef(path, allTokens, outcomes, result);
   }
 }
 
+/**
+ * A resolved token carries its height: the longest chain of references below
+ * it, 0 for a literal. A token that cannot resolve stays failed, so whatever
+ * references it fails too instead of holding a partial substitution.
+ */
+type Outcome = { value: string; height: number } | "failed";
+
+type Frame = { path: string; refs: readonly string[]; next: number };
+
+/**
+ * Resolves `start` and every token it reaches, walking an explicit stack so a
+ * long chain cannot exhaust the call stack. Each token's outcome is decided
+ * once, from its own references alone, so it does not depend on the order the
+ * file declares tokens in or on which token the walk started from.
+ */
 function resolveTokenRef(
+  start: string,
+  allTokens: Map<string, DesignTokenValue>,
+  outcomes: Map<string, Outcome>,
+  result: DesignTokenParseResult,
+): void {
+  if (outcomes.has(start)) {
+    return;
+  }
+  const onStack = new Set<string>([start]);
+  const stack: Frame[] = [{ path: start, refs: referencesOf(start, allTokens), next: 0 }];
+
+  while (stack.length > 0) {
+    const frame = stack[stack.length - 1];
+    if (!frame) break;
+    const refPath = frame.refs[frame.next];
+    if (refPath !== undefined) {
+      frame.next += 1;
+      if (outcomes.has(refPath) || !allTokens.has(refPath)) continue;
+      if (onStack.has(refPath)) {
+        result.errors.push({ message: `Circular reference detected: ${refPath}`, path: refPath });
+        outcomes.set(refPath, "failed");
+        continue;
+      }
+      onStack.add(refPath);
+      stack.push({ path: refPath, refs: referencesOf(refPath, allTokens), next: 0 });
+      continue;
+    }
+    stack.pop();
+    onStack.delete(frame.path);
+    if (!outcomes.has(frame.path)) {
+      settleToken(frame.path, allTokens, outcomes, result);
+    }
+  }
+}
+
+function referencesOf(path: string, allTokens: Map<string, DesignTokenValue>): string[] {
+  const value = allTokens.get(path)?.$value;
+  if (typeof value !== "string") {
+    return [];
+  }
+  return [...value.matchAll(REF_PATTERN)].flatMap((ref) => (ref[1] ? [ref[1]] : []));
+}
+
+/** Decides one token once every token it references has an outcome. */
+function settleToken(
   path: string,
   allTokens: Map<string, DesignTokenValue>,
-  visited: Set<string>,
-  depth: number,
+  outcomes: Map<string, Outcome>,
   result: DesignTokenParseResult,
-): string | undefined {
-  if (result.resolved.has(path)) {
-    return result.resolved.get(path);
-  }
-
-  if (depth > MAX_RESOLVE_DEPTH) {
-    result.errors.push({
-      message: `Max reference depth exceeded at: ${path}`,
-      path,
-    });
-    return undefined;
-  }
-
-  if (visited.has(path)) {
-    result.errors.push({
-      message: `Circular reference detected: ${path}`,
-      path,
-    });
-    return undefined;
-  }
-
-  const token = allTokens.get(path);
-  if (!token) {
-    return undefined;
-  }
-
-  if (typeof token.$value !== "string") {
-    const rawValue = stringifyTokenValue(token.$value);
-    result.resolved.set(path, rawValue);
-    return rawValue;
-  }
-
-  const rawValue = stringifyTokenValue(token.$value);
-  const refs = [...rawValue.matchAll(REF_PATTERN)];
-
-  if (refs.length === 0) {
-    result.resolved.set(path, rawValue);
-    return rawValue;
-  }
-
-  visited.add(path);
+): void {
+  const rawValue = stringifyTokenValue(allTokens.get(path)?.$value);
   let resolved = rawValue;
+  let height = 0;
+  let failed = false;
 
-  for (const ref of refs) {
-    const refPath = ref[1];
-    if (!refPath) continue;
-
-    const refToken = allTokens.get(refPath);
-    if (!refToken) {
+  for (const refPath of referencesOf(path, allTokens)) {
+    if (!allTokens.has(refPath)) {
       result.errors.push({
         message: `Unresolved token reference: {${refPath}} at ${path}`,
         path,
       });
+      failed = true;
       continue;
     }
-
-    const refValue = resolveTokenRef(refPath, allTokens, new Set(visited), depth + 1, result);
-    if (refValue !== undefined) {
-      resolved = resolved.split(`{${refPath}}`).join(refValue);
+    const outcome = outcomes.get(refPath);
+    if (outcome === undefined || outcome === "failed") {
+      failed = true;
+      continue;
     }
+    height = Math.max(height, outcome.height + 1);
+    resolved = resolved.split(`{${refPath}}`).join(outcome.value);
   }
 
-  result.resolved.set(path, resolved);
-  return resolved;
-}
+  if (!failed && height > MAX_RESOLVE_DEPTH) {
+    result.errors.push({
+      message: `Max reference depth exceeded at: ${path}`,
+      path,
+    });
+    failed = true;
+  }
 
-export { resolveTokenRef as _resolveTokenRefForTest };
+  if (failed) {
+    outcomes.set(path, "failed");
+    return;
+  }
+  outcomes.set(path, { value: resolved, height });
+  result.resolved.set(path, resolved);
+}
 
 function stringifyTokenValue(value: unknown): string {
   if (typeof value === "string") {

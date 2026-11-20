@@ -53,6 +53,46 @@ describe("uiux validators", () => {
     expect(parsed.resolved.get("semantic.text.body")).toBe("#ffffff / #ffffff");
   });
 
+  // QFAI:EX-0001-0039-62
+  it("resolves the same token references to the same result in any declaration order", () => {
+    const chainLength = 12;
+    const chainLines = Array.from({ length: chainLength }, (_, index) => {
+      const value =
+        index === chainLength - 1
+          ? "red"
+          : `'{primitive.chain.t${String(index + 1).padStart(2, "0")}}'`;
+      return [`    t${String(index).padStart(2, "0")}:`, `      $value: ${value}`];
+    });
+    const failureLines = [
+      ["    broken:", "      $value: '{primitive.missing}'"],
+      ["    dependent:", "      $value: '{primitive.fail.broken} / {primitive.chain.t11}'"],
+    ];
+    const yamlFor = (chain: string[][], failure: string[][]): string =>
+      ["primitive:", "  chain:", ...chain.flat(), "  fail:", ...failure.flat(), ""].join("\n");
+    const outcome = (yaml: string) => {
+      const parsed = parseDesignToken(yaml);
+      return {
+        resolved: [...parsed.resolved.entries()].sort(([a], [b]) => a.localeCompare(b)),
+        errors: parsed.errors.map((error) => `${error.path ?? ""}: ${error.message}`).sort(),
+      };
+    };
+
+    const rootFirst = outcome(yamlFor(chainLines, failureLines));
+    const leafFirst = outcome(yamlFor([...chainLines].reverse(), [...failureLines].reverse()));
+
+    expect(rootFirst).toEqual(leafFirst);
+    expect(rootFirst.errors).toEqual([
+      "primitive.chain.t00: Max reference depth exceeded at: primitive.chain.t00",
+      "primitive.fail.broken: Unresolved token reference: {primitive.missing} at primitive.fail.broken",
+    ]);
+    const resolved = new Map(rootFirst.resolved);
+    expect(resolved.has("primitive.chain.t00")).toBe(false);
+    expect(resolved.get("primitive.chain.t01")).toBe("red");
+    expect(resolved.get("primitive.chain.t11")).toBe("red");
+    expect(resolved.has("primitive.fail.broken")).toBe(false);
+    expect(resolved.has("primitive.fail.dependent")).toBe(false);
+  });
+
   it("detects local refs, unsafe URLs, and event handlers in HTML mock", async () => {
     const html = [
       '<button style="width: 20px; height: 20px" onclick="doX()">Tap</button>',
