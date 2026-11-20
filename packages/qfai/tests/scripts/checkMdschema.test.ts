@@ -1653,6 +1653,50 @@ describe("a heading finding", () => {
     );
     expect(raw.stderr).toContain('the schema requires "^# Objective$"');
   });
+
+  // QFAI:EX-0001-0011-23
+  it("keeps --show-patterns to the run that asked for it, in one process", async () => {
+    const root = await newTempDir();
+    const objective = readFileSync(
+      path.join(
+        REPO_ROOT,
+        "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/01_policy/objective.md",
+      ),
+      "utf-8",
+    ).replace(/^# Objective$/m, "# Objectives");
+    const dir = path.join(root, ".qfai", "specs", "01_policy");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "objective.md"), objective, "utf-8");
+    const file = ".qfai/specs/01_policy/objective.md";
+
+    const argv = process.argv;
+    const stderr = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const stdout = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const run = (...flags: string[]): string => {
+      process.argv = ["node", SCRIPT, "--root", root, "--scope", "files", ...flags, file];
+      expect(main()).toBe(1);
+      const text = stderr.mock.calls.flat().join("\n");
+      stderr.mockClear();
+      return text;
+    };
+    try {
+      const raw = run("--show-patterns");
+      const explained = run();
+      const result = await checkDocuments(root);
+
+      expect(raw).toContain('the schema requires "^# Objective$"');
+      expect(explained).toContain('the schema requires "# Objective";');
+      expect(explained).not.toContain("^# Objective$");
+      expect(result.ok).toBe(true);
+      const messages = result.violations.map((found: { message: string }) => found.message);
+      expect(messages.join("\n")).toContain('the schema requires "# Objective";');
+      expect(messages.join("\n")).not.toContain("^# Objective$");
+    } finally {
+      process.argv = argv;
+      stderr.mockRestore();
+      stdout.mockRestore();
+    }
+  });
 });
 
 describe("the configured decision register", () => {
