@@ -52,7 +52,9 @@ export function sinceInstant(value: string): number | null {
 function isCalendarDate(date: string): boolean {
   const [year, month, day] = date.split("-").map(Number);
   if (year === undefined || month === undefined || day === undefined) return false;
-  const parsed = new Date(Date.UTC(year, month - 1, day));
+  // `Date.UTC` reads years 0 through 99 as 1900 through 1999; `setUTCFullYear` keeps the year.
+  const parsed = new Date(0);
+  parsed.setUTCFullYear(year, month - 1, day);
   return (
     parsed.getUTCFullYear() === year &&
     parsed.getUTCMonth() === month - 1 &&
@@ -154,10 +156,11 @@ async function locateCodex(
     // A rollout opens with its session_meta record, so only that one is read.
     const meta = await firstValue(file, (record) => codexSessionMeta(record) ?? undefined, 1);
     if (meta?.cwd === undefined || !sameDirectory(meta.cwd, root, env.platform)) continue;
+    // The recorded id is the session's identity; a name-derived one could match another session.
+    const sessionId = meta.id;
+    if (sessionId === undefined || sessionId === "") continue;
     const mtimeMs = await fileTime(file);
     if (mtimeMs === null) continue;
-    const fromName = /([0-9a-f]{8}-[0-9a-f-]{28})\.jsonl$/i.exec(file)?.[1];
-    const sessionId = meta.id ?? fromName ?? path.basename(file, ".jsonl");
     sessions.push({ agent: "codex", sessionId, file, mtimeMs });
   }
   return sessions;

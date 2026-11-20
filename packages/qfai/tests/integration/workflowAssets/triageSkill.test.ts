@@ -302,7 +302,16 @@ describe("a question answered without a change", () => {
     );
     expect(procedure).toMatch(/Never enable a host's auto-merge/);
     expect(procedure).toMatch(
-      /Before a merge, merge the base branch into the pull request's branch locally \(`git merge origin\/<base>`\), push, and wait for the checks that push starts; only then merge/,
+      /Before a merge, read the pull request's base repository and base branch from the pull request's own metadata, never an assumed `origin\/main`/,
+    );
+    expect(procedure).toMatch(
+      /Fetch that branch from the remote for that repository \(`git fetch <remote> <base>`\) and record the commit it fetched \(`git rev-parse FETCH_HEAD`\); a local remote-tracking ref alone may be stale/,
+    );
+    expect(procedure).toMatch(
+      /Merge that recorded commit into the pull request's branch locally, push, and wait for the checks that push starts/,
+    );
+    expect(procedure).toMatch(
+      /Just before the merge, fetch the base again: when it no longer points to the recorded commit, record the new commit and merge it in the same way first; only then merge/,
     );
     expect(procedure).toMatch(
       /A conflict the host shows only in `decisions\.md`, its pages or `open-questions\.md` is resolved the same way: the union merge completes it/,
@@ -400,6 +409,9 @@ describe("a question answered without a change", () => {
     );
     expect(flat(sectionOf(await step("triage-handoff"), "## Procedure"))).toMatch(
       /delegates the release to the agent while this step waits.*Quote the instruction word for word with its source, do not report `handed-off`, and list the delegated release as the follow-up for the closing step, which closes the request as `deferred`/,
+    );
+    expect(flat(sectionOf(await step("triage-handoff"), "## Gate"))).toMatch(
+      /one of two outcomes: the result is recorded as the person reported it, or, where the user delegated the release while this step waited, the delegation is quoted word for word with its source, no `handed-off` is reported, and the delegated release is listed as the follow-up the closing step closes as `deferred`/,
     );
   });
 

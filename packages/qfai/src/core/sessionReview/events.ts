@@ -65,8 +65,9 @@ export function stringAt(value: unknown, key: string): string | undefined {
 
 /**
  * Feed each JSON-object line of `file` to `onRecord`, in order, and count the lines that are not
- * one. `onRecord` returns `false` to stop reading early and `true` to go on. CRLF line ends
- * read as line ends.
+ * one, a blank or whitespace-only line among them. `onRecord` returns `false` to stop reading early
+ * and `true` to go on. CRLF line ends read as line ends, and the file's last line end opens no
+ * further line.
  */
 export async function readJsonl(
   file: string,
@@ -78,11 +79,9 @@ export async function readJsonl(
   let malformed = 0;
   try {
     for await (const raw of lines) {
-      const line = raw.trim();
-      if (line === "") continue;
       let parsed: unknown;
       try {
-        parsed = JSON.parse(line);
+        parsed = JSON.parse(raw.trim());
       } catch {
         malformed += 1;
         continue;

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emptyEvents, type SessionEvents } from "../../src/core/sessionReview/events.js";
+import { emptyEvents, readJsonl, type SessionEvents } from "../../src/core/sessionReview/events.js";
 import {
   claudeProjectSlug,
   locateSessions,
@@ -226,6 +226,34 @@ describe("where the transcripts are", () => {
       "0199aaaa-bbbb-7ccc-8ddd-eeeeffff0000",
     ]);
   });
+
+  it("leaves out a Codex rollout whose session_meta names the root but records no session id", async () => {
+    const base = await tempDir();
+    const root = path.join(base, "project");
+    const day = path.join(base, "codex", "sessions", "2026", "11", "10");
+    const meta = (payload: Record<string, unknown>): string =>
+      `${JSON.stringify({ type: "session_meta", payload })}\n`;
+    // Each file name carries a UUID, so a fallback to the name would invent a session ID.
+    await place(
+      path.join(day, "rollout-2026-11-10T10-00-00-0199aaaa-bbbb-7ccc-8ddd-eeeeffff0002.jsonl"),
+      meta({ cwd: root }),
+    );
+    await place(
+      path.join(day, "rollout-2026-11-10T11-00-00-0199aaaa-bbbb-7ccc-8ddd-eeeeffff0003.jsonl"),
+      meta({ id: "", cwd: root }),
+    );
+    await place(
+      path.join(day, "rollout-2026-11-10T12-00-00-0199aaaa-bbbb-7ccc-8ddd-eeeeffff0004.jsonl"),
+      meta({ id: 42, cwd: root }),
+    );
+    await place(
+      path.join(day, "rollout-2026-11-10T13-00-00-0199aaaa-bbbb-7ccc-8ddd-eeeeffff0005.jsonl"),
+      meta({ id: "recorded-id", cwd: root }),
+    );
+
+    const found = await locateSessions(root, ["codex"], environment(base));
+    expect(found.map((session) => session.sessionId)).toEqual(["recorded-id"]);
+  });
 });
 
 // QFAI:EX-0001-0294-09
@@ -317,6 +345,21 @@ describe("what a Claude Code transcript shows", () => {
     expect(crlfEvents.malformed).toBe(2);
     expect(summarise(crlfEvents, FACTS)).toEqual(summarise(lf, FACTS));
   });
+
+  it("counts an interior blank or whitespace-only line as malformed, and not the last line end", async () => {
+    const dir = await tempDir();
+    const cases: Array<[string, string, { records: number; malformed: number }]> = [
+      ["lf.jsonl", '{"a":1}\n\n \t\n{"b":2}\n', { records: 2, malformed: 2 }],
+      ["crlf.jsonl", '{"a":1}\r\n\r\n \t\r\n{"b":2}\r\n', { records: 2, malformed: 2 }],
+      ["ended.jsonl", '{"a":1}\r\n{"b":2}\r\n', { records: 2, malformed: 0 }],
+      ["unended.jsonl", '{"a":1}\n{"b":2}', { records: 2, malformed: 0 }],
+    ];
+    for (const [name, text, counts] of cases) {
+      const file = path.join(dir, name);
+      await writeFile(file, text, "utf-8");
+      expect(await readJsonl(file, () => true), name).toEqual(counts);
+    }
+  });
 });
 
 // QFAI:EX-0001-0294-11
@@ -343,6 +386,37 @@ describe("what a Codex rollout shows", () => {
     // Injected AGENTS.md instructions and an unmarked message are not typed turns.
     expect(signals.typedTurns).toBe(2);
     expect(signals.corrections).toEqual([{ turn: 2, words: ["revert", "stop"] }]);
+  });
+
+  it("reads each content item of a mixed message by the kind declared at its own index", () => {
+    const events = emptyEvents();
+    const message = (role: string, texts: string[], kinds: unknown[]) =>
+      readCodexRecord(
+        {
+          type: "response_item",
+          payload: {
+            type: "message",
+            role,
+            content: texts.map((text) => ({ type: "input_text", text })),
+            internal_chat_message_metadata_passthrough: { content_item_kinds: kinds },
+          },
+        },
+        events,
+      );
+    message(
+      "user",
+      ["Run the checks.", "Stop, revert that."],
+      ["user.text", "generic.developer_instructions"],
+    );
+    message(
+      "developer",
+      ["QFAI API budget (.agents/rules/api-budget.md).", "Project instructions."],
+      ["hooks.additional_context", "generic.developer_instructions"],
+    );
+    // A kind that is no string still holds its index, so the next item keeps its own kind.
+    message("user", ["Ignored.", "Go on."], [null, "user.text"]);
+    expect(events.userTurns).toEqual(["Run the checks.", "Go on."]);
+    expect(events.hookContexts).toEqual(["QFAI API budget (.agents/rules/api-budget.md)."]);
   });
 });
 
@@ -473,6 +547,12 @@ describe("the edges a slug, a shell line and a calendar leave open", () => {
     expect(sinceInstant("2026-02-30T00:00:00Z")).toBeNull();
     expect(sinceInstant("2026-13-01")).toBeNull();
     expect(sinceInstant("2024-02-29")).toBe(Date.UTC(2024, 1, 29));
+  });
+
+  it("keeps a --since year below 0100 as written", () => {
+    expect(sinceInstant("0099-09-09")).toBe(Date.parse("0099-09-09T00:00:00Z"));
+    expect(sinceInstant("0000-02-29T12:00:00Z")).toBe(Date.parse("0000-02-29T12:00:00Z"));
+    expect(sinceInstant("0099-02-29")).toBeNull();
   });
 });
 

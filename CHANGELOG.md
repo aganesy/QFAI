@@ -507,6 +507,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai session-review` takes a Codex rollout only when its `session_meta`
+  records a session id.** A rollout whose metadata named the root but carried
+  no `id` was reported under an ID made up from its file name, which
+  `--session` could then select. Such a rollout is now left out, since the
+  recorded `id` is the session's identity.
+
 - **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
   shipped workflow edited to run a job on two operating systems and three
   Node versions was reported as three runner allocations instead of six,
@@ -529,6 +535,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   invalid JSON. They now drop one leading mark before parsing, as the
   `package.json` reader of `qfai atdd scaffold` already did.
 
+- **`qfai session-review --since` accepts a date with a year below 0100.** The
+  calendar check read years 0000 through 0099 as 1900 through 1999, so a valid
+  date such as `0099-09-09` was refused. The check now keeps the year as
+  written.
+
 - **Reviewer cards read the technology contract from the configured contracts
   directory.** The architecture, implementation, product-surface and
   requirements reviewer cards, the quality rule and the discussion skill named
@@ -536,6 +547,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `paths.contractsDir` elsewhere sent its reviewers to a missing or stale file,
   which they treat as absent evidence. They now name
   `<paths.contractsDir>/tech.md`.
+
+- **A pull-request merge fetches the pull request's own base and checks it
+  again before merging.** The `triage-operate` step merged the local
+  `origin/<base>` into the branch without fetching it, so a stale
+  remote-tracking ref could report "already up to date" while the remote base
+  had moved, and the merge went ahead on an integration nobody had checked. It
+  now reads the base repository and branch from the pull request itself,
+  fetches that branch, merges the commit it fetched, and fetches again just
+  before the merge, merging any newer base commit first.
 
 - **The installed agent entry sends scratch files to the host's scratch
   directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
@@ -548,6 +568,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   family such as `Brand9007199254740993` was refused as a number too large to
   read exactly, although both catalog formats write a family name as text. The
   precision check now reads only the fields that become numeric tokens.
+
+- **`qfai session-review` counts a blank transcript line as malformed.** The
+  JSONL reader skipped a blank or whitespace-only line without counting it, so
+  the malformed count missed lines that are not JSON objects. It now counts
+  each such interior line, CRLF line ends included, and the file's last line
+  end still opens no further line.
 
 - **The saas-package profile reports a `DESIGN.md` or handoff record it
   cannot read, instead of calling it absent.** A directory or an unreadable
@@ -601,6 +627,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   declaration list's `const` flag, so a `let`, `var` or `using` binding is not
   listed however it is exported.
 
+- **The bisection step starts the session and skips untestable revisions.**
+  `implement-bisect` told the agent to run `git bisect run` between two
+  revisions, though that command takes only the test command and cannot start
+  the session, and a build failure in the command counted as a bad revision.
+  The step now starts with `git bisect start <bad> <good>`, has the runner
+  script exit 125 for a revision that cannot be built or started, runs
+  `git bisect reset` on every exit path, and reports an inconclusive candidate
+  set when skipped revisions prevent naming one change.
+
 - **The policy check no longer asks a question under `--auto`.** When policy
   information could not be verified, the policy check in
   `.qfai/assistant/rule/workflow.md` told the agent to ask the user in every
@@ -608,6 +643,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   records the open question, and now asks only as Articles VI and X allow:
   under `--auto` it asks nothing, and a needed `hard-required` input stops the
   run.
+
+- **A test that never failed is no longer quarantined as flaky** (#4832). The
+  `implement-quarantine` step told the agent to run a test again or quarantine
+  it when one of its runs passed, which also covered five passes and no
+  failure, so a healthy gating test could be taken out of the gate. The step
+  now quarantines a test only when its runs on one revision hold at least one
+  failure matching the report and at least one pass. When every run passes, it
+  records the test as `unreproduced` and writes no quarantine marker.
 
 - **`qfai session-review` reads a Codex exit status only from the result
   envelope.** A shell call whose header said exit 0 was counted as exit 7 and a
@@ -624,6 +667,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The `schemaVersion` pass now reads each file as a whole and names every file
   that holds the field.
 
+- **`qfai session-review` reads each item of a mixed Codex message by its own
+  kind** (#4833). A user message holding typed text beside an injected
+  instruction counted both as one typed turn, so the instruction's words could
+  show as a correction, and a developer message with one hook item recorded
+  every item as hook context. Each content item now counts only under the kind
+  declared at its own index.
+
 - **`qfai doctor --profile prototyping` probes Playwright from the inspected
   project** (#4765). The launcher probe ran in the directory doctor was started
   from, so with `--root` naming another checkout, `npx` looked for Playwright
@@ -636,6 +686,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   its latest iteration to the user, so a reviewer following the old sentence
   looked for a historical winner. The strategy review now points at the
   comparison criteria instead.
+
+- **A release delegated while `triage-handoff` waits passes its gate**
+  (#4835). The step lets a user delegate the release while it waits, which
+  leaves no execution result to record, but its gate still asked for a
+  reported result in every case. The gate now also accepts the quoted
+  delegation with its source and the delegated release listed as the
+  follow-up that `triage-close` closes as `deferred`.
 
 - **`qfai doctor --profile prototyping` reports the Playwright probe command
   that ran** (#4769). The `displayCommand` of a direct `playwright` probe left

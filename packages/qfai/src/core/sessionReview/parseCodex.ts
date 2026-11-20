@@ -4,9 +4,10 @@
  * The records read: `session_meta` names the session and its working directory; a
  * `response_item` is a message, a tool call (`function_call`, `custom_tool_call`,
  * `local_shell_call`) or a call's output; an `event_msg` that reports a command execution ending
- * gives that command's status. A rollout marks what each message holds: a developer message
- * marked as a hook's additional context is a hook's context, and a user message marked as user
- * text is a typed turn. An unmarked message is passed over, as is every other record.
+ * gives that command's status. A rollout marks what each content item of a message holds, by the
+ * kind at the item's own index: a developer message's item marked as a hook's additional context
+ * is a hook's context, and a user message's items marked as user text make a typed turn. An
+ * unmarked item is passed over, as is every other record.
  */
 import {
   emptyEvents,
@@ -86,22 +87,31 @@ export function readCodexRecord(record: JsonRecord, events: SessionEvents): void
   }
 }
 
-/** The content-item kinds a message declares. */
-function kindsOf(payload: JsonRecord): string[] {
+/**
+ * The content-item kinds a message declares, one per content item at the same index; an entry
+ * that is no string names no kind but keeps the items after it at their own index.
+ */
+function kindsOf(payload: JsonRecord): (string | undefined)[] {
   const meta = payload.internal_chat_message_metadata_passthrough;
   const kinds = isRecord(meta) ? meta.content_item_kinds : undefined;
-  return Array.isArray(kinds) ? kinds.filter((kind) => typeof kind === "string") : [];
+  if (!Array.isArray(kinds)) return [];
+  return kinds.map((kind: unknown) => (typeof kind === "string" ? kind : undefined));
+}
+
+/** The texts of a message's content items whose declared kind is the one given. */
+function textsOfKind(payload: JsonRecord, kind: string): string[] {
+  const kinds = kindsOf(payload);
+  const content: unknown[] = Array.isArray(payload.content) ? payload.content : [];
+  return content.filter((_, at) => kinds[at] === kind).map(textOf);
 }
 
 function readMessage(payload: JsonRecord, events: SessionEvents): void {
-  const kinds = kindsOf(payload);
-  const texts = Array.isArray(payload.content) ? payload.content.map(textOf) : [];
-  if (payload.role === "developer" && kinds.includes("hooks.additional_context")) {
-    events.hookContexts.push(...texts);
+  if (payload.role === "developer") {
+    events.hookContexts.push(...textsOfKind(payload, "hooks.additional_context"));
     return;
   }
-  if (payload.role !== "user" || !kinds.includes("user.text")) return;
-  const typed = texts.filter(isTypedTurn);
+  if (payload.role !== "user") return;
+  const typed = textsOfKind(payload, "user.text").filter(isTypedTurn);
   if (typed.length > 0) events.userTurns.push(typed.join("\n"));
 }
 

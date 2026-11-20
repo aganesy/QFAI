@@ -101,7 +101,10 @@ describe("the steps the routes add to qfai-implement", () => {
   it("states each step's own obligation", async () => {
     const bisect = flat(await stepText("implement-bisect"));
     expect(bisect).toMatch(/report `branch: \{ outcome: "revert" \}` when all three hold/i);
-    expect(bisect).toMatch(/run `git bisect reset`/i);
+    expect(bisect).toMatch(/run `git bisect reset` on every exit path/i);
+    expect(bisect).toMatch(/start the session with `git bisect start <bad> <good>`/i);
+    expect(bisect).toMatch(/125 when the revision cannot be built or started/i);
+    expect(bisect).toMatch(/report the result as inconclusive with the candidate set/i);
 
     const refactor = flat(await stepText("implement-refactor"));
     expect(refactor).toMatch(/adds no example and runs no RED/i);
@@ -121,6 +124,14 @@ describe("the steps the routes add to qfai-implement", () => {
       /When all of at least five recorded runs fail, nothing is quarantined/i,
     );
     expect(quarantine).toMatch(/report the outcome `failing-consistently` with an extraction/i);
+    expect(quarantine).toMatch(
+      /flaky only when the runs at that one revision hold at least one failure matching the report and at least one pass/i,
+    );
+    expect(quarantine).toMatch(
+      /When every recorded run passes, the failure is not reproduced: nothing is quarantined, no marker is written/i,
+    );
+    expect(quarantine).toMatch(/record the test as `unreproduced`/i);
+    expect(quarantine).not.toMatch(/with one passing run/i);
 
     const bump = flat(await stepText("implement-dep-bump"));
     expect(bump).toMatch(/such as the `engines` field/i);
