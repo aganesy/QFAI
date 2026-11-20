@@ -110,4 +110,145 @@ describe("qfai doctor reports the jobs the shipped workflows start per pull requ
     expect(check?.message).toContain("qfai-tests.yml could not be counted");
     expect(check?.message).not.toContain("qfai-tests.yml starts");
   });
+
+  // QFAI:EX-0003-0011-40
+  it("counts a matrix job once per combination of its axes", async () => {
+    // QFAI:AC-0003-0011-12
+    const root = await project({
+      "qfai-docs.yml": await docsWithMatrix(["check: [shape, mermaid]", "node: [20, 22, 24]"]),
+    });
+
+    const check = await costCheck(root);
+
+    expect(check?.message).toContain(
+      "qfai-docs.yml starts 1 job when nothing is to run (scope) and up to 8 when its lane runs (scope, checks x6, docs)",
+    );
+  });
+
+  // QFAI:EX-0003-0011-40
+  it("counts one leg per entry of a matrix that is only an include list", async () => {
+    // QFAI:AC-0003-0011-12
+    const root = await project({
+      "qfai-docs.yml": await docsWithMatrix([
+        "include:",
+        "  - check: shape",
+        "  - check: mermaid",
+        "  - check: links",
+      ]),
+    });
+
+    const check = await costCheck(root);
+
+    expect(check?.message).toContain("up to 5 when its lane runs (scope, checks x3, docs)");
+  });
+
+  // QFAI:EX-0003-0011-40
+  it("multiplies the test lane's layer axis by a literal axis", async () => {
+    // QFAI:AC-0003-0011-12
+    const root = await project({ "qfai-tests.yml": await testsWithMatrix(["node: [20, 22]"]) });
+
+    const check = await costCheck(root);
+
+    expect(check?.message).toContain(
+      "qfai-tests.yml starts 1 job when nothing is to run (detection) and up to 12 when its lane runs (detection, tests x10, verdict)",
+    );
+  });
+
+  // QFAI:EX-0003-0011-40
+  it("removes the excluded combinations and adds an included one that extends none", async () => {
+    // QFAI:AC-0003-0011-12
+    const root = await project({
+      "qfai-docs.yml": await docsWithMatrix([
+        "check: [shape, mermaid]",
+        "os: [ubuntu-latest, windows-latest]",
+        "exclude:",
+        "  - check: mermaid",
+        "    os: windows-latest",
+        "include:",
+        "  - check: shape",
+        "    os: ubuntu-latest",
+        "    node: 22",
+        "  - check: links",
+      ]),
+    });
+
+    const check = await costCheck(root);
+
+    expect(check?.message).toContain("up to 6 when its lane runs (scope, checks x4, docs)");
+  });
+
+  // QFAI:EX-0003-0011-41
+  it("names a workflow whose matrix it cannot read instead of guessing a count", async () => {
+    // QFAI:AC-0003-0011-12
+    const docs = await packagedText("qfai-docs.yml");
+    const strategyExpression = docs.replace(
+      /^ {4}strategy:\n {6}fail-fast: false\n {6}matrix:\n {8}check: \[shape, mermaid\]$/m,
+      "    strategy: ${{ fromJSON(vars.CHECKS_STRATEGY) }}",
+    );
+    expect(strategyExpression).not.toBe(docs);
+    const unreadable: [string, string][] = [
+      ["qfai-docs.yml", strategyExpression],
+      ["qfai-docs.yml", await docsWithMatrix(["${{ fromJSON(vars.CHECKS) }}"])],
+      [
+        "qfai-docs.yml",
+        await docsWithMatrix([
+          "check: [shape, mermaid]",
+          "include: ${{ fromJSON(vars.EXTRA_CHECKS) }}",
+        ]),
+      ],
+      [
+        "qfai-docs.yml",
+        await docsWithMatrix(["check: [shape, mermaid]", "exclude:", "  - os: windows-latest"]),
+      ],
+      ["qfai-docs.yml", await docsWithMatrix(["check: [shape, mermaid]", "node: []"])],
+      ["qfai-docs.yml", await docsWithMatrix(["{}"])],
+      [
+        "qfai-docs.yml",
+        await docsWithMatrix([
+          "check: [shape, mermaid]",
+          "exclude:",
+          "  - check: shape",
+          "  - check: mermaid",
+        ]),
+      ],
+      ["qfai-tests.yml", await testsWithMatrix(["include:", "  - node: 22"])],
+    ];
+    for (const [name, text] of unreadable) {
+      const root = await project({ [name]: text });
+
+      const check = await costCheck(root);
+
+      expect(check?.severity).toBe("info");
+      expect(check?.message).toContain(`${name} could not be counted`);
+      expect(check?.message).not.toContain(`${name} starts`);
+    }
+  });
 });
+
+/** The matrix lines given, as the value of `matrix:` inline when one line is not a key. */
+function matrixBlock(lines: readonly string[]): string {
+  const [first, ...rest] = lines;
+  if (first !== undefined && rest.length === 0 && !/^[A-Za-z_][\w-]*:/.test(first)) {
+    return `      matrix: ${first}`;
+  }
+  return ["      matrix:", ...lines.map((line) => `        ${line}`)].join("\n");
+}
+
+/** The shipped docs workflow with the matrix of its `checks` job replaced by the given lines. */
+async function docsWithMatrix(lines: readonly string[]): Promise<string> {
+  const docs = await packagedText("qfai-docs.yml");
+  const edited = docs.replace(/^ {6}matrix:\n {8}check: \[shape, mermaid\]$/m, matrixBlock(lines));
+  expect(edited).not.toBe(docs);
+  return edited;
+}
+
+/** The shipped tests workflow with the given lines added after the layer axis of its matrix. */
+async function testsWithMatrix(lines: readonly string[]): Promise<string> {
+  const tests = await packagedText("qfai-tests.yml");
+  const edited = tests.replace(
+    /^ {8}layer: \$\{\{ fromJSON\(needs\.detection\.outputs\.selected\) \}\}$/m,
+    (layer) => [layer, ...lines.map((line) => `        ${line}`)].join("\n"),
+  );
+  expect(edited).not.toBe(tests);
+  return edited;
+}

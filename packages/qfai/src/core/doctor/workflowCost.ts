@@ -88,25 +88,100 @@ function jobStarts(
   return undefined;
 }
 
-/** How many runners the job allocates, or `undefined` for a matrix axis this does not recognise. */
+type Combination = Readonly<Record<string, unknown>>;
+
+/** The entries of a matrix `include` or `exclude` list, or `undefined` when it is not a list of mappings. */
+function matrixEntries(list: unknown): Combination[] | undefined {
+  if (list === undefined) return [];
+  if (!Array.isArray(list)) return undefined;
+  const entries: Combination[] = [];
+  for (const entry of list) {
+    if (!isRecord(entry)) return undefined;
+    entries.push(entry);
+  }
+  return entries;
+}
+
+function sameValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+/**
+ * The legs of a matrix whose axes are all written out, the way GitHub expands it: every
+ * combination of the axes, less each one an `exclude` entry matches, plus one leg for each
+ * `include` entry that would change an original axis value of every remaining combination, or
+ * `undefined` when an `exclude` key is not an axis or the matrix has no leg.
+ */
+function expandMatrix(
+  axes: Readonly<Record<string, readonly unknown[]>>,
+  exclude: readonly Combination[],
+  include: readonly Combination[],
+): number | undefined {
+  const names = Object.keys(axes);
+  if (exclude.some((entry) => Object.keys(entry).some((key) => !names.includes(key)))) {
+    return undefined;
+  }
+  let combinations: Combination[] = names.length === 0 ? [] : [{}];
+  for (const name of names) {
+    combinations = combinations.flatMap((combination) =>
+      (axes[name] ?? []).map((value) => ({ ...combination, [name]: value })),
+    );
+  }
+  const kept = combinations.filter(
+    (combination) =>
+      !exclude.some((entry) =>
+        Object.entries(entry).every(([key, value]) => sameValue(combination[key], value)),
+      ),
+  );
+  const extendsOne = (entry: Combination): boolean =>
+    kept.some((combination) =>
+      Object.entries(entry).every(
+        ([key, value]) => !names.includes(key) || sameValue(combination[key], value),
+      ),
+    );
+  const legs = kept.length + include.filter((entry) => !extendsOne(entry)).length;
+  // GitHub rejects a written-out matrix with no leg rather than skipping the job.
+  return legs === 0 ? undefined : legs;
+}
+
+/**
+ * How many runners the job allocates, or `undefined` for a matrix shape this does not recognise.
+ * The test lane's layer axis is read as one leg per declared layer; it is the only axis an
+ * expression may give, and only with no `include` or `exclude`, whose match against legs whose
+ * values are not known cannot be read.
+ */
 function instancesOf(
   job: Record<string, unknown>,
   scenario: PullRequestScenario,
 ): number | undefined {
   const strategy = job["strategy"];
-  const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
-  if (!isRecord(matrix)) return 1;
-  let widest = 1;
-  for (const axis of Object.values(matrix)) {
+  if (strategy === undefined) return 1;
+  if (!isRecord(strategy)) return undefined;
+  const matrix = strategy["matrix"];
+  if (matrix === undefined) return 1;
+  if (!isRecord(matrix)) return undefined;
+  const include = matrixEntries(matrix["include"]);
+  const exclude = matrixEntries(matrix["exclude"]);
+  if (include === undefined || exclude === undefined) return undefined;
+  const axes: Record<string, readonly unknown[]> = {};
+  let layerAxes = 0;
+  for (const [name, axis] of Object.entries(matrix)) {
+    if (name === "include" || name === "exclude") continue;
     if (Array.isArray(axis)) {
-      widest = Math.max(widest, axis.length);
+      if (axis.length === 0) return undefined;
+      axes[name] = axis;
     } else if (typeof axis === "string" && axis.includes("needs.detection.outputs.selected")) {
-      widest = Math.max(widest, scenario.layers);
+      layerAxes += 1;
     } else {
       return undefined;
     }
   }
-  return widest;
+  if (layerAxes === 0) return expandMatrix(axes, exclude, include);
+  if (include.length > 0 || exclude.length > 0) return undefined;
+  return Object.values(axes).reduce(
+    (legs, axis) => legs * axis.length,
+    scenario.layers ** layerAxes,
+  );
 }
 
 function jobsStarted(
@@ -119,7 +194,8 @@ function jobsStarted(
     const starts = jobStarts(job, scenario);
     const instances = instancesOf(job, scenario);
     if (starts === undefined || instances === undefined) return undefined;
-    if (!starts) continue;
+    // A layer axis with no declared layer starts no job.
+    if (!starts || instances === 0) continue;
     const runner = job["runs-on"];
     started.push({ id, instances, runner: typeof runner === "string" ? runner : "" });
   }

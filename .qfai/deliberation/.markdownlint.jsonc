@@ -10,4 +10,8 @@
   // layout. A long prose line would pass validation and then fail the lint
   // with no way to fix the record, so line length is not checked here.
   "MD013": false,
+  // Every stage section holds its own `### Interview` and `### Agent decisions`
+  // tables, so a record with two stages repeats both headings under different
+  // parents. Only sibling duplicates are errors.
+  "MD024": { "siblings_only": true },
 }

@@ -513,6 +513,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `--session` could then select. Such a rollout is now left out, since the
   recorded `id` is the session's identity.
 
+- **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
+  shipped workflow edited to run a job on two operating systems and three
+  Node versions was reported as three runner allocations instead of six,
+  because only the widest axis was counted, and `include` and `exclude` were
+  read as axes. The count is now every combination of the axes, less each
+  `exclude` match, plus each `include` entry that extends no remaining
+  combination. A `strategy`, matrix, `include` or `exclude` given as an
+  expression, an `exclude` key that is not an axis, and a written-out matrix
+  with no leg, which GitHub rejects, are named as not counted. Closes #4780.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
@@ -612,6 +622,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `tmp/` for when the host names none and for inputs the repository reads. The
   heading no longer names a location, so a reader of the outline is not sent to
   the wrong one.
+
+- **`verify-repeat-run` no longer guesses how many times to run a test.** It
+  took three divided by the measured failure rate, which has no value when no
+  rate was measured or the observed rate is zero. It now uses a positive count
+  the quarantine record, the work order or the request names, or derives one
+  from a measured positive rate, rounded up to a whole run. With neither, the
+  stage is `blocked` and its report names the input needed instead of claiming
+  coverage.
 
 - **The Firecrawl integration now says where it processes data.** The
   `web-research` skill and the Codex Firecrawl template recommended a local
