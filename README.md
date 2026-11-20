@@ -120,8 +120,8 @@ See [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 You state the change once, in your own words.
 The `qfai-run` skill reads it into facts: what it asks for, its risks, and how sure that reading is.
 `npx qfai workflow plan` then picks one of the fixed routes from those facts by ordered decision rules
-and returns the route's plan, writing nothing. The session runs each step of the plan in order and
-asks you only the decisions that are yours and each release. You type no stage name.
+and returns the route's plan, writing nothing. The session runs each step of the plan in order.
+It asks you to make decisions only you can make and to approve each release. You type no stage name.
 
 `npx qfai init` adds a hook that states this on a session's first prompt and repeats it in one line
 on every later prompt: a request that names no skill goes to `qfai-run`. Claude Code reads it from `.claude/settings.json` and Codex from `.codex/hooks.json`.
@@ -1051,9 +1051,9 @@ the two together:
 }
 ```
 
-The preset automerges every dependency update once your CI is green, and asks
-Renovate to run `qfai init --force` inside the update branch so the regenerated
-tree is committed into the same pull request.
+The preset automerges every dependency update except `qfai` itself once your
+CI is green, and asks Renovate to run `qfai init --force` inside the update
+branch so the regenerated tree is committed into the same pull request.
 
 Whether that command may run is a Renovate **administrator** setting
 (`allowedCommands`) that no config file can read: self-hosted Renovate can allow
