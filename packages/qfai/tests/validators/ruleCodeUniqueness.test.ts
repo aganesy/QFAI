@@ -199,9 +199,9 @@ type Scan = {
   owners: Map<string, Set<string>>;
   /**
    * module -> `expression x N` for each unresolved code expression.
-   * The count is pinned as well as the expression: `orphanProhibition.ts` has
-   * two sites named `input.unknownCode`, so an expression-only set would not
-   * notice a third.
+   * The count is pinned as well as the expression: a module that already has
+   * one `issue(code, …)` site would show the same entry after gaining a second
+   * site named `code`, so an expression-only set would not notice it.
    */
   dynamic: Map<string, Map<string, number>>;
   /** module with a dynamic site -> every rule-code literal it contains. */

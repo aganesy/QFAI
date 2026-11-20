@@ -22,7 +22,7 @@
  * ever consults, which is the shipped-but-inert defect restated, not a cure for
  * it.
  */
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,6 +30,7 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { collectTsFiles } from "../helpers/typescriptSourceScan.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SRC_ROOT = path.resolve(__dirname, "../../src");
@@ -209,19 +210,6 @@ function readsConfigPath(chains: ReadonlySet<string>, configPath: string): boole
 /** `readsConfigPath` over a single source, for the decoy cases below. */
 function readsPath(source: string, configPath: string): boolean {
   return readsConfigPath(collectReadChains(source), configPath);
-}
-
-async function collectTsFiles(dir: string, acc: string[] = []): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      await collectTsFiles(full, acc);
-    } else if (entry.name.endsWith(".ts")) {
-      acc.push(full);
-    }
-  }
-  return acc;
 }
 
 describe("validation config keys are wired", () => {

@@ -1,5 +1,6 @@
-import { readFile, readdir } from "node:fs/promises";
-import path from "node:path";
+import { readFile } from "node:fs/promises";
+
+import { collectTsFiles } from "./typescriptSourceScan.js";
 
 /**
  * What the source tree says about one issue code, aggregated over every
@@ -24,20 +25,6 @@ type EmissionSite = {
   errorCapable: boolean;
   hasSuggestedAction: boolean;
 };
-
-async function collectTsFiles(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const files: string[] = [];
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...(await collectTsFiles(full)));
-    } else if (entry.name.endsWith(".ts")) {
-      files.push(full);
-    }
-  }
-  return files;
-}
 
 /** Skip a string / template literal starting at `start`; returns the index of its closing quote. */
 function skipString(source: string, start: number): number {
@@ -476,8 +463,9 @@ function readIssueFactories(source: string): Map<string, IssueTemplate[]> {
 
 /**
  * File-local helpers that call `issue(...)` with a code their own caller
- * supplies — `validateParentExists({ …, missingCode: "…", unknownCode: "…" })`
- * in `validators/orphanProhibition.ts` is the pattern. The code is a literal in
+ * supplies — `emit({ missingCode: "…" })` feeding `issue(input.missingCode, …)`
+ * is the pattern, pinned by the "counts codes a caller hands to an emission
+ * helper" case in `core/issueCodeUniqueness.test.ts`. The code is a literal in
  * the source, just one frame up, so dropping the unresolvable argument at the
  * `issue(...)` call would hide a whole family of real codes behind a helper
  * that looks dynamic and is not.

@@ -20,6 +20,24 @@ export async function listSourceFiles(dir: string): Promise<string[]> {
   return out;
 }
 
+/**
+ * Every `.ts` file under `dir`, recursively, declaration and test files
+ * included — the surface the rule-code and config guards scan.
+ */
+export async function collectTsFiles(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await collectTsFiles(full)));
+    } else if (entry.name.endsWith(".ts")) {
+      files.push(full);
+    }
+  }
+  return files;
+}
+
 /** Whitespace and comments — the tokens that cannot end an expression. */
 function isTrivia(token: ts.SyntaxKind): boolean {
   return (

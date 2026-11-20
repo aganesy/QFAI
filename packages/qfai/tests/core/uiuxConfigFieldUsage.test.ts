@@ -1,7 +1,9 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
+
+import { collectTsFiles } from "../helpers/typescriptSourceScan.js";
 
 const CONFIG_RELATIVE = "core/config.ts";
 
@@ -12,20 +14,6 @@ const CONFIG_RELATIVE = "core/config.ts";
 const PENDING_CONSUMER_FIELDS = new Set<string>([
   "registries", // read by the procurement ladder, which is not written yet
 ]);
-
-async function collectTsFiles(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const files: string[] = [];
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...(await collectTsFiles(full)));
-    } else if (entry.name.endsWith(".ts")) {
-      files.push(full);
-    }
-  }
-  return files;
-}
 
 function extractOptionalFieldNames(source: string, typeName: string): string[] {
   const declaration = new RegExp(`export type ${typeName} = \\{([\\s\\S]*?)\\n\\};`).exec(source);
