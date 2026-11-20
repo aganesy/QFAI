@@ -4,7 +4,6 @@ import path from "node:path";
 import type { ConfigLoadResult, FailOn, QfaiConfig } from "../../core/config.js";
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
-import { normalizeValidationResult } from "../../core/normalize.js";
 import { writeReportFiles } from "../../core/runLog.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import {
@@ -24,7 +23,7 @@ import { shouldFail } from "../lib/failOn.js";
 import { isIncompleteRunResult } from "../lib/warnings.js";
 import { error, info, warn } from "../../core/logger.js";
 import {
-  appendIssue,
+  finishValidationResult,
   scopedReportPath,
   validateProjectOrIncomplete,
   validationResultPaths,
@@ -311,8 +310,7 @@ async function runValidateForReport(
     },
     "report",
   );
-  const withCiIssue = ciProfileIssue ? appendIssue(validated, ciProfileIssue) : validated;
-  const normalized = normalizeValidationResult(root, withCiIssue);
+  const normalized = await finishValidationResult(root, validated, options.profile);
   const resultPaths = validationResultPaths(
     configResult.config.output.validateJsonPath,
     flowIds,

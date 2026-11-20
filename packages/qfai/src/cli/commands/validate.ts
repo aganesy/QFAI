@@ -68,10 +68,6 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   }
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
-  // The CI narrow-profile finding is appended to a real run, not substituted
-  // for one. Replacing the run made every stage gate that names a narrow
-  // profile unreachable in CI.
-  const ciProfileIssue = buildCiProfileIssue(options.profile);
   const validated = await validateProjectOrIncomplete(
     root,
     configResult,
@@ -84,33 +80,13 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     "validate",
     options.toolVersionOverride,
   );
-  const rawResult = ciProfileIssue
-    ? {
-        ...validated,
-        issues: [...validated.issues, ciProfileIssue],
-        counts: { ...validated.counts, warning: validated.counts.warning + 1 },
-      }
-    : validated;
   // Test callers override; production reads the same package.json#version the
   // rest of the toolchain uses (so the source-of-truth is single).
   const effectiveToolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
   await emitProvenance(effectiveToolVersion);
   const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
   const scopedFlowIds = options.flowIds ?? [];
-  const normalized = normalizeValidationResult(root, rawResult);
-  // `!== false` rather than a truth test: a result that carries no claim (one
-  // not produced by `validateProject`) keeps the ordinary per-profile wording.
-  const partialProfileNotice = normalized.issues.some((item) => item.code === "QFAI-LAYOUT-001")
-    ? null
-    : buildPartialProfileNotice(
-        normalized.profile,
-        normalized.profileValidatorsRan !== false,
-        await unevaluatedPackageSelfGovernanceFamilies(root),
-      );
-  if (partialProfileNotice) {
-    normalized.issues.push(partialProfileNotice);
-    normalized.counts = recountIssues(normalized.counts, partialProfileNotice);
-  }
+  const normalized = await finishValidationResult(root, validated, options.profile);
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
   // No special case for an incomplete run. `QFAI-SCAN-002` is an `error`, so
@@ -656,14 +632,44 @@ function profileNotice(message: string): Issue {
 }
 
 /**
- * Append one finding to a result and keep `counts` in step.
+ * The post-processing every command that runs validation applies to the raw
+ * result, so `validate` and `report --run-validate` write the same findings
+ * for the same options.
  *
- * Exported so `report --run-validate` folds the shared migration-gate finding
- * into its result exactly the way `validate` does — a hand-rolled copy there
- * would be free to forget the recount and hand the gate a stale severity
- * tally.
+ * - The CI narrow-profile finding is appended to a real run, not substituted
+ *   for one. Replacing the run made every stage gate that names a narrow
+ *   profile unreachable in CI.
+ * - The `QFAI-PROFILE-001` coverage notice, naming what the run did not
+ *   evaluate, is appended last, after waiver processing, so no waiver can
+ *   suppress it.
  */
-export function appendIssue(result: ValidationResult, added: Issue): ValidationResult {
+export async function finishValidationResult(
+  root: string,
+  validated: ValidationResult,
+  profile: ValidationProfile | undefined,
+): Promise<ValidationResult> {
+  const ciProfileIssue = buildCiProfileIssue(profile);
+  const normalized = normalizeValidationResult(
+    root,
+    ciProfileIssue ? appendIssue(validated, ciProfileIssue) : validated,
+  );
+  // `!== false` rather than a truth test: a result that carries no claim (one
+  // not produced by `validateProject`) keeps the ordinary per-profile wording.
+  const partialProfileNotice = normalized.issues.some((item) => item.code === "QFAI-LAYOUT-001")
+    ? null
+    : buildPartialProfileNotice(
+        normalized.profile,
+        normalized.profileValidatorsRan !== false,
+        await unevaluatedPackageSelfGovernanceFamilies(root),
+      );
+  return partialProfileNotice ? appendIssue(normalized, partialProfileNotice) : normalized;
+}
+
+/**
+ * Append one finding to a result and keep `counts` in step, so no caller
+ * hands the gate a stale severity tally.
+ */
+function appendIssue(result: ValidationResult, added: Issue): ValidationResult {
   return {
     ...result,
     issues: [...result.issues, added],
