@@ -5,9 +5,9 @@ name: Prepare release
 # What this does NOT do is write release prose. The `## [Unreleased]` section is filled in as the
 # work lands, by whoever made each change; the only thing that happens at release time is deciding
 # where to cut. So this renames `## [Unreleased]` to `## [X.Y.Z] - <date>`, reopens an empty one,
-# syncs `packages/qfai/package.json#version`, and opens a pull request. A release note nobody wrote
-# is not one a reader can use, so an empty `## [Unreleased]` is refused rather than shipped as an
-# empty section.
+# syncs `packages/qfai/package.json#version` and `.qfai/assistant/VERSION`, and opens a pull
+# request. A release note nobody wrote is not one a reader can use, so an empty `## [Unreleased]`
+# is refused rather than shipped as an empty section.
 #
 # The VERSION is an input, and that is the point rather than an inconvenience.
 # `.agents/rules/version-discipline.md` puts the choice of `X.Y.Z` with the user: an automation that
@@ -22,7 +22,8 @@ name: Prepare release
 #
 # One job of four steps, and the chain between them is data rather than habit. The refusals produce
 # the version and the branch name the two steps after them read. The edit step produces nothing but
-# the two rewritten files, so a separate job for the pull request would either redo the edit or
+# the three rewritten files (`CHANGELOG.md`, `packages/qfai/package.json` and
+# `.qfai/assistant/VERSION`), so a separate job for the pull request would either redo the edit or
 # carry the work tree across as an artifact. Nothing here installs or builds, so a leg's whole
 # preamble is a shallow checkout and a runner start — more than any one of these steps costs.
 #
