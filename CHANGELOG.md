@@ -544,6 +544,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read exactly, although both catalog formats write a family name as text. The
   precision check now reads only the fields that become numeric tokens.
 
+- **`qfai session-review` counts a blank transcript line as malformed.** The
+  JSONL reader skipped a blank or whitespace-only line without counting it, so
+  the malformed count missed lines that are not JSON objects. It now counts
+  each such interior line, CRLF line ends included, and the file's last line
+  end still opens no further line.
+
 - **The saas-package profile reports a `DESIGN.md` or handoff record it
   cannot read, instead of calling it absent.** A directory or an unreadable
   file at either path was reported as missing, with instructions to author it.
