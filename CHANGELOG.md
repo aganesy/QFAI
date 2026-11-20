@@ -518,6 +518,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
   references now say the finding is an error, which it already was.
 
+- **The example waiver in a new `.qfai/waivers.yml` now points at evidence
+  that opens.** Its `evidence` linked `decisions.md#DEC-0001`, but a decision
+  ID is a table cell, not an anchor, so the link jumped nowhere, and its fixed
+  `expires` date was already past for anyone who copied it. The example now
+  names the register page, keeps the decision ID in `reason`, and leaves
+  `expires` as `YYYY-MM-DD` for you to replace with a future date.
+
 - **A contract or spec directory that cannot be reached is now reported, not
   read as empty.** A directory behind a parent this process may not open
   dropped out of contract discovery and the diagram budget check without a
