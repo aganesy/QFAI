@@ -17,8 +17,8 @@ run.
   an intermittent failure changed or added.
 - The failure rate the diagnosis measured, and how it exposed the failure: the
   stress harness, the parallelism and the order.
-- The number of runs the quarantine record or the work order names, where one
-  does.
+- The number of runs the quarantine record, the work order or the request
+  names, where one does.
 - The Test command, through `common-gate-run`.
 - The diagnosis and its executed same-signature Red, and the matching Green (same test and command)
   for the current exact revision.
@@ -66,8 +66,15 @@ changes the earlier record of what ran.
 ### When repeated runs are required
 
 1. Fix the number of runs before the first one, and record it with its reason.
-   Where nothing names a number, take at least three divided by the failure
-   rate the diagnosis measured, so a failure that rate predicts would show.
+   Take the positive whole number the quarantine record, the work order or
+   the request names. Where none names one, derive it from a positive
+   failure rate the diagnosis measured: three divided by that rate, rounded
+   up to a whole run, so a failure that rate predicts would show. With
+   neither a named positive count nor a measured positive rate, as when no
+   rate was measured or the observed rate is zero, guess no count and run
+   nothing: return `blocked`, name in the stage report the input needed, a
+   count of runs or a measured failure rate, with the operator as its
+   owner, and claim no coverage. Resume once that input is supplied.
 2. Run the tests that many times in a row on one revision, the way the
    diagnosis exposed the failure.
 3. Record every run in order. Reporting only the runs that passed is selective
@@ -84,7 +91,9 @@ changes the earlier record of what ran.
 
 When repeated runs are required:
 
-- The number of runs was fixed and recorded before the first run.
+- The number of runs was fixed and recorded before the first run, from a
+  named positive count or a measured positive failure rate; without either,
+  the stage is `blocked` and no run counts as coverage.
 - Every run is recorded, and all of them passed on the same revision.
 - A lifted quarantine removed only its marker and its record.
 

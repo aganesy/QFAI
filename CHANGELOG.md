@@ -513,6 +513,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `--session` could then select. Such a rollout is now left out, since the
   recorded `id` is the session's identity.
 
+- **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
+  shipped workflow edited to run a job on two operating systems and three
+  Node versions was reported as three runner allocations instead of six,
+  because only the widest axis was counted, and `include` and `exclude` were
+  read as axes. The count is now every combination of the axes, less each
+  `exclude` match, plus each `include` entry that extends no remaining
+  combination. A `strategy`, matrix, `include` or `exclude` given as an
+  expression, an `exclude` key that is not an axis, and a written-out matrix
+  with no leg, which GitHub rejects, are named as not counted. Closes #4780.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
@@ -613,6 +623,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   heading no longer names a location, so a reader of the outline is not sent to
   the wrong one.
 
+- **`verify-repeat-run` no longer guesses how many times to run a test.** It
+  took three divided by the measured failure rate, which has no value when no
+  rate was measured or the observed rate is zero. It now uses a positive count
+  the quarantine record, the work order or the request names, or derives one
+  from a measured positive rate, rounded up to a whole run. With neither, the
+  stage is `blocked` and its report names the input needed instead of claiming
+  coverage.
+
 - **The Firecrawl integration now says where it processes data.** The
   `web-research` skill and the Codex Firecrawl template recommended a local
   `npx` launch for sensitive environments, while every template sends pages
@@ -636,6 +654,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   was `__proto__` was not counted at all. The counts are now kept in a `Map`,
   so any id counts from zero and the total stays a number.
 
+- **`triage-close` routes the request again before it closes it.** Its first
+  procedure step told the agent to pick an outcome from the closure table,
+  which has no `info-received` or `adopted`, so an answered information request
+  could be closed as `awaiting-info` instead of being routed again. The step
+  now applies those two re-routes first and uses the table only when the
+  request closes.
+
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two
   revisions, though that command takes only the test command and cannot start
@@ -644,6 +669,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   script exit 125 for a revision that cannot be built or started, runs
   `git bisect reset` on every exit path, and reports an inconclusive candidate
   set when skipped revisions prevent naming one change.
+
+- **`qfai session-review` reads Codex rollouts only from date directories.**
+  Discovery descended into every directory three levels under `sessions`, so a
+  rollout copied to `sessions/backup/old/copy` was reported as another session
+  and could become the default when the copy was newest. Only
+  `sessions/YYYY/MM/DD/` directories naming a day the calendar has are now
+  read, and a matching name that is not a regular file is skipped before it is
+  opened.
 
 - **The policy check no longer asks a question under `--auto`.** When policy
   information could not be verified, the policy check in
@@ -660,6 +693,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now quarantines a test only when its runs on one revision hold at least one
   failure matching the report and at least one pass. When every run passes, it
   records the test as `unreproduced` and writes no quarantine marker.
+
+- **Filing several issues no longer duplicates an older open issue** (#4838).
+  The `triage-operate` step matched every proposed title against one capped
+  list of open issues, so on a tracker with more open issues than the cap an
+  older match was missed and a duplicate created. The step still lists the
+  open issues once, and when that list returned as many issues as its limit it
+  now pages through the rest, or searches the tracker for each title that
+  matched nothing, before creating it.
 
 - **`qfai session-review` reads a Codex exit status only from the result
   envelope.** A shell call whose header said exit 0 was counted as exit 7 and a
