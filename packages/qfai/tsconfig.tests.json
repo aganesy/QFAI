@@ -252,6 +252,7 @@
     "tests/unit/core/uiux/htmlMockEventHandlers.test.ts",
     "tests/unit/core/uiux/htmlMockInteractiveElements.test.ts",
     "tests/unit/core/uiux/htmlMockResourceReferences.test.ts",
+    "tests/unit/core/uiux/htmlMockStateMarkers.test.ts",
     "tests/core/markdownFiles.test.ts",
     "tests/core/literalGlobDirectories.test.ts",
     "tests/core/collectFilesRoot.test.ts",
