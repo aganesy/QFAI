@@ -372,6 +372,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `stale-install`. The upgrade guide now tells every checkout and worktree to
   run its install after pulling a qfai upgrade.
 
+- **The workflow rule delegates as the shared delegation baseline does.** Its
+  delegation section no longer hands analysis, contracts and CI to technical
+  roles, one of them a DevOps/CI Engineer no shipped card defines. It now says
+  a stage delegates only for an independent judgement or for parallel units
+  that pass the parallel-unit gate, that the plan's `review` field names the
+  reviewers, and that the verify stage runs the quality gates.
+
 - **`qfai --help` lists the validation profiles in the order the parser
   names them.** The `--profile` line for validate and report now reads
   `discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift`, the
