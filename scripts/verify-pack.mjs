@@ -28,6 +28,7 @@ import {
 } from "./fresh-init-findings.mjs";
 import { explainNpmInstallFailure } from "./lib/npm-failure.mjs";
 import { assertPackagedGithubTopology } from "./lib/pack-github-topology.mjs";
+import { sourceSkillIds } from "./lib/pack-skill-set.mjs";
 
 function toPosix(p) {
   return p.split(path.sep).join("/");
@@ -139,16 +140,11 @@ if (!existsSync(rootAssetsDir)) {
   throw new Error("assets/init/root is missing from the packed artifact.");
 }
 
-const requiredSkills = [
-  "qfai-configure",
-  "qfai-discussion",
-  "qfai-sdd",
-  "qfai-prototyping",
-  "qfai-implement",
-  "qfai-verify",
-  "qfai-triage",
-  "qfai-migration-v1-to-v2",
-];
+// Read from the source tree, not the tarball: a skill the pack drops must still
+// be expected here, or every per-skill check below skips it.
+const requiredSkills = sourceSkillIds(
+  path.join(pkgDir, "assets", "init", ".qfai", "assistant", "skill"),
+);
 const deprecatedSkillIds = [
   "qfai-atdd",
   "qfai-spec",

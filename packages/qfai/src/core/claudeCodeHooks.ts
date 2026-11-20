@@ -377,7 +377,7 @@ function groupIdentity(group: unknown): string | null {
       markers.push(entry.statusMessage);
     }
   }
-  return markers.length === 0 ? null : JSON.stringify([...markers].sort());
+  return markers.length === 0 ? null : JSON.stringify(markers.sort());
 }
 
 /** The identities of the groups already under one event. */
