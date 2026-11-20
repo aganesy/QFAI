@@ -523,6 +523,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `webResearch.allowlist`. The templates still
   default to the cloud API.
 
+- **The leakage guard catches a `schemaVersion` whose colon is on the next
+  line** (#4743). The guard's pattern allows any whitespace between the field
+  name and its colon, but grep read each file one line at a time, so a valid
+  JavaScript property split across a line break shipped without a failure.
+  The `schemaVersion` pass now reads each file as a whole and names every file
+  that holds the field.
+
 - **The UI strategy review no longer hands winner selection to the comparison
   review.** The comparison review owns no winner and the prototyping loop puts
   its latest iteration to the user, so a reviewer following the old sentence
