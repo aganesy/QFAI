@@ -260,7 +260,10 @@ async function writePair(
     placed: false,
     aside: null,
   }));
-  const directories = [...new Set(outputs.map((output) => path.dirname(output.file)))];
+  // The lock's directory is checked and created with the pair's, and after them.
+  const directories = [
+    ...new Set([...outputs.map((output) => path.dirname(output.file)), DESIGN_LOCK_DIRECTORY]),
+  ];
   // Set once the lock is held, so a failure to release it is told from one to take it.
   const held: { committed?: PairFailure | null } = {};
   let committed: PairFailure | null;
@@ -301,8 +304,14 @@ async function removeAsides(entries: readonly PairEntry[]): Promise<void> {
   await Promise.all(asides.map((aside) => rm(aside, { force: true })));
 }
 
-/** The lock that lets one run at a time place or undo the pair, beside the two files. */
-const DESIGN_LOCK_PATH = path.join(".qfai", "catalog", ".design.lock");
+/**
+ * The lock that lets one run at a time place or undo the pair. It sits with the project's local
+ * state under `.qfai/tools/`, which the graph preparation keeps out of Git, so a lock a killed
+ * run leaves is never committed with the catalogue. Unlike the graph state it carries no
+ * platform key, so runs from every platform on one checkout share it.
+ */
+const DESIGN_LOCK_DIRECTORY = path.join(".qfai", "tools", "state");
+const DESIGN_LOCK_PATH = path.join(DESIGN_LOCK_DIRECTORY, "design-catalog.lock");
 
 function designLock(): OwnerLockOptions {
   const lock = DESIGN_LOCK_PATH.split(path.sep).join("/");

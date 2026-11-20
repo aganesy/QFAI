@@ -56,7 +56,7 @@ export async function withOwnerLock<T>(
 }
 
 /** Reads a lock file, or undefined when it is not there; one that is not one plain file throws. */
-export async function readLockFile(
+async function readLockFile(
   file: string,
   options: Pick<OwnerLockOptions, "maxBytes" | "invalid">,
 ): Promise<string | undefined> {
@@ -84,7 +84,7 @@ export async function readLockFile(
 }
 
 /** Creates a lock file exclusively and writes `value` to it; one already there throws EEXIST. */
-export async function writeLockFile(
+async function writeLockFile(
   file: string,
   value: unknown,
   options: Pick<OwnerLockOptions, "maxBytes" | "invalid">,

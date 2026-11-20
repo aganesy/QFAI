@@ -60,5 +60,5 @@ Feature: Derive the design tokens and the theme from DESIGN.md
     Then a `.qfai/catalog` that is a symbolic link stops it with exit 1 and one line naming the link, and the directory it points to is as it was
     And it stages each file in a new file of its own, so a staging or moved-aside file of another run is never overwritten or removed
     And when a step fails it undoes only what it did, says in one line whether both files are as they were, and keeps a moved-aside file it could not rename back
-    And it places and undoes its files only while it holds `.qfai/catalog/.design.lock`, so a run that finds the lock held writes nothing, exits 1 with one line saying whether another run is writing or the lock is to be removed by hand, and the two files always come from one run
+    And it places and undoes its files only while it holds `.qfai/tools/state/design-catalog.lock`, so a run that finds the lock held writes nothing, exits 1 with one line saying whether another run is writing or the lock is to be removed by hand, and the two files always come from one run, and a lock that no longer holds its record at the end is left in place and named in its one line
 ```

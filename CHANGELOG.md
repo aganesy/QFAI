@@ -625,10 +625,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the same time placed their files in turn, so the token file could come from
   one revision of `DESIGN.md` and the theme from another, and a failing run
   could meet the other run's files while undoing its own. A run now places and
-  undoes its files only while it holds `.qfai/catalog/.design.lock`. A run that
-  finds the lock held writes nothing and exits 1, saying whether to retry once
-  the other run finishes or to remove a lock no running process holds.
-  Closes #4756.
+  undoes its files only while it holds `.qfai/tools/state/design-catalog.lock`,
+  under the `.qfai/tools/` that `qfai init` keeps out of Git, so a lock a
+  killed run leaves is never committed. A run that finds the lock held writes
+  nothing and exits 1, saying whether to retry once the other run finishes or
+  to remove a lock no running process holds. Closes #4756.
 
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
