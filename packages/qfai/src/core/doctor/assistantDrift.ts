@@ -7,14 +7,16 @@ import {
   REFRESHED_ASSISTANT_LAYERS,
   joinAssistantAssetLayer,
 } from "../paths/assistantPaths.js";
-import { readText, withLf } from "./workflowDrift.js";
+import { printable, readCopies, unreadableCopyMessage, withLf } from "./workflowDrift.js";
 
 export type AssistantDriftCheck = {
   id: string;
   severity: "warning";
   title: string;
   message: string;
-  details: { path: string; packagedCopy: string };
+  details:
+    | { path: string; packagedCopy: string }
+    | { path: string; packagedCopy: string; unreadable: string; code: string };
 };
 
 function packagedAssistantDir(): string | undefined {
@@ -32,7 +34,8 @@ function packagedAssistantDir(): string | undefined {
  *
  * The packaged tree is the list, so a file the package does not ship (a `rule/*.local.md`
  * overlay, anything under `skill.local/`, an agent the project added) is never compared, and a
- * shipped file the project does not have raises no finding.
+ * shipped file the project does not have raises no finding. A shipped file whose installed or
+ * packaged copy exists and cannot be read is a warning naming that copy and the cause.
  */
 export async function checkAssistantDrift(root: string): Promise<AssistantDriftCheck[]> {
   const packagedDir = packagedAssistantDir();
@@ -46,12 +49,27 @@ export async function checkAssistantDrift(root: string): Promise<AssistantDriftC
     for (const relative of relatives) {
       const packagedCopy = path.join(packagedDir, ...relative.split("/"));
       const installedPath = `${ASSISTANT_DIR}/${relative}`;
-      const installed = await readText(path.join(root, ...installedPath.split("/")));
-      const packaged = await readText(packagedCopy);
-      if (installed === undefined || packaged === undefined) continue;
-      if (withLf(installed) === withLf(packaged)) continue;
+      const id = `assistant.drift.${relative}`;
+      const copies = await readCopies(root, installedPath, packagedCopy);
+      if (copies.kind === "absent") continue;
+      if (copies.kind === "unreadable") {
+        findings.push({
+          id,
+          severity: "warning",
+          title: `Shipped assistant file cannot be read (${printable(copies.unreadable)})`,
+          message: unreadableCopyMessage(copies, installedPath),
+          details: {
+            path: installedPath,
+            packagedCopy,
+            unreadable: copies.unreadable,
+            code: copies.code,
+          },
+        });
+        continue;
+      }
+      if (withLf(copies.installed) === withLf(copies.packaged)) continue;
       findings.push({
-        id: `assistant.drift.${relative}`,
+        id,
         severity: "warning",
         title: `Shipped assistant file differs (${installedPath})`,
         message:

@@ -19,6 +19,8 @@ export type ToolCall = {
   questions?: number;
   /** The command executions a host reported for the call apart from its output, in order. */
   executions?: Execution[];
+  /** The exit codes the structured envelope of the call's result states, in order. */
+  resultExits?: number[];
 };
 
 /** One command execution's end: its exit code where stated, and whether it failed. */
