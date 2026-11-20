@@ -58,8 +58,10 @@ decision. It is derived from `issues` and cannot disagree with it.
   repair what the findings name and run again.
 - absent: the file makes no claim either way. A file written by a qfai from
   before the field existed does not carry it, nor does a run that could not
-  finish, whose `QFAI-SCAN-002` error already fails it. Read absence as "not
-  known", not as `true`.
+  finish. That run reports a `QFAI-SCAN-002` error and fails under every
+  `--fail-on` except `never`; under `never` it still exits 0, so read its
+  result as incomplete whatever the exit code. Read absence as "not known",
+  not as `true`.
 
 BF, AC, and EX test obligations appear in `issues` as `QFAI-STORY-006` through
 `QFAI-STORY-009` findings. There is no separate traceability summary field.
