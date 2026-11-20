@@ -578,6 +578,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps `tmp/` for when the host names none. The one-line entry now says the
   same.
 
+- **`qfai session-review` keeps each error on one line.** Redaction kept the
+  line breaks in a file-system error or a `--session` ID, so an `--out` path
+  holding a newline, or such an ID, could print further lines on standard
+  error. Line breaks in these messages, and in the line naming the written
+  `--out` file, now become a space after redaction.
+
 - **`DESIGN.md` accepts a font family whose name ends in many digits.** A
   family such as `Brand9007199254740993` was refused as a number too large to
   read exactly, although both catalog formats write a family name as text. The
