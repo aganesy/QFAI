@@ -28,6 +28,13 @@ export type StoryTestFile = {
 
 export type StoryObligationProfile = "atdd" | "tdd";
 
+/**
+ * How many test files the story-tree scan has open at once. A selection may hold up to
+ * `DEFAULT_GLOB_FILE_LIMIT` files, and opening them all together can hit the open-file limit
+ * (`EMFILE`), which fails the whole scan.
+ */
+export const STORY_TEST_READ_BATCH = 64;
+
 /** The shipped rule that says which annotation belongs to which test layer. */
 const TEST_LAYERS_RULE = `${assistantLayerDir("rule")}/test-layers.md`;
 
@@ -261,16 +268,22 @@ export async function readStoryTests(
   ]);
   const examplePaths = new Set(examples.files.map((file) => path.resolve(file)));
   const roots = createTestLayerRoots(root, config);
-  const files = await Promise.all(
-    [...new Set([...acceptance.files, ...examples.files].map((file) => path.resolve(file)))].map(
-      async (file) => ({
+  const selected = [
+    ...new Set([...acceptance.files, ...examples.files].map((file) => path.resolve(file))),
+  ];
+  const files: StoryTestFile[] = [];
+  for (let start = 0; start < selected.length; start += STORY_TEST_READ_BATCH) {
+    const batch = selected.slice(start, start + STORY_TEST_READ_BATCH);
+    const read = await Promise.all(
+      batch.map(async (file) => ({
         file,
         content: await readFile(file, "utf8"),
         kind: resolveTestKind(file, roots),
         selectedForExample: examplePaths.has(file),
-      }),
-    ),
-  );
+      })),
+    );
+    files.push(...read);
+  }
   return { files, truncated: acceptance.truncated || examples.truncated };
 }
 
