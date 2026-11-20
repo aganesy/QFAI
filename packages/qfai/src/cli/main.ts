@@ -533,6 +533,7 @@ Options:
   --format <text|github>       validate: output format
   --format <md|json>           report: output format
   --format <text|json>         doctor: output format
+  --format <text|json>         db-drift: output format (text by default)
   --format <md|json>           session-review: output format (md by default)
   --agent <claude|codex|all>   session-review: whose transcripts to read (all by default)
   --session <id>               session-review: the session to report, instead of the latest of each agent
@@ -548,7 +549,7 @@ Options:
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
   --timings                     validate: print the time each finding family took, slowest first; runs the UI/UX checks one after another
   --check                       catalog components / design: exit 1 when a committed catalogue file is missing, does not parse, or is out of date, without writing it
-  --out <path>                  report/doctor/session-review: output path (a relative path is resolved against --root)
+  --out <path>                  report/doctor/db-drift/session-review: output path (a relative path is resolved against --root)
   --in <path>                   report: validate.json input path (takes precedence over the config)
   --run-validate                report: run validate first, then generate the report
   --base-url <url>              report: base URL
