@@ -17,5 +17,12 @@ describe("qfai-sdd contract executability evidence", () => {
       expect(gate).toContain("declared write paths were exercised");
       expect(gate).toContain("Contract executability");
     });
+
+    it(`${tree}: sends contract executability evidence to the SDD report`, async () => {
+      for (const reference of ["sdd-quality-gate.md", "sdd-phase-checklists.md"]) {
+        const body = await read(tree, `assistant/skill/qfai-sdd/references/${reference}`);
+        expect(body).toContain("under Contract executability in the SDD report.");
+      }
+    });
   }
 });

@@ -552,6 +552,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `--session` could then select. Such a rollout is now left out, since the
   recorded `id` is the session's identity.
 
+- **The shipped `qfai-triage` skill names the tracked changes it allows.** Its
+  description, reviewer gate, smoke check and project memory said any tracked
+  change fails the run, although `triage-close` commits the run's deliberation
+  record and the `open-questions.md` rows it wrote, and `qfai-run` may record
+  an approval row in `decisions.md` before `triage-handoff`. They now name
+  those exceptions, and `triage-owned-cleanup` keeps its own unchanged-tree
+  check.
+
 - **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
   shipped workflow edited to run a job on two operating systems and three
   Node versions was reported as three runner allocations instead of six,
@@ -630,6 +638,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   date such as `0099-09-09` was refused. The check now keeps the year as
   written.
 
+- **The SDD gate references send DB contract execution evidence to the SDD
+  report.** The quality gate and phase checklists named a misspelled
+  destination that does not exist. Both now name the SDD report, matching the
+  contract artifact rules. Closes #4933.
+
 - **Reviewer cards read the technology contract from the configured contracts
   directory.** The architecture, implementation, product-surface and
   requirements reviewer cards, the quality rule and the discussion skill named
@@ -647,6 +660,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   workflow's path and why it was not counted. A job `if:` written as an
   expression that wraps a literal boolean, such as `${{ false }}`, is read as
   that boolean. Closes #4790.
+
+- **The prototyping skill names the files a `restyle` run edits outside
+  `.qfai/prototype/`.** `qfai-prototyping` said every file the loop writes stays
+  under `.qfai/prototype/` and then had a `restyle` loop edit application
+  files, so a literal reading either blocked a supported restyle or hid its
+  write scope. The folder rule now covers ordinary prototyping runs, and a
+  `restyle` run edits only the stylesheet and motion entry points its
+  `final/handoff.json` lists under `entryPoints`. Closes #4935.
 
 - **`qfai --help` lists `sdd preflight --format <text|json>` and says what
   `--fail-on never` does to a blocked preflight.** The options table left the
