@@ -3286,6 +3286,108 @@ describe("release automation performs decisions rather than making them", () => 
     );
   });
 
+  it("stops on an inconclusive tag lookup instead of treating it as an absent tag", () => {
+    // `gh api` exits 1 for a missing ref and for a denied read or an outage alike. Tested for
+    // truth with its stderr discarded, a 401 or a 5xx read as "no such tag", and the run went on
+    // to prepare a version-bump pull request for a version that may already be tagged. Only the
+    // response status says which it was, so the step's own body runs against a stubbed `gh`.
+    const prepare = workflow("prepare-release.yml");
+    const jobs = isRecord(prepare["jobs"]) ? prepare["jobs"] : {};
+    const job = isRecord(jobs["prepare"]) ? jobs["prepare"] : {};
+    const steps = Array.isArray(job["steps"]) ? job["steps"] : [];
+    const step = steps.find((entry) => isRecord(entry) && entry["id"] === "check");
+    const body = isRecord(step) ? step["run"] : undefined;
+    expect(body, "prepare-release has no `check` step with a body").toBeTypeOf("string");
+
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-prepare-tag-"));
+    try {
+      mkdirSync(path.join(dir, "packages", "qfai"), { recursive: true });
+      writeFileSync(
+        path.join(dir, "packages", "qfai", "package.json"),
+        '{ "version": "1.2.2" }\n',
+        "utf-8",
+      );
+      writeFileSync(
+        path.join(dir, "CHANGELOG.md"),
+        "# Changelog\n\n## [Unreleased]\n\n### Fixed\n\n- A change.\n\n## [1.2.2] - 2026-01-01\n",
+        "utf-8",
+      );
+      const outputFile = path.join(dir, "github-output");
+
+      /**
+       * Runs the step with `gh api` answering `statusLine` on stdout and exiting `exitCode`. The
+       * stub prints a status line only when asked for `--include`, as gh does, so a lookup that
+       * stopped asking for it reads every answer as inconclusive and the 404 row goes red.
+       */
+      const run = (statusLine: string, exitCode: number, stderr: string) => {
+        writeFileSync(outputFile, "", "utf-8");
+        const fake = [
+          "gh() {",
+          '  [ "$1" = "api" ] || { echo "fake-gh: unexpected $1" >&2; return 99; }',
+          '  case " $* " in',
+          '    *" --include "*) ;;',
+          '    *) echo "fake-gh: called without --include" >&2; return 98 ;;',
+          "  esac",
+          ...(statusLine === "" ? [] : [`  printf '%s\\n\\n{}' '${statusLine}'`]),
+          `  printf '%s\\n' '${stderr}' >&2`,
+          `  return ${exitCode}`,
+          "}",
+        ].join("\n");
+        const script = path.join(dir, "check.sh");
+        writeFileSync(script, `${fake}\n${typeof body === "string" ? body : ""}`, "utf-8");
+        const result = spawnSync("bash", [script], {
+          cwd: dir,
+          env: {
+            ...process.env,
+            GITHUB_REPOSITORY: "owner/repo",
+            GITHUB_OUTPUT: outputFile,
+            RELEASE_VERSION: "1.2.3",
+          },
+          encoding: "utf-8",
+        });
+        if (result.error !== undefined) throw result.error;
+        return {
+          status: result.status,
+          output: `${result.stdout}${result.stderr}`,
+          written: readFileSync(outputFile, "utf-8"),
+        };
+      };
+
+      const absent = run("HTTP/2.0 404 Not Found", 1, "gh: Not Found (HTTP 404)");
+      expect
+        .soft(absent.status, `an explicit 404 means the tag is absent:\n${absent.output}`)
+        .toBe(0);
+      expect.soft(absent.written).toContain("version=1.2.3");
+
+      const tagged = run("HTTP/2.0 200 OK", 0, "");
+      expect.soft(tagged.status, "an existing tag must stop the run").toBe(1);
+      expect.soft(tagged.output).toContain("already has a tag");
+
+      const inconclusiveAnswers: Array<[statusLine: string, stderr: string, why: string]> = [
+        ["HTTP/2.0 401 Unauthorized", "gh: Bad credentials (HTTP 401)", "a denied read"],
+        ["HTTP/2.0 502 Bad Gateway", "gh: HTTP 502", "a server error"],
+        ["", "error connecting to api.github.com", "an unreachable API"],
+      ];
+      for (const [statusLine, stderr, why] of inconclusiveAnswers) {
+        const inconclusive = run(statusLine, 1, stderr);
+        expect
+          .soft(inconclusive.status, `${why} must stop the run:\n${inconclusive.output}`)
+          .toBe(1);
+        expect
+          .soft(inconclusive.output, `${why} must be reported as an unanswered lookup`)
+          .toMatch(
+            /::error::prepare-release: could not determine whether v1\.2\.3 is already tagged/,
+          );
+        expect
+          .soft(inconclusive.output, `${why} must keep gh's own message visible`)
+          .toContain(stderr);
+        expect.soft(inconclusive.written, `${why} must hand no version on`).toBe("");
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("keeps scratch inside the one directory this repository sanctions", () => {
     // `.agents/rules/temporary-files.md` makes `tmp/` at the repository root the sole scratch
     // area. Bare `mktemp` implies `--tmpdir` and lands in `/tmp` when `TMPDIR` is unset, which
