@@ -159,10 +159,18 @@ That selection is separate from Vitest's current `.test.ts` includes.
 
 ## CLI Smoke Test (in an empty directory)
 
-```
-npx qfai init
-npx qfai validate --fail-on error --format github
-npx qfai report
+An empty directory has no local `qfai` dependency and `init` installs none,
+so `npx qfai` there runs a cached or registry copy, not this checkout. Build
+the checkout, record its CLI's absolute path, then run every command through
+it. Use Git Bash from the checkout root:
+
+```bash
+pnpm build
+qfaiCli=$(pwd)/packages/qfai/dist/cli/index.mjs
+smokeDir=$(mktemp -d) && cd "$smokeDir" || exit 1
+node "$qfaiCli" init
+node "$qfaiCli" validate --fail-on error --format github
+node "$qfaiCli" report
 ```
 
 ## Release
