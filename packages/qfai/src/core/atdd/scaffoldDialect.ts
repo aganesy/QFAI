@@ -191,65 +191,170 @@ function scriptWords(script: string): string[] {
     .filter((word) => word !== "");
 }
 
-/** Package runners that run their first non-option word as the command. */
-const PACKAGE_RUNNERS: ReadonlySet<string> = new Set([
-  "npx",
-  "pnpx",
-  "bunx",
-  "cross-env",
-  "cross-env-shell",
+/**
+ * Launchers that run the first word after their options as the command,
+ * each with the options that take the next word as their value.
+ */
+const LAUNCHERS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ["npx", new Set(["-p", "--package", "-c", "--call"])],
+  ["pnpx", new Set(["-p", "--package"])],
+  ["bunx", new Set(["-p", "--package"])],
+  ["cross-env", new Set<string>()],
+  ["cross-env-shell", new Set<string>()],
+  ["env", new Set(["-u", "--unset", "-C", "--chdir"])],
+  ["dotenv", new Set(["-e", "-c", "-v", "-p"])],
+  ["env-cmd", new Set(["-f", "--file", "-e", "--environments", "-r", "--rc-file"])],
+  ["time", new Set(["-f", "--format", "-o", "--output"])],
 ]);
 
-/** Package managers and the subcommands after them that run the next word as a command. */
-const PACKAGE_MANAGER_EXEC: ReadonlyMap<string, ReadonlySet<string>> = new Map([
-  ["pnpm", new Set(["exec", "dlx"])],
-  ["yarn", new Set(["exec", "dlx"])],
-  ["npm", new Set(["exec", "x"])],
-  ["bun", new Set(["x"])],
+/** Launchers whose arguments are scripts in their own right, as `sh -c "vitest run"`. */
+const SCRIPT_LAUNCHERS: ReadonlySet<string> = new Set([
+  "sh",
+  "bash",
+  "zsh",
+  "concurrently",
+  "run-p",
+  "run-s",
+  "npm-run-all",
 ]);
 
-/** Package managers that run an installed binary named straight after them, as `pnpm vitest` does. */
-const BARE_BINARY_MANAGERS: ReadonlySet<string> = new Set(["pnpm", "yarn"]);
+/** How a package manager runs a binary. */
+interface PackageManager {
+  /** Its own options that take the next word as their value. */
+  readonly valueOptions: ReadonlySet<string>;
+  /** Subcommands that run the next word as a command. */
+  readonly exec: ReadonlySet<string>;
+  /** Whether it runs an installed binary named straight after it, as `pnpm vitest` does. */
+  readonly bare: boolean;
+}
+
+const PACKAGE_MANAGERS: ReadonlyMap<string, PackageManager> = new Map([
+  [
+    "pnpm",
+    {
+      valueOptions: new Set(["--filter", "-F", "-C", "--dir", "--reporter", "--loglevel"]),
+      exec: new Set(["exec", "dlx"]),
+      bare: true,
+    },
+  ],
+  ["yarn", { valueOptions: new Set(["--cwd"]), exec: new Set(["exec", "dlx"]), bare: true }],
+  [
+    "npm",
+    {
+      valueOptions: new Set(["-w", "--workspace", "--prefix", "-C"]),
+      exec: new Set(["exec", "x"]),
+      bare: false,
+    },
+  ],
+  [
+    "bun",
+    { valueOptions: new Set(["--cwd", "-F", "--filter"]), exec: new Set(["x", "run"]), bare: true },
+  ],
+]);
+
+/** Options of `pnpm exec`, `npm exec` and the like that take the next word as their value. */
+const EXEC_VALUE_OPTIONS: ReadonlySet<string> = new Set(["-p", "--package", "-c", "--call"]);
 
 /** A leading `NAME=value` environment assignment before a command. */
 const ENV_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 
-/** The index of the first word from `index` that is neither an option nor `--`. */
-function skipOptions(words: readonly string[], index: number): number {
-  let next = index;
-  while ((words[next] ?? "").startsWith("-")) next += 1;
-  return next;
+/** Characters that end a command outside quotes; `$(` and backticks open a nested one. */
+const COMMAND_BREAKS = ";&|()`";
+
+/**
+ * A script's commands as lists of words. Whitespace outside quotes ends a
+ * word and a shell operator outside quotes ends a command; quotes are dropped
+ * and what they enclose stays in one word. A backslash is kept as it is, so a
+ * Windows path reads as one word. Shortcut: no escapes, globs or variable
+ * expansion; a project whose script needs them to be read as running vitest
+ * is still read so when it declares vitest in its dependencies. Add them when
+ * a script that runs vitest is reported read as some other runner.
+ */
+function splitCommands(script: string): string[][] {
+  const commands: string[][] = [];
+  let words: string[] = [];
+  let word = "";
+  let quote: string | undefined;
+  const endWord = (): void => {
+    if (word !== "") words.push(word);
+    word = "";
+  };
+  for (const char of script) {
+    if (quote !== undefined) {
+      if (char === quote) quote = undefined;
+      else word += char;
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if (/\s/.test(char)) {
+      endWord();
+    } else if (COMMAND_BREAKS.includes(char)) {
+      endWord();
+      if (words.length > 0) commands.push(words);
+      words = [];
+    } else {
+      word += char;
+    }
+  }
+  endWord();
+  if (words.length > 0) commands.push(words);
+  return commands;
 }
 
 /**
- * The command word of each command in a script: the first word of each part
- * between shell operators, after environment assignments and the package
- * runners above. `npx vitest` and `pnpm exec vitest` yield `vitest`;
- * `echo vitest` and `npm run vitest` yield `echo` and `npm`.
+ * The index of the first word from `index` that is not an option or the
+ * value of one in `valueOptions`; a `--` ends the options and is skipped.
+ */
+function skipOptions(
+  words: readonly string[],
+  index: number,
+  valueOptions: ReadonlySet<string>,
+): number {
+  let next = index;
+  for (;;) {
+    const word = words[next] ?? "";
+    if (word === "--") return next + 1;
+    if (!word.startsWith("-")) return next;
+    next += valueOptions.has(word) ? 2 : 1;
+  }
+}
+
+/**
+ * The command word of each command in a script, after environment
+ * assignments and the launchers and package managers above. `npx vitest` and
+ * `pnpm exec vitest` yield `vitest`; `echo vitest` and `npm run vitest` yield
+ * `echo` and `npm`. A script launcher's arguments are read as scripts, so
+ * `sh -c "tsc && vitest"` yields `tsc` and `vitest`.
  */
 function commandWords(script: string): string[] {
   const commands: string[] = [];
-  for (const part of script.split(/[;&|()]+/)) {
-    const words = scriptWords(part);
+  for (const words of splitCommands(script)) {
     let index = 0;
     for (;;) {
       while (ENV_ASSIGNMENT.test(words[index] ?? "")) index += 1;
       const word = words[index] ?? "";
-      if (PACKAGE_RUNNERS.has(word)) {
-        index = skipOptions(words, index + 1);
+      const launcherOptions = LAUNCHERS.get(word);
+      if (launcherOptions !== undefined) {
+        index = skipOptions(words, index + 1, launcherOptions);
         continue;
       }
-      const subcommand = words[index + 1];
+      if (SCRIPT_LAUNCHERS.has(word)) {
+        for (const argument of words.slice(index + 1)) {
+          if (!argument.startsWith("-")) commands.push(...commandWords(argument));
+        }
+        index = words.length;
+        break;
+      }
+      const manager = PACKAGE_MANAGERS.get(word);
+      if (manager === undefined) break;
+      const next = skipOptions(words, index + 1, manager.valueOptions);
+      const subcommand = words[next];
       if (subcommand === undefined) break;
-      if (PACKAGE_MANAGER_EXEC.get(word)?.has(subcommand) === true) {
-        index = skipOptions(words, index + 2);
+      if (manager.exec.has(subcommand)) {
+        index = skipOptions(words, next + 1, EXEC_VALUE_OPTIONS);
         continue;
       }
-      if (BARE_BINARY_MANAGERS.has(word) && !subcommand.startsWith("-") && subcommand !== "run") {
-        index += 1;
-        continue;
-      }
-      break;
+      if (!manager.bare || subcommand === "run") break;
+      index = next;
     }
     const command = words[index];
     if (command !== undefined) commands.push(command);

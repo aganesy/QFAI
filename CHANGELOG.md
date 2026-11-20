@@ -625,9 +625,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A `package.json` script that only named `vitest` as an argument, such as
   `echo vitest`, made the command write a vitest skeleton for a project that
   runs `node --test`, so the test imported a package the project does not
-  have. Now `vitest` counts only as the command a script runs, directly or
-  through `npx`, `pnpm exec`, `pnpm dlx`, `yarn`, `npm exec`, `bunx` or
-  `cross-env`.
+  have. Now `vitest` counts only as the command a script runs: directly,
+  after environment assignments, through a launcher such as `npx`,
+  `cross-env`, `dotenv`, `env-cmd`, `env` or `time`, through a package
+  manager such as `pnpm exec`, `pnpm vitest`, `yarn dlx`, `npm exec` or
+  `bun run`, or inside the quoted script of `sh -c`, `concurrently` or
+  `run-p`.
 
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
