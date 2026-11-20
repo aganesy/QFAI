@@ -538,6 +538,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **`qfai validate` compares the decision register when a tracked name under
+  the specs directory contains a newline.** One such file anywhere beneath the
+  configured specs directory made the base inventory unreadable, and the drift
+  check failed with `QFAI-DRIFT-001` before it looked for the register. Each
+  name is now read verbatim after the first tab of its Git record.
+
 - **`qfai doctor` reads a shipped workflow's `on:` before counting its jobs in
   `workflows.cost`.** A shipped workflow edited to run on `push` alone was still
   reported as starting jobs on each pull request. A workflow whose `on:` starts
