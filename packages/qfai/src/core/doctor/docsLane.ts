@@ -1,4 +1,5 @@
-import { access } from "node:fs/promises";
+import { constants } from "node:fs";
+import { access, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
@@ -14,9 +15,13 @@ export type DocsLaneCheck = {
   details: { path: string; packagedCopy?: string };
 };
 
-async function exists(target: string): Promise<boolean> {
+/** Whether `target` is a regular file this process can read; a directory there is not a workflow. */
+async function isReadableFile(target: string): Promise<boolean> {
   try {
-    await access(target);
+    if (!(await stat(target)).isFile()) {
+      return false;
+    }
+    await access(target, constants.R_OK);
     return true;
   } catch {
     return false;
@@ -41,7 +46,7 @@ function packagedCopy(): string | undefined {
  */
 export async function checkDocsLane(root: string): Promise<DocsLaneCheck> {
   const title = `Document-schema lane (${DOCS_LANE})`;
-  if (await exists(path.join(root, ...DOCS_LANE.split("/")))) {
+  if (await isReadableFile(path.join(root, ...DOCS_LANE.split("/")))) {
     return {
       id: "workflows.docsLane",
       severity: "ok",
