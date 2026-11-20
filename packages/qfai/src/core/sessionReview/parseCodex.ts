@@ -34,11 +34,6 @@ const QUESTION_CALLS: ReadonlySet<string> = new Set([
   "request_user_input_async",
 ]);
 
-/**
- * A command's structured exit status: an `exit_code` field of the call's own JSON result. The
- * same field inside the command's output is escaped there (`\"exit_code\"`), so it is not matched.
- */
-const EXIT_FIELD = /(?<!\\)"exit_code"\s*:\s*(-?\d+)/g;
 /** The status line of the header Codex writes above a shell command's output. */
 const EXIT_LINE = /^(?:Exit code:|Process exited with code) (-?\d+)$/;
 /** The line that ends that header; everything after it is what the command printed. */
@@ -236,17 +231,53 @@ function readOutput(payload: JsonRecord, calls: readonly ToolCall[]): ToolResult
   const unsuccessful = isRecord(output) && output.success === false;
   const call = latestCall(calls, id);
   const shell = call !== undefined && isShellCall(call);
+  if (shell) call.resultExits = envelopeExits(output);
   const stated = shell ? shellStatus(text, call) : { exitCode: null, failed: false };
   return { id, isError: unsuccessful || stated.failed, text, exitCode: stated.exitCode };
 }
 
 /**
- * A shell call's status: the structured `exit_code` fields of its result, else the executions
+ * The exit codes a result's structured envelope states: the `exit_code` field, or the one under
+ * `metadata`, of the result object or of the JSON object a result text holds whole, for each
+ * content item of a list. An `exit_code` inside the command's output, or in text that wraps a
+ * JSON object, is something the command or the model printed, so it is not read.
+ */
+function envelopeExits(value: unknown): number[] {
+  if (Array.isArray(value)) return value.flatMap(envelopeExits);
+  if (typeof value === "string") {
+    const parsed = parsedJson(value);
+    return parsed === undefined ? [] : envelopeExits(parsed);
+  }
+  if (!isRecord(value)) return [];
+  const code = exitCodeAt(value) ?? exitCodeAt(value.metadata);
+  if (code !== undefined) return [code];
+  return typeof value.text === "string" ? envelopeExits(value.text) : [];
+}
+
+function exitCodeAt(value: unknown): number | undefined {
+  const code = isRecord(value) ? value.exit_code : undefined;
+  return typeof code === "number" && Number.isInteger(code) ? code : undefined;
+}
+
+/** The JSON object or list a text holds whole, or none. */
+function parsedJson(text: string): unknown {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    return isRecord(parsed) || Array.isArray(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * A shell call's status: the exit codes its result envelope states, else the executions
  * the rollout reported for it, else the status line of the header Codex writes above the output.
  * A script that ran several commands failed when any of them did.
  */
 function shellStatus(text: string, call: ToolCall): { exitCode: number | null; failed: boolean } {
-  const fields = [...text.matchAll(EXIT_FIELD)].map((match) => Number(match[1]));
+  const fields = call.resultExits ?? [];
   if (fields.length > 0) {
     const exitCode = fields.find((code) => code !== 0) ?? 0;
     return { exitCode, failed: exitCode !== 0 };
