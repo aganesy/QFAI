@@ -117,10 +117,15 @@ describe("turn-end hook", () => {
 
   // QFAI:EX-0001-0244-04
   it("stops what the timed-out command started as well", async () => {
+    const ready = path.join(root, "ready.txt");
     const marker = path.join(root, "late.txt");
     await writeFile(
       path.join(root, "late.js"),
-      `setTimeout(() => require("fs").writeFileSync(${JSON.stringify(marker)}, "late"), 1500);\n`,
+      [
+        `require("fs").writeFileSync(${JSON.stringify(ready)}, "ready");`,
+        `setTimeout(() => require("fs").writeFileSync(${JSON.stringify(marker)}, "late"), 1500);`,
+        "",
+      ].join("\n"),
       "utf-8",
     );
     await writeFile(
@@ -132,8 +137,10 @@ describe("turn-end hook", () => {
     expect(String(parsed(await hook({ session_id: "s1" }, 500)).reason)).toContain(
       "did not finish within",
     );
+    // The grandchild must have started, or the absent late marker proves nothing.
+    expect(await readFile(ready, "utf-8")).toBe("ready");
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    await expect(readFile(marker, "utf-8")).rejects.toThrow();
+    await expect(readFile(marker, "utf-8")).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   // QFAI:EX-0001-0244-05
