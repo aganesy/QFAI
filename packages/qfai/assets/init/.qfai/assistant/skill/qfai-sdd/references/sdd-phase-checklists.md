@@ -37,7 +37,7 @@ The one example a diagnosed missing test needs is appended by the implement stag
 - No contract names an implementation file.
 - Every written contract file has a contracts.md index row in the same change, with the columns `ID`, `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`.
 - Contract state, errors, and persisted attributes can realize the AC and EX outcomes, including required joins.
-- Changed DB contracts were applied to a scratch database and their declared write paths exercised as the contract artifact rules require. Record the command and result under Contract executability in the SDD repdence.
+- Changed DB contracts were applied to a scratch database and their declared write paths exercised as the contract artifact rules require. Record the command and result under Contract executability in the SDD report.
 - UI contracts follow the product's own root `DESIGN.md`; the sample design was not adopted.
 
 ## Concrete-abstract cycle
