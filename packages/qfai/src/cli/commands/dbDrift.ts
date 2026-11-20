@@ -22,8 +22,8 @@ import type { ColumnDifference, DatabaseFactory } from "../../core/dbSchemaDrift
 import {
   compareSchemas,
   contractApplyOrder,
-  defaultDatabaseFactory,
   migrationApplyOrder,
+  projectDatabaseFactory,
 } from "../../core/dbSchemaDrift.js";
 import { error, info } from "../../core/logger.js";
 
@@ -86,7 +86,7 @@ export async function runDbDrift(options: DbDriftOptions): Promise<number> {
       root,
       contractFiles,
       migrationFiles,
-      createDatabase: options.createDatabase ?? defaultDatabaseFactory,
+      createDatabase: options.createDatabase ?? projectDatabaseFactory(root),
     });
   } catch (cause) {
     error(`qfai db-drift: ${cause instanceof Error ? cause.message : String(cause)}`);

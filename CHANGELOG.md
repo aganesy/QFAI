@@ -638,6 +638,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   option, no count, no leading `sed`, `awk` or `grep` script and no `echo`
   text leaves the bytes unknown.
 
+- **`qfai db-drift` uses the Postgres engine the inspected project installed.**
+  The engine was imported from qfai's own location, so with qfai run from
+  another tree (`npx`, a global install) installing `@electric-sql/pglite` in
+  the `--root` project, as the command's message says, changed nothing. The
+  engine is now resolved from the project root first, then from qfai, and the
+  same install message stands when neither has it.
+
 - **The prototyping preflight installs nothing.** Its step said to run
   `npm i -D playwright`, which could rewrite the manifest and lockfile of a
   step that promises to change no file, and npm cannot install a project

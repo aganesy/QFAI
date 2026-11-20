@@ -31,7 +31,9 @@
  */
 
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { extractDeclaredContractIds, extractDeclaredDependencies } from "./contractsDecl.js";
 import { collectDbContractFiles } from "./discovery.js";
@@ -108,8 +110,15 @@ const COLUMN_QUERY = `
   ORDER BY c.table_name, c.column_name
 `;
 
+const ENGINE_PACKAGE = "@electric-sql/pglite";
+
+const ENGINE_MISSING =
+  "qfai db-drift needs an in-process Postgres engine. Install it with `npm i -D @electric-sql/pglite` and run the command again.";
+
+type EngineModule = { PGlite: new () => SchemaDatabase };
+
 /**
- * The default Postgres build, loaded only when a run reaches it.
+ * The Postgres build qfai itself can reach, loaded only when a run reaches it.
  *
  * A static import would put a WASM engine in the module graph of every command,
  * including the ones that never touch a database. The message on failure names
@@ -117,15 +126,66 @@ const COLUMN_QUERY = `
  * to install it.
  */
 export async function defaultDatabaseFactory(): Promise<SchemaDatabase> {
-  let pglite: { PGlite: new () => SchemaDatabase };
+  let pglite: EngineModule;
   try {
     pglite = await import("@electric-sql/pglite");
   } catch {
-    throw new Error(
-      "qfai db-drift needs an in-process Postgres engine. Install it with `npm i -D @electric-sql/pglite` and run the command again.",
-    );
+    throw new Error(ENGINE_MISSING);
   }
   return new pglite.PGlite();
+}
+
+/**
+ * The Postgres build the inspected project installed, falling back to qfai's.
+ *
+ * A bare import resolves from qfai's own location, so a CLI run from another
+ * tree (`npx`, a global install) never saw the engine the message tells the
+ * operator to install in the project. Resolving from the project root first
+ * makes that instruction true; a project without one keeps whatever qfai can
+ * reach, and the same message when neither has it.
+ */
+export function projectDatabaseFactory(root: string): DatabaseFactory {
+  return async () => {
+    const engine = await loadProjectEngine(root);
+    return engine ? new engine.PGlite() : defaultDatabaseFactory();
+  };
+}
+
+/** The engine module installed under `root`, or `null` when it has none. */
+async function loadProjectEngine(root: string): Promise<EngineModule | null> {
+  let resolved: string;
+  try {
+    resolved = createRequire(path.join(root, "package.json")).resolve(ENGINE_PACKAGE);
+  } catch {
+    return null;
+  }
+  let loaded: unknown;
+  try {
+    loaded = await import(pathToFileURL(resolved).href);
+  } catch (cause) {
+    throw new Error(`${ENGINE_MISSING} (${resolved} did not load: ${describe(cause)})`, {
+      cause,
+    });
+  }
+  // Node may expose a CommonJS build's exports only under `default`.
+  const PGlite =
+    exportNamed(loaded, "PGlite") ?? exportNamed(exportNamed(loaded, "default"), "PGlite");
+  if (!isEngineConstructor(PGlite)) {
+    throw new Error(`${ENGINE_MISSING} (${resolved} exports no PGlite class)`);
+  }
+  return { PGlite };
+}
+
+/** One named export of a loaded module, or `undefined`. */
+function exportNamed(loaded: unknown, name: string): unknown {
+  if (typeof loaded !== "object" || loaded === null) return undefined;
+  const exports: Record<string, unknown> = { ...loaded };
+  return exports[name];
+}
+
+/** Whether an export can be constructed as the engine; its shape is checked on use. */
+function isEngineConstructor(value: unknown): value is new () => SchemaDatabase {
+  return typeof value === "function";
 }
 
 /**
