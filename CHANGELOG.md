@@ -518,12 +518,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `webResearch.allowlist`. The templates still
   default to the cloud API.
 
+- **The UI open-questions review now follows the register's real lifecycle.**
+  It asked reviewers to filter rows by a Status and a Severity and to
+  downgrade them, but the register has only ID, Content and Approach, and its
+  rows are never edited. The review now treats a row as blocking when the
+  reviewed UI needs its answer now, or when it opens `Unadjudicated:`; a row
+  deferred past the reviewed UI does not block it. It resolves the question
+  with a decision row that names it, or defers it with a replacing row, and
+  deletes the original row either way.
+
 - **An unknown `prototype.mode` written as an inline mapping is now
   reported.** `QFAI-CONTRACT-038` scanned a UI contract line by line, so
   `prototype: { mode: static }` passed unchecked. It now reads the mode from
   the parsed contract, so the block and inline forms are treated alike. A
   contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
   references now say the finding is an error, which it already was.
+
+- **The example waiver in a new `.qfai/waivers.yml` now points at evidence
+  that opens.** Its `evidence` linked `decisions.md#DEC-0001`, but a decision
+  ID is a table cell, not an anchor, so the link jumped nowhere, and its fixed
+  `expires` date was already past for anyone who copied it. The example now
+  names the register page and carries the decision ID in `reason` as
+  `DEC-yyyymmddhhMMss`, the form a new decision row takes. It leaves `expires`
+  as `YYYY-MM-DD`. Replace both with your decision's ID and a future date.
 
 - **A contract or spec directory that cannot be reached is now reported, not
   read as empty.** A directory behind a parent this process may not open
@@ -553,6 +570,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   compared, so an edit saved while `qfai init` ran was left out of the
   notice naming the files only `--force` brings up to date. It is now
   compared like a file that was already there. Closes #4703.
+
+- **`--show-patterns` on the shipped document-schema checker now applies to
+  the run that asked for it only.** A run with the flag left it set for the
+  rest of the process, so a later run, or a `qfai validate` document-schema
+  check in the same process, printed raw patterns it never asked for. Each
+  run now restores the setting it started with. Closes #4726.
 
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
