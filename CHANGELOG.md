@@ -572,6 +572,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   resolve the same directory, so raw color literals in those mocks are
   counted.
 
+- **A YAML or JSON contract whose top level is not a mapping is reported.**
+  An API contract holding only its declaration line, or a body that is
+  `null`, a list or a scalar, stopped `qfai validate` with an exception
+  instead of a finding. It is now reported as `QFAI-CONTRACT-021`, and the
+  other contracts are still checked. A UI contract with such a top level is
+  reported the same way.
+
 - **The README states what the Claude Code launcher permission allows.** It
   said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
   entries `qfai init` writes trust the launcher the project installs. Claude
@@ -579,6 +586,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `npx qfai` in a checkout without its own install runs a copy outside the
   checkout or one downloaded from the npm registry without asking. The README
   now says so. Closes #4622.
+
+- **A heading inside an HTML comment no longer names a flow or a story.** The
+  story tree took the first level-one heading of `business-flow.md` or
+  `01_User-story.md` as its ID even when that heading sat in an HTML comment or
+  a `<pre>` block, so a hidden draft such as `# BF-9999: sample` replaced the
+  real `# BF-0001` and broke every link to it. The story tree now reads only
+  headings Markdown renders, as contract IDs already did. Closes #4710.
 
 - **The business rules of a JSON contract with a `// QFAI-CONTRACT-ID` line
   are read.** Contract validation accepted such a file, but the story tree
