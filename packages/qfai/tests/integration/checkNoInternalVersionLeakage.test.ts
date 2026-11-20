@@ -22,6 +22,8 @@
  *   - name pass scope: the name regexes run over paths relative to
  *     `$ROOT`, so an absolute `QFAI_LEAKAGE_SCAN_ROOT` whose own
  *     ancestors carry a version marker does not fail a clean surface.
+ *   - unreadable content: a grep that could not read a file (exit 2) is
+ *     a failure naming the path, never "no match".
  *
  * Tests stage a temp directory with a controllable `package.json` and
  * spawn the script with cwd=tempDir so the script's auto-ROOT detection
@@ -407,6 +409,39 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
     const r = runGuard(tmp);
     expect(r.status).toBe(0);
     expect(r.stdout).toMatch(/OK: no internal spec ids/);
+  });
+
+  it("fails, naming the path, when a content pass cannot read a packed file (exit 1)", async () => {
+    // Regression: both content passes discarded grep's stderr and turned
+    // every grep failure into success, so a file `find` lists but grep
+    // cannot read (exit 2) read as "no match" and the guard printed OK.
+    // A shell function seeded through BASH_ENV stands in for that grep on
+    // every platform; a permission bit cannot, since Windows ignores it.
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["clean.md", "clean body\n"]]);
+    const bashEnv = path.join(await newTempDir(), "unreadable-grep.sh");
+    await writeFile(
+      bashEnv,
+      [
+        "grep() {",
+        '  if [[ "$1" == "-rnE" ]]; then',
+        "    printf 'grep: %s/unreadable.md: Permission denied\\n' \"$3\" >&2",
+        "    return 2",
+        "  fi",
+        '  command grep "$@"',
+        "}",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const r = runGuard(tmp, { BASH_ENV: bashEnv.split(path.sep).join("/") });
+    expect(r.status, r.stderr).toBe(1);
+    expect(r.stdout).not.toMatch(/OK: no internal spec ids/);
+    expect(r.stderr).toMatch(/could not read every file under \.\/assets for the content pass/);
+    expect(r.stderr).toMatch(
+      /could not read every file under \.\/assets for the schemaVersion pass/,
+    );
+    expect(r.stderr).toContain("assets/unreadable.md: Permission denied");
   });
 
   it("warns and passes when every files[] entry is absent on disk (exit 0)", async () => {
