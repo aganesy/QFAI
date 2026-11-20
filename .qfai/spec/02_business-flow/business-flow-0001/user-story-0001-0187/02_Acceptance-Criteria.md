@@ -8,6 +8,6 @@ Feature: Repair a defective test with example coverage untouched
   Scenario: A defective test is fixed with example coverage untouched
     Given diagnosis returns the defective-test verdict
     When the `test_fix` stage returns its result
-    Then the test-fix step of the layer the first matched ID names repairs the test, and the other test-fix step passes
+    Then the one test-fix step repairs the diagnosed test, whichever layer the first matched ID names, and the test keeps its original annotation
     And the result is accepted with every example still annotated as before
 ```
