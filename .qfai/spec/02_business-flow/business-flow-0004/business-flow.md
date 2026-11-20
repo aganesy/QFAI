@@ -25,6 +25,9 @@ flowchart TD
   More -->|No| Recheck[Repeat steps and confirm zero-file change]
   Recheck --> Entry[Install, then check, the free-text entry: steps 11 and 12]
   Entry --> EntryCheck{Step 12 result}
+  EntryCheck -->|Exit 2| Repair[Fix the cause on standard error, such as an unreadable git index]
+  Repair --> Rerun[Rerun step 12]
+  Rerun --> EntryCheck
   EntryCheck -->|Exit 3| Resolve[Resolve each listed item]
   Resolve --> Entry
   EntryCheck -->|Exit 0| Validate[Validate the story tree]
@@ -50,3 +53,6 @@ flowchart TD
 - Step 12 writes nothing and lists for a person every check a shipped plan
   would fail. The first free-text change request goes to `qfai-run` once none
   is left.
+- Step 12 exits 2 with git's message when git cannot scan the project, such as
+  an unreadable index. Once the index is usable again, rerunning step 12
+  changes no file.
