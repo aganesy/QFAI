@@ -288,19 +288,20 @@ export function pathsInCommand(
   if (command.includes("apply_patch")) return [];
   const found: string[] = [];
   const visit = (word: string): void => {
-    // An option's value, as in `--file=<path>`, is a path argument too.
-    const values = word.includes("=") ? [word, word.slice(word.indexOf("=") + 1)] : [word];
-    let named = false;
-    for (const value of values) {
-      const file = watchedOnly(relativeToRoot(value, facts));
-      if (file === null || !namesOneFile(file)) continue;
-      found.push(file);
-      named = true;
-    }
-    if (!named && SHELL_BREAK.test(word)) shellWords(word).forEach(visit);
+    const files = watchedFilesIn(word, facts);
+    found.push(...files);
+    if (files.length === 0 && SHELL_BREAK.test(word)) shellWords(word).forEach(visit);
   };
   shellWords(slashed(command)).forEach(visit);
   return [...new Set(found)];
+}
+
+/** The watched files one shell word names. An option's value, as in `--file=<path>`, is one too. */
+function watchedFilesIn(word: string, facts: Pick<ProjectFacts, "root" | "platform">): string[] {
+  const values = word.includes("=") ? [word, word.slice(word.indexOf("=") + 1)] : [word];
+  return values
+    .map((value) => watchedOnly(relativeToRoot(value, facts)))
+    .filter((file): file is string => file !== null && namesOneFile(file));
 }
 
 /** A character that ends a shell word outside quotes: a blank, a separator or a redirection. */
@@ -350,8 +351,8 @@ function countReads(events: SessionEvents, facts: ProjectFacts): FileRead[] {
     }
     if (call.command !== undefined) {
       const files = pathsInCommand(call.command, facts);
-      // The output is one file's only when the command names no other path, watched or not.
-      const alone = files.length === 1 && pathArguments(call.command) === 1;
+      // The output is one file's only when no other operand, watched or not, can add to it.
+      const alone = files.length === 1 && otherOperands(call.command, facts) === 0;
       for (const file of files) add(file, alone ? resultBytes : 0);
     }
   }
@@ -365,11 +366,37 @@ function countReads(events: SessionEvents, facts: ProjectFacts): FileRead[] {
     .sort((a, b) => compareText(a.path, b.path));
 }
 
-/** How many words of a shell line look like a path: holding a slash, or ending in an extension. */
-function pathArguments(command: string): number {
-  return command
-    .split(/[\s'"`;|&()]+/)
-    .filter((word) => /[\\/]/.test(word) || /\.[A-Za-z0-9]+$/.test(word)).length;
+/** The commands whose first operand is a script or a pattern, not a file. */
+const SCRIPT_FIRST = new Set(["awk", "egrep", "fgrep", "gawk", "grep", "rg", "sed"]);
+
+/** The commands whose operands are text they print, not files. */
+const TEXT_ONLY = new Set(["echo", "printf"]);
+
+/**
+ * How many operands of a shell line, other than the watched files it names, can name a file
+ * that adds to its output: every word after each command's name that is no option, no count
+ * and no leading script, so an extensionless file such as `LICENSE` counts. Each word is read
+ * whole, a quoted blank included; a quoted script that names no watched file is read as a
+ * command in turn.
+ */
+function otherOperands(command: string, facts: Pick<ProjectFacts, "root" | "platform">): number {
+  let count = 0;
+  for (const segment of shellSegments(slashed(command))) {
+    const [name = "", ...words] = shellWords(segment);
+    const base = path.posix.basename(name).toLowerCase();
+    if (TEXT_ONLY.has(base)) continue;
+    let scriptPending = SCRIPT_FIRST.has(base);
+    for (const word of words) {
+      if (word.startsWith("-") || /^\d+$/.test(word)) continue;
+      if (scriptPending) {
+        scriptPending = false;
+        continue;
+      }
+      if (watchedFilesIn(word, facts).length > 0) continue;
+      count += SHELL_BREAK.test(word) ? otherOperands(word, facts) : 1;
+    }
+  }
+  return count;
 }
 
 function countToolErrors(events: SessionEvents): ToolErrors[] {

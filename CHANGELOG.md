@@ -593,6 +593,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not counted at all. Each shell word is now read whole, quotes removed, and
   normalized before it is tested against the watched directories.
 
+- **`qfai session-review` leaves a read's result bytes unknown when another
+  file can add to the output.** `cat .agents/rules/a.md LICENSE` gave all of
+  its output to `a.md`, because only a word with a slash or an extension was
+  taken for a path, and `cat '.agents/rules/feature notes.md'` gave its file
+  no bytes, because the quoted blank split the path in two. Each command's
+  operands are now read as whole shell words, and any operand that is no
+  option, no count, no leading `sed`, `awk` or `grep` script and no `echo`
+  text leaves the bytes unknown.
+
 - **The prototyping preflight installs nothing.** Its step said to run
   `npm i -D playwright`, which could rewrite the manifest and lockfile of a
   step that promises to change no file, and npm cannot install a project
