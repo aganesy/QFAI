@@ -622,6 +622,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   other contracts are still checked. A UI contract with such a top level is
   reported the same way.
 
+- **`scripts/pr-threads.mjs` returns 2 when `gh` fails.** A GitHub API error
+  or a missing `gh` escaped as an exception, so the command printed a stack
+  trace and exited 1, the status it documents for a budget refusal. It now
+  prints one line naming the operation that failed, such as resolving a
+  given thread, and exits 2 (#4737).
+
 - **`qfai init --force` keeps a project's own wrapper when the link replacing
   it cannot be written.** A file or directory of the project's at a skill or
   agent wrapper path was deleted before the link was created, so a refused
