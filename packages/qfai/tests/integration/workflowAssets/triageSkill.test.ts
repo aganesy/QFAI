@@ -335,6 +335,9 @@ describe("a question answered without a change", () => {
       /When one request files several issues, list the open issues once, with a limit, and match each title against that list/,
     );
     expect(procedure).toMatch(
+      /A list that returned as many issues as its limit may be incomplete: page through the rest of the open issues, or search the tracker with key terms for each title that matched nothing, before creating it/,
+    );
+    expect(procedure).toMatch(
       /On a match, create no duplicate: comment on it only when the user's instruction allows comments and the finding adds what the match lacks; otherwise report the match and what the finding would add, and skip/,
     );
     expect(procedure).toMatch(

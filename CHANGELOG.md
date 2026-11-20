@@ -636,6 +636,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   failure matching the report and at least one pass. When every run passes, it
   records the test as `unreproduced` and writes no quarantine marker.
 
+- **Filing several issues no longer duplicates an older open issue** (#4838).
+  The `triage-operate` step matched every proposed title against one capped
+  list of open issues, so on a tracker with more open issues than the cap an
+  older match was missed and a duplicate created. The step still lists the
+  open issues once, and when that list returned as many issues as its limit it
+  now pages through the rest, or searches the tracker for each title that
+  matched nothing, before creating it.
+
 - **`qfai session-review` reads a Codex exit status only from the result
   envelope.** A shell call whose header said exit 0 was counted as exit 7 and a
   failed tool call when the command printed a JSON object holding

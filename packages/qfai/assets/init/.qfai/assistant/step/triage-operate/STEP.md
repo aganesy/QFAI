@@ -66,7 +66,10 @@ operation. This step runs it and reports what happened.
 Before creating an issue, search the tracker for a matching open issue with the
 forge CLI's issue search and key terms from the title. When one request files
 several issues, list the open issues once, with a limit, and match each title
-against that list. On a match, create no duplicate: comment on it only when the
+against that list. A list that returned as many issues as its limit may be
+incomplete: page through the rest of the open issues, or search the tracker
+with key terms for each title that matched nothing, before creating it. On a
+match, create no duplicate: comment on it only when the
 user's instruction allows comments and the finding adds what the match lacks;
 otherwise report the match and what the finding would add, and skip. Where the
 search cannot run, such as with no tracker CLI, an authentication error or a
