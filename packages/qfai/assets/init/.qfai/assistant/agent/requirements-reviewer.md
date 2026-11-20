@@ -61,7 +61,7 @@ specialization_tags:
 ## Inputs you must read
 
 - .qfai/assistant/rule/** (shared operating rules)
-- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/tech.md (project context)
+- <paths.specsDir>/01_policy/** and <paths.contractsDir>/tech.md (project context)
 - .qfai/assistant/rule/agent-selection.md (this card's frontmatter is authoritative)
 - .qfai/assistant/rule/test-layers.md
 - <paths.specsDir>/decisions.md and open-questions.md

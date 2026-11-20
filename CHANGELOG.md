@@ -519,6 +519,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   invalid JSON. They now drop one leading mark before parsing, as the
   `package.json` reader of `qfai atdd scaffold` already did.
 
+- **Reviewer cards read the technology contract from the configured contracts
+  directory.** The architecture, implementation, product-surface and
+  requirements reviewer cards, the quality rule and the discussion skill named
+  `<paths.specsDir>/03_contract/tech.md`, so a project that set
+  `paths.contractsDir` elsewhere sent its reviewers to a missing or stale file,
+  which they treat as absent evidence. They now name
+  `<paths.contractsDir>/tech.md`.
+
 - **The installed agent entry sends scratch files to the host's scratch
   directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
   said every scratch file goes under `tmp/`, while the temporary-files rule they

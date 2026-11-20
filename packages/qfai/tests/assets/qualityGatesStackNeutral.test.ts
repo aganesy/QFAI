@@ -17,7 +17,7 @@ describe("stack-neutral quality rule", () => {
       for (const capability of ["- format check", "- lint", "- typecheck", "- tests"]) {
         expect(normative).toContain(capability);
       }
-      expect(normative).toContain("<paths.specsDir>/03_contract/tech.md");
+      expect(normative).toContain("<paths.contractsDir>/tech.md");
       expect(normative).not.toContain(".qfai/assistant/catalog/tech.md");
       expect(normative).not.toContain("pnpm format:check");
       expect(normative).toContain(
