@@ -519,12 +519,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   invalid JSON. They now drop one leading mark before parsing, as the
   `package.json` reader of `qfai atdd scaffold` already did.
 
+- **Reviewer cards read the technology contract from the configured contracts
+  directory.** The architecture, implementation, product-surface and
+  requirements reviewer cards, the quality rule and the discussion skill named
+  `<paths.specsDir>/03_contract/tech.md`, so a project that set
+  `paths.contractsDir` elsewhere sent its reviewers to a missing or stale file,
+  which they treat as absent evidence. They now name
+  `<paths.contractsDir>/tech.md`.
+
 - **The installed agent entry sends scratch files to the host's scratch
   directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
   said every scratch file goes under `tmp/`, while the temporary-files rule they
   point at puts it in the scratch directory the host names for the session and
   keeps `tmp/` for when the host names none. The one-line entry now says the
   same.
+
+- **`DESIGN.md` accepts a font family whose name ends in many digits.** A
+  family such as `Brand9007199254740993` was refused as a number too large to
+  read exactly, although both catalog formats write a family name as text. The
+  precision check now reads only the fields that become numeric tokens.
 
 - **The saas-package profile reports a `DESIGN.md` or handoff record it
   cannot read, instead of calling it absent.** A directory or an unreadable
@@ -631,6 +644,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   policy still applies, so a host that blocks scripts still reports the shim as
   not runnable.
 
+- **The `resolve-conflicts` route always leaves a merge for `verify-commit` to
+  conclude.** On a branch the base could fast-forward, `git merge --no-commit
+  <base>` moved the branch to the base and left no merge in progress, so
+  `verify-commit` had nothing to conclude or undo. The `maintain-edit` step now
+  starts the merge with `git merge --no-ff --no-commit <base>`. When git reports
+  `Already up to date.` and leaves no `MERGE_HEAD`, the branch already holds the
+  base: the step stops, reports the base as already merged and edits nothing.
+
 - **The `resolve-conflicts` route resumes a merge of the same base instead of
   starting a second one.** A branch still resolving an earlier merge of the
   base has `MERGE_HEAD`, so running `git merge --no-commit <base>` again failed
@@ -659,6 +680,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A directory named `.github/workflows/qfai-docs.yml` passed the existence
   check, so doctor reported the required lane installed although GitHub had
   no workflow there. The lane now counts only as a readable regular file.
+
+- **Verification reads its context from the configured spec and contract
+  directories.** The `verify-context` step read the policy, contracts and
+  `decisions.md` from the default `.qfai/spec` paths, and looked for gate
+  commands in the default `tech.md`, so a project that sets `paths.specsDir`
+  or `paths.contractsDir` could miss its rules or update the wrong file. The
+  step now resolves both directories from `qfai.config.yaml` once and uses
+  them for every read and write.
 
 - **`-h` and `-V` after a value-taking option are switches, not its value.**
   `qfai init --dir -h` initialized a directory named `-h`. An option's value

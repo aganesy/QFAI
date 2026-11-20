@@ -1447,11 +1447,16 @@ describe("qfai-maintain", () => {
     expect(resolving).toMatch(/in the `resolve-conflicts` route/i);
     expect(resolving).toContain("Fetch the base (`git fetch`).");
     expect(resolving).toContain(
-      "Check for a merge already in progress with `git rev-parse -q --verify MERGE_HEAD`. When it prints nothing, start the merge with `git merge --no-commit <base>`.",
+      "Check for a merge already in progress with `git rev-parse -q --verify MERGE_HEAD`. When it prints nothing, start the merge with `git merge --no-ff --no-commit <base>`, so that a branch the base can fast-forward still gets a merge in progress for `verify-commit` to conclude.",
+    );
+    expect(resolving).not.toContain("`git merge --no-commit <base>`");
+    // A base the branch already holds leaves no merge to conclude, so the step stops.
+    expect(resolving).toContain(
+      "When that merge reports `Already up to date.` and leaves no `MERGE_HEAD`, the branch already holds the base: stop, report the base as already merged, edit nothing and leave `verify-commit` no merge to conclude.",
     );
     // A merge of the same base already in progress is resumed, never merged a second time.
     expect(resolving).toContain(
-      "When it prints the base's commit (`git rev-parse <base>`), resume at step 3 and run no second merge.",
+      "When `MERGE_HEAD` prints the base's commit (`git rev-parse <base>`), resume at step 3 and run no second merge.",
     );
     expect(resolving).toContain(
       "When it prints any other commit, stop: report the in-progress merge and the commit it names, and leave it in place.",

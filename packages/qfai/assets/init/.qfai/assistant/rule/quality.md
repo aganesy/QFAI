@@ -27,8 +27,8 @@ Discover the actual commands from the repository, in this order: the project's
 task-runner manifest (`package.json` `scripts`, `Makefile`, `justfile`,
 `pyproject.toml`, `Cargo.toml`, …), then the CI workflow, then the project's own
 contributing docs. `/qfai-configure` records the Standard commands in
-`<paths.specsDir>/03_contract/tech.md`; read that before guessing. The config
-path comes from `qfai.config.yaml` and defaults to `.qfai/spec`.
+`<paths.contractsDir>/tech.md`; read that before guessing. The config
+path comes from `qfai.config.yaml` and defaults to `.qfai/spec/03_contract`.
 
 A capability with no discoverable command is **UNRUN**, not passed. Report it as
 a blocker rather than substituting a command from another stack — a gate that
