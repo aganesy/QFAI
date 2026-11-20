@@ -532,6 +532,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read as empty. Any other failure now stops the scan with its error, or is
   reported as an unreadable directory where the check already reports those.
 
+- **The Markdown-schema checker refuses a `--base` with no ref.** Given
+  `--base --summary`, it took `--summary` as the ref, could not diff against
+  it, checked every document instead and printed no summary. It now leaves a
+  following option alone, reports `--base needs a git ref` and exits 2, as it
+  already did for `--tools`.
+
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio
   server, though the skill and its contract call for HTTP transport too.
