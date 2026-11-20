@@ -1,6 +1,6 @@
 import { defineProject } from "vitest/config";
 
-import { SETUP_FILES, projectKnobs } from "./vitest.knobs";
+import { SETUP_FILES, projectKnobs } from "./vitest.knobs.ts";
 
 /**
  * The runner projects, each declaring the project-scoped half of the knob set.
