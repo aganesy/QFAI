@@ -205,9 +205,8 @@ async function collectMarkdown(target) {
     }
     for (const child of entries) {
       if (child.isDirectory()) {
-        const childPath = path.join(dir, child.name);
         if (!SKIP_DIRS.has(child.name)) {
-          pending.push(childPath);
+          pending.push(path.join(dir, child.name));
         }
         continue;
       }
