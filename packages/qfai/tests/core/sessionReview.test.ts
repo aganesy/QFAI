@@ -515,6 +515,29 @@ describe("the edges a slug, a shell line and a calendar leave open", () => {
     ]);
   });
 
+  it("leaves the status unknown when a trailing & runs the qfai command in the background", () => {
+    const events = (command: string): SessionEvents => ({
+      records: 2,
+      malformed: 0,
+      hookContexts: [],
+      calls: [{ id: "x", name: "Bash", command }],
+      results: [{ id: "x", isError: false, text: "", exitCode: 0 }],
+      userTurns: [],
+    });
+    for (const command of [
+      "npx qfai validate &",
+      "npx qfai validate & ",
+      "npx qfai validate &\n",
+    ]) {
+      expect(summarise(events(command), FACTS).qfaiCommands, command).toEqual([
+        { command: "qfai validate", runs: 1, exits: [{ name: "unknown", count: 1 }] },
+      ]);
+    }
+    expect(summarise(events("npx qfai validate;"), FACTS).qfaiCommands).toEqual([
+      { command: "qfai validate", runs: 1, exits: [{ name: "0", count: 1 }] },
+    ]);
+  });
+
   it("adds result bytes to a file only when the command names no other path", () => {
     const events: SessionEvents = {
       records: 4,
@@ -556,6 +579,51 @@ describe("the edges a slug, a shell line and a calendar leave open", () => {
     expect(bytesOf("Get-Content -Path .agents/rules/a.md -TotalCount 20")).toBe(6);
     expect(bytesOf("cat .agents/rules/a.md | grep -n QFAI")).toBe(6);
     expect(bytesOf("cat .agents/rules/a.md && echo done")).toBe(6);
+  });
+
+  it("reads no redirection target as an operand that adds output", () => {
+    const bytesOf = (command: string): number => {
+      const events: SessionEvents = {
+        records: 2,
+        malformed: 0,
+        hookContexts: [],
+        calls: [{ id: "a", name: "Bash", command }],
+        results: [{ id: "a", isError: false, text: "123456", exitCode: 0 }],
+        userTurns: [],
+      };
+      return summarise(events, FACTS).reads[0]?.bytes ?? -1;
+    };
+    for (const command of [
+      "cat .agents/rules/a.md 2>/dev/null",
+      "cat .agents/rules/a.md 2> /dev/null",
+      "cat .agents/rules/a.md > out.txt",
+      "cat .agents/rules/a.md >> out.txt",
+      "cat .agents/rules/a.md < in.txt",
+      "cat .agents/rules/a.md &> log.txt",
+      "cat .agents/rules/a.md >log.txt 2>&1",
+    ]) {
+      expect(bytesOf(command), command).toBe(6);
+    }
+    // A file named after the redirection's target still adds output.
+    expect(bytesOf("cat .agents/rules/a.md 2>/dev/null LICENSE")).toBe(0);
+  });
+
+  it("takes the command name after leading NAME=value assignments", () => {
+    const bytesOf = (command: string): number => {
+      const events: SessionEvents = {
+        records: 2,
+        malformed: 0,
+        hookContexts: [],
+        calls: [{ id: "a", name: "Bash", command }],
+        results: [{ id: "a", isError: false, text: "123456", exitCode: 0 }],
+        userTurns: [],
+      };
+      return summarise(events, FACTS).reads[0]?.bytes ?? -1;
+    };
+    expect(bytesOf("FOO=1 cat .agents/rules/a.md")).toBe(6);
+    expect(bytesOf("FOO=1 BAR='a b' cat .agents/rules/a.md")).toBe(6);
+    expect(bytesOf("LC_ALL=C grep -n QFAI .agents/rules/a.md")).toBe(6);
+    expect(bytesOf("FOO=1 cat .agents/rules/a.md LICENSE")).toBe(0);
   });
 
   it("reads a quoted operand with a blank as one word when it attributes result bytes", () => {
