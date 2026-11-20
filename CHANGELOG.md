@@ -540,6 +540,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such `)`. A `)` inside a string, quoted identifier, comment or
   dollar-quoted body is still not counted.
 
+- **The 1.x migration reports every old-path line of a file with very many
+  of them.** The migration's last step lists each line of a tracked project
+  file that still names a 1.x path. A file with hundreds of thousands of
+  such lines, such as a generated or vendored one, ended the migration with
+  `RangeError: Maximum call stack size exceeded` before the report was
+  written. The report now lists every such line.
+
 - **The release-notes drift check holds a cut body to its kept entries, in
   order.** When a changelog section is too long for a GitHub Release body,
   the release workflow cuts it and appends a note. The check compared such a
