@@ -254,6 +254,39 @@ describe("what the exit code says", () => {
     expect(exitCode).toBe(2);
   });
 
+  it("runs the engine the inspected project installed, not the one beside qfai", async () => {
+    const root = await project({ migrationsDir: "migrations" });
+    // A stand-in engine installed in the target alone. Its second database
+    // reports one more column than its first, so a run that loaded it reports
+    // that column; a run on any other engine compares two identical schemas.
+    await write(
+      root,
+      "node_modules/@electric-sql/pglite/package.json",
+      JSON.stringify({ name: "@electric-sql/pglite", version: "0.0.0", main: "index.js" }),
+    );
+    await write(
+      root,
+      "node_modules/@electric-sql/pglite/index.js",
+      [
+        "let made = 0;",
+        "const row = (column_name) => ({ table_name: 'orders', column_name, data_type: 'text', is_nullable: 'YES', column_default: null });",
+        "class PGlite {",
+        "  constructor() { this.rows = made++ === 0 ? [row('id')] : [row('id'), row('from_target_engine')]; }",
+        "  exec() { return Promise.resolve(undefined); }",
+        "  query() { return Promise.resolve({ rows: this.rows }); }",
+        "  close() { return Promise.resolve(); }",
+        "}",
+        "module.exports = { PGlite };",
+        "",
+      ].join("\n"),
+    );
+
+    const { exitCode, said } = await captured(() => runDbDrift({ root, format: "json" }));
+
+    expect(said).toContain("from_target_engine");
+    expect(exitCode).toBe(1);
+  });
+
   it("is 2 when a file would not apply, because the comparison then saw less", async () => {
     const root = await project({ migrationsDir: "migrations" });
     let calls = 0;
