@@ -228,18 +228,21 @@ function spawnProbeChild(
   candidate: PlaywrightLauncherCandidate,
   args: string[],
 ): ReturnType<typeof spawn> {
-  const useCmdShim = process.platform === "win32" && /\.(cmd|bat|ps1)$/i.test(candidate.executable);
-  if (useCmdShim) {
-    const isBatchShim = /\.(cmd|bat)$/i.test(candidate.executable);
-    const command = toCmdCommand(candidate, args);
+  if (process.platform === "win32" && /\.ps1$/i.test(candidate.executable)) {
+    // cmd.exe cannot run a PowerShell script. `-NoProfile` keeps the operator's
+    // profile scripts out of the probe, and the operator's execution policy
+    // still applies: a host that forbids scripts reports the shim as not runnable.
+    return spawn(
+      "powershell.exe",
+      ["-NoProfile", "-NonInteractive", "-File", candidate.executable, ...args],
+      { stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
+    );
+  }
+  if (process.platform === "win32" && /\.(cmd|bat)$/i.test(candidate.executable)) {
     return spawn(
       process.env.ComSpec ?? "cmd.exe",
-      ["/d", "/s", "/c", isBatchShim ? `"${command}"` : command],
-      {
-        stdio: ["ignore", "pipe", "pipe"],
-        windowsHide: true,
-        ...(isBatchShim ? { windowsVerbatimArguments: true } : {}),
-      },
+      ["/d", "/s", "/c", `"${toCmdCommand(candidate, args)}"`],
+      { stdio: ["ignore", "pipe", "pipe"], windowsHide: true, windowsVerbatimArguments: true },
     );
   }
   return spawn(candidate.executable, args, {

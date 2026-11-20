@@ -541,6 +541,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   command", although db-drift reads `--format`. It now says the value is
   invalid and that `text|json` is expected.
 
+- **`qfai doctor --profile prototyping` now runs a PowerShell-only Playwright
+  shim through PowerShell.** On Windows, a project whose only launcher was
+  `node_modules/.bin/playwright.ps1` had that script handed to cmd.exe, which
+  cannot run it, so the launcher check failed. Doctor now starts it with
+  `powershell.exe -NoProfile -NonInteractive -File`. The machine's execution
+  policy still applies, so a host that blocks scripts still reports the shim as
+  not runnable.
+
 - **The UI open-questions review now follows the register's real lifecycle.**
   It asked reviewers to filter rows by a Status and a Severity and to
   downgrade them, but the register has only ID, Content and Approach, and its
