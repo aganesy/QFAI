@@ -56,7 +56,8 @@ one kind of content each section holds. `qfai validate` reports a violation as
 - user story: `US-0001-0001` under `BF-0001`
 - acceptance criterion: `AC-0001-0001-01` under its story
 - example: `EX-0001-0001-01` with one `AC-Ref`
-- business rule: `BR-0001` in a contract, citing its examples
+- business rule: `BR-CLI-0014-0092` in contract `CLI-0014`, citing its
+  examples; the scope for its candidate is `BR-CLI-0014`
 - decision and open question: `DEC-yyyymmddhhMMss`, `OQ-yyyymmddhhMMss`, the UTC
   time the row is written; a second already taken moves to the next free one.
   Legacy `DEC-0001` and `OQ-0001` rows keep their IDs.

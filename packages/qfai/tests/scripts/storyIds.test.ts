@@ -756,4 +756,17 @@ describe("ID candidate and pre-push guidance", () => {
     expect(naming).toMatch(/UTC/);
     expect(naming).not.toMatch(/story-ids\.mjs next (?:DEC|OQ)\b/);
   });
+
+  it("shows a business-rule ID scoped by its contract's kind and number", () => {
+    const naming = readFileSync(
+      new URL("../../../../.instruction/02_project/naming.md", import.meta.url),
+      "utf-8",
+    );
+    const idFormats = naming.split("## ID Formats")[1]?.split("## Contracts")[0] ?? "";
+    const ruleLine =
+      idFormats.split("\n- ").find((item) => item.startsWith("business rule:")) ?? "";
+    expect(ruleLine).toMatch(/`BR-[A-Z]+-\d{4}-\d{4}`/);
+    expect(ruleLine).toMatch(/`BR-[A-Z]+-\d{4}`/);
+    expect(ruleLine).not.toMatch(/`BR-\d{4}`/);
+  });
 });
