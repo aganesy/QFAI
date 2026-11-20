@@ -524,6 +524,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   word, as if it held no files. Only a directory that does not exist is still
   read as empty. Any other failure now stops the scan with its error, or is
   reported as an unreadable directory where the check already reports those.
+
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio
   server, though the skill and its contract call for HTTP transport too.
@@ -572,6 +573,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   resolve the same directory, so raw color literals in those mocks are
   counted.
 
+- **A YAML or JSON contract whose top level is not a mapping is reported.**
+  An API contract holding only its declaration line, or a body that is
+  `null`, a list or a scalar, stopped `qfai validate` with an exception
+  instead of a finding. It is now reported as `QFAI-CONTRACT-021`, and the
+  other contracts are still checked. A UI contract with such a top level is
+  reported the same way.
+
 - **The README states what the Claude Code launcher permission allows.** It
   said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
   entries `qfai init` writes trust the launcher the project installs. Claude
@@ -580,13 +588,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout or one downloaded from the npm registry without asking. The README
   now says so. Closes #4622.
 
-- **`qfai atdd scaffold` writes a CommonJS node:test skeleton that Node can
-  load.** For a project that runs `node --test`, the skeleton imported
-  `describe` and `it` with an `import` statement even in a `.cjs` file, and
-  Node stopped with `Cannot use import statement outside a module`. A `.cjs`
-  or `.cts` skeleton, and a `.js` one whose nearest `package.json` does not
-  set `"type": "module"`, or a `.ts` one whose nearest `package.json` sets
-  `"type": "commonjs"`, now loads them with `require`. Closes #4708.
+- **A heading inside an HTML comment no longer names a flow or a story.** The
+  story tree took the first level-one heading of `business-flow.md` or
+  `01_User-story.md` as its ID even when that heading sat in an HTML comment or
+  a `<pre>` block, so a hidden draft such as `# BF-9999: sample` replaced the
+  real `# BF-0001` and broke every link to it. The story tree now reads only
+  headings Markdown renders, as contract IDs already did. Closes #4710.
 
 - **The business rules of a JSON contract with a `// QFAI-CONTRACT-ID` line
   are read.** Contract validation accepted such a file, but the story tree
@@ -600,6 +607,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports `QFAI-SKILLS-016` for it as a `requires:` that is not a list. An
   omitted `requires:` still counts as empty.
 
+- **An escaped pipe at the end of a table row's last cell is kept.** Every
+  table `qfai validate` reads dropped the `|` of a last cell ending in `\|`
+  and kept the backslash, so `| x | text\|` read `text\`. It now reads
+  `text|`, with or without a closing `|`. Closes #4712.
+
 - **The README's skipped-test check now names each allowed skip.** The
   example script allowed a number of skipped tests per file, so one test's
   skip could stand in for another's, and it read whatever report was on disk,
@@ -609,6 +621,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   name. An allowlist written for the old script, with a count per file, makes
   the new script stop with an error at the first skip in that file, so rewrite
   each count as the names of the tests it covered.
+
+- **`qfai atdd scaffold` writes a CommonJS node:test skeleton that Node can
+  load.** For a project that runs `node --test`, the skeleton imported
+  `describe` and `it` with an `import` statement even in a `.cjs` file, and
+  Node stopped with `Cannot use import statement outside a module`. A `.cjs`
+  or `.cts` skeleton, and a `.js` one whose nearest `package.json` does not
+  set `"type": "module"`, or a `.ts` one whose nearest `package.json` sets
+  `"type": "commonjs"`, now loads them with `require`. Closes #4708.
+
+- **Design token references resolve the same way in any declaration order.**
+  A chain of more than ten references raised `QFAI-DT-002` and kept a
+  `{...}` placeholder when the file declared the first token before the
+  last, and resolved with no finding when it declared them the other way
+  round. The depth limit now applies to the whole chain under each token,
+  so such a token raises the finding in either order. A token whose
+  reference fails no longer keeps a half-substituted value, and nor does any
+  token that references it, so the mock fallback check compares only values
+  that fully resolved.
 
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
