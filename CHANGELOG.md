@@ -637,6 +637,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the new script stop with an error at the first skip in that file, so rewrite
   each count as the names of the tests it covered.
 
+- **`qfai atdd scaffold` reads vitest only from a script that runs it.**
+  A `package.json` script that only named `vitest` as an argument, such as
+  `echo vitest`, made the command write a vitest skeleton for a project that
+  runs `node --test`, so the test imported a package the project does not
+  have. Now `vitest` counts only as the command a script runs: directly,
+  after environment assignments, through a launcher such as `npx`,
+  `cross-env`, `dotenv`, `env-cmd`, `env` or `time`, through a package
+  manager such as `pnpm exec`, `pnpm vitest`, `yarn dlx`, `npm exec` or
+  `bun run`, or inside the quoted script of `sh -c`, `concurrently` or
+  `run-p`.
+
 - **`qfai atdd scaffold` writes a CommonJS node:test skeleton that Node can
   load.** For a project that runs `node --test`, the skeleton imported
   `describe` and `it` with an `import` statement even in a `.cjs` file, and
