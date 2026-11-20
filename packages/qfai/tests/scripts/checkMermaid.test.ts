@@ -146,6 +146,53 @@ describe("check-mermaid lane", () => {
     expect(result.stdout).toContain("2 diagram(s) parsed");
   });
 
+  // The shipped document lane runs for a change to any of these extensions, so
+  // a broken diagram in one the scan skipped passed the check it triggered.
+  it.each([".md", ".markdown", ".mdx", ".MDX"])(
+    "fails a broken diagram in a %s file found by a directory scan",
+    async (extension) => {
+      const dir = await newTempDir();
+      const nested = path.join(dir, "docs");
+      await mkdir(nested, { recursive: true });
+      await writeFile(path.join(nested, `page${extension}`), `# P\n\n${BROKEN_DIAGRAM}\n`, "utf-8");
+
+      const result = runLane([dir]);
+
+      expect(result.status, result.stdout).toBe(1);
+      expect(result.stderr).toContain(`page${extension}:3`);
+      expect(result.stderr).toContain("1 of 1 diagram(s) failed to parse");
+    },
+  );
+
+  it.each([".md", ".markdown", ".mdx", ".MDX"])(
+    "fails a broken diagram in a %s file named on the command line",
+    async (extension) => {
+      const dir = await newTempDir();
+      const file = path.join(dir, `page${extension}`);
+      await writeFile(file, `# P\n\n${BROKEN_DIAGRAM}\n`, "utf-8");
+
+      const result = runLane([file]);
+
+      expect(result.status, result.stdout).toBe(1);
+      expect(result.stderr).toContain(`page${extension}:3`);
+      expect(result.stderr).toContain("1 of 1 diagram(s) failed to parse");
+    },
+  );
+
+  it("reads no diagram from a file whose extension is not a Markdown one", async () => {
+    const dir = await newTempDir();
+    await writeFile(path.join(dir, "notes.txt"), `# N\n\n${BROKEN_DIAGRAM}\n`, "utf-8");
+    await writeFile(path.join(dir, "page.mdown.bak"), `# N\n\n${BROKEN_DIAGRAM}\n`, "utf-8");
+
+    const fromDirectory = runLane([dir]);
+    const fromFile = runLane([path.join(dir, "notes.txt")]);
+
+    expect(fromDirectory.status, fromDirectory.stderr).toBe(0);
+    expect(fromDirectory.stdout).toContain("no Mermaid diagrams found");
+    expect(fromFile.status, fromFile.stderr).toBe(0);
+    expect(fromFile.stdout).toContain("no Mermaid diagrams found");
+  });
+
   it("reports every broken diagram rather than stopping at the first", async () => {
     const dir = await newTempDir();
     await writeFile(path.join(dir, "a.md"), `# A\n\n${BROKEN_DIAGRAM}\n`, "utf-8");

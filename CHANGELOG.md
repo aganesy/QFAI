@@ -631,6 +631,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token that references it, so the mock fallback check compares only values
   that fully resolved.
 
+- **The shipped diagram check reads `.markdown` and `.mdx` files.** The
+  document lane in `qfai-docs.yml` runs when a `.md`, `.markdown` or `.mdx`
+  file changes, but `check-mermaid.mjs` read only `.md` files, so a broken
+  Mermaid diagram in the other two passed the check its change triggered. A
+  directory scan and a file named on the command line now both read all three
+  extensions, in any letter case.
+
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
   dropped one and ran as if it had not been given, so

@@ -75,6 +75,24 @@ const SCAN_ROOT = process.cwd();
  */
 const SKIP_DIRS = new Set(["node_modules", "dist", ".git", "tmp", "coverage", ".turbo"]);
 
+/**
+ * The file extensions read as Markdown, compared without regard to case.
+ *
+ * The shipped document lane runs for a change to any of these, so a file the
+ * scan skipped would pass the very check its change triggered.
+ */
+const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown", ".mdx"]);
+
+/**
+ * Whether a file name carries one of the Markdown extensions.
+ *
+ * @param {string} name File name or path.
+ * @returns {boolean}
+ */
+function isMarkdownFile(name) {
+  return MARKDOWN_EXTENSIONS.has(path.extname(name).toLowerCase());
+}
+
 /** The opt-out marker, recognised on the line directly above an opening fence. */
 const IGNORE_MARKER = "<!-- mermaid-lint:ignore -->";
 
@@ -200,7 +218,7 @@ async function isOtherCheckout(dir) {
 async function collectMarkdown(target) {
   const entry = await stat(target);
   if (!entry.isDirectory()) {
-    return target.toLowerCase().endsWith(".md") ? [target] : [];
+    return isMarkdownFile(target) ? [target] : [];
   }
 
   const found = [];
@@ -231,7 +249,7 @@ async function collectMarkdown(target) {
         }
         continue;
       }
-      if (child.isFile() && child.name.toLowerCase().endsWith(".md")) {
+      if (child.isFile() && isMarkdownFile(child.name)) {
         found.push(path.join(dir, child.name));
       }
     }
