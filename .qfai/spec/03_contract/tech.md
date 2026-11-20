@@ -11,7 +11,7 @@
 | Language | TypeScript 6 (`^6.0.3`), compiled to ESM and CommonJS |
 | Package manager | pnpm (root `package.json#packageManager`) |
 | Build tool | tsup 8 (`^8.3.5`) |
-| Test runner | Vitest 4 (`^4.1.11`), one project per test layer |
+| Test runner | Vitest 4 (`^4.1.11`), seven projects in `packages/qfai/vitest.workspace.ts`: `core`, `unit`, `validators`, `cli` and `scripts` each run their own `tests/<name>/` directory; `integration` also runs `tests/skill/` and `tests/codex/`; `e2e` also runs `tests/assets/` |
 | Lint / format | ESLint 10 and Prettier 3 |
 | CSS framework | None: the package is a command-line tool with no user interface |
 | Component catalogue | None: the package is a command-line tool with no user interface |
