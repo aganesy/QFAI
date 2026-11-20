@@ -52,11 +52,11 @@ const RUN_ID = /\b\d{9,14}\b/g;
 
 /**
  * The axes a tuning change can move. `maxConcurrency` is project-scoped and carries the declared
- * value; the three worker axes are root-only, so a project declaring one at all has been moved —
- * `vitest.workspace.ts` says the runner ignores them there, which makes such a declaration a silent
- * departure rather than a loud one.
+ * value; the worker and file-parallelism axes are root-only, so a project declaring one at all has
+ * been moved — `vitest.workspace.ts` says the runner ignores them there, which makes such a
+ * declaration a silent departure rather than a loud one.
  */
-const ROOT_ONLY_AXES = ["maxWorkers", "minWorkers", "fileParallelism"] as const;
+const ROOT_ONLY_AXES = ["maxWorkers", "fileParallelism"] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

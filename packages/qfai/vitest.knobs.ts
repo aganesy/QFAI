@@ -169,13 +169,9 @@ export function tunable(name: string, declared: number = DECLARED_START): number
 
 /**
  * The axes the runner reads only from the root configuration.
- *
- * `minWorkers` is declared alongside the maximum so the pool has a stated floor rather
- * than an inherited one; it is not tunable, because the obligation is about the ceiling.
  */
 export const rootKnobs = {
   maxWorkers: tunable(WORKERS_ENV, DECLARED_WORKERS),
-  minWorkers: 1,
   fileParallelism: true,
 } as const;
 
