@@ -224,7 +224,11 @@ for idx in "${!SCAN_PATHS[@]}"; do
     printf '%s\n' "$name_hits" | head -20 >&2
     fail=1
   fi
-  schema_hits=$(grep -rnE "$SCHEMA_VERSION_RE" "$target" 2>/dev/null || true)
+  # `-z` reads each file as one record, so `[[:space:]]*` also crosses a line
+  # break: `schemaVersion` on one line and its colon on the next is one valid
+  # JavaScript property. Read line by line, the pair never met and passed.
+  # `-l` names each file, as a whole-file record has no useful line to print.
+  schema_hits=$(grep -rlzE "$SCHEMA_VERSION_RE" "$target" 2>/dev/null || true)
   if [[ -n "$schema_hits" ]]; then
     echo "FAIL: schemaVersion field present in distributed surface $target:" >&2
     echo "$schema_hits" | head -20 >&2
