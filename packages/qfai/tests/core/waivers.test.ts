@@ -94,6 +94,41 @@ describe("applyWaivers", () => {
     }
   });
 
+  // A waiver written with only `match.paths` takes those paths as its scope.
+  it("reads match.paths as the scope when scope is absent", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-01M",
+          "    rule: COMPAT-003",
+          "    match:",
+          '      paths: ["src/**"]',
+          '    reason: "scope given through match"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [
+        buildIssue({ rule: "COMPAT-003", file: path.join(root, "src", "index.ts") }),
+        buildIssue({ rule: "COMPAT-003", file: path.join(root, "docs", "index.md") }),
+      ]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-001")).toBe(false);
+      expect(result.waivers.active).toHaveLength(1);
+      expect(result.waivers.active[0]?.scope).toEqual({ paths: ["src/**"] });
+      expect(result.waivers.active[0]?.match).toEqual({ paths: ["src/**"] });
+      expect(result.waivers.suppressed.total).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it.each([
     { version: "1", accepted: true },
     { version: '"1"', accepted: true },

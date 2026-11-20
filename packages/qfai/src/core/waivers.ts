@@ -433,7 +433,6 @@ async function loadWaivers(
       return;
     }
 
-    const match = mergeMatchScope(matchParsed.match, scope);
     const activeWaiver: ValidationWaiverEntry = {
       id,
       rule: ruleId,
@@ -442,7 +441,7 @@ async function loadWaivers(
       reason,
       expires: expiresOn,
       evidence,
-      match,
+      match: { paths: scope.paths },
       ...(downgradeTo ? { downgrade_to: downgradeTo } : {}),
       ...(severity ? { severity } : {}),
       ...(owner ? { owner } : {}),
@@ -746,16 +745,6 @@ function parseScope(
   }
 
   return { scope: { paths } };
-}
-
-function mergeMatchScope(
-  match: ValidationWaiverMatch | undefined,
-  scope: ValidationWaiverScope,
-): ValidationWaiverMatch {
-  const merged: ValidationWaiverMatch = {
-    paths: scope.paths,
-  };
-  return merged;
 }
 
 function toStringArray(value: unknown): { value: string[]; error?: string } {
