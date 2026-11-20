@@ -621,6 +621,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the new script stop with an error at the first skip in that file, so rewrite
   each count as the names of the tests it covered.
 
+- **The Mermaid check now fails on a directory it cannot read.** The shipped
+  `check-mermaid.mjs` passed over any directory it could not list, so a tree
+  it never read could report "no Mermaid diagrams found" and exit 0. It now
+  exits 2 and names the directory, as it already did for an unreadable file. A
+  directory removed while the check runs is still passed over. Closes #4717.
+
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
   dropped one and ran as if it had not been given, so

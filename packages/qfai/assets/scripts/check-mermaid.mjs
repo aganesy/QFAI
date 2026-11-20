@@ -210,9 +210,14 @@ async function collectMarkdown(target) {
     let entries;
     try {
       entries = await readdir(dir, { withFileTypes: true });
-    } catch {
-      // A directory that vanished or cannot be read is not a diagram failure.
-      continue;
+    } catch (error) {
+      // A directory that vanished during the walk holds nothing to check. One
+      // that cannot be read may hold a broken diagram, so passing over it would
+      // report a clean tree that was never read.
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+        continue;
+      }
+      throw error;
     }
     // Another repository checked out inside this one — a clone, a submodule, or a
     // git worktree, which carries `.git` as a file rather than a directory. Its
@@ -358,7 +363,16 @@ export async function main() {
     try {
       files.push(...(await collectMarkdown(absolute)));
     } catch (error) {
-      console.error(`check-mermaid: cannot read ${root}: ${describeError(error)}`);
+      // A file system error carries the path it failed on. Inside the walk that is
+      // a directory below the one named, and it is the one reported.
+      const failed =
+        error instanceof Error &&
+        "path" in error &&
+        typeof error.path === "string" &&
+        error.path !== absolute
+          ? path.relative(SCAN_ROOT, error.path) || "."
+          : root;
+      console.error(`check-mermaid: cannot read ${failed}: ${describeError(error)}`);
       return 2;
     }
   }
