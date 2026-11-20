@@ -29,10 +29,11 @@
  * be read.
  */
 /* global console, process, TextDecoder */
-import { execFileSync } from "node:child_process";
 import { lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+
+import { trackedFiles } from "./lib/tracked-files.mjs";
 
 /**
  * The forbidden classes, checked in order. A block comes before the scripts so
@@ -87,22 +88,6 @@ export function findNonEnglish(text) {
     }
   }
   return findings;
-}
-
-/** Tracked paths, or `null` when git cannot answer. */
-function trackedFiles(cwd) {
-  try {
-    return execFileSync("git", ["ls-files", "-z"], {
-      cwd,
-      encoding: "buffer",
-      maxBuffer: 64 * 1024 * 1024,
-    })
-      .toString("utf-8")
-      .split("\0")
-      .filter((entry) => entry !== "");
-  } catch {
-    return null;
-  }
 }
 
 /** The file's text, or `null` for a non-file, a binary file or invalid UTF-8. */
