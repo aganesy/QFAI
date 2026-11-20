@@ -669,6 +669,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it already did for any other value that is not a mapping. Defaults still
   apply when the file or the `paths` key is absent.
 
+- **A repeated code query no longer rewrites the whole code corpus.** Every
+  code query copied each project file into the local CodeGraph corpus again
+  before checking freshness, so an unchanged repository paid a write per file
+  on every query. A file whose bytes already match its copy is now left as it
+  stands; an uncommitted edit, an added file or a removed file is still
+  reconciled before the freshness check.
+
 - **The review-cycle gate no longer reads as asking for a second re-review.**
   The completion step and the gate of `common-review-cycle` said every
   behaviour fix must be re-reviewed, which also covered fixes made for findings

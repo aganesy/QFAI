@@ -45,6 +45,7 @@
     "tests/helpers/legacyInitArguments.ts",
     "tests/helpers/graphProject.ts",
     "tests/unit/graph/sourceUpdates.examples.test.ts",
+    "tests/unit/graph/codeCorpusReuse.examples.test.ts",
     "tests/unit/graph/analysisCompatibility.examples.test.ts",
     "tests/unit/graph/cacheFailures.examples.test.ts",
     "tests/unit/graph/replacementFailure.examples.test.ts",
