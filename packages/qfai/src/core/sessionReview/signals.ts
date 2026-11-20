@@ -275,27 +275,62 @@ function relativeToRoot(file: string, facts: Pick<ProjectFacts, "root" | "platfo
   return file.replace(/^\.\//, "");
 }
 
-/** The watched files a shell command names. A patch names files it writes, so it names none. */
+/**
+ * The watched files a shell command names. Each word is read whole, a quoted blank included,
+ * then normalized, and only then tested against the watched directories. A quoted word that
+ * names no file, such as the script of `bash -c "cat <path>"`, is read as a command in turn.
+ * A patch names files it writes, so it names none.
+ */
 export function pathsInCommand(
   command: string,
   facts: Pick<ProjectFacts, "root" | "platform">,
 ): string[] {
   if (command.includes("apply_patch")) return [];
-  let text = slashed(command);
-  for (const form of rootForms(facts)) {
-    text = text.replace(
-      new RegExp(`${escapeRegExp(form)}/`, facts.platform === "win32" ? "gi" : "g"),
-      " ",
-    );
-  }
   const found: string[] = [];
-  const pattern =
-    /(?:^|[^A-Za-z0-9_.\-/])(?:\.\/)?((?:\.agents\/(?:rules|skills)|\.qfai\/assistant|\.claude\/(?:rules|skills))\/[A-Za-z0-9_.\-/]*[A-Za-z0-9_-])/g;
-  for (const match of text.matchAll(pattern)) {
-    const file = match[1] === undefined ? null : watchedOnly(match[1]);
-    if (file !== null) found.push(file);
-  }
+  const visit = (word: string): void => {
+    // An option's value, as in `--file=<path>`, is a path argument too.
+    const values = word.includes("=") ? [word, word.slice(word.indexOf("=") + 1)] : [word];
+    let named = false;
+    for (const value of values) {
+      const file = watchedOnly(relativeToRoot(value, facts));
+      if (file === null || !namesOneFile(file)) continue;
+      found.push(file);
+      named = true;
+    }
+    if (!named && SHELL_BREAK.test(word)) shellWords(word).forEach(visit);
+  };
+  shellWords(slashed(command)).forEach(visit);
   return [...new Set(found)];
+}
+
+/** A character that ends a shell word outside quotes: a blank, a separator or a redirection. */
+const SHELL_BREAK = /[\s;|&()`<>]/;
+
+/**
+ * The words of a shell line with their quotes removed, split at blanks and at separators and
+ * redirections outside quotes, so a quoted blank stays inside its word.
+ */
+function shellWords(command: string): string[] {
+  const words: string[] = [];
+  let current = "";
+  let quote: "'" | '"' | null = null;
+  for (const char of command) {
+    if (quote !== null) {
+      if (char === quote) quote = null;
+      else current += char;
+    } else if (char === "'" || char === '"') quote = char;
+    else if (SHELL_BREAK.test(char)) {
+      if (current !== "") words.push(current);
+      current = "";
+    } else current += char;
+  }
+  if (current !== "") words.push(current);
+  return words;
+}
+
+/** Whether a normalized path names one file: not a directory, a glob or a variable. */
+function namesOneFile(file: string): boolean {
+  return !file.endsWith("/") && !/[*?[\]{}$]/.test(file);
 }
 
 function countReads(events: SessionEvents, facts: ProjectFacts): FileRead[] {
