@@ -524,6 +524,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   word, as if it held no files. Only a directory that does not exist is still
   read as empty. Any other failure now stops the scan with its error, or is
   reported as an unreadable directory where the check already reports those.
+
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio
   server, though the skill and its contract call for HTTP transport too.
@@ -578,6 +579,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   instead of a finding. It is now reported as `QFAI-CONTRACT-021`, and the
   other contracts are still checked. A UI contract with such a top level is
   reported the same way.
+
+- **`qfai init --force` keeps a project's own wrapper when the link replacing
+  it cannot be written.** A file or directory of the project's at a skill or
+  agent wrapper path was deleted before the link was created, so a refused
+  `symlink` left the path empty and the wrapper, with everything in it, gone.
+  The entry is now moved aside first and put back when the link fails, and
+  removed only once the link stands.
 
 - **The README states what the Claude Code launcher permission allows.** It
   said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
