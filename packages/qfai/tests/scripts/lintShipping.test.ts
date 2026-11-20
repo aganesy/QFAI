@@ -26,6 +26,7 @@ import {
   TIMESTAMP_PLACEHOLDERS,
   scanDistributedSurface,
 } from "../helpers/distributedSurfaceScan.js";
+import { aggregateChecks } from "../helpers/aggregateChecks.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -98,7 +99,9 @@ describe("lint-shipping fixture — detection rules", () => {
       scripts: Record<string, string>;
     };
     expect(scripts.scripts["ci:lint"]).toContain("run-lint-checks.sh");
-    expect(scripts.scripts["ci:lint:structure"]).toContain("lint:shipping");
+    expect(aggregateChecks(path.resolve(PKG_ROOT, "../.."), "ci:lint:structure")).toContain(
+      "pnpm -C packages/qfai lint:shipping",
+    );
     expect(
       await readFile(path.resolve(PKG_ROOT, "../../scripts/run-lint-checks.sh"), "utf-8"),
     ).toContain("pnpm ci:lint:structure");

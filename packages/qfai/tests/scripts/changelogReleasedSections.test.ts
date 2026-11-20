@@ -28,6 +28,7 @@ import {
   tagOnOrigin,
   taggedBefore,
 } from "../../../../scripts/check-changelog-released-sections.mjs";
+import { aggregateChecks } from "../helpers/aggregateChecks.js";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -199,14 +200,10 @@ describe("where the tag is looked up", () => {
 });
 
 describe("the lane that runs it", () => {
-  it("is in the scans lane, so a pull request is where the refusal lands", async () => {
+  it("is in the scans lane, so a pull request is where the refusal lands", () => {
     // A guard nothing invokes reports nothing. `ci:lint:scans` is the lane that
     // runs on every pull request and carries the other whole-tree readers.
-    const manifest = JSON.parse(await readFile(path.join(repoRoot, "package.json"), "utf-8")) as {
-      scripts: Record<string, string>;
-    };
-
-    expect(manifest.scripts["ci:lint:scans"]).toContain(
+    expect(aggregateChecks(repoRoot, "ci:lint:scans")).toContain(
       "node ./scripts/check-changelog-released-sections.mjs",
     );
   });

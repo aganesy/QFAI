@@ -3,6 +3,7 @@ paths:
   - ".github/workflows/**"
   - ".github/actions/**"
   - "scripts/run-lint-checks.sh"
+  - "scripts/run-aggregate-checks.sh"
   - "package.json"
   - ".github/shipped-ci-dispositions.md"
 ---

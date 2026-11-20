@@ -26,6 +26,8 @@
  *     and the two files it reads;
  *   - `scripts/run-lint-checks.sh` — the helper that groups the lint lanes,
  *     which is where a grouping improvement actually lives;
+ *   - `scripts/run-aggregate-checks.sh` — the helper that holds each aggregate
+ *     lane's check list, which is where a check is added to a lane or taken out;
  *   - the `ci:*` entries of the root `package.json` — the lane bodies the
  *     workflows invoke by name. A workflow step reading `pnpm ci:lint` moves
  *     when that entry moves, so watching the workflow alone watches a pointer.
@@ -106,7 +108,7 @@ import { pathToFileURL } from "node:url";
 const WATCHED_PREFIXES = [".github/workflows/", ".github/actions/"];
 
 /** Single files that are part of it. */
-const WATCHED_FILES = ["scripts/run-lint-checks.sh"];
+const WATCHED_FILES = ["scripts/run-lint-checks.sh", "scripts/run-aggregate-checks.sh"];
 
 const MANIFEST_REL = "package.json";
 

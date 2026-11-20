@@ -8,6 +8,7 @@ import { parse as parseYaml } from "yaml";
 
 import { removeTempTree } from "../helpers/tempTree.js";
 import { isRecord, REPO_ROOT } from "../scripts/helpers/hygieneTree.js";
+import { aggregateChecks } from "../helpers/aggregateChecks.js";
 
 const FULL_LANE_CONDITION = "${{ needs.detect.outputs.full == 'true' }}";
 
@@ -274,7 +275,7 @@ describe("BF-0002 change detection acceptance", () => {
     );
     const scripts = isRecord(manifest) ? manifest["scripts"] : undefined;
     expect(isRecord(scripts) ? scripts["ci:lint"] : undefined).toContain("run-lint-checks.sh");
-    expect(isRecord(scripts) ? scripts["ci:lint:structure"] : undefined).toContain("lint:md");
+    expect(aggregateChecks(REPO_ROOT, "ci:lint:structure")).toContain("pnpm lint:md");
     const aggregate = readFileSync(path.join(REPO_ROOT, "scripts", "run-lint-checks.sh"), "utf8");
     expect(aggregate).toContain("pnpm format:check");
 

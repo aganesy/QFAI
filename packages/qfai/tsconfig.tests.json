@@ -291,6 +291,7 @@
     "tests/e2e/spec0016ResearchAllowlistE2E.test.ts",
     "tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
     "tests/e2e/spec0017RunnerParallelismE2E.test.ts",
+    "tests/helpers/aggregateChecks.ts",
     "tests/helpers/assistantVersion.ts",
     "tests/helpers/buildCommand.ts",
     "tests/helpers/childFailure.ts",

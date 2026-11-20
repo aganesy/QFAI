@@ -6,7 +6,7 @@
  * in the tree, so the next deletion fails the scans lane instead.
  */
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
+import { aggregateChecks } from "../helpers/aggregateChecks.js";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -179,17 +180,12 @@ describe("check-instruction-links", () => {
   });
 
   // QFAI:EX-0002-0028-03
-  it("passes on this repository and runs in the scans lane of the pull request lint job", async () => {
+  it("passes on this repository and runs in the scans lane of the pull request lint job", () => {
     const run = check(repoRoot);
     expect(run.status, run.output).toBe(0);
 
-    const manifest: unknown = JSON.parse(
-      await readFile(path.join(repoRoot, "package.json"), "utf-8"),
+    expect(aggregateChecks(repoRoot, "ci:lint:scans")).toContain(
+      "node ./scripts/check-instruction-links.mjs",
     );
-    expect(manifest).toMatchObject({
-      scripts: {
-        "ci:lint:scans": expect.stringContaining("node ./scripts/check-instruction-links.mjs"),
-      },
-    });
   });
 });

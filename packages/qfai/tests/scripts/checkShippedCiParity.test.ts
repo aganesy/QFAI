@@ -24,6 +24,7 @@ const SCRIPT = path.join(REPO_ROOT, "scripts/check-shipped-ci-parity.mjs");
 
 const WORKFLOW = ".github/workflows/ci.yml";
 const HELPER = "scripts/run-lint-checks.sh";
+const AGGREGATE_HELPER = "scripts/run-aggregate-checks.sh";
 const ACTION = ".github/actions/setup/action.yml";
 const LEDGER = ".github/shipped-ci-dispositions.md";
 const SHIPPED = "packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml";
@@ -406,14 +407,21 @@ describe("check-shipped-ci-parity", () => {
     expect(result.stderr).toContain(`${WORKFLOW}: this change moves this repository's CI`);
   });
 
-  it("watches the composite action and the lint helper, not only the workflows", async () => {
+  it("watches the composite action and the lint helpers, not only the workflows", async () => {
     const base = {
       [ACTION]: "name: setup\nruns:\n  using: composite\n  steps: []\n",
       [HELPER]: "#!/usr/bin/env bash\npnpm lint &\nwait\n",
+      [AGGREGATE_HELPER]: "#!/usr/bin/env bash\nnode ./scripts/a.mjs || status=1\n",
     };
     for (const [rel, changed] of [
       [ACTION, "name: setup\nruns:\n  using: composite\n  steps: []\n  extra: true\n"],
       [HELPER, "#!/usr/bin/env bash\npnpm lint &\npnpm format:check &\nwait\n"],
+      // The aggregate lanes' check lists left the manifest for this helper, so a
+      // check added to a lane lands here rather than in a watched manifest entry.
+      [
+        AGGREGATE_HELPER,
+        "#!/usr/bin/env bash\nnode ./scripts/a.mjs || status=1\nnode ./scripts/b.mjs || status=1\n",
+      ],
     ] as const) {
       const dir = await branchRepo(base, { [rel]: changed });
 
