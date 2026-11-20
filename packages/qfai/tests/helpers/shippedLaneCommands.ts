@@ -1389,6 +1389,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned when the graph-exploration bullet stopped naming search protection and said to
     // prefer the graph CLIs with ordinary search still acceptable. Derived by running `qfai init`
     // into a temp root; the previous digest was `ce9391e5…`.
+    // Re-pinned when the temporary-files bullet stopped saying a scratch file goes under `tmp/`
+    // and named the host's session scratch directory first, with `tmp/` as the fallback. Derived
+    // by `pnpm pins:entry`; restoring the old wording reproduces `3a47d46c…` byte for byte.
     ".github/copilot-instructions.md",
     "eaba031b1a3a2ab15254f8ea7fe43f3c1147e784ac5051906017a55974a06ad3",
   ],

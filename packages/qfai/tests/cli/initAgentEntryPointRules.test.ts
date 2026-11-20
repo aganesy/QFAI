@@ -430,9 +430,10 @@ describe("an installed entry point states the scratch-directory precedence of it
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
         const bullet = bulletIn(await readEntryPoint(root, name)) ?? "";
         expect(bullet, `${name} does not cite ${master}`).not.toBe("");
-        const host = bullet.indexOf("scratch directory the host names");
-        expect(host, bullet).toBeGreaterThan(-1);
-        expect(bullet.indexOf("`tmp/`"), bullet).toBeGreaterThan(host);
+        // `tmp/` only as the fallback: a bullet that dropped it, or used it first, fails.
+        expect(bullet).toContain(
+          "the scratch directory the host names for the session, else under `tmp/`",
+        );
       });
     },
   );
