@@ -156,7 +156,9 @@ describe("cli root discovery", () => {
     // options table named neither for it, so --help hid both outputs.
     const help = await captureStdout(() => run(["--help"], process.cwd()));
 
-    expect(help).toContain("--format <text|json>         db-drift: output format (text by default)");
+    expect(help).toContain(
+      "--format <text|json>         db-drift: output format (text by default)",
+    );
     expect(help).toContain("--out <path>                  report/doctor/db-drift/session-review:");
   });
 
