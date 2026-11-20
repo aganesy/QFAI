@@ -613,6 +613,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not counted at all. Each shell word is now read whole, quotes removed, and
   normalized before it is tested against the watched directories.
 
+- **`qfai --help` says `report` exits 1 when its findings reach the
+  `--fail-on` threshold.** The `report` exit-code row gave 1 only for a
+  corrupt input or a runtime error, though `qfai report` also writes the
+  report and then exits 1 when the findings reach the threshold. The row now
+  names that gate result first, so CI can tell findings from an I/O error.
+
 - **`qfai session-review` leaves a read's result bytes unknown when another
   file can add to the output.** `cat .agents/rules/a.md LICENSE` gave all of
   its output to `a.md`, because only a word with a slash or an extension was
