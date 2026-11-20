@@ -145,7 +145,8 @@ describe("readLockfilePin", () => {
     // A directory under the lockfile's name exists but does not read as a
     // file, so the pnpm pin behind it must not stand in for it.
     const root = await project({
-      "pnpm-lock.yaml": "importers:\n  .:\n    dependencies:\n      qfai:\n        version: 2.4.0\n",
+      "pnpm-lock.yaml":
+        "importers:\n  .:\n    dependencies:\n      qfai:\n        version: 2.4.0\n",
     });
     await mkdir(path.join(root, "package-lock.json"));
     expect(await readLockfilePin(root)).toBeNull();

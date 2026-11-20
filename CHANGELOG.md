@@ -571,6 +571,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Only the template's exact
   placeholder is now read as no carry-over. Closes #4864.
 
+- **The stale-install check keeps lockfile precedence when a lockfile cannot
+  be read.** A `package-lock.json` that existed but failed to read, for example
+  for lack of permission, was passed over for a `pnpm-lock.yaml` or `yarn.lock`
+  behind it, so a command could warn or stop with another package manager's
+  install command. Only a missing lockfile now moves on to the next one; any
+  other read error ends the comparison. Closes #4887.
+
 - **`qfai session-review --since` accepts a date with a year below 0100.** The
   calendar check read years 0000 through 0099 as 1900 through 1999, so a valid
   date such as `0099-09-09` was refused. The check now keeps the year as
