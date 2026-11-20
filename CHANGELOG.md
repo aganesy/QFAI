@@ -566,6 +566,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout or one downloaded from the npm registry without asking. The README
   now says so. Closes #4622.
 
+- **The business rules of a JSON contract with a `// QFAI-CONTRACT-ID` line
+  are read.** Contract validation accepted such a file, but the story tree
+  read it before removing that line, which is not JSON, so it found no rules
+  and reported `Invalid structured contract`. The declaration line is now
+  removed first, and the rest is read as JSON. Closes #4707.
+
 - **A null `requires:` is no longer read as an empty step list.** In a
   step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
   `requires: null`, or a `requires:` with no value, as `requires: []`. It now

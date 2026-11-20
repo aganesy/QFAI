@@ -1,7 +1,7 @@
 import path from "node:path";
 
-import { parse as parseYaml } from "yaml";
-
+import { parseStructuredContract } from "../contracts.js";
+import { stripContractDeclarationLines } from "../contractsDecl.js";
 import { extractH2Sections, headingText, parseHeadings } from "../parse/markdown.js";
 import { maskNonSpecRegions, parseAllMarkdownTables } from "../specPackParsers.js";
 
@@ -42,8 +42,9 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
 
   if (extension === ".yaml" || extension === ".yml" || extension === ".json") {
     let parsed: unknown;
+    // A JSON contract's `// QFAI-CONTRACT-ID` line is not JSON, so it goes before parsing.
     try {
-      parsed = parseYaml(text);
+      parsed = parseStructuredContract(file, stripContractDeclarationLines(text));
     } catch {
       return { rules, errors: [`Invalid structured contract: ${file}`] };
     }
