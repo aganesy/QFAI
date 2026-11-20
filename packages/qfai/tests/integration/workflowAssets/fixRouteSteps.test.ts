@@ -455,6 +455,28 @@ describe("the evidence gates on a fix-intermittent route", () => {
       /no unperformed repetitions count.*passed.*no quarantine is lifted/i,
     );
   });
+
+  // QFAI:AC-0001-0220-05
+  // QFAI:EX-0001-0220-64
+  it("fixes the repeat count from a named count or a positive rate, and stops without either", async () => {
+    const step = await readShipped("step/verify-repeat-run/STEP.md");
+    const actual = flat(sectionOf(step, "### When repeated runs are required"));
+    expect(actual).toMatch(
+      /positive whole number the quarantine record, the work order or the request names/i,
+    );
+    expect(actual).toMatch(
+      /positive failure rate the diagnosis measured: three divided by that rate, rounded up to a whole run/i,
+    );
+    expect(actual).toMatch(
+      /neither a named positive count nor a measured positive rate.*observed rate is zero.*guess no count and run nothing/i,
+    );
+    expect(actual).toMatch(
+      /return `blocked`, name in the stage report the input needed, a count of runs or a measured failure rate.*claim no coverage/i,
+    );
+    expect(flat(sectionOf(step, "## Gate"))).toMatch(
+      /named positive count or a measured positive failure rate; without either, the stage is `blocked`/i,
+    );
+  });
 });
 
 describe("where qfai-run runs the policy check and the commit", () => {
