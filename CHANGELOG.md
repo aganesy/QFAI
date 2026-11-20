@@ -593,10 +593,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **`qfai report --run-validate` keeps the profile coverage notice.** On a
   partial profile, `qfai validate --profile sdd` records `QFAI-PROFILE-001`,
-  which lists the checks the run did not evaluate. `qfai report --run-validate
-  --profile sdd` rewrote the same validation result without it, so the
-  information count dropped and the list was gone. Both commands now finish a
-  validation run the same way and write the same findings.
+  which lists the checks the run did not evaluate. The same run through
+  `qfai report --run-validate --profile sdd` rewrote that validation result
+  without it, so the information count dropped and the list was gone. Both
+  commands now finish a validation run the same way and write the same
+  findings.
 
 - **The release-notes drift check holds a cut body to its kept entries, in
   order.** When a changelog section is too long for a GitHub Release body,
