@@ -1,16 +1,36 @@
+import type * as fsPromises from "node:fs/promises";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createDoctorData } from "../../src/core/doctor.js";
+const LOCKFILE_NAMES = new Set(["pnpm-lock.yaml", "yarn.lock", "package-lock.json"]);
+// Every lockfile the code under test opened for reading, by base name.
+const lockfileReads: string[] = [];
+
+vi.mock("node:fs/promises", async () => {
+  const actual = await vi.importActual<typeof fsPromises>("node:fs/promises");
+  return {
+    ...actual,
+    readFile: (...args: Parameters<typeof actual.readFile>) => {
+      const [file] = args;
+      if (typeof file === "string" && LOCKFILE_NAMES.has(path.basename(file))) {
+        lockfileReads.push(path.basename(file));
+      }
+      return actual.readFile(...args);
+    },
+  };
+});
+
+const { createDoctorData } = await import("../../src/core/doctor.js");
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const roots: string[] = [];
 
 afterEach(async () => {
+  lockfileReads.splice(0);
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
@@ -124,6 +144,35 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     const root = await project({
       packageJson: { packageManager: "pnpm@9.15.9" },
       files: { "pnpm-lock.yaml": "" },
+    });
+
+    expect(await finding(root, "workflows.lockfiles")).toBeUndefined();
+  });
+
+  // QFAI:EX-0003-0011-18
+  it("finds the lockfiles from file metadata without reading them", async () => {
+    // QFAI:AC-0003-0011-08
+    const root = await project({
+      packageJson: { packageManager: "pnpm@9.15.9" },
+      files: {
+        "pnpm-lock.yaml": "lockfileVersion: 9\n",
+        "yarn.lock": "",
+        "package-lock.json": "{}",
+      },
+    });
+
+    const check = await finding(root, "workflows.lockfiles");
+
+    expect(check?.message).toContain("pnpm-lock.yaml and yarn.lock and package-lock.json");
+    expect(lockfileReads).toEqual([]);
+  });
+
+  // QFAI:EX-0003-0011-18
+  it("does not count a directory that carries a lockfile name", async () => {
+    // QFAI:AC-0003-0011-08
+    const root = await project({
+      packageJson: { packageManager: "pnpm@9.15.9" },
+      files: { "pnpm-lock.yaml": "", "yarn.lock/keep": "" },
     });
 
     expect(await finding(root, "workflows.lockfiles")).toBeUndefined();

@@ -1,5 +1,6 @@
 import { getHashes } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
+import { constants } from "node:fs";
+import { access, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
@@ -69,10 +70,21 @@ async function readPackageJson(root: string): Promise<Record<string, unknown> | 
   }
 }
 
+/** Whether `target` is a regular file this process may read, decided from metadata alone. */
+async function isReadableFile(target: string): Promise<boolean> {
+  try {
+    if (!(await stat(target)).isFile()) return false;
+    await access(target, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function presentLockfiles(root: string): Promise<(typeof LOCKFILES)[number][]> {
   const present: (typeof LOCKFILES)[number][] = [];
   for (const lockfile of LOCKFILES) {
-    if ((await readText(path.join(root, lockfile.file))) !== undefined) present.push(lockfile);
+    if (await isReadableFile(path.join(root, lockfile.file))) present.push(lockfile);
   }
   return present;
 }

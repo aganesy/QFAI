@@ -284,6 +284,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   implementation runs no gate, like `narrow`, and its final report says the
   tests come with the implementation it left out.
 
+- **`qfai doctor` finds lockfiles without reading them.** The shipped-workflow
+  checks decide which of `pnpm-lock.yaml`, `yarn.lock` and
+  `package-lock.json` are present from file metadata: a readable regular
+  file counts, as before. A large lockfile is no longer read and decoded on
+  every `qfai doctor` and `qfai init` run. The findings are unchanged.
+
 - **The graph exploration rule describes the graph CLI lifecycle once.** Its
   opening now says the integration registers no graph MCP server and runs no
   daemon or IPC, and one sentence after the command example says each CLI
