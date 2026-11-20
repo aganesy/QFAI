@@ -45,29 +45,13 @@ import {
 import { flat, sectionOf } from "../helpers/shippedAssistant.js";
 import { reminderSettings } from "../helpers/reminderSettings.js";
 import { removeTempTree } from "../helpers/tempTree.js";
+import { expectNoEmbeddedReminderText } from "../helpers/reminderAssertions.js";
 
 /** Where every entry reads its message, as the settings file names it. */
 const MESSAGES_ARG = `${PROJECT_DIR_PLACEHOLDER}/.agents/rules/reminders.json`;
 
 /** The shipped message file. */
 const SHIPPED_MESSAGES = "packages/qfai/assets/init/root/.agents/rules/reminders.json";
-
-function expectNoEmbeddedReminderText(program: string, messages: unknown): void {
-  if (typeof messages !== "object" || messages === null) throw new Error("no reminder catalog");
-  for (const message of Object.values(messages)) {
-    if (typeof message !== "object" || message === null) throw new Error("invalid reminder");
-    const output: unknown = Reflect.get(message, "hookSpecificOutput");
-    const full: unknown =
-      typeof output === "object" && output !== null
-        ? Reflect.get(output, "additionalContext")
-        : undefined;
-    for (const context of [full, Reflect.get(message, "briefContext")]) {
-      if (typeof context !== "string") continue;
-      expect(program).not.toContain(context);
-      expect(program).not.toContain(JSON.stringify(context).slice(1, -1));
-    }
-  }
-}
 
 /** What the host writes to a `Bash` hook's stdin for one command. */
 function hookInput(command: string): string {
