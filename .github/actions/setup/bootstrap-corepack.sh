@@ -20,12 +20,12 @@ fi
 
 # PINNED — the version, the REGISTRY it comes from, and the bytes themselves.
 #
-# Review finding [55] pinned the version: an unpinned global install fetches whatever the
+# The version is pinned because an unpinned global install fetches whatever the
 # registry calls latest at the moment the job runs, so the same commit installs a different
 # corepack from one day to the next — inside a job whose every `uses:` is pinned to an immutable
 # ref, and which then installs and verifies everything else.
 #
-# Review finding [83]: a version is not a source. `npm` resolves the registry from
+# A version is not a source. `npm` resolves the registry from
 # `NPM_CONFIG_REGISTRY` or a project `.npmrc`, both of which a pull request controls, so
 # `corepack@0.35.0` from an attacker's registry is the same request answered by a different
 # package — and its `corepack` bin runs on the very next line, before any verification in the

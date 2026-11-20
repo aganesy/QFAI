@@ -2584,7 +2584,9 @@ describe("every corepack call runs after the shared corepack bootstrap", () => {
   const BOOTSTRAP_REL = path.join(".github", "actions", "setup", "bootstrap-corepack.sh");
   const RELEASE_BOOTSTRAP = "bash .ci-actions/.github/actions/setup/bootstrap-corepack.sh";
   const ACTION_BOOTSTRAP = 'bash "${{ github.action_path }}/bootstrap-corepack.sh"';
-  const COREPACK_CALL = /\bcorepack (enable|prepare)\b/;
+  // Any corepack command, not a list of subcommands: every one of them needs corepack on PATH.
+  // The bootstrap's own path, `bootstrap-corepack.sh`, is not a command word, so it is not a call.
+  const COREPACK_CALL = /(?:^|[\s;&|(!])corepack(?=\s|$)/m;
 
   // The commands of a step, without its comment lines, so a comment naming corepack is not a call.
   const commandsOf = (step: Record<string, unknown>): string =>
