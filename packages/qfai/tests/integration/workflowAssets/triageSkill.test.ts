@@ -173,11 +173,24 @@ describe("qfai-triage invoked by name", () => {
     expect(rowOf(steps, "| `triage-close`")).toMatch(/Only `triage-security-intake` ran/);
     expect(flat(steps)).toMatch(/Invoked by name, the skill ends at this stage/);
     expect(flat(steps)).toMatch(/starts no other stage and routes no follow-up/);
-    expect(flat(sectionOf(skill, "### Reviewer Gate"))).toMatch(
-      /A tracked file the stage changed fails the review/,
+    const reviewerGate = flat(sectionOf(skill, "### Reviewer Gate"));
+    expect(reviewerGate).toMatch(/A tracked file the stage changed fails the review/);
+    expect(reviewerGate).toMatch(
+      /except these: - the run's deliberation record and the `open-questions\.md` rows the run wrote, which `triage-close` commits locally and does not push; - the approval row, if any, that `qfai-run` records in `decisions\.md` before `triage-handoff` runs/,
     );
-    expect(flat(sectionOf(skill, "## Completion"))).toMatch(
-      /never says a (?:tracked )?change is done/i,
+    expect(reviewerGate).toMatch(
+      /`triage-owned-cleanup` keeps its own check that tracked contents and the index are unchanged/,
+    );
+    const completion = flat(sectionOf(skill, "## Completion"));
+    expect(completion).toMatch(/never says a (?:tracked )?change is done/i);
+    expect(completion).toMatch(
+      /the commits the stage made touch only the run's deliberation record, the `open-questions\.md` rows the run wrote and the `decisions\.md` approval row the Reviewer Gate allows/,
+    );
+    expect(String(frontMatterOf(skill).description)).toMatch(
+      /ending with no tracked change but its deliberation record, open questions and approval row:/,
+    );
+    expect(flat(sectionOf(skill, "## Default Autopilot Policy"))).toMatch(
+      /Triage changes no tracked file except the run's deliberation record and `open-questions\.md` rows, which `triage-close` commits locally, and the approval row `qfai-run` records in `decisions\.md` before `triage-handoff`/,
     );
 
     const policy = parseAutopilotPolicy(skill, "qfai-triage");

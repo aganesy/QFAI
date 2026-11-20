@@ -552,6 +552,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `--session` could then select. Such a rollout is now left out, since the
   recorded `id` is the session's identity.
 
+- **The shipped `qfai-triage` skill names the tracked changes it allows.** Its
+  description, reviewer gate, smoke check and project memory said any tracked
+  change fails the run, although `triage-close` commits the run's deliberation
+  record and the `open-questions.md` rows it wrote, and `qfai-run` may record
+  an approval row in `decisions.md` before `triage-handoff`. They now name
+  those exceptions, and `triage-owned-cleanup` keeps its own unchanged-tree
+  check.
+
 - **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
   shipped workflow edited to run a job on two operating systems and three
   Node versions was reported as three runner allocations instead of six,
