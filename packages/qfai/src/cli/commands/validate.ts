@@ -378,6 +378,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-UITEXT-*",
     "QFAI-COMP-*",
     "QFAI-DCAT-*",
+    "QFAI-LEGACY-*",
   ],
   "prototyping-skill": ["QFAI-PROTOSKILL-*"],
   "accessibility-layer": ["QFAI-AXE-*"],
@@ -1381,6 +1382,14 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The committed Tailwind theme is the file `qfai catalog design` writes for the current root DESIGN.md.",
   "QFAI-DCAT-003":
     "A surface file writes no hex colour that matches none of the colours root DESIGN.md states.",
+  // The legacy-pattern warnings read the `uiux.surfacePaths` files, stylesheets included, and
+  // admit a pattern only when its replacement is Baseline Widely available.
+  "QFAI-LEGACY-001":
+    "Every `<script>` a surface file loads from another origin carries an `integrity` attribute (Subresource Integrity).",
+  "QFAI-LEGACY-002":
+    "A surface stylesheet styles `:user-invalid`, not `:invalid`, so a field shows an error only after the user has interacted with it.",
+  "QFAI-LEGACY-003":
+    'Where no component catalogue is installed, a surface file builds a modal with the native `<dialog>` element, not `role="dialog"` or `aria-modal` on another element.',
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —
