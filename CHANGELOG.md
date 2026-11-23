@@ -652,6 +652,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review, and that it makes no commit, as `triage-security-intake` already
   said. Closes #5012.
 
+- **`qfai doctor --autoremediate` asks before installing only where the
+  prompt can be seen, and reports a Ctrl+C at it.** The install prompt is
+  written to stderr, yet a terminal on stdin alone made the session count as
+  interactive, so a run with stderr redirected waited on a prompt nobody saw.
+  Both must now be terminals; otherwise nothing is installed and the output
+  says to rerun with `--yes`. Ctrl+C at the prompt ended with "The operation
+  was aborted" and exit 1, and dropped the lines of the `.gitignore` and
+  wrapper repairs that ran before it. Doctor now prints those lines and that
+  the install was cancelled, and exits 130. Closes #5055.
+
 - **The `qfai-triage` skill invoked by name takes a security report in
   privately before any other step.** Its step list put
   `triage-security-intake` seventh, after the duplicate search, the request

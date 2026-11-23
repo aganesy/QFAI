@@ -43,6 +43,8 @@ export const EXIT_CODES = {
   inputError: 2,
   /** Init could not read or write a required file or directory. */
   requiredIo: 64,
+  /** doctor --autoremediate: the operator pressed Ctrl+C at the install prompt (128 + SIGINT). */
+  interrupted: 130,
 } as const;
 
 type ExitCodeRow = {
@@ -59,7 +61,8 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
       `${EXIT_CODES.ok} = success,`,
       `${EXIT_CODES.findings} = the --fail-on threshold was reached, or a runtime error`,
       "      (an output I/O exception: a failed validate JSON write, a failed doctor --out write),",
-      `      and validate stops with ${EXIT_CODES.findings} when the installed qfai is not the version the lockfile pins, even under --fail-on never`,
+      `      and validate stops with ${EXIT_CODES.findings} when the installed qfai is not the version the lockfile pins, even under --fail-on never,`,
+      `${EXIT_CODES.interrupted} = doctor --autoremediate was cancelled with Ctrl+C at the install prompt`,
     ],
   },
   {

@@ -31,8 +31,9 @@ Feature: doctor --autoremediate mode
     Given `--profile <skill>` names a manifest that declares uninstalled runtimeDependencies, outside CI
     When `qfai doctor --autoremediate` runs without `--yes`
     Then an operator at a terminal is shown the packages and `npm install` runs only after an affirmative answer
-    And a session with no terminal on stdin installs nothing and says to rerun with `--yes`
+    And a session without a terminal on stdin or on stderr installs nothing and says to rerun with `--yes`
     And Ctrl+C at the prompt stops the command, installing nothing and running nothing else
+    And after Ctrl+C the output keeps the repairs already made, says the install was cancelled, and the exit code is 130
 
   # AC-0003-0009-05
   Scenario: A failed install makes --autoremediate exit non-zero (error)
