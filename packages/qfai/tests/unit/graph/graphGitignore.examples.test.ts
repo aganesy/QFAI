@@ -128,8 +128,12 @@ it("names every staging directory and the CodeGraph install directory a managed 
   // Each rule ignores everything under the tools directory except one directory a writer uses.
   const only = (parent: string, depth: string, name: string) =>
     `/.qfai/tools/*\n!/.qfai/tools/${parent}/\n/.qfai/tools/${parent}/${depth}\n!/.qfai/tools/${parent}/${name}\n`;
+  // The id follows the name directly, so `.preparing-graphify` matches no `graphify-code` path.
   const analysis = (name: string) =>
-    [only("analysis", "*/*", `*/${name}-*`), `.qfai/tools/analysis/${key}/${name}-`] as const;
+    [
+      only("analysis", "*/*", `*/${name}-[0-9a-f]*`),
+      `.qfai/tools/analysis/${key}/${name}-0`,
+    ] as const;
   for (const [rules, visible] of [
     analysis(".preparing-codegraph"),
     analysis(".preparing-graphify"),
