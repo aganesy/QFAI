@@ -715,6 +715,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   category must name an operation after its colon or dash, or inside a closed
   parenthesis. Closes #5046.
 
+- **A refused graph processing endpoint names its canonical form, and the
+  origin guard holds the endpoint's scheme.** An endpoint in
+  `.qfai/graph-processing.json` spelled another way than its canonical URL,
+  such as `http://LOCALHOST:11434/v1`, `https://api.example.com:443/v1` or a
+  Unicode host name, left document analysis not ready with only a generic
+  setup hint. The preparation and query recoveries now name the canonical
+  form to write, as long as nothing else in the definition is wrong. The
+  Graphify origin guard checked only the host and port, so a request in plain
+  `http` to an `https` endpoint's host and port passed it; its HTTP clients
+  now refuse a request in any scheme other than the endpoint's. Closes #5197.
+
 - **The SQL contract lexer reads backtick and bracket identifiers.** It
   skipped only `'` and `"` quoting, so in ``CREATE TABLE t (`a)` int);`` the
   `)` inside the MySQL name raised `QFAI-CONTRACT-021`, and so did one inside a
