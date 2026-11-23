@@ -604,4 +604,27 @@ describe("runSddPreflight", () => {
       });
     });
   });
+
+  // QFAI:EX-0001-0151-04
+  it("replaces a linked latest pointer even when the file it links to names a newer run", async (ctx) => {
+    await withRoot(async (root) => {
+      await withRoot(async (outside) => {
+        const escapee = path.join(outside, "someone-elses.md");
+        const newer = "- run id: run-29991231235959000\n- started at: 2999-12-31T23:59:59.000Z\n";
+        await writeFile(escapee, newer, "utf-8");
+        const reportRoot = path.join(root, ".qfai", "report");
+        await mkdir(reportRoot, { recursive: true });
+        const pointer = path.join(reportRoot, "preflight_summary.md");
+        if (!(await createSymlinkFixture(escapee, pointer, "file"))) ctx.skip();
+
+        const result = await runSddPreflight(root, defaultConfig);
+
+        expect(await readFile(escapee, "utf-8")).toBe(newer);
+        expect((await lstat(pointer)).isSymbolicLink()).toBe(false);
+        expect(await readFile(pointer, "utf-8")).toBe(
+          await readFile(result.preflightSummaryPath, "utf-8"),
+        );
+      });
+    });
+  });
 });

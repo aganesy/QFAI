@@ -18,27 +18,42 @@ import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const schema = vi.hoisted(() => ({ unavailable: false }));
-/** Runs once, just before the next rename or hard link the command makes, as another program would. */
-const between = vi.hoisted(() => ({
-  next: undefined as (() => Promise<void>) | undefined,
-}));
+/**
+ * What another program does just before a matching `open`, `rename` or `link`: `when` reads the
+ * call's name and its paths, resolved. A hook runs once and is then dropped, unless it is `kept`;
+ * one that throws makes the call fail.
+ */
+type Hook = {
+  when: (call: string, paths: string[]) => boolean;
+  run: () => Promise<void>;
+  kept?: boolean;
+};
+const between = vi.hoisted(() => {
+  const hooks: Hook[] = [];
+  return { hooks };
+});
 
 // A save by another program can only be timed between two system calls from inside them.
 vi.mock("node:fs/promises", async (importOriginal) => {
   const original = await importOriginal<typeof FsPromises>();
+  const { resolve } = await import("node:path");
   const interrupted =
-    <A extends unknown[], R>(call: (...args: A) => Promise<R>) =>
+    <A extends unknown[], R>(name: string, call: (...args: A) => Promise<R>) =>
     async (...args: A): Promise<R> => {
-      const save = between.next;
-      between.next = undefined;
-      if (save !== undefined) await save();
+      const paths = args.slice(0, name === "open" ? 1 : 2).map((arg) => resolve(String(arg)));
+      const hook = between.hooks.find((candidate) => candidate.when(name, paths));
+      if (hook !== undefined) {
+        if (hook.kept !== true) between.hooks.splice(between.hooks.indexOf(hook), 1);
+        await hook.run();
+      }
       return call(...args);
     };
   return {
     ...original,
     default: original,
-    rename: interrupted(original.rename),
-    link: interrupted(original.link),
+    open: interrupted("open", original.open),
+    rename: interrupted("rename", original.rename),
+    link: interrupted("link", original.link),
   };
 });
 
@@ -176,7 +191,7 @@ function read(file: string): Promise<string> {
 
 beforeEach(async () => {
   schema.unavailable = false;
-  between.next = undefined;
+  between.hooks.length = 0;
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-merge-docs-"));
   git("init", "-q", "-b", "main");
   git("config", "user.email", "test@example.test");
@@ -435,6 +450,42 @@ describe("qfai sdd merge-docs", () => {
       expect(result.code).toBe(1);
     });
 
+    // QFAI:EX-0001-0238-20
+    it("creates no file when the story directory becomes a link after it is checked", async (ctx) => {
+      await sameSentence();
+      const conflicted = await read(EXAMPLES);
+      const working = path.join(root, EXAMPLES);
+      const story = path.dirname(working);
+      const moved = path.join(outside, "story");
+      let linked = true;
+      let temporaries = 0;
+      between.hooks.push(
+        {
+          // Once the path is checked, just before the working file is read through it.
+          when: (call, [file]) => call === "open" && file === working,
+          run: async () => {
+            await rename(story, moved);
+            linked = await createSymlinkFixture(moved, story, "junction");
+          },
+        },
+        {
+          when: (call, [file]) =>
+            call === "open" && /\.merge-docs-[0-9a-f]+\.new$/u.test(file ?? ""),
+          run: () => {
+            temporaries += 1;
+            return Promise.resolve();
+          },
+          kept: true,
+        },
+      );
+      const result = await mergeDocs();
+      if (!linked) ctx.skip();
+      expect(result.stdout).toContain(`${EXAMPLES}: left as is; its working file or a directory`);
+      expect(temporaries).toBe(0);
+      expect(await readFile(path.join(moved, path.basename(EXAMPLES)), "utf8")).toBe(conflicted);
+      expect(result.code).toBe(1);
+    });
+
     // QFAI:EX-0001-0238-17
     it("leaves a working file that is not UTF-8 text", async () => {
       await sameSentence();
@@ -486,7 +537,12 @@ describe("qfai sdd merge-docs", () => {
     // QFAI:EX-0001-0238-19
     it("keeps a save that replaces the working file just before it is replaced", async () => {
       await sameSentence();
-      between.next = atomicSave;
+      const working = path.join(root, EXAMPLES);
+      // Just before the working file is set aside.
+      between.hooks.push({
+        when: (call, [from]) => call === "rename" && from === working,
+        run: atomicSave,
+      });
       const result = await mergeDocs();
       expect(result.stdout).toContain(
         `${EXAMPLES}: left as is; the working file changed while it was merged`,
@@ -499,11 +555,12 @@ describe("qfai sdd merge-docs", () => {
     // QFAI:EX-0001-0238-19
     it("keeps a save made after the working file is set aside", async () => {
       await sameSentence();
-      // The first call sets the working file aside; the save lands before the second one.
-      between.next = () => {
-        between.next = () => writeFile(path.join(root, EXAMPLES), saved, "utf8");
-        return Promise.resolve();
-      };
+      const working = path.join(root, EXAMPLES);
+      // Just before the merged text is given the working file's name, which is then empty.
+      between.hooks.push({
+        when: (call, [, to]) => (call === "link" || call === "rename") && to === working,
+        run: () => writeFile(working, saved, "utf8"),
+      });
       const result = await mergeDocs();
       expect(result.stdout).toContain(
         `${EXAMPLES}: left as is; the working file changed while it was merged`,
@@ -511,6 +568,36 @@ describe("qfai sdd merge-docs", () => {
       expect(await read(EXAMPLES)).toBe(saved);
       expect(await leftover()).toEqual([]);
       expect(result.code).toBe(1);
+    });
+
+    // QFAI:EX-0001-0238-21
+    it("names the file that keeps the working text when neither text can take the name", async () => {
+      await sameSentence();
+      const conflicted = await read(EXAMPLES);
+      const working = path.join(root, EXAMPLES);
+      /** Every link or rename of a file ending in `suffix` to the working file's name fails. */
+      const refuse = (suffix: string, message: string): Hook => ({
+        when: (call, [from, to]) =>
+          (call === "link" || call === "rename") &&
+          to === working &&
+          from?.endsWith(suffix) === true,
+        run: () => Promise.reject(Object.assign(new Error(message), { code: "EIO" })),
+        kept: true,
+      });
+      between.hooks.push(
+        refuse(".new", "the merged text was refused"),
+        refuse(".old", "the put-back was refused"),
+      );
+      const result = await mergeDocs();
+      const kept = await leftover();
+      expect(kept).toHaveLength(1);
+      expect(kept[0]).toMatch(/^\.03_Example\.md\.merge-docs-[0-9a-f]{12}\.old$/u);
+      const keptPath = path.posix.join(path.posix.dirname(EXAMPLES), kept[0] ?? "");
+      expect(result.stdout).toContain("the merged text was refused");
+      expect(result.stdout).not.toContain("the put-back was refused");
+      expect(result.stdout).toContain(keptPath);
+      expect(await read(keptPath)).toBe(conflicted);
+      expect(result.code).toBe(2);
     });
   });
 

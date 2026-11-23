@@ -73,10 +73,12 @@ A fresh `qfai init` needs these on the machine before the first run:
 
 - Node.js 20.19.0 or later, to run `qfai` at all.
 - Python 3.10 or later, and [`uv`](https://docs.astral.sh/uv/). Init installs
-  the code and document graph runtimes with them; the graphs themselves are
-  built later, when the graph commands first run.
+  Graphify, the document graph runtime, with them.
+- npm, which ships with Node.js. Init installs CodeGraph, the code graph
+  runtime, with the npm of the Node.js that runs `qfai`.
 - Network access to the npm registry, which serves CodeGraph, and to PyPI,
-  which serves Graphify. Init downloads both on its first run.
+  which serves Graphify. Init downloads both on its first run; the graphs
+  themselves are built later, when the graph commands first run.
 
 > **Windows users:** `qfai init` creates symlinks internally.
 > You must enable **Developer Mode** (Settings → System → For developers → Developer Mode: ON)
@@ -465,7 +467,7 @@ flowchart LR
     or contradicts itself is still `ready`: SDD states each gap in its report.
   - `--assume <text>` (repeatable) records carry-over open questions / assumptions in the summary. Without it
     the carry-over list already present in the `<paths.outDir>/preflight_summary.md` pointer is preserved, not
-    overwritten.
+    overwritten. A pointer that is a symbolic link is not read: it is replaced, and nothing is carried over from it.
 
 ## Test annotations
 

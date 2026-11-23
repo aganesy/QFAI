@@ -566,12 +566,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai sdd preflight` reads no previous summary through a link.** A
+  `preflight_summary.md` that was a link to a file elsewhere was read before
+  being replaced: the run copied that file's carry-over list into its own
+  summary, and a newer run id in it left the latest summary unrefreshed. A
+  linked summary now counts as no previous summary and is replaced.
+  Closes #5060.
+
 - **`qfai session-review` redacts a quoted `password=` value whole.** The
   value was blanked only up to its first space, so `password="a b"` printed
   `[redacted] b"` in the report and in an error line. A value in double or
   single quotes is now blanked to its closing quote, past escaped quotes, or
   to the end of the line when it is never closed; a bare value is still
   blanked to the next whitespace. Closes #5020.
+
+- **Migration step 11 names a staging directory it could not remove.** When
+  step 11 replaced a shipped skill or step but could not remove the hidden
+  `.<id>-replace-*` directory it staged in, the failure was ignored: the
+  directory, holding the project's earlier copy, stayed under
+  `.qfai/assistant/` unreported, where a later commit could take it. Step 11
+  now lists that directory under `## For a person`, asks for it to be deleted
+  before the next commit, and exits 3. Closes #5061.
 
 - **`qfai workflow plan` refuses a plan whose added specification stage runs a
   step that is not installed.** A request naming the story tree can give a
@@ -749,6 +764,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   invalid JSON. They now drop one leading mark before parsing, as the
   `package.json` reader of `qfai atdd scaffold` already did.
 
+- **The README names the installer of each graph runtime.** Its init
+  prerequisites said Python and `uv` install both graph runtimes. Only
+  Graphify is installed with them; init installs CodeGraph with the npm of
+  the Node.js that runs `qfai`. Closes #5059.
+
 - **`qfai validate` reports a `.qfai/waivers.yml` it cannot read.** An
   existence probe that swallowed every error ran first, so a `.qfai` directory
   that could not be traversed read as having no waiver file and the
@@ -836,6 +856,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   report.** The quality gate and phase checklists named a misspelled
   destination that does not exist. Both now name the SDD report, matching the
   contract artifact rules. Closes #4933.
+
+- **`qfai sdd merge-docs` keeps the original error and names the kept text.**
+  When the merged text could not take a working file's name and the working
+  file could not be put back either, the run reported the put-back's error and
+  left the document's text in a hidden `.<name>.merge-docs-<hex>.old` file no
+  message named. It now reports the failure to place the merged text and names
+  that file. The story directories are also checked again just before the
+  temporary file is created, so a directory replaced by a link while the
+  document is merged receives no file, and the pinned file reader sizes its
+  buffer from the file instead of always allocating its ceiling, so each
+  document no longer costs two zero-filled 16 MiB buffers. Closes #5056.
 
 - **Reviewer cards read the technology contract from the configured contracts
   directory.** The architecture, implementation, product-surface and
@@ -2580,8 +2611,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the preflight summary there, and a `preflight_summary.md` that was a link was
   written through. Preflight now stops and names the linked directory without
   writing, also when `paths.outDir` lies outside the project and is itself a
-  link, and says so separately when a path it needs is a file. It writes each summary to a new file that replaces the old one,
-  so a linked summary file is replaced instead of followed.
+  link, and says so separately when a path it needs is a file. It writes each
+  summary to a new file that replaces the old one, so a linked summary file is
+  replaced instead of followed.
 
 - **A cyclic design token file no longer stops `qfai validate`.** A YAML alias
   that made a token group or a `$value` its own descendant overflowed the stack,
