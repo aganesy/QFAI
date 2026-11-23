@@ -736,6 +736,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   arguments, and its overloads were reported as one routine defined twice. The
   list is now read from the parenthesis that follows the name. Closes #5149.
 
+- **The graph ignore check covers every name graph setup writes under.** The
+  paths `qfai init` checks against an existing managed graph block missed the
+  CodeGraph install directory in its private home and most hidden directories
+  an analysis is prepared, refreshed, restored or replaced in, so a rule that
+  ignored only the checked paths left those visible to Git while the check
+  passed. The paths are now built from the same layout the writers use, with
+  one for each of those directories. Closes #5194.
+
 - **`qfai validate` records no pass in its run log when the result write
   fails.** The run log was written, with status `pass`, before `validate.json`;
   when the result write then failed, the command exited 1 while `validate.log`,
