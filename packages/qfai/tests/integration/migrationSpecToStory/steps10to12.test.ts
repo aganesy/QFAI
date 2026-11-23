@@ -411,9 +411,7 @@ describe("migration step 10: the managed .gitignore block", () => {
     const before = await readFile(other, "utf8");
     const result = await stepIn(root, 10);
     expect(result.code, result.output).toBe(0);
-    expect(await readFile(path.join(root, ".gitignore"), "utf8")).not.toContain(
-      "!.qfai/evidence/",
-    );
+    expect(await readFile(path.join(root, ".gitignore"), "utf8")).not.toContain("!.qfai/evidence/");
     expect(await readFile(other, "utf8")).toBe(before);
     expect((await stat(other)).nlink).toBe(1);
   });
