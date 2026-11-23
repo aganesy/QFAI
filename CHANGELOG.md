@@ -390,6 +390,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   session starts from that research. A run whose screens they all cover runs
   no research. Before, only `/qfai-discussion` ran the protocol. Closes #4293.
 
+- **A graph query whose code analysis runs out of time no longer suggests a
+  retry.** The 30-minute limit is fixed and the analysis has nothing to
+  resume, so a retry stopped the same way. The recovery now says the analysis
+  needs longer than QFAI allows. A code analysis stopped at its output limit
+  still suggests a retry. Closes #5196.
+
 - **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
   examples are green, each screen the flow adds or changes is placed in the
   shell its UI contract names, linked from its entry points, built from shared

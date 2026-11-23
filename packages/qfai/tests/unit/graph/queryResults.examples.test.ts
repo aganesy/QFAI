@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import { exploreGraph } from "../../../src/core/graph/query.js";
-import { documentAnalysisFixture } from "../../helpers/graphAnalysis.js";
+import { prepareGraphifyCodeAnalysis } from "../../../src/core/graph/documents.js";
+import { codeAnalysisFixture, documentAnalysisFixture } from "../../helpers/graphAnalysis.js";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -330,7 +331,7 @@ it("labels inferred relationships and retains the native source locations", asyn
 });
 
 // QFAI:EX-0001-0234-26
-// Mutation: packages/qfai/src/core/graph/codePreparation.ts `const cause = result && graphLimitCause("CodeGraph analysis", result);` -> `const cause = undefined;` fails "names the limit a managed query's analysis passed instead of a repair"
+// Mutation: packages/qfai/src/core/graph/codePreparation.ts `(result && codeAnalysisLimitRecovery("CodeGraph analysis", result)) ??` -> `undefined ??` fails "names the limit a managed query's analysis passed instead of a repair"
 it("names the limit a managed query's analysis passed instead of a repair", async () => {
   const fixture = await documentAnalysisFixture();
   try {
@@ -371,8 +372,9 @@ it("names the limit a managed query's analysis passed instead of a repair", asyn
       failure: "CodeGraph analysis preparation failed.",
     });
     expect(code.output).toContain(
-      "Cause: the CodeGraph analysis did not finish within 30 minutes and was stopped. Retry the graph query.",
+      "Cause: the CodeGraph analysis did not finish within 30 minutes and was stopped. The analysis needs longer than QFAI allows, so a retry stops the same way.",
     );
+    expect(code.output).not.toContain("Retry the graph query.");
     expect(code.output).not.toContain("Repair the local CodeGraph runtime");
     const documents = await graphCliResult(fixture.root, ["documents", "Changed rationale"], run);
     expect(documents.value).toMatchObject({
@@ -387,6 +389,38 @@ it("names the limit a managed query's analysis passed instead of a repair", asyn
       GRAPH_PROCESS_LIMITS.codeAnalysis,
       GRAPH_PROCESS_LIMITS.documentAnalysis,
     ]);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+// QFAI:EX-0001-0234-26
+// Mutation: packages/qfai/src/core/graph/documents.ts `...GRAPH_PROCESS_LIMITS.codeAnalysis,` -> `` fails "names the limit the Graphify code analysis passed, and offers a retry only after an output limit"
+it("names the limit the Graphify code analysis passed, and offers a retry only after an output limit", async () => {
+  const fixture = await codeAnalysisFixture();
+  try {
+    const limits: { timeoutMs: number | undefined; maxBufferBytes: number | undefined }[] = [];
+    const stopped: { failure: string; limit: "time" | "output" }[] = [
+      { failure: "did not finish within 30 minutes and was stopped", limit: "time" },
+      { failure: "printed more than 16 MiB of output and was stopped", limit: "output" },
+    ];
+    const run: GraphProcess = async (command, args, options) => {
+      if (!(args.includes("extract") && args.includes("--code-only")))
+        return fixture.run(command, args, options);
+      limits.push({ timeoutMs: options.timeoutMs, maxBufferBytes: options.maxBufferBytes });
+      return { exitCode: 1, stdout: "", ...stopped[limits.length - 1] };
+    };
+    expect(await prepareGraphifyCodeAnalysis(fixture.root, run)).toEqual({
+      status: "failed",
+      recovery:
+        "Cause: the Graphify code analysis did not finish within 30 minutes and was stopped. The analysis needs longer than QFAI allows, so a retry stops the same way.",
+    });
+    expect(await prepareGraphifyCodeAnalysis(fixture.root, run)).toEqual({
+      status: "failed",
+      recovery:
+        "Cause: the Graphify code analysis printed more than 16 MiB of output and was stopped. Retry the graph query.",
+    });
+    expect(limits).toEqual([GRAPH_PROCESS_LIMITS.codeAnalysis, GRAPH_PROCESS_LIMITS.codeAnalysis]);
   } finally {
     await fixture.dispose();
   }
