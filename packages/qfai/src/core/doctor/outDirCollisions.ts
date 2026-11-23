@@ -184,8 +184,9 @@ export async function detectOutDirCollisions(root: string): Promise<OutDirCollis
  *
  * Both sides of the comparison go through `canonicalizeOutDir`, so a
  * co-owner that reaches the directory through a symlink or junction is
- * still recognised; a directory that cannot be resolved at all throws,
- * which the pre-prune guard turns into a refusal to delete.
+ * still recognised; a directory that cannot be resolved at all, or that
+ * lies outside the scanned tree, throws, which the pre-prune guard turns
+ * into a refusal to delete.
  */
 export async function findOutDirCoOwners(
   root: string,
@@ -195,7 +196,10 @@ export async function findOutDirCoOwners(
 ): Promise<string[]> {
   const selfRoot = path.resolve(root);
   const target = await canonicalizeOutDir(outDirAbs);
-  const { ownersByCanonicalOutDir, scan } = await collectOutDirOwnership(selfRoot, scanLimit);
+  const { monorepoRoot, ownersByCanonicalOutDir, scan } = await collectOutDirOwnership(
+    selfRoot,
+    scanLimit,
+  );
   // A truncated scan is not "no co-owners" — it is "the question was not
   // answered". The glob stops at its file limit, so a co-owner enumerated
   // after the cut is simply absent from the map, and an empty result here
@@ -206,6 +210,17 @@ export async function findOutDirCoOwners(
   if (scan.truncated) {
     throw new Error(
       `outDir ownership scan hit its ${scan.limit}-file limit after ${scan.matchedFileCount} qfai.config.yaml matches; exclusive ownership of ${outDirAbs} cannot be proven`,
+    );
+  }
+  // A project outside the scanned tree can write into a directory outside
+  // it unseen, so only an `outDir` inside the tree can be proven exclusive.
+  // Outside a Git repository the tree is the project alone, which is what
+  // turns this from a corner case into the guard a shared parent needs.
+  const scannedTree = await canonicalizeOutDir(monorepoRoot);
+  const fromTree = path.relative(scannedTree, target);
+  if (fromTree === ".." || fromTree.startsWith(`..${path.sep}`) || path.isAbsolute(fromTree)) {
+    throw new Error(
+      `${outDirAbs} lies outside the scanned tree ${monorepoRoot}; exclusive ownership of it cannot be proven`,
     );
   }
   const owners = ownersByCanonicalOutDir.get(target);
@@ -225,23 +240,30 @@ export async function findOutDirCoOwners(
 }
 
 /**
- * The directory the config scan starts from: the nearest ancestor of
- * `startDir` holding `pnpm-workspace.yaml`, else the Git working-tree
- * root, else `startDir` itself.
+ * The directory the config scan starts from: inside a Git repository,
+ * the nearest ancestor of `startDir` up to the working-tree root holding
+ * `pnpm-workspace.yaml`, else the working-tree root. Outside any Git
+ * repository, `startDir` itself: nothing above the project bounds a
+ * workspace there, so a stray `pnpm-workspace.yaml` in a shared parent
+ * (a temporary directory, a home directory) is not read.
  *
  * The Git root comes from Git, not from a `.git` entry on disk. An empty
- * `.git` directory left in a shared parent (a temporary directory, say)
- * is not a repository, and treating it as one widened a standalone
- * project's scan to unrelated directories.
+ * `.git` directory left in a shared parent is not a repository, and
+ * treating it as one widened a standalone project's scan to unrelated
+ * directories.
  *
  * Whenever Git gives no usable answer, the on-disk marker walk decides
  * instead. That walk can only widen the scan, so the pre-prune guard
- * still sees every co-owner it would have seen before; a narrower scan
- * there could authorise deleting a sibling project's run logs.
+ * still sees every co-owner it would have seen before. A scan that stops
+ * short of a co-owner is covered by `findOutDirCoOwners`, which refuses
+ * to vouch for an `outDir` outside the scanned tree.
  */
 async function findMonorepoRoot(startDir: string): Promise<string> {
   const start = path.resolve(startDir);
   const gitRoot = await resolveGitRoot(start);
+  if (gitRoot.kind === "none") {
+    return start;
+  }
   if (gitRoot.kind === "unknown") {
     return findMarkerRoot(start, [".git", "pnpm-workspace.yaml"]);
   }
@@ -250,16 +272,14 @@ async function findMonorepoRoot(startDir: string): Promise<string> {
     if (await exists(path.join(current, "pnpm-workspace.yaml"))) {
       return current;
     }
-    if (gitRoot.kind === "root" && (await isSameDirectory(current, gitRoot.dir))) {
+    if (await isSameDirectory(current, gitRoot.dir)) {
       return current;
     }
     const parent = path.dirname(current);
     if (parent === current) {
       // Git named a root that is no ancestor under any spelling this walk
       // sees (a work tree set elsewhere, a mapped-drive alias).
-      return gitRoot.kind === "root"
-        ? findMarkerRoot(start, [".git", "pnpm-workspace.yaml"])
-        : start;
+      return findMarkerRoot(start, [".git", "pnpm-workspace.yaml"]);
     }
     current = parent;
   }

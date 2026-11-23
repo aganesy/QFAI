@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, readdir, rename, rm } from "node:fs/promises";
+import { cp, lstat, mkdir, readdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { isEnoent } from "../fs/errno.js";
 
@@ -65,4 +65,36 @@ export async function replaceGraphDirectory(
     throw cause;
   }
   if (retained) await rm(previous, { recursive: true, force: true });
+}
+
+/**
+ * Refreshes and checks an independent copy of the active `analysis`, made beside it, and switches
+ * the copy in only when `current` accepts what `check` found, so a failed refresh leaves the
+ * previous graph paired with the inputs it was built from. The copy is discarded in every case.
+ */
+export async function checkRefreshCopy<T>(
+  root: string,
+  analysis: string,
+  engine: string,
+  check: (staged: string) => Promise<T>,
+  current: (result: T) => boolean,
+): Promise<T> {
+  const staged = path.join(path.dirname(analysis), `.refreshing-${engine}-${randomUUID()}`);
+  await assertGraphStoragePath(root, staged);
+  try {
+    await cp(analysis, staged, { recursive: true, dereference: false });
+    const result = await check(staged);
+    if (current(result)) await replaceGraphDirectory(staged, analysis, root);
+    return result;
+  } finally {
+    await discardRefreshCopy(staged);
+  }
+}
+
+async function discardRefreshCopy(staged: string): Promise<void> {
+  try {
+    await rm(staged, { recursive: true, force: true, maxRetries: 3 });
+  } catch {
+    // The status already decided stands: a left-over hidden copy is never read as analysis.
+  }
 }

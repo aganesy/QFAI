@@ -84,7 +84,7 @@ it("retains prior document graph when the selected local backend cannot update c
 });
 
 // QFAI:EX-0001-0236-15
-// Mutation: packages/qfai/src/core/graph/documents.ts `if (status.current) await replaceGraphDirectory(staged, analysis, root);` -> `await replaceGraphDirectory(staged, analysis, root);` fails "keeps the prior graph paired with its prior inputs when a changed document cannot be refreshed"
+// Mutation: packages/qfai/src/core/graph/storage.ts `if (current(result)) await replaceGraphDirectory(staged, analysis, root);` -> `await replaceGraphDirectory(staged, analysis, root);` fails "keeps the prior graph paired with its prior inputs when a changed document cannot be refreshed"
 it("keeps the prior graph paired with its prior inputs when a changed document cannot be refreshed", async () => {
   const fixture = await documentAnalysisFixture();
   try {
@@ -123,7 +123,7 @@ function semanticChecksOf(fixture: Awaited<ReturnType<typeof documentAnalysisFix
   };
 }
 
-// Mutation: packages/qfai/src/core/graph/documents.ts `if (status.current) await replaceGraphDirectory(staged, analysis, root);` -> `` fails "activates refreshed inputs together with the graph they were verified against"
+// Mutation: packages/qfai/src/core/graph/storage.ts `if (current(result)) await replaceGraphDirectory(staged, analysis, root);` -> `` fails "activates refreshed inputs together with the graph they were verified against"
 it("activates refreshed inputs together with the graph they were verified against", async () => {
   const fixture = await documentAnalysisFixture();
   try {
@@ -218,7 +218,7 @@ it("checks the refresh copy's independence once before refreshing its inputs", a
   }
 });
 
-// Mutation: packages/qfai/src/core/graph/documents.ts `await discardRefreshCopy(staged);` -> `await rm(staged, { recursive: true, force: true });` fails "reports the checked status when the refresh copy cannot be removed"
+// Mutation: packages/qfai/src/core/graph/storage.ts `await discardRefreshCopy(staged);` -> `await rm(staged, { recursive: true, force: true });` fails "reports the checked status when the refresh copy cannot be removed"
 it("reports the checked status when the refresh copy cannot be removed", async () => {
   const fixture = await documentAnalysisFixture();
   try {
