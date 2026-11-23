@@ -6,7 +6,7 @@
 // QFAI:AC-0001-0244-06
 // QFAI:AC-0001-0244-07
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -245,6 +245,23 @@ describe("turn-end hook", () => {
     expect(second.systemMessage).toContain("ended anyway");
   });
 
+  // QFAI:EX-0001-0244-08
+  it("releases the turn when the same failure comes back through a link to the same root", async () => {
+    await script("fail.js", "type error\n", 1);
+    await project(["- Typecheck: `node fail.js`", "- Turn-end check: Typecheck"]);
+    const parent = await mkdtemp(path.join(os.tmpdir(), "qfai-turn-end-link-"));
+    try {
+      const link = path.join(parent, "root");
+      await symlink(root, link, "junction");
+      expect(parsed(await hook({ session_id: "s1" })).decision).toBe("block");
+      const linked = parsed(await hook({ cwd: link, session_id: "s1", stop_hook_active: true }));
+      expect(linked.decision).toBeUndefined();
+      expect(linked.systemMessage).toContain("ended anyway");
+    } finally {
+      await removeTempTree(parent);
+    }
+  });
+
   // QFAI:EX-0001-0244-09
   it("blocks again when the failure changes", async () => {
     await script("fail.js", "first error\n", 1);
@@ -284,6 +301,8 @@ describe("turn-end hook", () => {
       expect(parsed(await hook({ session_id: "s1" })).decision).toBe("block");
       const moved = parsed(await hook({ cwd: other, session_id: "s1", stop_hook_active: true }));
       expect(moved.decision).toBe("block");
+      expect(moved.reason).toContain("node fail.js");
+      expect(moved.reason).toContain("type error");
     } finally {
       await removeTempTree(other);
     }
