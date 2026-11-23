@@ -329,6 +329,7 @@
     "tests/integration/browserTestCouplingGuidance.test.ts",
     "tests/integration/cli/commands/doctorAutoremediate.confirm.test.ts",
     "tests/integration/cli/commands/doctorAutoremediate.noShell.test.ts",
+    "tests/integration/cli/commands/doctorAutoremediate.npmEntryMissing.test.ts",
     "tests/integration/cli/commands/doctorClean.runLogs.test.ts",
     "tests/integration/cli/commands/doctorSkillProfile.packageName.test.ts",
     "tests/integration/cli/commands/validate.profileCoverageNotice.test.ts",
