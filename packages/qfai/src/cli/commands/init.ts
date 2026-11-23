@@ -172,6 +172,9 @@ async function legacySpecLayoutPath(root: string): Promise<string | undefined> {
  *
  * The asset copies guard the entries below the directory they copy into, not that directory
  * itself, so a linked `.qfai` had every assistant file written wherever it points.
+ *
+ * Any link at `.qfai` is refused on purpose, a dangling one and one that resolves inside the
+ * project included: init does not resolve the link to decide whether its target is safe.
  */
 async function refuseUnsafeQfaiDirectory(root: string): Promise<void> {
   const qfaiDir = await findUnsafeWrapperComponent(root, ".qfai");

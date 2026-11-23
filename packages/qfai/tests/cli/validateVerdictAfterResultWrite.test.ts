@@ -1,6 +1,7 @@
 /**
  * `qfai validate` saves its result files before it prints a verdict, so a run
- * that could not save them never announces a pass.
+ * that could not save them never announces a pass, and before its run log, so
+ * the run log never records one either.
  *
  * `validateProject` is mocked to a clean result: the subject is what the run
  * prints when the write fails, not what the validators find. The write fails
@@ -107,4 +108,33 @@ describe("the validation verdict follows the saved result", () => {
     expect(printed.some((line) => line.includes("result=PASS"))).toBe(false);
     expect(printed.some((line) => line.includes("validate.json"))).toBe(false);
   });
+
+  // QFAI:EX-0001-0039-61
+  it.each(["text", "github"] as const)(
+    "a %s run that cannot write its result records fail, not pass, in the run log",
+    async (format) => {
+      const root = await projectWithUnwritableResult();
+
+      await expect(
+        runValidate({ root, strict: false, format, toolVersionOverride: "0.0.0-test" }),
+      ).rejects.toThrow(
+        "qfai validate: the validation result was not written: results is not a directory",
+      );
+
+      const reportDir = path.join(root, ".qfai", "report");
+      const validateLog = await readFile(path.join(reportDir, "validate.log"), "utf-8");
+      expect(validateLog).toContain("- status: fail");
+      expect(validateLog).not.toContain("- status: pass");
+      const runDir = /^- run_log: (.+)$/m.exec(validateLog)?.[1];
+      expect(runDir).toBeDefined();
+      const runJson: unknown = JSON.parse(
+        await readFile(path.join(root, runDir ?? "", "run.json"), "utf-8"),
+      );
+      expect(runJson).toMatchObject({ result: { status: "fail" } });
+      const validatorJson: unknown = JSON.parse(
+        await readFile(path.join(root, runDir ?? "", "validator.json"), "utf-8"),
+      );
+      expect(validatorJson).toMatchObject({ status: "fail" });
+    },
+  );
 });

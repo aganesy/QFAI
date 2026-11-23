@@ -112,17 +112,6 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       ? "fail"
       : "pass";
 
-  const runLog = await writeValidateRunLog({
-    root,
-    config: configResult.config,
-    result: normalized,
-    startedAt,
-    command: "/qfai-validate",
-    status,
-    failOn,
-  });
-  const runLogPath = toRelativePath(root, runLog.reportDir);
-
   // A `--flow` run is one worker's view of one slice, so it writes its own
   // report rather than the shared one. Resolve it BEFORE the GitHub summary:
   // pointed at the shared `validate.json`, that summary would name a file this
@@ -144,25 +133,37 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
 
   // The result files are written before any verdict is printed, so a run that
   // could not save them never announces a pass or points at a file it did not
-  // write; the write failure then stops the command and exits 1.
+  // write; the write failure then stops the command and exits 1. They are also
+  // written before the run log, so the run log records such a run as failed
+  // rather than as the pass its findings alone would make it.
   if (format === "text") {
     emitText(normalized, failOn, designAuditFindingsShownPerCode(configResult.config));
-    // Kept, not thrown here: the run log was written, so `run-log:` still ends
-    // the output before the failure reaches stderr.
-    const writeFailure = await writeResult().then(
-      () => null,
-      (error: unknown) => ({ error }),
-    );
+  }
+  // Kept, not thrown here: the run log is still written, and under `text`
+  // `run-log:` still ends the output before the failure reaches stderr.
+  const writeFailure = await writeResult().then(
+    () => null,
+    (error: unknown) => ({ error }),
+  );
+  const runLog = await writeValidateRunLog({
+    root,
+    config: configResult.config,
+    result: normalized,
+    startedAt,
+    command: "/qfai-validate",
+    status: writeFailure !== null && status === "pass" ? "fail" : status,
+    failOn,
+  });
+  const runLogPath = toRelativePath(root, runLog.reportDir);
+  if (format === "text") {
     if (writeFailure === null && status === "pass") {
       const elapsedMs = Date.now() - startedAt.getTime();
       process.stdout.write(`${formatPassSummary(normalized, failOn, elapsedMs)}\n`);
     }
     process.stdout.write(`${formatRunLogLine(runLogPath)}\n`);
-    if (writeFailure !== null) {
-      throw writeFailure.error;
-    }
-  } else {
-    await writeResult();
+  }
+  if (writeFailure !== null) {
+    throw writeFailure.error;
   }
   if (format === "github") {
     const jsonPath = resolveJsonPath(root, resultPaths?.write[0] ?? configuredValidateJsonPath);

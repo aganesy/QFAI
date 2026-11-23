@@ -646,6 +646,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pass `--paginate`, and the per-item `--jq` filters still print one line per
   run or job.
 
+- **`qfai validate` records no pass in its run log when the result write
+  fails.** The run log was written, with status `pass`, before `validate.json`;
+  when the result write then failed, the command exited 1 while `validate.log`,
+  `run.json`, `validator.json` and `summary.md` still recorded a pass. The run
+  log is now written after the result files, and a run that could not write
+  them records the status `fail`.
+
 - **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
   shipped workflow edited to run a job on two operating systems and three
   Node versions was reported as three runner allocations instead of six,
@@ -710,12 +717,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   write path's guard before reading and exits 1 naming the linked path, or the
   catalogue path when it is a link or not a file. Closes #5048.
 
-- **`qfai doctor` no longer reads a `pnpm-workspace.yaml` above a project that
-  is in no Git repository.** A stray one in a shared parent widened the
-  output-directory collision scan to unrelated projects. Outside a Git
-  repository the scan now covers the project directory alone, and
-  `qfai doctor --clean` keeps the run logs of an `outDir` that lies outside the
-  scanned tree, since no scan can prove it unshared. Closes #5117.
+- **`qfai catalog design` puts both files back on a volume with no inode
+  numbers, and names a moved-aside file it cannot remove.** On such a volume a
+  failed write left the new token file and a hidden moved-aside file behind;
+  the undo now tells its own placed file by its bytes and restores the pair.
+  After a successful write, a moved-aside file that cannot be removed, such as
+  one Windows holds open, no longer rejects the command without its message: it
+  exits 1 with one line that says both files were written and names the file
+  it kept. Closes #5093.
 
 - **`qfai doctor` refuses a skill dependency that npm would install from a
   local tarball.** An unscoped `runtimeDependencies` entry ending in `.tgz`,
@@ -726,6 +735,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which could run the project's own `node_modules/npm` as npm, and finds it
   under a quoted one. Refused entries escape format and separator characters
   such as U+202E in the doctor message. Closes #5092.
+
+- **`QFAI-CONTRACT-036` reads PostgreSQL escape strings.** The apply-order
+  check ended an `E'…'` string at a backslash-escaped quote, so in
+  `E'it\'s'` the rest of the line could open a stray string that hid a real
+  `REFERENCES`, or text inside the literal could be read as one. It now reads
+  string literals by the rule the statement splitter follows: a lone `E` or
+  `e` before the quote opens an escape string, in which a backslash escapes
+  the next character. Closes #5137.
 
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
@@ -826,6 +843,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prerequisites said Python and `uv` install both graph runtimes. Only
   Graphify is installed with them; init installs CodeGraph with the npm of
   the Node.js that runs `qfai`. Closes #5059.
+
+- **`qfai doctor` no longer reads a `pnpm-workspace.yaml` above a project that
+  is in no Git repository.** A stray one in a shared parent widened the
+  output-directory collision scan to unrelated projects. Outside a Git
+  repository the scan now covers the project directory alone, and
+  `qfai doctor --clean` keeps the run logs of an `outDir` that lies outside the
+  scanned tree, since no scan can prove it unshared. Closes #5117.
 
 - **`qfai validate` reports a `.qfai/waivers.yml` it cannot read.** An
   existence probe that swallowed every error ran first, so a `.qfai` directory
@@ -2521,8 +2545,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pointed. A story-tree seed path under a link was refused only after the root
   assets and `AGENTS.md` had already been written. Init now checks `.qfai` and
   the seed paths before it writes anything, and stops with the path named when
-  `.qfai` is a link or not a directory, leaving every project file as it was.
-  Closes #4471.
+  `.qfai` is a link or not a directory, or when a contract kind directory under
+  `.qfai/spec/03_contract/` is a link or not a directory, leaving every project
+  file as it was. Any link at `.qfai` is refused, including a dangling one and
+  one that resolves inside the project. Closes #4471.
 
 - **`qfai init --force` no longer removes another run's staging file.** Each
   run first removed every leftover `.qfai-init-*` staging file in
