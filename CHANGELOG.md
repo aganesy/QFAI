@@ -692,6 +692,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   invalid JSON. They now drop one leading mark before parsing, as the
   `package.json` reader of `qfai atdd scaffold` already did.
 
+- **The README names the installer of each graph runtime.** Its init
+  prerequisites said Python and `uv` install both graph runtimes. Only
+  Graphify is installed with them; init installs CodeGraph with the npm of
+  the Node.js that runs `qfai`. Closes #5059.
+
 - **`qfai validate` reports a `.qfai/waivers.yml` it cannot read.** An
   existence probe that swallowed every error ran first, so a `.qfai` directory
   that could not be traversed read as having no waiver file and the
