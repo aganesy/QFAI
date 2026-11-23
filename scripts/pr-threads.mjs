@@ -291,10 +291,11 @@ function readThreads(owner, repo, number) {
 /**
  * The comments of a pull request, page by page until a page is not full.
  *
- * `complete` is false when a call failed, an answer was not a list, or the
- * reserve stopped the reading after a full page, so the comments read may be
- * short. `budget` is the last
- * remaining-budget line, printed once after the answer.
+ * `complete` is false when a call failed, an answer was not a list of
+ * comments, or the reserve stopped the reading after a full page, so the
+ * comments read may be short. An answer that is not a list stops the reading
+ * with code 2, as a failed call does. `budget` is the last remaining-budget
+ * line, printed once after the answer.
  */
 function readComments(slug, number) {
   const comments = [];
@@ -305,12 +306,19 @@ function readComments(slug, number) {
     const code = callAndReport(
       `repos/${slug}/issues/${number}/comments?per_page=${String(PAGE_SIZE)}&page=${String(page)}`,
       (body) => {
-        const items = JSON.parse(body);
-        if (Array.isArray(items)) {
-          read = true;
-          comments.push(...items);
-          full = items.length === PAGE_SIZE;
+        let items;
+        try {
+          items = JSON.parse(body);
+        } catch {
+          items = undefined;
         }
+        if (!Array.isArray(items)) {
+          console.error(`GitHub's answer for page ${String(page)} of the comments is not a list.`);
+          return 2;
+        }
+        read = true;
+        comments.push(...items);
+        full = items.length === PAGE_SIZE;
         return 0;
       },
       (line) => {

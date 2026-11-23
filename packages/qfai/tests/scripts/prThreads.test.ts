@@ -491,10 +491,14 @@ describe("listing a pull request that holds more than one page", () => {
     expect(out).toContain("Incomplete: not every page of comments was read");
   });
 
-  it("says the count is incomplete when a page of comments is not a list", () => {
+  it.each([
+    ["an object", JSON.stringify({ message: "x" })],
+    ["not JSON", "<html>Bad gateway</html>"],
+  ])("returns 2 and says the count is incomplete when a page of comments is %s", (_, body) => {
     calls.threadPages.push(threadPage([], null));
-    calls.commentPages.push(`HTTP/2.0 200 OK\n\n${JSON.stringify({ message: "x" })}`);
-    const { out } = listOutput();
+    calls.commentPages.push(`HTTP/2.0 200 OK\n\n${body}`);
+    const { code, out } = listOutput();
+    expect(code).toBe(2);
     expect(out).toContain("Codex review comments: 0");
     expect(out).toContain("Incomplete: not every page of comments was read");
   });
