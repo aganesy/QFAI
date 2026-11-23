@@ -517,8 +517,8 @@ describe("story-tree core", () => {
     for (const id of [
       "BF-0001",
       "US-0001-0001",
-      ...scope.acceptanceCriteriaIds,
-      ...scope.exampleIds,
+      "AC-0001-0001-01",
+      "EX-0001-0001-01",
       "BR-API-0001-0001",
     ]) {
       expect(flowScopeContainsId(scope, id)).toBe(true);
