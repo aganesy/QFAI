@@ -23,7 +23,7 @@
 import path from "node:path";
 
 import { declaredContractId, extractDeclaredDependencies } from "../contractsDecl.js";
-import { DOLLAR_QUOTE_MARKER } from "../sqlContract.js";
+import { DOLLAR_QUOTE_MARKER, opensEscapeString } from "../sqlContract.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -110,18 +110,46 @@ export function tableName(raw: string): TableName {
 }
 
 /**
- * A line comment, a block comment, a quoted string, a double-quoted
- * identifier, or a dollar-quoted literal.
+ * A line comment, a block comment, the opening quote of a string, a
+ * double-quoted identifier, or a dollar-quoted literal.
  *
  * A dollar-quoted literal opens with `$$` or `$tag$` and closes at the same
  * marker, so the marker is captured and matched again by backreference. A
  * quoted identifier is matched so that a `$tag$`, `'` or `--` inside it opens
  * nothing; it is kept, not blanked, because it may be the table a key names.
+ * A string is matched by its opening quote alone and read on by
+ * {@link stringLiteralEnd}, because where it ends depends on what precedes it.
  */
-const SQL_NOISE = new RegExp(
-  String.raw`--[^\n]*|\/\*[\s\S]*?\*\/|'(?:[^']|'')*'|${QUOTED_IDENTIFIER}|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`,
-  "g",
-);
+const SQL_NOISE = String.raw`--[^\n]*|\/\*[\s\S]*?\*\/|'|${QUOTED_IDENTIFIER}|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`;
+
+/**
+ * The offset just past the string literal whose opening quote is at `quoteAt`,
+ * or undefined when it never closes.
+ *
+ * Read by the rule the statement splitter follows: `''` stands for one quote,
+ * and in an `E'…'` escape string a backslash escapes the next character, so
+ * `E'it\'s'` is one literal.
+ */
+function stringLiteralEnd(sql: string, quoteAt: number): number | undefined {
+  const escapes = opensEscapeString(sql, quoteAt);
+  let cursor = quoteAt + 1;
+  while (cursor < sql.length) {
+    const ch = sql[cursor];
+    if (escapes && ch === "\\") {
+      cursor += 2;
+      continue;
+    }
+    if (ch === "'") {
+      if (sql[cursor + 1] !== "'") {
+        return cursor + 1;
+      }
+      cursor += 2;
+      continue;
+    }
+    cursor += 1;
+  }
+  return undefined;
+}
 
 /**
  * SQL with its comments and string literals blanked, keeping every offset.
@@ -129,12 +157,31 @@ const SQL_NOISE = new RegExp(
  * A `REFERENCES` inside a comment is prose, and one inside a quoted string is
  * data. Removing the text would move the rest; replacing each character with a
  * space leaves the file the same length, so a later match still lands where the
- * reader sees it. Double-quoted identifiers are left as they are.
+ * reader sees it. Double-quoted identifiers are left as they are, and so is a
+ * string that never closes.
  */
 export function blankSqlNoise(sql: string): string {
-  return sql.replace(SQL_NOISE, (matched) =>
-    matched.startsWith('"') ? matched : matched.replace(/[^\n]/g, " "),
-  );
+  const noise = new RegExp(SQL_NOISE, "g");
+  let blanked = "";
+  let copied = 0;
+  for (let match = noise.exec(sql); match !== null; match = noise.exec(sql)) {
+    const start = match.index;
+    let end = start + match[0].length;
+    if (match[0] === "'") {
+      const close = stringLiteralEnd(sql, start);
+      if (close === undefined) {
+        continue;
+      }
+      end = close;
+      noise.lastIndex = end;
+    }
+    if (sql[start] === '"') {
+      continue;
+    }
+    blanked += sql.slice(copied, start) + sql.slice(start, end).replace(/[^\n]/g, " ");
+    copied = end;
+  }
+  return blanked + sql.slice(copied);
 }
 
 /** Every table `sql` creates, and every table it points a foreign key at, by {@link TableName.key}. */

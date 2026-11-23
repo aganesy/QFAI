@@ -658,6 +658,43 @@ describe("the read boundary", () => {
       },
     );
   });
+
+  it("reports a missing document cited under a ..drafts directory in the tree", async () => {
+    // `..drafts/` is a directory of the tree, so the citation names a document
+    // QFAI owns; reading the name as a parent step let the drift pass.
+    await withAssistantTree(
+      {
+        ".qfai/assistant/skill/qfai-sdd/SKILL.md": [
+          "# qfai-sdd",
+          "",
+          "Classify per `.qfai/assistant/..drafts/missing.md#drift-classes`.",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const issues = await run(root);
+        expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-002"]);
+        expect(issues[0]?.rule).toBe("assistantAnchorReferences.missingTarget");
+      },
+    );
+  });
+
+  it("stays silent on a missing document cited through a real parent step", async () => {
+    // `.qfai/assistant/../drafts/` leaves the tree, so the citation is not QFAI's.
+    await withAssistantTree(
+      {
+        ".qfai/assistant/skill/qfai-sdd/SKILL.md": [
+          "# qfai-sdd",
+          "",
+          "Classify per `.qfai/assistant/../drafts/missing.md#drift-classes`.",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        expect(await run(root)).toEqual([]);
+      },
+    );
+  });
 });
 
 describe("profile wiring", () => {

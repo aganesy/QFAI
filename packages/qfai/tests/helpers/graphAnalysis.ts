@@ -28,7 +28,8 @@ export async function codeAnalysisFixture() {
         stdout: JSON.stringify({
           initialized: true,
           version: GRAPH_VERSIONS.codegraph,
-          projectPath: analysis,
+          // Native status reports the analysis directory it was given.
+          projectPath: args[args.indexOf("status") + 1],
           worktreeMismatch: null,
           index: {
             state: "complete",

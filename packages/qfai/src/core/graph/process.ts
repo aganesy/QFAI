@@ -226,20 +226,75 @@ export function graphLimitCause(step: string, result: GraphProcessResult): strin
   return result.limit && result.failure ? `Cause: the ${step} ${result.failure}.` : undefined;
 }
 
-export async function npmCommand(): Promise<{ command: string; prefix: string[] }> {
-  const node = await realpath(process.execPath);
+/** Windows has npm's JavaScript entry neither beside Node nor under a directory on `PATH`. */
+export class NpmEntryNotFoundError extends Error {
+  constructor() {
+    super("npm's JavaScript entry (npm-cli.js) was not found beside node or on PATH");
+    this.name = "NpmEntryNotFoundError";
+  }
+}
+
+/** Where `npmCommand` looks; tests pass their own. Defaults to the running Node and `PATH`. */
+export interface NpmLookup {
+  nodeDirectory?: string;
+  searchPath?: string;
+}
+
+/**
+ * The program and leading arguments that start npm without a shell, for doctor's installs and
+ * graph provisioning alike. npm's JavaScript entry beside Node runs with Node. Without one, POSIX
+ * starts the `npm` launcher, an executable script. Windows' launcher is a `.cmd` file only a shell
+ * can start, so Windows looks for the entry under a directory on `PATH` instead, and throws
+ * `NpmEntryNotFoundError` when it finds none.
+ */
+export async function npmCommand(
+  lookup: NpmLookup = {},
+): Promise<{ command: string; prefix: string[] }> {
+  const nodeDirectory = lookup.nodeDirectory ?? path.dirname(await realpath(process.execPath));
   const candidates = [
-    path.join(path.dirname(node), "node_modules", "npm", "bin", "npm-cli.js"),
-    path.resolve(path.dirname(node), "..", "lib", "node_modules", "npm", "bin", "npm-cli.js"),
+    path.join(nodeDirectory, "node_modules", "npm", "bin", "npm-cli.js"),
+    path.resolve(nodeDirectory, "..", "lib", "node_modules", "npm", "bin", "npm-cli.js"),
   ];
   for (const candidate of candidates) {
     try {
       await access(candidate);
       return { command: process.execPath, prefix: [candidate] };
     } catch (cause: unknown) {
-      if (!(cause instanceof Error) || !("code" in cause) || cause.code !== "ENOENT") throw cause;
+      if (!isEnoent(cause)) throw cause;
     }
   }
-  // POSIX npm launchers are executable scripts. Windows uses the JS entry above.
-  return { command: "npm", prefix: [] };
+  if (process.platform !== "win32") return { command: "npm", prefix: [] };
+  const entry = await npmEntryOnPath(lookup.searchPath ?? process.env["PATH"] ?? "");
+  if (entry === undefined) throw new NpmEntryNotFoundError();
+  return { command: process.execPath, prefix: [entry] };
+}
+
+/**
+ * npm's JavaScript entry at `node_modules/npm/bin/npm-cli.js` under a
+ * directory on `searchPath`, the layout the Node installer and nvm-windows
+ * use beside their `npm.cmd` launcher. A directory Windows lists in double
+ * quotes is read without them. A relative directory is skipped: it resolves
+ * against the project, so a project's own `node_modules/npm` would run as
+ * npm. Undefined when no directory on the path holds one.
+ */
+export async function npmEntryOnPath(searchPath: string): Promise<string | undefined> {
+  for (const listed of searchPath.split(path.delimiter)) {
+    const dir = unquotePathEntry(listed);
+    if (!path.isAbsolute(dir)) continue;
+    const entry = path.join(dir, "node_modules", "npm", "bin", "npm-cli.js");
+    try {
+      await access(entry);
+      return entry;
+    } catch {
+      // Not in this directory; the next one may hold it.
+    }
+  }
+  return undefined;
+}
+
+/** A `PATH` entry without the double quotes Windows allows around it. */
+function unquotePathEntry(entry: string): string {
+  return entry.length >= 2 && entry.startsWith('"') && entry.endsWith('"')
+    ? entry.slice(1, -1)
+    : entry;
 }

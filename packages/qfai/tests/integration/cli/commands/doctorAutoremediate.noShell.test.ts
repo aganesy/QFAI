@@ -32,7 +32,7 @@ vi.mock("node:child_process", async () => {
   };
 });
 
-const { npmEntryOnPath, npmInstallInvocation, runAutoremediate } =
+const { npmInstallInvocation, runAutoremediate } =
   await import("../../../../src/core/doctor/autoremediate.js");
 
 const tempDirs: string[] = [];
@@ -56,47 +56,6 @@ describe("the default install runner starts npm without a shell", () => {
     if (process.platform === "win32") {
       // npm's `.cmd` launcher needs a shell, so Windows starts npm's JavaScript entry with Node.
       expect(invocation.command).toBe(process.execPath);
-    }
-  });
-
-  // Windows falls back to this when npm-cli.js is not beside node.
-  it("finds npm's JavaScript entry beside an npm on the search path", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-autoremediate-npmpath-"));
-    tempDirs.push(root);
-    const withNpm = path.join(root, "with-npm");
-    const entry = path.join(withNpm, "node_modules", "npm", "bin", "npm-cli.js");
-    await mkdir(path.dirname(entry), { recursive: true });
-    await writeFile(entry, "", "utf-8");
-    const searchPath = ["", path.join(root, "without-npm"), withNpm].join(path.delimiter);
-    expect(await npmEntryOnPath(searchPath)).toBe(entry);
-    expect(await npmEntryOnPath(path.join(root, "without-npm"))).toBeUndefined();
-  });
-
-  // Windows lets a PATH entry be quoted, as when it holds the delimiter.
-  it("reads a double-quoted search path entry without its quotes", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-autoremediate-quoted-"));
-    tempDirs.push(root);
-    const entry = path.join(root, "node_modules", "npm", "bin", "npm-cli.js");
-    await mkdir(path.dirname(entry), { recursive: true });
-    await writeFile(entry, "", "utf-8");
-    expect(await npmEntryOnPath(`"${root}"`)).toBe(entry);
-  });
-
-  // A relative entry resolves against the project, whose own node_modules/npm would run as npm.
-  it("skips a relative search path entry", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-autoremediate-relative-"));
-    tempDirs.push(root);
-    const entry = path.join(root, "node_modules", "npm", "bin", "npm-cli.js");
-    await mkdir(path.dirname(entry), { recursive: true });
-    await writeFile(entry, "", "utf-8");
-    const previous = process.cwd();
-    process.chdir(root);
-    try {
-      expect(await npmEntryOnPath(".")).toBeUndefined();
-      expect(await npmEntryOnPath(`"."`)).toBeUndefined();
-      expect(await npmEntryOnPath(root)).toBe(entry);
-    } finally {
-      process.chdir(previous);
     }
   });
 

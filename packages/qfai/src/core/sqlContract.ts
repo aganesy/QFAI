@@ -287,7 +287,7 @@ export const IDENTIFIER_CHAR = new RegExp(IDENTIFIER_CHAR_CLASS);
  * The prefix is a lone `E` or `e`. One that ends a longer identifier, as in
  * `name'x'`, belongs to that name, and the quote opens a standard string.
  */
-function opensEscapeString(text: string, quoteAt: number): boolean {
+export function opensEscapeString(text: string, quoteAt: number): boolean {
   const prefix = text[quoteAt - 1];
   if (prefix !== "E" && prefix !== "e") return false;
   return !IDENTIFIER_CHAR.test(text[quoteAt - 2] ?? "");
@@ -407,25 +407,25 @@ const IDENTIFIER_START = new RegExp(IDENTIFIER_START_CLASS);
  * keeps its case, with `""` standing for one `"`. A quoted part is written back
  * without its quotes unless it holds a `.` or a `"`, the two characters no bare
  * part can hold; that keeps `"a.b"`, one name, apart from `a.b`, a schema and a
- * table. Returns `""` when no whole name starts there: a quoted part that never
- * closes, or a part missing after a `.`, names nothing.
+ * table. `end` is the index just past the name's last part. Returns undefined
+ * when no whole name starts there: a quoted part that never closes, or a part
+ * missing after a `.`, names nothing.
  *
  * Ceiling: a `U&"…"` part is not read, because its Unicode escapes are not
  * decoded, so an object named that way is not recorded at all.
  * Lift when: a contract needs a `U&` name checked for redefinition.
  */
-function readQualifiedName(text: string, from: number): string {
+function readQualifiedName(text: string, from: number): { name: string; end: number } | undefined {
   const parts: string[] = [];
   let index = from;
   for (;;) {
     const part = readNamePart(text, index);
-    if (!part) return "";
+    if (!part) return undefined;
     parts.push(part.name);
     index = skipSpaces(text, part.end);
-    if (text[index] !== ".") break;
+    if (text[index] !== ".") return { name: parts.join("."), end: part.end };
     index = skipSpaces(text, index + 1);
   }
-  return parts.join(".");
 }
 
 function readNamePart(text: string, from: number): { name: string; end: number } | undefined {
@@ -488,13 +488,13 @@ export function collectCreatedObjects(statements: SqlStatement[]): CreatedObject
       if (UNNAMED_INDEX_AT.test(statement.text.slice(nameAt))) continue;
     }
     const name = readQualifiedName(statement.text, nameAt);
-    if (name.length === 0) continue;
+    if (!name) continue;
     created.push({
       kind,
-      name,
+      name: name.name,
       signature:
         kind === "FUNCTION" || kind === "PROCEDURE"
-          ? identityArgumentTypes(argumentList(statement.text), kind)
+          ? identityArgumentTypes(argumentList(statement.text, name.end), kind)
           : "",
       line: statement.line,
     });
@@ -502,10 +502,15 @@ export function collectCreatedObjects(statements: SqlStatement[]): CreatedObject
   return created;
 }
 
-/** The text inside the parentheses of a `CREATE FUNCTION` / `PROCEDURE`. */
-function argumentList(statement: string): string {
-  const open = statement.indexOf("(");
-  if (open === -1) return "";
+/**
+ * The text inside the parentheses that follow a `CREATE FUNCTION` /
+ * `PROCEDURE` routine name ending at `nameEnd`. A quoted name may itself hold
+ * a `(`, so the search starts after the name rather than at the statement's
+ * first parenthesis.
+ */
+function argumentList(statement: string, nameEnd: number): string {
+  const open = skipSpaces(statement, nameEnd);
+  if (statement[open] !== "(") return "";
   let depth = 0;
   for (let index = open; index < statement.length; index += 1) {
     const ch = statement[index];
