@@ -976,9 +976,9 @@ the timing endpoint for a single run reports `billable` as zero, and the detaile
 usage report needs an admin. This method needs only read access to the repository:
 
 1. List the runs of one pull request, by its head commit:
-   `gh api "repos/OWNER/REPO/actions/runs?head_sha=SHA" --jq '.workflow_runs[].id'`
+   `gh api --paginate "repos/OWNER/REPO/actions/runs?head_sha=SHA&per_page=100" --jq '.workflow_runs[].id'`
 2. For each run, list its jobs:
-   `gh api "repos/OWNER/REPO/actions/runs/RUN_ID/jobs?per_page=100" --jq '.jobs[] | [.name, .conclusion, .started_at, .completed_at] | @tsv'`
+   `gh api --paginate "repos/OWNER/REPO/actions/runs/RUN_ID/jobs?per_page=100" --jq '.jobs[] | [.name, .conclusion, .started_at, .completed_at] | @tsv'`
 3. A job bills `max(1, ceil(seconds / 60))` minutes, where the seconds run from
    `started_at` to `completed_at`. A skipped job bills zero.
 4. Compare pull requests by the same author and of the same kind of change, and
