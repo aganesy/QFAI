@@ -566,6 +566,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai sdd preflight` reads no previous summary through a link.** A
+  `preflight_summary.md` that was a link to a file elsewhere was read before
+  being replaced: the run copied that file's carry-over list into its own
+  summary, and a newer run id in it left the latest summary unrefreshed. A
+  linked summary now counts as no previous summary and is replaced.
+  Closes #5060.
+
 - **`qfai session-review` redacts a quoted `password=` value whole.** The
   value was blanked only up to its first space, so `password="a b"` printed
   `[redacted] b"` in the report and in an error line. A value in double or
@@ -2577,8 +2584,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the preflight summary there, and a `preflight_summary.md` that was a link was
   written through. Preflight now stops and names the linked directory without
   writing, also when `paths.outDir` lies outside the project and is itself a
-  link, and says so separately when a path it needs is a file. It writes each summary to a new file that replaces the old one,
-  so a linked summary file is replaced instead of followed.
+  link, and says so separately when a path it needs is a file. It writes each
+  summary to a new file that replaces the old one, so a linked summary file is
+  replaced instead of followed.
 
 - **A cyclic design token file no longer stops `qfai validate`.** A YAML alias
   that made a token group or a `$value` its own descendant overflowed the stack,

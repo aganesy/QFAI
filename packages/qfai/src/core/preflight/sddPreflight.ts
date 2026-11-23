@@ -10,6 +10,7 @@ import {
   recordedRunStart,
   replaceFile,
 } from "../runLog.js";
+import { isInside } from "../validators/utils.js";
 
 const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
 /**
@@ -336,14 +337,9 @@ async function publishPreflightSummary(run: PreflightRun, body: string): Promise
   });
 }
 
-/** Whether `target` is `base` or lies under it, compared as paths. */
-function isWithin(base: string, target: string): boolean {
-  const relative = path.relative(base, target);
-  return relative === "" || (!path.isAbsolute(relative) && relative.split(path.sep)[0] !== "..");
-}
-
 /**
- * Create `directory` under `reportRoot` and prove it physically lies there.
+ * Create `directory` under `reportRoot`, stopping when a check finds that it
+ * does not lie there.
  *
  * When `paths.outDir` lies in the project, which the default `.qfai/report`
  * does, every component from the project root down is checked and the
@@ -353,14 +349,20 @@ function isWithin(base: string, target: string): boolean {
  * or a junction would carry every write to wherever it points: `mkdir` and
  * `writeFile` both follow it. So each component is `lstat`-ed before and after
  * creating the directory, and the directory's real path is checked against the
- * start's. Nothing is written when any check fails.
+ * start's. No summary is written when a check fails.
+ *
+ * Ceiling: this is a check, then writes. Another process that swaps a checked
+ * directory for a link after the check is not caught: `mkdir`, the run
+ * directory allocation and the summaries' rename all follow a linked parent
+ * directory. Closing the window needs directory handles opened without
+ * following links, which Node does not offer portably; lift this if it does.
  */
 async function ensureDirectoryWithin(
   root: string,
   reportRoot: string,
   directory: string,
 ): Promise<void> {
-  const insideRoot = isWithin(root, reportRoot);
+  const insideRoot = isInside(root, reportRoot);
   const containment = insideRoot ? root : reportRoot;
   // `blockedAncestor` checks the components below the path it starts from, so
   // an outside `paths.outDir` is walked from its parent to check it too, and a
@@ -372,7 +374,7 @@ async function ensureDirectoryWithin(
   await mkdir(directory, { recursive: true });
   await refuseBlockedComponent(root, walkFrom, probe);
 
-  if (!isWithin(await realpath(containment), await realpath(directory))) {
+  if (!isInside(await realpath(containment), await realpath(directory))) {
     throw new Error(
       `${toDisplayPath(root, directory)} resolves outside ${toDisplayPath(root, containment)}, ` +
         "so the preflight summary would be written outside the output directory. " +
