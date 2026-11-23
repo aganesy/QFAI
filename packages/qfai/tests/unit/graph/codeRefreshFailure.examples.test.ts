@@ -6,7 +6,7 @@ import type { GraphProcess } from "../../../src/core/graph/process.js";
 import { completedCodeSnapshotFixture } from "../../helpers/graphReuse.js";
 
 // QFAI:EX-0001-0236-20
-// Mutation: packages/qfai/src/core/graph/analysis.ts `if (refresh === "in-place") await mirrorGraphCorpus(root, analysis);` -> `await mirrorGraphCorpus(root, analysis);` fails "keeps the prior code graph paired with its prior inputs when a changed source cannot be rebuilt"
+// Mutation: packages/qfai/src/core/graph/analysis.ts `if (refresh === "in-place") await mirrorGraphCorpus(root, analysis);` -> `if (true) await mirrorGraphCorpus(root, analysis);` fails "keeps the prior code graph paired with its prior inputs when a changed source cannot be rebuilt"
 it("keeps the prior code graph paired with its prior inputs when a changed source cannot be rebuilt", async () => {
   const fixture = await completedCodeSnapshotFixture();
   try {
