@@ -287,7 +287,7 @@ export const IDENTIFIER_CHAR = new RegExp(IDENTIFIER_CHAR_CLASS);
  * The prefix is a lone `E` or `e`. One that ends a longer identifier, as in
  * `name'x'`, belongs to that name, and the quote opens a standard string.
  */
-function opensEscapeString(text: string, quoteAt: number): boolean {
+export function opensEscapeString(text: string, quoteAt: number): boolean {
   const prefix = text[quoteAt - 1];
   if (prefix !== "E" && prefix !== "e") return false;
   return !IDENTIFIER_CHAR.test(text[quoteAt - 2] ?? "");

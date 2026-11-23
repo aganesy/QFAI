@@ -4,7 +4,7 @@
  */
 import { randomUUID } from "node:crypto";
 import type { BigIntStats, Stats } from "node:fs";
-import { lstat, mkdir, open, rename, rm } from "node:fs/promises";
+import { lstat, mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
@@ -284,10 +284,17 @@ type PairEntry = {
  * another run is never removed or overwritten. Staging, placing and undoing run while this run
  * holds the design catalogue lock, so two runs never place their files in turn and leave the
  * pair from two revisions of `DESIGN.md`; a run that finds the lock held writes nothing. On
- * success the moved-aside files are removed. Returns null, or the failure's message and whether
- * both files were put back as they were, could not be, or were written but the lock not released;
- * when they could not be, the message names each file left behind and each target that is as it
+ * success the moved-aside files are removed, and one that cannot be is named as left behind.
+ * Returns null, or the failure's message and whether both files were put back as they were, could
+ * not be, or were written but the lock not released or a moved-aside file not removed; when they
+ * could not be put back, the message names each file left behind and each target that is as it
  * was.
+ *
+ * Ceiling: the directories are checked after they are created and before the lock is taken, the
+ * staging files opened and the targets renamed, so a directory swapped for a link inside that
+ * window still leads those steps through it. Node offers no directory handle to open and rename
+ * relative to, which closing the window would need. Lift when: Node gains `openat`-style calls,
+ * or a write through a swapped directory is reported.
  */
 async function writePair(
   root: string,
@@ -331,18 +338,28 @@ async function writePair(
     if (failed !== null) {
       return { message: `${failed.message} ${messageOf(caught)}`, state: failed.state };
     }
-    await removeAsides(entries);
-    return { message: messageOf(caught), state: "written" };
+    const kept = await removeAsides(root, entries);
+    return { message: [messageOf(caught), ...kept].join(" "), state: "written" };
   }
   if (committed !== null) return committed;
-  await removeAsides(entries);
-  return null;
+  const kept = await removeAsides(root, entries);
+  return kept.length === 0 ? null : { message: kept.join(" "), state: "written" };
 }
 
-/** Removes the files this run moved aside, once both of its files are in place. */
-async function removeAsides(entries: readonly PairEntry[]): Promise<void> {
-  const asides = entries.flatMap((entry) => (entry.aside === null ? [] : [entry.aside]));
-  await Promise.all(asides.map((aside) => rm(aside, { force: true })));
+/**
+ * Removes the files this run moved aside, once both of its files are in place. Returns a sentence
+ * naming each one that could not be removed, which is left where it is.
+ */
+async function removeAsides(root: string, entries: readonly PairEntry[]): Promise<string[]> {
+  const kept: string[] = [];
+  for (const entry of entries) {
+    const aside = entry.aside;
+    if (aside === null) continue;
+    await rm(aside, { force: true }).catch((caught: unknown) => {
+      kept.push(`${relativeTo(root, aside)} could not be removed: ${messageOf(caught)}`);
+    });
+  }
+  return kept;
 }
 
 /**
@@ -442,9 +459,8 @@ async function place(entry: PairEntry): Promise<void> {
 /**
  * Undoes what this run did to the pair after a failed write. Returns a sentence for each step
  * that could not be undone, and each target that is as it was. A placed file that another run has
- * since replaced is left in place, as is one whose file system gives no inode number to tell the
- * two apart or that cannot be inspected, and the moved-aside file is then kept under its own name
- * rather than renamed over it.
+ * since replaced is left in place, as is one that cannot be inspected, and the moved-aside file is
+ * then kept under its own name rather than renamed over it.
  */
 async function undoPair(
   root: string,
@@ -460,7 +476,7 @@ async function undoPair(
         intact = false;
         left.push(`${what}: ${messageOf(caught)}`);
       });
-    let owner: "this run" | "other" | "unknown" | "uninspected" = "other";
+    let owner: "this run" | "other" | "uninspected" = "other";
     if (entry.placed) {
       owner = await ownerOf(entry).catch((caught: unknown): "uninspected" => {
         left.push(
@@ -471,12 +487,8 @@ async function undoPair(
     }
     if (owner === "this run") {
       await attempt(`${target} could not be removed`, () => rm(entry.file, { force: true }));
-    } else if (owner === "unknown") {
-      left.push(
-        `${target} was left in place: the file system gives no inode number, so it cannot be told apart from another run's file.`,
-      );
     }
-    if (owner === "unknown" || owner === "uninspected") intact = false;
+    if (owner === "uninspected") intact = false;
     const aside = entry.aside;
     if (aside !== null) {
       await attempt(`${relativeTo(root, aside)} still holds the earlier ${target}`, async () => {
@@ -509,11 +521,17 @@ async function inspect(file: string): Promise<Stats | null> {
 }
 
 /**
- * Whether the entry's target is still the file this run placed there, another file or none, or
- * cannot be told: a volume that gives no inode number reports 0 for every file. Throws when the
- * target cannot be inspected.
+ * Whether the entry's target is still the file this run placed there, or another file or none, by
+ * its device and inode number. A volume that gives no inode number reports 0 for every file; there
+ * the target counts as this run's while it is a file holding exactly the text this run wrote.
+ * Throws when the target cannot be inspected or, on such a volume, read.
+ *
+ * Ceiling: on a volume with no inode numbers, a file another writer put in place with the very
+ * bytes this run wrote counts as this run's, so the undo removes it and puts the earlier file
+ * back; nothing it held differs from what this run wrote. Lift when: a writer outside the lock is
+ * found to write the catalogue with the same bytes and to need its own file kept.
  */
-async function ownerOf(entry: PairEntry): Promise<"this run" | "other" | "unknown"> {
+async function ownerOf(entry: PairEntry): Promise<"this run" | "other"> {
   let found: BigIntStats;
   try {
     found = await lstat(entry.file, { bigint: true });
@@ -521,10 +539,14 @@ async function ownerOf(entry: PairEntry): Promise<"this run" | "other" | "unknow
     if (isEnoent(caught)) return "other";
     throw caught;
   }
-  if (entry.identity === null || entry.identity.ino === 0n || found.ino === 0n) return "unknown";
-  return found.dev === entry.identity.dev && found.ino === entry.identity.ino
-    ? "this run"
-    : "other";
+  if (entry.identity !== null && entry.identity.ino !== 0n && found.ino !== 0n) {
+    return found.dev === entry.identity.dev && found.ino === entry.identity.ino
+      ? "this run"
+      : "other";
+  }
+  if (!found.isFile()) return "other";
+  const bytes = await readFile(entry.file);
+  return bytes.equals(Buffer.from(entry.text, "utf-8")) ? "this run" : "other";
 }
 
 function relativeTo(root: string, file: string): string {
