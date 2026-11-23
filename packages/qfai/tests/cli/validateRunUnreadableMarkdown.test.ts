@@ -1,11 +1,16 @@
 /**
  * `qfai validate` records a story-tree Markdown file it cannot read as an unfinished run.
  *
- * The HTML mock, Mermaid screen flow and UI definition checks share one read of the Markdown
- * under `paths.specsDir`. A file there that the run may not read fails that read, and
- * `runValidate` turns the failure into one `QFAI-SCAN-002` naming the file and the errno. The
- * file is made unreadable with `chmod`, so the case is skipped on Windows and as root, where a
- * mode bit does not stop the read.
+ * A file under `paths.specsDir` that the run may not read stops validation, and `runValidate`
+ * turns the failure into one `QFAI-SCAN-002` naming the file and the errno.
+ *
+ * The first read to reach the file is the story-tree read, which reads every file under
+ * `paths.specsDir` before any profile check runs. The shared Markdown read of the HTML mock,
+ * Mermaid screen flow and UI definition checks never reaches the file here, so it is guarded only
+ * by the cases in `tests/core/markdownFiles.test.ts`.
+ *
+ * The file is made unreadable with `chmod`, so the case is skipped on Windows and as root, where
+ * a mode bit does not stop the read.
  */
 import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -27,7 +32,7 @@ afterEach(async () => {
 
 type Finding = { code: string; severity: string; message: string };
 
-/** The findings `qfai validate --profile prototyping` writes to `validate.json`. */
+/** The findings `qfai validate` writes to `validate.json`. */
 async function validateFindings(root: string): Promise<Finding[]> {
   const write = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -37,7 +42,6 @@ async function validateFindings(root: string): Promise<Finding[]> {
       strict: false,
       format: "text",
       failOn: "never",
-      profile: "prototyping",
     });
   } finally {
     write.mockRestore();
@@ -49,7 +53,7 @@ async function validateFindings(root: string): Promise<Finding[]> {
 }
 
 describe("validate on a story-tree Markdown file it cannot read", () => {
-  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+  it.skipIf(process.platform === "win32" || process.geteuid?.() === 0)(
     "records the run as incomplete with one QFAI-SCAN-002 naming the file and EACCES",
     async () => {
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-unreadable-md-"));

@@ -98,9 +98,9 @@ describe("Markdown under the specs directory in the UI/UX group", () => {
   });
 
   it("fails the read with the read's own error when a file is there but cannot be read", async () => {
-    // The reader passes the failure on unchanged. Naming the file is the error's job: Node's
-    // message carries the path, which `validateRunUnreadableMarkdown.test.ts` shows with a real
-    // unreadable file. Matching the path here would only match the text this stub wrote.
+    // The reader passes the failure on unchanged; the incomplete-run finding names the file from
+    // the error's `path`, as `validateRunUnreadableMarkdown.test.ts` shows. Matching the path here
+    // would only match the text this stub wrote.
     const root = await projectWithMockAndFlow();
     const specsDir = path.join(root, ".qfai", "specs");
     await writeFile(path.join(specsDir, "denied.md"), "# Denied\n", "utf-8");
