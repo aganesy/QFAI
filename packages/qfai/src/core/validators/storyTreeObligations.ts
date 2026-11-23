@@ -232,11 +232,10 @@ function toPosix(value: string): string {
   return value.replace(/\\/g, "/");
 }
 
+export type StoryTestScan = { files: StoryTestFile[]; truncated: boolean };
+
 /** Reads acceptance layers and configured test-file selectors once per run. */
-export async function readStoryTests(
-  root: string,
-  config: QfaiConfig,
-): Promise<{ files: StoryTestFile[]; truncated: boolean }> {
+export async function readStoryTests(root: string, config: QfaiConfig): Promise<StoryTestScan> {
   const testsRoot = resolvePath(root, config, "testsDir");
   // Joined, not concatenated: `paths.testsDir: "."` makes this empty, and a
   // leading `/` would root every pattern at the filesystem root.
@@ -296,11 +295,14 @@ export async function validateStoryTreeObligations(
   config: QfaiConfig,
   profile: StoryObligationProfile,
   model?: StoryTreeModel,
+  // A composed profile passes one shared read, so its ATDD and TDD passes scan
+  // the selected test files once between them.
+  readTests: () => Promise<StoryTestScan> = () => readStoryTests(root, config),
 ): Promise<Issue[]> {
   const tree = model ?? (await readStoryTreeModel(root, config));
-  let scan: Awaited<ReturnType<typeof readStoryTests>>;
+  let scan: StoryTestScan;
   try {
-    scan = await readStoryTests(root, config);
+    scan = await readTests();
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     return [storyTestScanIssue(root, `Story-tree test scan failed: ${reason}`)];

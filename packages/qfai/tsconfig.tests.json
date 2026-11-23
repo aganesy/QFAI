@@ -510,6 +510,7 @@
     "tests/unit/windowsFullSuiteFixture.test.ts",
     "tests/unit/legacyInitProcess.test.ts",
     "tests/integration/storyTreeValidateScan.test.ts",
+    "tests/integration/storyTreeSharedTestScan.test.ts",
     "tests/unit/core/validators/brokenWrapperRemedy.test.ts",
     "tests/unit/core/validators/externalReferences.test.ts",
     "tests/unit/core/validators/markdownTableArity.test.ts",
