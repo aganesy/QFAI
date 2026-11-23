@@ -723,6 +723,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   category must name an operation after its colon or dash, or inside a closed
   parenthesis. Closes #5046.
 
+- **The SQL contract lexer reads backtick and bracket identifiers.** It
+  skipped only `'` and `"` quoting, so in ``CREATE TABLE t (`a)` int);`` the
+  `)` inside the MySQL name raised `QFAI-CONTRACT-021`, and so did one inside a
+  SQL Server name such as `[a)]`. A backtick identifier is now read like a
+  double-quoted one, and a `(`, `)` or `;` inside `[ … ]` is not counted.
+  Brackets nest and a string inside them stays a string, so PostgreSQL arrays
+  such as `ARRAY[[1,2],[3,4]]` still parse, and a `[` left open is reported.
+  Closes #5136.
+
 - **A failed code graph refresh keeps the previous graph with the files it
   was built from.** Checking whether the code graph was current copied the
   changed project files into the active analysis first, so when the
@@ -831,6 +840,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such as `CREATE PUBLICATION feed FOR TABLE orders` made its contract the owner
   of `orders`. Only the PostgreSQL modifiers `TEMP`, `TEMPORARY`, `GLOBAL`,
   `LOCAL` and `UNLOGGED` may now sit there.
+
+- **A package.json QFAI cannot read is reported as unreadable.** While
+  locating its init templates (for `qfai init`, `qfai doctor` and the graph
+  commands), a nearest `package.json` that failed to read or parse
+  (a permission error, a truncated file, a directory of that name) was reported
+  as "not the qfai package". The message now names the file and the read or
+  parse error. Closes #5155.
 
 - **`qfai catalog components` stops when it cannot inspect the catalogue.** A
   catalogue whose metadata could not be read, for example because access was
