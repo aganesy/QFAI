@@ -405,6 +405,7 @@
     "tests/integration/staleTerms.test.ts",
     "tests/integration/decisionRowLength.test.ts",
     "tests/integration/validators/stepTree.test.ts",
+    "tests/integration/validators/packageSelfGovernance.test.ts",
     "tests/integration/delegationByContext.test.ts",
     "tests/integration/init/stepDistribution.test.ts",
     "tests/integration/workflowAssets/acceptanceAndVerifyInRun.test.ts",
