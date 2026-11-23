@@ -205,6 +205,29 @@ describe("the catalogue is written only inside the project", () => {
     expect(await readdir(outside)).toEqual(["components.yaml"]);
   });
 
+  // QFAI:EX-0001-0307-23
+  it("under --check refuses a catalogue directory that links outside and reads nothing through it", async () => {
+    const root = await projectWith({ "src/a.tsx": component("Alpha", []) });
+    const current = await projectWith({ "src/a.tsx": component("Alpha", []) });
+    expect((await cli(["catalog", "components", "--root", current])).code).toBe(0);
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-component-catalog-outside-"));
+    roots.push(outside);
+    // The outside file is the current catalogue, so a check read through the link would pass.
+    await writeFile(path.join(outside, "components.yaml"), await readCatalogText(current), "utf-8");
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await symlink(
+      outside,
+      path.join(root, ".qfai", "catalog"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const result = await cli(["catalog", "components", "--check", "--root", root]);
+    expect(result.code).toBe(1);
+    expect(result.err).toBe(
+      `qfai catalog components: could not read ${CATALOG}, so nothing was compared: .qfai/catalog is a symbolic link.\n`,
+    );
+    expect(await readdir(outside)).toEqual(["components.yaml"]);
+  });
+
   // QFAI:EX-0001-0307-19
   it("replaces the catalogue in place and leaves no temporary file beside it", async () => {
     const root = await projectWith({
