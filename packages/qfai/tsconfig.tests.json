@@ -58,6 +58,7 @@
     "tests/unit/graph/completedCorpus.test.ts",
     "tests/unit/graph/corpusSourceSwap.test.ts",
     "tests/unit/graph/documentUpdateFailure.examples.test.ts",
+    "tests/unit/graph/codeRefreshFailure.examples.test.ts",
     "tests/unit/graph/graphGitignore.examples.test.ts",
     "tests/unit/graph/ciPolicy.examples.test.ts",
     "tests/integration/graph/processingOrigin.examples.test.ts",
