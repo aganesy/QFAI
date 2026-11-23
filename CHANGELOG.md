@@ -337,6 +337,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   implementation runs no gate, like `narrow`, and its final report says the
   tests come with the implementation it left out.
 
+- **`web-research` loads its MCP server detail only when it configures a
+  server.** The HTTP-mode start command for Brave Search, where Firecrawl runs
+  and scrapes pages, the credentials each template reads and the self-hosted
+  Firecrawl setup moved from the skill body into
+  `web-research/references/mcp-configuration.md`, which the skill reads before
+  it configures, starts or connects an MCP server. The skill still names every
+  configuration template and says that a local Firecrawl launch does not keep
+  the data local.
+
 - **`qfai doctor` finds lockfiles without reading them.** The shipped-workflow
   checks decide which of `pnpm-lock.yaml`, `yarn.lock` and
   `package-lock.json` are present from file metadata: a readable regular

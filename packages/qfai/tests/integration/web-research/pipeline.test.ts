@@ -135,11 +135,24 @@ describe("web-research pipeline", () => {
   // QFAI:EX-0001-0177-06
   it("Firecrawl docs separate where the server runs from where pages are scraped", async () => {
     // A local npx launch still sends every URL to the API at FIRECRAWL_API_URL,
-    // so the docs must not let "local" read as "the data stays here".
-    const content = await readSkill();
-    const start = content.indexOf("### 2.2 Firecrawl MCP");
-    expect(start, "section 2.2 Firecrawl MCP").toBeGreaterThanOrEqual(0);
-    const end = content.indexOf("\n### ", start + 1);
+    // so the docs must not let "local" read as "the data stays here". The skill
+    // says so at start and sends the agent to the reference for the detail.
+    const skill = await readSkill();
+    const skillStart = skill.indexOf("### 2.2 Firecrawl MCP");
+    expect(skillStart, "section 2.2 Firecrawl MCP").toBeGreaterThanOrEqual(0);
+    const skillEnd = skill.indexOf("\n### ", skillStart + 1);
+    expect(skill.slice(skillStart, skillEnd).replace(/\s+/g, " ")).toContain(
+      "Launching the server locally does not keep the data local",
+    );
+    expect(skill).toContain("Read `references/mcp-configuration.md` before you configure");
+
+    const content = await readFile(
+      path.join(skillDir, "references", "mcp-configuration.md"),
+      "utf-8",
+    );
+    const start = content.indexOf("## Firecrawl MCP");
+    expect(start, "reference section Firecrawl MCP").toBeGreaterThanOrEqual(0);
+    const end = content.indexOf("\n## ", start + 1);
     const section = content.slice(start, end === -1 ? undefined : end).replace(/\s+/g, " ");
 
     expect(section).toContain("**Where the MCP server runs.**");

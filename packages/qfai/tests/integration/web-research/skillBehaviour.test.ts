@@ -319,24 +319,36 @@ describe("web-research skill behaviour", () => {
     expect(brave.copilot).toEqual({ type: "http", url: braveUrl, tools: ["*"] });
     expect(brave.codex).toEqual({ url: braveUrl });
 
-    const braveSection = flatten(sectionLines(skill, "2.1 Brave Search MCP"));
+    // The skill names the templates and the reference it reads before it
+    // configures a server; the reference holds the per-server detail.
+    expect(flatten(sectionLines(skill, "2. MCP Integration"))).toContain(
+      "Read `references/mcp-configuration.md` before you configure, start or connect an MCP server",
+    );
+    const reference = await readFile(
+      path.join(path.dirname(skillPath), "references", "mcp-configuration.md"),
+      "utf-8",
+    );
+
+    expect(flatten(sectionLines(skill, "2.1 Brave Search MCP"))).toContain(
+      "mcp-templates/brave-search-http/",
+    );
+    const braveSection = flatten(sectionLines(reference, "Brave Search MCP"));
     // The start command carries no shell-specific variable syntax, so it runs
     // as written in POSIX shells, PowerShell and cmd alike.
     expect(braveSection).toContain(
       "with `BRAVE_API_KEY` set in your shell's environment, `npx -y @brave/brave-search-mcp-server@2.2.0 --transport http` serves",
     );
-    expect(braveSection).toContain("mcp-templates/brave-search-http/");
 
-    const firecrawlSection = flatten(sectionLines(skill, "2.2 Firecrawl MCP"));
+    expect(flatten(sectionLines(skill, "2.2 Firecrawl MCP"))).toContain(
+      "Hosted server over HTTP transport: Configuration templates: `.qfai/assistant/skill/web-research/mcp-templates/firecrawl-hosted/`",
+    );
+    const firecrawlSection = flatten(sectionLines(reference, "Firecrawl MCP"));
     expect(firecrawlSection).toContain(
       "Firecrawl's remote MCP server at `https://mcp.firecrawl.dev/v2/mcp`; the `firecrawl-hosted/` templates do this.",
     );
     expect(firecrawlSection).toContain("`Authorization: Bearer <FIRECRAWL_API_KEY>`");
     expect(firecrawlSection).toContain(
       "export it in the shell that starts the agent. When it is unset, Claude Code still loads the server",
-    );
-    expect(firecrawlSection).toContain(
-      "Hosted server over HTTP transport: Configuration templates: `.qfai/assistant/skill/web-research/mcp-templates/firecrawl-hosted/`",
     );
 
     const toml = await readTemplate("firecrawl", "config.toml");
