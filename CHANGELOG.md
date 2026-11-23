@@ -781,6 +781,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which they treat as absent evidence. They now name
   `<paths.contractsDir>/tech.md`.
 
+- **The document-schema checker stops an mdschema run that never exits.** Run
+  from the command line, as the shipped document lane runs it, the checker
+  waited on each mdschema run with no time limit, so a run that never exited
+  held the lane until the CI job timed out. It now stops a run after 120
+  seconds, the limit `qfai validate` already applied, and exits 2 saying that
+  mdschema did not finish, never reading the run as a pass or a schema
+  failure. Closes #5033.
+
 - **`qfai doctor` names a shipped workflow it cannot read in
   `workflows.cost`.** The check skipped every read failure as if the workflow
   were not installed, so an installed workflow that could not be read
