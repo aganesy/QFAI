@@ -931,7 +931,11 @@ describe("what the report may carry", () => {
       userTurns: [],
     };
     const sessions = [
-      { agent: "claude" as const, sessionId: `password='${"hunter2"} id'`, signals: summarise(events, FACTS) },
+      {
+        agent: "claude" as const,
+        sessionId: `password='${"hunter2"} id'`,
+        signals: summarise(events, FACTS),
+      },
     ];
     const clean = (text: string): string => redact(text, context);
     for (const rendered of [renderJson(sessions, clean), renderMarkdown(sessions, clean)]) {
