@@ -24,8 +24,10 @@
  * call per page of open pull requests and one `git fetch`. A page that cannot
  * be read stops the command before it answers: an ID an unread pull request
  * holds would be handed out again. A pull request closed while the pages are
- * read can move another across a page boundary unread, as a simultaneous
- * publisher can still collide. The listing goes
+ * read can move another across a page boundary unread, so a listing of more
+ * than one page is read again, and one still shifting after a few passes, or
+ * one that does not end within a fixed number of pages, stops the command.
+ * The listing goes
  * through `gh-budget.mjs`, which keeps its reserve and reports the remaining
  * allowance on stderr, so stdout holds only the answer. A check during an unfinished
  * merge stops before fetching or comparing branch-owned identifiers. The fetch
@@ -45,8 +47,9 @@
  * Exit codes: 0 answered; 1 a collision was found, or the listing left the
  * budget below the reserve (the answer is still printed once every page was
  * read, and nothing is when the reserve stopped a page); 2 the arguments,
- * the runtime, `git` or `gh` could not be used, the fetch did not return main
- * and every listed head, or `check` found an unfinished merge; 3 a scope has
+ * the runtime, `git` or `gh` could not be used, the listing did not settle or
+ * end, the fetch did not return main and every listed head, or `check` found
+ * an unfinished merge; 3 a scope has
  * no number left.
  */
 /* global console, process */
@@ -176,18 +179,28 @@ export function pullsFrom(body) {
 }
 
 /**
- * Every open pull request, page by page, until a page comes back short.
- *
- * `callPage(page, handleBody)` makes one call and returns its exit code, as
- * `callAndReport` does. A page is full by its raw length, so an entry
- * `pullsFrom` drops does not end the listing early. Pull requests are kept by
- * number, so one that moves across a page boundary is counted once. The
- * listing is `undefined` unless every page was read.
+ * The most pages one pass reads. A response that ignores `page=` and keeps
+ * coming back full would otherwise be read forever.
  */
-export function listAllPulls(callPage, perPage = PULLS_PER_PAGE) {
+export const MAX_LISTING_PAGES = 50;
+
+/** The most passes over the listing while open pull requests keep shifting. */
+export const MAX_LISTING_PASSES = 3;
+
+/**
+ * One pass over the listing, page by page, until a page comes back short.
+ *
+ * A page is full by its raw length, so an entry `pullsFrom` drops does not end
+ * the pass early. Pull requests are kept by number, so one that moves across a
+ * page boundary is counted once. A full page that adds no number, or a pass
+ * that reaches `MAX_LISTING_PAGES`, is a listing that is not advancing and
+ * ends the pass with exit 2. `pulls` is `undefined` unless every page was
+ * read; `unread` is then the page that could not be.
+ */
+function readListingPass(callPage, perPage) {
   const byNumber = new Map();
   let code = 0;
-  for (let page = 1; ; page += 1) {
+  for (let page = 1; page <= MAX_LISTING_PAGES; page += 1) {
     let pagePulls;
     let size = 0;
     const pageCode = callPage(page, (body) => {
@@ -200,17 +213,76 @@ export function listAllPulls(callPage, perPage = PULLS_PER_PAGE) {
       return 0;
     });
     if (pagePulls === undefined || (pageCode !== 0 && pageCode !== 1)) {
-      if (page > 1) {
-        console.error(
-          `Open pull requests past page ${String(page - 1)} were not read, so no ID is answered.`,
-        );
-      }
-      return { code: pageCode === 0 ? 2 : pageCode, pulls: undefined };
+      return { code: pageCode === 0 ? 2 : pageCode, pulls: undefined, unread: page };
     }
+    const before = byNumber.size;
     for (const pull of pagePulls) byNumber.set(pull.number, pull);
     if (pageCode === 1) code = 1;
-    if (size < perPage) return { code, pulls: [...byNumber.values()] };
+    if (size < perPage) return { code, pulls: byNumber, pages: page };
+    if (byNumber.size === before) {
+      console.error(
+        `Page ${String(page)} of open pull requests is full but adds none, so the listing is not advancing and no ID is answered.`,
+      );
+      return { code: 2, pulls: undefined };
+    }
   }
+  console.error(
+    `The open pull request listing did not end within ${String(MAX_LISTING_PAGES)} pages, so no ID is answered.`,
+  );
+  return { code: 2, pulls: undefined };
+}
+
+/** Why a listing that was read once but not again is kept anyway. */
+const SNAPSHOT_WARNING =
+  "The listing was not read again below the reserve, so it is a snapshot: a pull request closed while it was read can hide another.";
+
+/**
+ * Every open pull request, read again until no entry turns out to have been
+ * skipped.
+ *
+ * `callPage(page, handleBody)` makes one call and returns its exit code, as
+ * `callAndReport` does. Pages run oldest first, so a pull request closing on
+ * an earlier page moves every later one back a slot, and the one that crosses
+ * the boundary is never read. A listing of more than one page is therefore
+ * read again: a number the next pass holds that is older than the newest one
+ * already read was skipped, and the listing is read once more, up to
+ * `MAX_LISTING_PASSES`; a newer number was opened meanwhile and is kept. A
+ * listing still shifting after the last pass answers nothing, with exit 2.
+ * When the reserve stops the re-read, what was read is kept with exit 1 and a
+ * warning that it is a snapshot. A pull request closed during both a pass and
+ * its re-read can still hide another. The listing is `undefined` unless every
+ * page of the first pass was read.
+ */
+export function listAllPulls(callPage, perPage = PULLS_PER_PAGE) {
+  const known = new Map();
+  for (let pass = 1; pass <= MAX_LISTING_PASSES; pass += 1) {
+    const read = readListingPass(callPage, perPage);
+    if (read.pulls === undefined) {
+      if (pass > 1 && read.code === 1) {
+        console.error(SNAPSHOT_WARNING);
+        return { code: 1, pulls: [...known.values()] };
+      }
+      if ((read.unread ?? 1) > 1) {
+        console.error(
+          `Open pull requests past page ${String(read.unread - 1)} were not read, so no ID is answered.`,
+        );
+      }
+      return { code: read.code, pulls: undefined };
+    }
+    const newest = Math.max(0, ...known.keys());
+    const skipped = [...read.pulls.keys()].some((number) => !known.has(number) && number < newest);
+    for (const [number, pull] of read.pulls) known.set(number, pull);
+    const settled = read.pages === 1 || (pass > 1 && !skipped);
+    if (settled) return { code: read.code, pulls: [...known.values()] };
+    if (read.code === 1) {
+      console.error(SNAPSHOT_WARNING);
+      return { code: 1, pulls: [...known.values()] };
+    }
+  }
+  console.error(
+    `Open pull requests kept moving between pages over ${String(MAX_LISTING_PASSES)} passes, so no ID is answered. Run the command again.`,
+  );
+  return { code: 2, pulls: undefined };
 }
 
 /**
@@ -576,9 +648,10 @@ function checkCommand(reader, pulls, heads) {
  *
  * Oldest first, so a pull request opened while the pages are read lands on a
  * later page. Returns the exit code the calls left and the listing, which is
- * present even when the last call left the budget below the reserve.
+ * present even when the last call left the budget below the reserve. `call`
+ * replaces `callAndReport` for the tests.
  */
-function listOpenPulls(cwd) {
+export function listOpenPulls(cwd, call = callAndReport) {
   let slug;
   try {
     slug = repoSlug(
@@ -592,7 +665,7 @@ function listOpenPulls(cwd) {
     return { code: 2, pulls: undefined };
   }
   return listAllPulls((page, handleBody) =>
-    callAndReport(
+    call(
       `repos/${slug}/pulls?state=open&sort=created&direction=asc&per_page=${String(PULLS_PER_PAGE)}&page=${String(page)}`,
       handleBody,
       console.error,

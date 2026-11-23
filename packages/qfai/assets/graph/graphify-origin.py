@@ -8,9 +8,12 @@ any other request cannot carry documents to a destination nobody approved. A
 different host name is refused even when it resolves to the same address, and
 reverse lookups are refused outright, since a lookup can carry data itself.
 
-No redirect is followed, since one could switch the scheme on the approved host
-and port, which the socket checks cannot see. No child process starts, since an
-audit hook does not reach into one; extraction with a selected backend needs
+The socket checks see a host and port, not the protocol spoken over them, so the
+HTTP clients hold the scheme themselves: a request in another scheme than the
+origin's is refused, since plain http to an https origin's port would carry
+documents readable in transit. No redirect is followed either. No child process
+starts, since an audit hook does not reach into one; extraction with a selected
+backend needs
 none, and Graphify's optional Git ignore probe falls back without it. No socket
 binds or listens, since extraction only sends requests and an accepted
 connection would raise no connect event.
@@ -71,7 +74,11 @@ def approved_origin(url):
     parts = urlsplit(url)
     if parts.scheme not in ("http", "https") or not parts.hostname:
         raise ValueError("Unsupported processing origin")
-    return host_text(parts.hostname), parts.port or (443 if parts.scheme == "https" else 80)
+    return (
+        parts.scheme,
+        host_text(parts.hostname),
+        parts.port or (443 if parts.scheme == "https" else 80),
+    )
 
 
 def resolved_addresses(host, port):
@@ -134,6 +141,32 @@ def refuse_listening():
     socket.socket.listen = listen
 
 
+def in_scheme(send, scheme):
+    def send_held(self, request, *args, **kwargs):
+        if request.url.scheme != scheme:
+            raise PermissionError(REFUSAL)
+        return send(self, request, *args, **kwargs)
+
+    return send_held
+
+
+def hold_scheme(scheme):
+    def refuse(self, *args, **kwargs):
+        raise PermissionError(REFUSAL)
+
+    other = "http" if scheme == "https" else "https"
+    # urllib has no https handler when Python was built without ssl.
+    handler = getattr(urllib.request, "HTTPSHandler" if other == "https" else "HTTPHandler", None)
+    if handler is not None:
+        setattr(handler, f"{other}_open", refuse)
+    try:
+        import httpx
+    except ImportError:
+        return
+    for client in (httpx.Client, httpx.AsyncClient):
+        client.send = in_scheme(client.send, scheme)
+
+
 def without_redirects(send):
     def send_once(self, request, *args, **kwargs):
         kwargs["follow_redirects"] = False
@@ -159,11 +192,12 @@ def main():
     if len(sys.argv) < 3:
         sys.stderr.write("Usage: graphify-origin.py <origin URL> <Graphify arguments...>\n")
         sys.exit(2)
-    host, port = approved_origin(sys.argv[1])
+    scheme, host, port = approved_origin(sys.argv[1])
     # The hook comes first, so whatever importing an HTTP client does at import time is held too.
     sys.addaudithook(origin_hook(host, port))
     refuse_listening()
     refuse_redirects()
+    hold_scheme(scheme)
     sys.argv = ["graphify", *sys.argv[2:]]
     runpy.run_module("graphify", run_name="__main__", alter_sys=True)
 

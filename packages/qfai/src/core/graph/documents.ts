@@ -164,7 +164,7 @@ export async function prepareDocumentAnalysisLocked(
   if (!processing) {
     return {
       status: "not-ready",
-      recovery: DOCUMENT_PROCESSING_SETUP,
+      recovery: (await canonicalEndpointRecovery(root)) ?? DOCUMENT_PROCESSING_SETUP,
     };
   }
   const selected = new URL(processing.endpoint ?? DEFAULT_PROCESSING_ENDPOINT);
@@ -323,6 +323,29 @@ async function recordsDefaultProcessing(analysis: string): Promise<boolean> {
 export async function readGraphProcessing(root: string): Promise<GraphProcessing | undefined> {
   const processing = await readOptionalJson(path.join(root, ".qfai", "graph-processing.json"));
   return validGraphProcessing(processing) ? processing : undefined;
+}
+
+/**
+ * The recovery for a processing definition refused only because its endpoint is not written in
+ * its canonical URL form, such as an uppercase host, a default port or a Unicode host name. It
+ * names the canonical form, which is what the authorization, the origin guard and the managed
+ * process would receive. Any other refusal returns `undefined`.
+ */
+export async function canonicalEndpointRecovery(root: string): Promise<string | undefined> {
+  const processing = await readOptionalJson(path.join(root, ".qfai", "graph-processing.json"));
+  if (!object(processing) || typeof processing.endpoint !== "string") return undefined;
+  let canonical: string;
+  try {
+    canonical = new URL(processing.endpoint).href;
+  } catch {
+    return undefined;
+  }
+  if (
+    validGraphProcessing(processing) ||
+    !validGraphProcessing({ ...processing, endpoint: canonical })
+  )
+    return undefined;
+  return `Write the endpoint in .qfai/graph-processing.json in its canonical form, ${canonical}, then run node .qfai/tools/graph-cli.mjs documents "<question>".`;
 }
 
 function validGraphProcessing(processing: unknown): processing is GraphProcessing {
