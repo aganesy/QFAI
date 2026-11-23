@@ -39,6 +39,21 @@ export type SqlParseResult = {
 };
 
 /**
+ * Every character above ASCII, written with escapes so the source holds no
+ * raw U+FFFF, which no editor or diff shows.
+ */
+const NON_ASCII_RANGE = String.raw`\u0080-\uFFFF`;
+
+/** A character that may start an identifier or a dollar-quote tag. */
+const IDENTIFIER_START_CLASS = `[A-Za-z_${NON_ASCII_RANGE}]`;
+
+/** A character that may continue a dollar-quote tag, which takes no `$`. */
+const TAG_CHAR_CLASS = `[A-Za-z0-9_${NON_ASCII_RANGE}]`;
+
+/** A character that may continue an identifier, `$` included. */
+const IDENTIFIER_CHAR_CLASS = `[A-Za-z0-9_$${NON_ASCII_RANGE}]`;
+
+/**
  * The opening marker of a PostgreSQL dollar-quoted literal: `$$` or `$tag$`.
  *
  * The literal ends at the next occurrence of the same marker. Shared with the
@@ -52,8 +67,9 @@ export type SqlParseResult = {
  * A marker directly after a letter, digit, `_`, non-ASCII character or `$`
  * opens nothing: `$` continues an identifier, so `foo$tag$` is one name.
  */
-export const DOLLAR_QUOTE_MARKER =
-  /(?<![A-Za-z0-9_$\u0080-\uFFFF])\$(?:[A-Za-z_\u0080-\uFFFF][A-Za-z0-9_\u0080-\uFFFF]*)?\$/;
+export const DOLLAR_QUOTE_MARKER = new RegExp(
+  String.raw`(?<!${IDENTIFIER_CHAR_CLASS})\$(?:${IDENTIFIER_START_CLASS}${TAG_CHAR_CLASS}*)?\$`,
+);
 
 /** {@link DOLLAR_QUOTE_MARKER} at one offset of the whole text, so the lookbehind sees what precedes it. */
 const DOLLAR_QUOTE_AT = new RegExp(DOLLAR_QUOTE_MARKER.source, "y");
@@ -263,7 +279,7 @@ export function parseSqlContract(text: string): SqlParseResult {
 }
 
 /** One character that may continue an identifier, under the rules {@link DOLLAR_QUOTE_MARKER} follows. */
-const IDENTIFIER_CHAR = /[A-Za-z0-9_$\u0080-￿]/;
+export const IDENTIFIER_CHAR = new RegExp(IDENTIFIER_CHAR_CLASS);
 
 /**
  * Whether the `'` at `quoteAt` opens a PostgreSQL escape string, `E'…'`.
@@ -372,7 +388,7 @@ const CREATE_RE = new RegExp(
 );
 
 /** The first character of a bare identifier, under the rules {@link IDENTIFIER_CHAR} continues. */
-const IDENTIFIER_START = /[A-Za-z_\u0080-\uFFFF]/;
+const IDENTIFIER_START = new RegExp(IDENTIFIER_START_CLASS);
 
 /**
  * The normalised, possibly qualified object name that starts at `from`.
