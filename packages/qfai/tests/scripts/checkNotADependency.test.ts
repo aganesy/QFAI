@@ -15,7 +15,7 @@
  *   - unknown / absent user agent -> exit 0 (fail-open)
  */
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, lstatSync } from "node:fs";
 import { copyFile, mkdir, mkdtemp, readFile, rmdir, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -110,7 +110,7 @@ type BootstrapOptions = {
   unsafeModules?: { relative: string; kind: "link" | "file" };
   realModules?: boolean;
   invalidNode?: boolean;
-  packageParent?: { relative: "packages" | "packages/qfai"; kind: "file" | "absent" };
+  packageParent?: { relative: "packages" | "packages/qfai"; kind: "file" | "absent" | "link" };
   signal?: boolean;
   recordSpawn?: boolean;
   /** Write a native executable's leading bytes, with no execute bit, as the pnpm entry. */
@@ -135,6 +135,13 @@ async function runBootstrap(options: BootstrapOptions = {}) {
     if (options.packageParent.relative === "packages") await rmdir(path.join(root, "packages"));
     if (options.packageParent.kind === "file") {
       await writeFile(path.join(root, options.packageParent.relative), "keep package parent");
+    }
+    if (options.packageParent.kind === "link") {
+      await symlink(
+        foreign,
+        path.join(root, options.packageParent.relative),
+        process.platform === "win32" ? "junction" : "dir",
+      );
     }
   }
   const entry = path.join(scripts, "bootstrap.mjs");
@@ -364,6 +371,19 @@ describe("the repository bootstrap entry", () => {
       expect(result.stderr).toContain("Cannot inspect dependency path packages/qfai/node_modules.");
       expect(result.calls).toEqual([]);
       expect(await readFile(path.join(result.root, relative), "utf8")).toBe("keep package parent");
+    },
+  );
+
+  it.each(["packages", "packages/qfai"] as const)(
+    "refuses a linked dependency parent %s and starts no command",
+    async (relative) => {
+      const result = await runBootstrap({ packageParent: { relative, kind: "link" } });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        `Dependency path packages/qfai/node_modules is below the link ${relative}; it must be a real directory.`,
+      );
+      expect(result.calls).toEqual([]);
+      expect(lstatSync(path.join(result.root, relative)).isSymbolicLink()).toBe(true);
     },
   );
 
