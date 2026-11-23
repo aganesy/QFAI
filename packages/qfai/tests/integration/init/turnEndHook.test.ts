@@ -365,6 +365,8 @@ describe("turn-end hook", () => {
     ["cannot be parsed", "workflow: [\n"],
     ["holds a list instead of keys", "- workflow\n"],
     ["is empty", ""],
+    // A directory under the config file's name is found, and reading it fails.
+    ["cannot be read", null],
   ])("runs no command and names the config file when it %s", async (_case, config) => {
     const marker = path.join(root, "ran.txt");
     await writeFile(
@@ -372,7 +374,8 @@ describe("turn-end hook", () => {
       `require("fs").writeFileSync(${JSON.stringify(marker)}, "ran");process.exit(1);\n`,
       "utf-8",
     );
-    await project(["- Lint: `node mark.js`", "- Turn-end check: Lint"], config);
+    await project(["- Lint: `node mark.js`", "- Turn-end check: Lint"], config ?? "");
+    if (config === null) await unreadableConfig();
     const output = parsed(await hook({ hook_event_name: "Stop", session_id: "s1" }));
     expect(output.decision).toBeUndefined();
     expect(output.systemMessage).toContain(path.join(root, "qfai.config.yaml"));
@@ -380,7 +383,27 @@ describe("turn-end hook", () => {
     expect(output.systemMessage).toContain("no turn-end check ran");
     await expect(readFile(marker, "utf-8")).rejects.toThrow();
   });
+
+  // QFAI:EX-0001-0244-20
+  it("drops the failure the session last blocked on when the config cannot be read", async () => {
+    const fail = await script("fail.js", "type error\n", 1);
+    await project([`- Lint: \`${fail}\``, "- Turn-end check: Lint"]);
+    expect(parsed(await hook({ session_id: "s1" })).decision).toBe("block");
+    expect(await readdir(stateDir)).toHaveLength(1);
+    await unreadableConfig();
+    expect(parsed(await hook({ session_id: "s1" })).systemMessage).toContain(
+      "no turn-end check ran",
+    );
+    expect(await readdir(stateDir)).toEqual([]);
+  });
 });
+
+/** Replaces the project's config file with a directory of the same name, which cannot be read. */
+async function unreadableConfig(): Promise<void> {
+  const config = path.join(root, "qfai.config.yaml");
+  await rm(config, { force: true });
+  await mkdir(config);
+}
 
 const assetsInit = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

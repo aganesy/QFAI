@@ -295,9 +295,13 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
   const found = await findConfigRoot(stringField(event, "cwd") ?? options.processDir);
   if (!found.found) return "";
   const loaded = await loadConfig(found.root);
+  const session = stringField(event, "session_id");
+  const file = session === undefined ? null : stateFile(options.stateDir, session, agentKey(event));
   // Only a file that reads as keys, the form loadConfig accepts, can omit `workflow.stopGate`;
-  // the default applies to an omission, never to a file that could not be read or parsed.
+  // the default applies to an omission, never to a file that could not be read or parsed. No
+  // check ran, so a failure blocked on earlier no longer stands.
   if (!isRecord(loaded.document)) {
+    if (file !== null) await rm(file, { force: true });
     return `${JSON.stringify({
       systemMessage: `QFAI turn-end check: ${found.configPath} could not be read as configuration, so no turn-end check ran. Run qfai validate to see why.`,
     })}\n`;
@@ -313,8 +317,6 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
     throw error;
   }
   const { checks, ambiguous } = readTurnEndChecks(techText);
-  const session = stringField(event, "session_id");
-  const file = session === undefined ? null : stateFile(options.stateDir, session, agentKey(event));
   if (ambiguous.length > 0) {
     // Which command a repeated label means cannot be told, so none runs and the turn ends; a
     // failure blocked on earlier no longer stands.
