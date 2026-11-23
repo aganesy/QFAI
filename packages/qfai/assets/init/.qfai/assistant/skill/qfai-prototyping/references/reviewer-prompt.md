@@ -207,16 +207,17 @@ iteration.
 Use these questions to find defects and justify the four ordinal scores. A
 count can support a finding, but cannot replace the live assessment.
 
-| #   | Answer yes or no                                                                                                        | Source                                   |
-| --- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| 1   | Catalogues and templates were used where they cover the need and no native element does                                 | `.qfai/assistant/rule/ui-procurement.md` |
-| 2   | Components were reused or taken from a package rather than written                                                      | the same ladder, rungs 1, 3 and 4        |
-| 3   | A native element was used where one does the job, and the language or framework standard where nothing else provided it | the same ladder, rungs 2 and 5           |
-| 4   | Authoring was the last resort, and each authored region records why                                                     | the same ladder, rung 6                  |
-| 5   | No catalogued anti-pattern is present                                                                                   | `lap-*`, below                           |
-| 6   | Conformant, procured, restrained and consistent                                                                         | below                                    |
-| 7   | Every declared `primary_task` walks                                                                                     | below                                    |
-| 8   | No text explains the interface, and the text shown is the contract's                                                    | `.agents/rules/interface-clarity.md`     |
+| #   | Answer yes or no                                                                                                                                                                 | Source                                                                                    |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 1   | Catalogues and templates were used where they cover the need and no native element does                                                                                          | `.qfai/assistant/rule/ui-procurement.md`                                                  |
+| 2   | Components were reused or taken from a package rather than written                                                                                                               | the same ladder, rungs 1, 3 and 4                                                         |
+| 3   | A native element was used where one does the job, and the language or framework standard where nothing else provided it                                                          | the same ladder, rungs 2 and 5                                                            |
+| 4   | Authoring was the last resort, and each authored region records why                                                                                                              | the same ladder, rung 6                                                                   |
+| 5   | No catalogued anti-pattern is present                                                                                                                                            | `lap-*`, below                                                                            |
+| 6   | Conformant, procured, restrained and consistent                                                                                                                                  | below                                                                                     |
+| 7   | Every declared `primary_task` walks                                                                                                                                              | below                                                                                     |
+| 8   | No text explains the interface, and the text shown is the contract's                                                                                                             | `.agents/rules/interface-clarity.md`                                                      |
+| 9   | Each platform feature a screen relies on is in `progress.md` with its source URL and Baseline status, and one newer than the browser-support target has its fallback in the page | `.qfai/assistant/rule/ui-procurement.md#platform-features-and-the-browser-support-target` |
 
 Criteria 1 to 4 are the procurement ladder read as questions, so a screen
 cannot pass by a standard it was not built to.

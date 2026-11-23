@@ -1,10 +1,10 @@
 /**
- * The prototype review scores four ordinal UX axes and uses eight diagnostic questions.
+ * The prototype review scores four ordinal UX axes and uses nine diagnostic questions.
  *
  * The ordinal scores summarize the cycle; each diagnostic "no" becomes one
  * actionable line in `blockingFindings` for its screen.
  *
- * Two of the eight carry method rather than opinion, and those are the ones
+ * Two of the nine carry method rather than opinion, and those are the ones
  * pinned hardest here.
  *
  * - Criterion 7 is the streamlined cognitive walkthrough. It needs a task
@@ -45,10 +45,12 @@ function criterionNumbers(markdown: string): number[] {
   return Array.from(table.matchAll(/^\|\s*(\d+)\s*\|/gm), (m) => Number(m[1]));
 }
 
-describe("four ordinal axes and eight diagnostic questions", () => {
+describe("four ordinal axes and nine diagnostic questions", () => {
   for (const tree of QFAI_TREES) {
-    it(`${tree}: the criteria table is numbered 1 to 8`, async () => {
-      expect(criterionNumbers(await read(tree, REVIEWER_PROMPT))).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    it(`${tree}: the criteria table is numbered 1 to 9`, async () => {
+      expect(criterionNumbers(await read(tree, REVIEWER_PROMPT))).toEqual([
+        1, 2, 3, 4, 5, 6, 7, 8, 9,
+      ]);
     });
 
     it(`${tree}: scores the four axes and records each diagnostic defect`, async () => {

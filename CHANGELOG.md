@@ -63,6 +63,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps the screen working where the feature is missing, such as an
   `@supports` block or a polyfill loaded only where the feature is absent.
 
+- **Platform features are looked up per screen region, and reviews catch the
+  legacy patterns they replace.** An agent decided from memory whether a
+  platform feature such as `popover`, `dialog` or `:user-invalid` did the job,
+  and nothing recorded where the choice came from. Before starting a new screen
+  region, the prototyping generator and the implementation now look each
+  feature up in MDN, web.dev or the web-features data, and the region's
+  procurement record names the source URL and the Baseline status: the
+  prototype lists them in `progress.md` and the handoff's `procurement` row
+  (`platformFeatures`), and the implementation on a `@platform` line of the
+  component's doc comment. The prototype reviewer, the implementation reviewer
+  and the product-surface reviewer check that record against the code. The
+  implementation and product-surface reviewers also report code that a
+  platform feature within the browser-support target now replaces, such as a
+  script-built modal where `dialog` serves, naming the legacy code, the
+  replacement and the source that shows its Baseline status.
+
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date
@@ -694,6 +710,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   could disclose the report, that any tracked file it changed fails the
   review, and that it makes no commit, as `triage-security-intake` already
   said. Closes #5012.
+
+- **`qfai doctor --autoremediate` asks before installing only where the
+  prompt can be seen, and reports a Ctrl+C at it.** The install prompt is
+  written to stderr, yet a terminal on stdin alone made the session count as
+  interactive, so a run with stderr redirected waited on a prompt nobody saw.
+  Both must now be terminals; otherwise nothing is installed and the output
+  says to rerun with `--yes`. Ctrl+C at the prompt ended with "The operation
+  was aborted" and exit 1, and dropped the lines of the `.gitignore` and
+  wrapper repairs that ran before it. Doctor now prints those lines and that
+  the install was cancelled, and exits 130. Closes #5055.
 
 - **The `qfai-triage` skill invoked by name takes a security report in
   privately before any other step.** Its step list put
