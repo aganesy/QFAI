@@ -14,14 +14,15 @@ const ORIGIN_GUARD = path.resolve(getInitAssetsDir(), "..", "graph", "graphify-o
 
 // A stand-in for Graphify: it sends the synthetic document to the approved endpoint, meets a
 // redirect to another origin and one back to the approved origin, sends it straight to another
-// origin, asks httpx to follow redirects, tries every kind of name lookup, since a lookup of a
-// chosen name can carry data out by itself, and tries to start child processes, which the audit
-// hook would not reach.
+// origin, sends it to the approved host and port in the other scheme, asks httpx to follow
+// redirects, tries every kind of name lookup, since a lookup of a chosen name can carry data out
+// by itself, and tries to start child processes, which the audit hook would not reach.
 const STUB_GRAPHIFY = `import json, os, socket, sys, urllib.error, urllib.parse, urllib.request
 import httpx
 document = open(sys.argv[2], encoding="utf-8").read().encode("utf-8")
 approved, other = sys.argv[3], sys.argv[4]
 host = urllib.parse.urlsplit(approved).hostname
+swapped = ("https" if approved.startswith("http:") else "http") + approved[approved.index(":"):]
 outside = "rationale-data.example.invalid"
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 def attempt(url):
@@ -46,6 +47,15 @@ def awaited(coroutine):
         coroutine.send(None)
     except StopIteration as done:
         return done.value
+def via_httpx(url):
+    request = httpx.Request("POST", url)
+    try:
+        return [
+            httpx.Client().send(request, follow_redirects=True),
+            awaited(httpx.AsyncClient().send(request, follow_redirects=True)),
+        ]
+    except PermissionError:
+        return "refused"
 child = [sys.executable, "-c", "pass"]
 processes = {
     "subprocess": lookup(lambda: __import__("subprocess").run(child)),
@@ -69,10 +79,9 @@ print(json.dumps({
     "redirect": attempt(approved + "/redirect"),
     "same origin redirect": attempt(approved + "/same"),
     "other": attempt(other + "/v1/chat/completions"),
-    "httpx follows": [
-        httpx.Client().send("request", follow_redirects=True),
-        awaited(httpx.AsyncClient().send("request", follow_redirects=True)),
-    ],
+    "other scheme": attempt(swapped + "/v1/chat/completions"),
+    "httpx follows": via_httpx(approved + "/v1/chat/completions"),
+    "httpx other scheme": via_httpx(swapped + "/v1/chat/completions"),
     "lookups": {
         "gethostbyname": lookup(lambda: socket.gethostbyname(host)),
         "gethostbyname_ex": lookup(lambda: socket.gethostbyname_ex(host)),
@@ -91,8 +100,9 @@ print(json.dumps({
 }))
 `;
 
-// A stand-in for the httpx client the OpenAI SDK uses: send reports whether it would follow, and
-// importing it tries to reach another host, which must already be refused.
+// A stand-in for the httpx client the OpenAI SDK uses: send reports whether it would follow, a
+// request carries its URL's scheme, and importing it tries to reach another host, which must
+// already be refused.
 const STUB_HTTPX = `import socket
 try:
     socket.create_connection(("rationale-data.example.invalid", 80), timeout=5)
@@ -101,6 +111,12 @@ except PermissionError:
     IMPORT_REACH = "refused"
 except OSError as error:
     IMPORT_REACH = type(error).__name__
+class URL:
+    def __init__(self, url):
+        self.scheme = url.split(":", 1)[0]
+class Request:
+    def __init__(self, method, url):
+        self.url = URL(url)
 class Client:
     def send(self, request, *, stream=False, follow_redirects=True):
         return follow_redirects
@@ -124,7 +140,9 @@ const GUARDED = {
   redirect: "not followed",
   "same origin redirect": "not followed",
   other: "refused",
+  "other scheme": "refused",
   "httpx follows": [false, false],
+  "httpx other scheme": "refused",
   lookups: {
     gethostbyname: "allowed",
     gethostbyname_ex: "allowed",
@@ -239,6 +257,7 @@ async function close(...endpoints: Endpoint[]): Promise<void> {
 // Mutation: packages/qfai/assets/graph/graphify-origin.py `if event in PROCESSES or event in REVERSE_LOOKUPS:` -> `if event in REVERSE_LOOKUPS:` fails "delivers the synthetic document only to the selected local origin"
 // Mutation: packages/qfai/assets/graph/graphify-origin.py ` or event == "socket.bind":` -> `:` fails "delivers the synthetic document only to the selected local origin"
 // Mutation: packages/qfai/assets/graph/graphify-origin.py `    refuse_listening()` -> `    pass` fails "delivers the synthetic document only to the selected local origin"
+// Mutation: packages/qfai/assets/graph/graphify-origin.py `    hold_scheme(scheme)` -> `    pass` fails "delivers the synthetic document only to the selected local origin"
 it("delivers the synthetic document only to the selected local origin", async () => {
   const other = await endpoint();
   const approved = await endpoint(() => other.origin);
@@ -276,6 +295,43 @@ it("refuses another host name for the approved address", async () => {
       "/redirect",
       "/same",
     ]);
+  } finally {
+    await close(approved);
+  }
+});
+
+// A stand-in for Graphify that sends the synthetic document to the approved URL through urllib
+// and both httpx clients, and reports whether each send was refused.
+const STUB_SCHEME = `import json, sys, urllib.request
+import httpx
+document = open(sys.argv[2], encoding="utf-8").read().encode("utf-8")
+approved = sys.argv[3] + "/v1/chat/completions"
+opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+def attempt(call):
+    try:
+        call()
+        return "sent"
+    except Exception as error:
+        reason = getattr(error, "reason", error)
+        return "refused" if isinstance(reason, PermissionError) else type(reason).__name__
+print(json.dumps({
+    "urllib": attempt(lambda: opener.open(urllib.request.Request(approved, data=document), timeout=10).read()),
+    "httpx": attempt(lambda: httpx.Client().send(httpx.Request("POST", approved))),
+    "httpx async": attempt(lambda: httpx.AsyncClient().send(httpx.Request("POST", approved))),
+}))
+`;
+
+// QFAI:EX-0001-0234-21
+// Mutation: packages/qfai/assets/graph/graphify-origin.py `    hold_scheme(scheme)` -> `    pass` fails "refuses plain http to the host and port of an https origin"
+// Mutation: packages/qfai/assets/graph/graphify-origin.py `        if request.url.scheme != scheme:` -> `        if False:` fails "refuses plain http to the host and port of an https origin"
+it("refuses plain http to the host and port of an https origin", async () => {
+  const approved = await endpoint();
+  const port = new URL(approved.origin).port;
+  try {
+    expect(
+      await guardedRun(`https://127.0.0.1:${port}/v1`, approved.origin, "", STUB_SCHEME),
+    ).toEqual({ urllib: "refused", httpx: "refused", "httpx async": "refused" });
+    expect(approved.received).toEqual([]);
   } finally {
     await close(approved);
   }
