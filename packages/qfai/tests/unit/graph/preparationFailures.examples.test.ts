@@ -271,31 +271,51 @@ it("quotes a rerun argument for the shell of the platform", () => {
   expect(shellArgument("C:\\Users\\a b\\Temp", "win32")).toBe('"C:\\Users\\a b\\Temp"');
   for (const unsafe of ["C:\\Users\\$a", "C:\\Users\\`a", "C:\\Users\\%a%", 'C:\\"a'])
     expect(shellArgument(unsafe, "win32")).toBeUndefined();
+  // PowerShell also ends a string at a curly double quote; the line separators break the line.
+  for (const separator of ["\u201c", "\u201d", "\u201e", "\u2028", "\u2029"])
+    expect(shellArgument(`C:\\Users\\a${separator}b\\Temp`, "win32")).toBeUndefined();
   expect(shellArgument("/tmp/forged\nline", "linux")).toBeUndefined();
   expect(shellArgument("C:\\forged\u001b[2J", "win32")).toBeUndefined();
 });
 
 // A temporary directory that cannot be allocated, or carries a control character, leaves the
 // generic recovery line rather than a forged one.
+// Mutation: packages/qfai/src/core/graph/prepare.ts `await rm(created, { recursive: true, force: true });` -> `` fails "keeps the generic recovery line when no rerun directory can be allocated"
 it("keeps the generic recovery line when no rerun directory can be allocated", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-rerun-escape-"));
   const fixture = graphProcessFixture();
-  const tmpdir = vi.spyOn(os, "tmpdir").mockReturnValue(path.join(root, "forged\nline"));
+  // One parent is missing, so the directory is never created; the other exists, so it is created
+  // and must be removed again because its name has no literal displayed form on this platform.
+  const missing = path.join(root, "absent", "forged\nline");
+  const undisplayable = path.join(
+    root,
+    process.platform === "win32" ? "forged\u201c line" : "forged\nline",
+  );
+  await mkdir(undisplayable);
   try {
-    const result = await prepareGraphRuntimes(root, (command, args, options) =>
-      args[0] === "pip"
-        ? Promise.resolve({ exitCode: 1, stdout: "" })
-        : fixture.run(command, args, options),
-    );
-    expect(result.failedStep).toBe("Graphify download");
-    expect(result.rerun).toBeUndefined();
-    const output = renderGraphPreparation(result);
-    expect(output).toContain(
-      "Recovery: Preparation failed. Fix the cause, then run qfai init again.",
-    );
-    expect(output.split("\n").some((line) => line.startsWith("line"))).toBe(false);
+    for (const parent of [missing, undisplayable]) {
+      const tmpdir = vi.spyOn(os, "tmpdir").mockReturnValue(parent);
+      try {
+        const result = await prepareGraphRuntimes(root, (command, args, options) =>
+          args[0] === "pip"
+            ? Promise.resolve({ exitCode: 1, stdout: "" })
+            : fixture.run(command, args, options),
+        );
+        expect(result.failedStep).toBe("Graphify download");
+        expect(result.rerun).toBeUndefined();
+        const output = renderGraphPreparation(result);
+        expect(output).toContain(
+          "Recovery: Preparation failed. Fix the cause, then run qfai init again.",
+        );
+        expect(output.split("\n").some((line) => line.startsWith("line"))).toBe(false);
+      } finally {
+        tmpdir.mockRestore();
+      }
+    }
+    expect(
+      (await readdir(undisplayable)).filter((entry) => entry.startsWith("qfai-graph-check-")),
+    ).toEqual([]);
   } finally {
-    tmpdir.mockRestore();
     await rm(root, { recursive: true, force: true });
   }
 });

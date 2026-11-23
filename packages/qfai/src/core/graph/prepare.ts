@@ -365,11 +365,18 @@ async function rerunByHand(
 const PLAIN_ARGUMENT = /^[\w@+=:,./-]+$/;
 
 /**
+ * What ends or expands a double-quoted Windows argument: `"`, `$`, backtick and `%`, the curly
+ * double quotes PowerShell also closes a string at, and the Unicode line and paragraph separators,
+ * which pass the control-character check yet break the displayed line.
+ */
+const WINDOWS_UNQUOTABLE = /["$`%\u201c\u201d\u201e\u2028\u2029]/;
+
+/**
  * One argument of a displayed command, as the shell of the platform reads it literally: bare when
  * it holds no special character, otherwise single-quoted for a POSIX shell, and double-quoted on
- * Windows, which cmd.exe and PowerShell both read literally when the value holds no `"`, `$`,
- * backtick or `%`. A value that cannot be quoted so, or carries a control character that could
- * forge an output line, has no displayed form.
+ * Windows, which cmd.exe and PowerShell both read literally when the value holds none of
+ * `WINDOWS_UNQUOTABLE`. A value that cannot be quoted so, or carries a control character that
+ * could forge an output line, has no displayed form.
  */
 export function shellArgument(
   value: string,
@@ -377,7 +384,7 @@ export function shellArgument(
 ): string | undefined {
   if (formatReportPath(value) !== value) return undefined;
   if (PLAIN_ARGUMENT.test(value)) return value;
-  if (platform === "win32") return /["$`%]/.test(value) ? undefined : `"${value}"`;
+  if (platform === "win32") return WINDOWS_UNQUOTABLE.test(value) ? undefined : `"${value}"`;
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
