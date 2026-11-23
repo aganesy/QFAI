@@ -858,9 +858,9 @@ jobs:
       # never creates a tag itself.
       #
       # GitHub offers no call that creates a Release only if a tag still names a given commit, so
-      # the tag can still move between the check and the create. The tag is therefore read once
-      # more after the create, and a Release whose tag no longer names the verified commit is
-      # deleted again (the tag itself is left alone) and the job fails. Check, create and re-check
+      # the tag can still move between the check and the create. The tag is therefore read again
+      # after the create (up to three times while the API cannot answer), and a Release whose tag
+      # no longer names the verified commit, or cannot be shown to, is deleted again (the tag itself is left alone) and the job fails. Check, create and re-check
       # are one step so that no other step can run between them.
       #
       # SHIPPED-CI: not-applicable
@@ -876,7 +876,9 @@ jobs:
           set -euo pipefail
           refuse() { echo "::error::$1"; exit 1; }
           # Sets TAG_COMMIT to the commit refs/tags/$RELEASE_TAG names now. On failure it sets
-          # REASON and returns 1, so the caller decides whether a Release has to be rolled back.
+          # REASON and returns non-zero, so the caller decides whether a Release has to be rolled
+          # back: 1 when the API could not be read, which a second read may cure, and 2 when it
+          # answered with something that is not a commit, which a second read would only repeat.
           read_tag_commit() {
             local answer object_type object_sha hops=0
             TAG_COMMIT=""
@@ -899,7 +901,7 @@ jobs:
             done
             if [ "$object_type" != "commit" ]; then
               REASON="${RELEASE_TAG} does not resolve to a commit (last object: ${object_type} ${object_sha})"
-              return 1
+              return 2
             fi
             TAG_COMMIT="$object_sha"
           }
@@ -958,15 +960,36 @@ jobs:
 
           gh release create "$RELEASE_TAG" --verify-tag --title "qfai $RELEASE_VERSION" --notes-file tmp/release-notes.md
 
-          if read_tag_commit; then
+          # A read that fails right after the create is more often the API than the tag: an HTTP
+          # 5xx or a secondary rate limit would otherwise delete a correct Release and fail the
+          # job. So an unreadable tag is asked again, a few seconds apart, before it is treated as
+          # gone. An answer naming another commit, or no commit, is final and is not asked again.
+          attempt=1
+          while :; do
+            read_status=0
+            read_tag_commit || read_status=$?
+            if [ "$read_status" -ne 1 ] || [ "$attempt" -ge 3 ]; then
+              break
+            fi
+            sleep $((attempt * 5))
+            attempt=$((attempt + 1))
+          done
+          if [ "$read_status" -eq 0 ]; then
             if [ "$TAG_COMMIT" = "$VERIFIED_SHA" ]; then
               echo "release: ${RELEASE_TAG} points at the verified commit ${VERIFIED_SHA}"
               exit 0
             fi
             REASON="${RELEASE_TAG} moved to ${TAG_COMMIT}"
           fi
+          outcome="so the Release no longer names the verified commit ${VERIFIED_SHA}"
+          rerun=""
+          if [ "$read_status" -eq 1 ]; then
+            REASON="${REASON} on ${attempt} attempts"
+            outcome="so whether the Release names the verified commit ${VERIFIED_SHA} is unknown"
+            rerun="; if ${RELEASE_TAG} still names ${VERIFIED_SHA}, rerunning this job is safe"
+          fi
           if gh release delete "$RELEASE_TAG" --yes; then
-            refuse "${REASON} while its Release was being created, so the Release no longer names the verified commit ${VERIFIED_SHA}; the Release was deleted again and the tag left as it is"
+            refuse "${REASON} while its Release was being created, ${outcome}; the Release was deleted again and the tag left as it is${rerun}"
           fi
           refuse "${REASON} while its Release was being created, and deleting that Release failed: delete the ${RELEASE_TAG} Release by hand, because it does not name the verified commit ${VERIFIED_SHA}"
         shell: bash
