@@ -63,6 +63,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps the screen working where the feature is missing, such as an
   `@supports` block or a polyfill loaded only where the feature is absent.
 
+- **Platform features are looked up per screen region, and reviews catch the
+  legacy patterns they replace.** An agent decided from memory whether a
+  platform feature such as `popover`, `dialog` or `:user-invalid` did the job,
+  and nothing recorded where the choice came from. Before starting a new screen
+  region, the prototyping generator and the implementation now look each
+  feature up in MDN, web.dev or the web-features data, and the region's
+  procurement record names the source URL and the Baseline status: the
+  prototype lists them in `progress.md` and the handoff's `procurement` row
+  (`platformFeatures`), and the implementation on a `@platform` line of the
+  component's doc comment. The prototype reviewer, the implementation reviewer
+  and the product-surface reviewer check that record against the code. The
+  implementation and product-surface reviewers also report code that a
+  platform feature within the browser-support target now replaces, such as a
+  script-built modal where `dialog` serves, naming the legacy code, the
+  replacement and the source that shows its Baseline status.
+
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date
@@ -649,6 +665,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **`qfai catalog components` stops when it cannot inspect the catalogue.** A
+  catalogue whose metadata could not be read, for example because access was
+  denied, counted as absent, so the command replaced it without checking that it
+  was a file. Only a missing catalogue now counts as absent; any other failure
+  exits 1 with one line naming the catalogue and the cause, and writes or
+  compares nothing. Closes #5114.
+
 - **`qfai validate` compares the decision register when a tracked name under
   the specs directory contains a newline.** One such file anywhere beneath the
   configured specs directory made the base inventory unreadable, and the drift
@@ -681,16 +704,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review, and that it makes no commit, as `triage-security-intake` already
   said. Closes #5012.
 
-- **`qfai sdd merge-docs` keeps the original error and names the kept text.**
-  When the merged text could not take a working file's name and the working
-  file could not be put back either, the run reported the put-back's error and
-  left the document's text in a hidden `.<name>.merge-docs-<hex>.old` file no
-  message named. It now reports the failure to place the merged text and names
-  that file. The story directories are also checked again just before the
-  temporary file is created, so a directory replaced by a link while the
-  document is merged receives no file, and the pinned file reader sizes its
-  buffer from the file instead of always allocating its ceiling, so each
-  document no longer costs two zero-filled 16 MiB buffers. Closes #5056.
+- **`qfai doctor --autoremediate` asks before installing only where the
+  prompt can be seen, and reports a Ctrl+C at it.** The install prompt is
+  written to stderr, yet a terminal on stdin alone made the session count as
+  interactive, so a run with stderr redirected waited on a prompt nobody saw.
+  Both must now be terminals; otherwise nothing is installed and the output
+  says to rerun with `--yes`. Ctrl+C at the prompt ended with "The operation
+  was aborted" and exit 1, and dropped the lines of the `.gitignore` and
+  wrapper repairs that ran before it. Doctor now prints those lines and that
+  the install was cancelled, and exits 130. Closes #5055.
 
 - **The `qfai-triage` skill invoked by name takes a security report in
   privately before any other step.** Its step list put
@@ -793,6 +815,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   report.** The quality gate and phase checklists named a misspelled
   destination that does not exist. Both now name the SDD report, matching the
   contract artifact rules. Closes #4933.
+
+- **`qfai sdd merge-docs` keeps the original error and names the kept text.**
+  When the merged text could not take a working file's name and the working
+  file could not be put back either, the run reported the put-back's error and
+  left the document's text in a hidden `.<name>.merge-docs-<hex>.old` file no
+  message named. It now reports the failure to place the merged text and names
+  that file. The story directories are also checked again just before the
+  temporary file is created, so a directory replaced by a link while the
+  document is merged receives no file, and the pinned file reader sizes its
+  buffer from the file instead of always allocating its ceiling, so each
+  document no longer costs two zero-filled 16 MiB buffers. Closes #5056.
 
 - **Reviewer cards read the technology contract from the configured contracts
   directory.** The architecture, implementation, product-surface and

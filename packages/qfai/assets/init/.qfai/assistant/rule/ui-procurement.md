@@ -67,6 +67,15 @@ a CSS property or selector, or a script API.
   `word-break: auto-phrase`.
 - A feature newer than the target with no such fallback is not used.
 
+Platform features change every few months, so which one does the job and how
+widely it is supported is looked up, not remembered. Before starting a new
+screen region, look up each platform feature it could rely on in MDN, web.dev
+or the web-features data, such as `popover`, `dialog` or `:user-invalid`, and
+take its Baseline status from that source. QFAI ships no list of its own. The
+status, compared with the target, decides which of the cases above applies, and
+the region's procurement record names the source and the status, as "Recording
+what was procured" says.
+
 ## Widgets that are not hand-authored
 
 An interactive widget is correct only with its focus handling, keyboard
@@ -167,7 +176,10 @@ a component the project already has, or authored code with the reason. A
 catalogue item also names the constraints it was checked against. An authored
 widget from "Widgets that are not hand-authored" also names its APG pattern and
 the keyboard behaviour it implements, in its `@a11y` tag, and the test that
-covers that behaviour. An
+covers that behaviour. A region that relies on a platform feature also names,
+for each one, the URL of the source it was looked up in and the Baseline status
+that source gave, such as `Widely available` or `Newly available 2024`, and the
+fallback when the feature is newer than the target. An
 implementer then installs rather than reconstructs, and a reviewer has
 something to check instead of a resemblance to judge.
 

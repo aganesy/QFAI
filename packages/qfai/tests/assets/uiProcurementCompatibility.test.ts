@@ -113,6 +113,60 @@ describe("ui-procurement checks runtime compatibility", () => {
       );
     });
 
+    it(`${tree}: a platform feature is looked up per region and its source recorded`, async () => {
+      const read = async (...parts: string[]): Promise<string> =>
+        flat(await readFile(path.join(repoRoot, tree, "assistant", ...parts), "utf-8"));
+      const rule = await read("rule", "ui-procurement.md");
+      expect(rule).toContain("is looked up, not remembered");
+      expect(rule).toContain("in MDN, web.dev or the web-features data");
+      expect(rule).toContain("QFAI ships no list of its own.");
+      expect(rule).toContain(
+        "the URL of the source it was looked up in and the Baseline status that source gave",
+      );
+
+      const generator = await read(
+        "skill",
+        "qfai-prototyping",
+        "references",
+        "generator-prompt.md",
+      );
+      expect(generator).toContain(
+        "Before starting a new screen region, look up each platform feature",
+      );
+      expect(generator).toContain(
+        "list it in `progress.md` under the screen and region with the source URL",
+      );
+      const handoff = await read("skill", "qfai-prototyping", "references", "handoff.md");
+      expect(handoff).toContain('"platformFeatures": [');
+      expect(handoff).toContain('"source": "<URL it was looked up in>"');
+      expect(handoff).toContain('"baseline": "<Baseline status that source gave>"');
+
+      const implement = await read("skill", "qfai-implement", "references", "ui-affecting.md");
+      expect(implement).toContain("Look a feature up before starting a new screen region");
+      expect(implement).toContain("one `@platform` line per feature");
+
+      const prototypeReview = flat(await readFile(path.join(repoRoot, tree, REVIEWER), "utf-8"));
+      expect(prototypeReview).toContain(
+        "Each platform feature a screen relies on is in `progress.md` with its source URL and Baseline status",
+      );
+    });
+
+    it(`${tree}: both code reviewers check the record and report a legacy pattern`, async () => {
+      for (const card of ["implementation-reviewer.md", "product-surface-reviewer.md"]) {
+        const text = flat(
+          await readFile(path.join(repoRoot, tree, "assistant", "agent", card), "utf-8"),
+        );
+        expect(text).toContain("Read the browser-support target before the next two items");
+        expect(text).toContain("Check the procurement record against the");
+        expect(text).toContain("Report a legacy pattern:");
+        expect(text).toContain("that a platform feature within the target now replaces");
+        expect(text).toContain(
+          "names the legacy code, the replacement and the source URL that shows the replacement's Baseline status",
+        );
+        expect(text).toContain("A replacement newer than the target is not a finding.");
+      }
+    });
+
     it(`${tree}: the prototype review does not block a native element`, async () => {
       const text = flat(await readFile(path.join(repoRoot, tree, REVIEWER), "utf-8"));
 

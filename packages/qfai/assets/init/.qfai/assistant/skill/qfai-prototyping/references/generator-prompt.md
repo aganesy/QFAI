@@ -54,7 +54,13 @@ identity.
    the target goes in only with a fallback that keeps the screen working where
    the feature is missing, as
    `.qfai/assistant/rule/ui-procurement.md#platform-features-and-the-browser-support-target`
-   says.
+   says. Before starting a new screen region, look up each platform feature it
+   relies on in MDN, web.dev or the web-features data, and list it in
+   `progress.md` under the screen and region with the source URL, the Baseline
+   status that source gives and, for a feature newer than the target, its
+   fallback. Keep the list in step when a later iteration changes the features
+   a region relies on. `prototyping-handoff` carries it into the region's
+   `procurement` row, so the implementation uses the same feature.
 
 ## HTML envelope (every iteration)
 
