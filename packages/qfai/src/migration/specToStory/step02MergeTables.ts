@@ -386,11 +386,12 @@ export const step02: MigrationStep = {
         candidate.source.endsWith("07_Decisions.md") ||
         candidate.source.endsWith("08_Decisions.md")
       ) {
-        records.push(...markdownEntries(text, candidate.source, "decision"));
+        for (const record of markdownEntries(text, candidate.source, "decision"))
+          records.push(record);
       } else if (candidate.source.endsWith("Open-questions.md")) {
-        records.push(...questionRows(text, candidate.source));
+        for (const record of questionRows(text, candidate.source)) records.push(record);
       } else if (candidate.source.endsWith("delta.md")) {
-        records.push(...deltaEntries(text, candidate.source));
+        for (const record of deltaEntries(text, candidate.source)) records.push(record);
       } else {
         const request = changeRequest(text, candidate.source);
         if (request) records.push(request);

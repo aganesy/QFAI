@@ -622,6 +622,61 @@ describe("against a repository", () => {
     }
   });
 
+  it("keeps the original outcome and names the refs to delete when the deletion fails", async () => {
+    // The hook refuses every deletion under the run's namespace, so the cleanup throws.
+    const hooks = path.join(root, "refuse-story-ids-deletion");
+    mkdirSync(hooks, { recursive: true });
+    writeFileSync(
+      path.join(hooks, "reference-transaction"),
+      [
+        "#!/bin/sh",
+        '[ "$1" = prepared ] || exit 0',
+        "while read -r old new ref; do",
+        '  case "$ref" in refs/story-ids/*)',
+        '    [ "$new" = 0000000000000000000000000000000000000000 ] && exit 1 ;;',
+        "  esac",
+        "done",
+        "exit 0",
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const leftovers = (): string[] =>
+      git(work, "for-each-ref", "--format=%(refname)", "refs/story-ids")
+        .split("\n")
+        .filter(Boolean);
+    git(work, "config", "core.hooksPath", hooks);
+    try {
+      const broken = () =>
+        Promise.resolve({
+          buildStoryTreeModel: () => {
+            throw new Error("the parser broke");
+          },
+          nextStoryTreeId,
+        });
+      expect(await run(["next", "BF"], { cwd: work, list, loadTree: broken })).toBe(2);
+      expect(log.mock.calls).toEqual([]);
+      const failed = error.mock.calls.flat().join("\n");
+      expect(failed).toMatch(/the parser broke$/);
+      expect(failed).toMatch(/refs under refs\/story-ids\/\S+\/ were not deleted/);
+      expect(failed).toMatch(/Delete them with: .*update-ref --stdin/);
+      expect(leftovers().length).toBeGreaterThan(0);
+
+      log.mockClear();
+      error.mockClear();
+      expect(await run(["next", "BF"], { cwd: work, list })).toBe(0);
+      expect(log.mock.calls).toEqual([["BF-0002"]]);
+      expect(error.mock.calls.flat().join("\n")).toMatch(/were not deleted/);
+    } finally {
+      git(work, "config", "--unset", "core.hooksPath");
+      for (const ref of leftovers()) git(work, "update-ref", "-d", ref);
+      log.mockRestore();
+      error.mockRestore();
+    }
+  });
+
   // QFAI:EX-0001-0008-27
   it("allocates from complete listed pages and refuses an ignored unlisted entry", async () => {
     const target = path.join(work, ".qfai", "spec", "decisions.md");
@@ -764,10 +819,10 @@ describe("main IDs received through a merge", () => {
         );
       }
 
-      const fetchHead = path.join(work, ".git", "FETCH_HEAD");
-      if (!commitMerge) expect(existsSync(fetchHead)).toBe(false);
-
-      const list = () => ({ code: 0, pulls: [{ number: 7, branch: "other" }] });
+      // #9 has no head on the remote: a fetch run before the guard would fail and print why.
+      const listed = [{ number: 7, branch: "other" }];
+      const pulls = commitMerge ? listed : [...listed, { number: 9, branch: "closed" }];
+      const list = () => ({ code: 0, pulls });
       const code = await run(["check"], { cwd: work, list });
       if (commitMerge) {
         expect(code).toBe(0);
@@ -778,8 +833,9 @@ describe("main IDs received through a merge", () => {
       } else {
         expect(code).toBe(2);
         expect(log.mock.calls).toEqual([]);
-        expect(error.mock.calls.flat().join("\n")).toMatch(/finish.*merge/i);
-        expect(existsSync(fetchHead)).toBe(false);
+        expect(error.mock.calls).toEqual([
+          ["Finish the merge before checking branch-owned identifiers."],
+        ]);
       }
       const output = [...log.mock.calls, ...error.mock.calls].flat().join("\n");
       expect(output).not.toMatch(/DEC-\d+.*also added|renumber|timestamp ID/i);

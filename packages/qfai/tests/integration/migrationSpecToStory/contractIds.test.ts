@@ -15,7 +15,10 @@ import {
   type MigrationContext,
   type MigrationStep,
 } from "../../../src/migration/specToStory/harness.js";
-import { OLD_CONTRACT_TOKEN } from "../../../src/migration/specToStory/contractIds.js";
+import {
+  OLD_CONTRACT_TOKEN,
+  planContracts,
+} from "../../../src/migration/specToStory/contractIds.js";
 import { step03 } from "../../../src/migration/specToStory/step03MoveCatalog.js";
 import { step04 } from "../../../src/migration/specToStory/step04RenumberIds.js";
 import { step05 } from "../../../src/migration/specToStory/step05CasesToExamples.js";
@@ -358,6 +361,21 @@ describe("migration contract IDs", () => {
     expect(forAPerson(result.output).filter((item) => item.startsWith(receipt))).toEqual([listed]);
     const content = personGroups(result.output).find((group) => group.heading === "Content");
     expect(content?.items).toContain(listed);
+  });
+
+  it("lists every line of a contract with more undeclared old IDs than one call takes as arguments", async () => {
+    const root = await project();
+    // 500,000 arguments overflow the call stack, so spreading the lines into one push would throw.
+    const lines = 500_000;
+    const source = path.join(root, CONTRACTS, "ui", "receipt.yaml");
+    await writeFile(source, `${await readFile(source, "utf8")}${"# CON-UI-0009\n".repeat(lines)}`);
+    const plan = await planContracts(await context(root));
+    const receipt = `${CONTRACTS}/ui/ui-0001-receipt.yaml`;
+    const items = plan.forAPerson.filter((item) => item.startsWith(`${receipt}:`));
+    expect(items).toHaveLength(lines + 1);
+    const lineOf = (item: string | undefined) => Number(/:(\d+): /.exec(item ?? "")?.[1]);
+    expect(lineOf(items.at(-1))).toBe(lineOf(items[0]) + lines);
+    expect(items.at(-1)).toMatch(/: CON-UI-0009 is declared by no contract, so it has no new ID$/);
   });
 
   // QFAI:AC-0004-0006-04

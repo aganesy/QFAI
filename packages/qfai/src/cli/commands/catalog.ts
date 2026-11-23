@@ -7,7 +7,7 @@ import type { BigIntStats, Stats } from "node:fs";
 import { lstat, mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { loadConfig } from "../../core/config.js";
+import { type QfaiConfig, loadConfig } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { type OwnerLockOptions, withOwnerLock } from "../../core/fs/ownerLock.js";
 import {
@@ -17,6 +17,7 @@ import {
 import { error, info } from "../../core/logger.js";
 import {
   COMPONENT_CATALOG_PATH,
+  type ComponentScan,
   readCatalog,
   renderCatalog,
   sameCatalogText,
@@ -55,56 +56,124 @@ export async function runCatalogComponents(options: CatalogComponentsOptions): P
     for (const issue of configErrors) error(`  - ${issue.message}`);
     return EXIT_CODES.findings;
   }
-  const scan = await scanComponents(
+  const target = COMPONENT_CATALOG_PATH.split(path.sep).join("/");
+  if (!options.check) return publishComponents(root, config, options, target);
+  const scan = await scanSurface(root, config, options);
+  if (!scan.readable) {
+    error(unreadableSurface(scan.unread));
+    return EXIT_CODES.findings;
+  }
+  const text = renderCatalog(scan.components);
+  const unreadable = await unsafeCatalogPath(root);
+  if (unreadable !== null) {
+    error(
+      `qfai catalog components: could not read ${target}, so nothing was compared: ${unreadable}`,
+    );
+    return EXIT_CODES.findings;
+  }
+  const committed = await readCatalog(root);
+  if (committed.state === "read" && sameCatalogText(committed.text, text)) {
+    info(`${target} is up to date: ${scan.components.length} component(s).`);
+    return EXIT_CODES.ok;
+  }
+  error(
+    committed.state === "absent"
+      ? `${target} does not exist. Run \`qfai catalog components\` and commit it.`
+      : `${target} is out of date with the source. Run \`qfai catalog components\` and commit it.`,
+  );
+  return EXIT_CODES.findings;
+}
+
+function scanSurface(
+  root: string,
+  config: QfaiConfig,
+  options: CatalogComponentsOptions,
+): Promise<ComponentScan> {
+  return scanComponents(
     root,
     config,
     options.loadTypescript ? { loadTypescript: options.loadTypescript } : {},
   );
-  const target = COMPONENT_CATALOG_PATH.split(path.sep).join("/");
+}
+
+function unreadableSurface(unread: number): string {
+  return `qfai catalog components: ${unread} .tsx/.jsx file(s) cannot be read: the \`typescript\` package cannot be loaded from the project root. Install it as a dev dependency of the project.`;
+}
+
+/** The one line a run prints, its exit code, and whether the catalogue was written. */
+type ComponentsOutcome = { code: number; line: string; wrote: boolean };
+
+/**
+ * Scans the surface and writes the catalogue while this run holds the component catalogue lock,
+ * so a run that scanned an earlier revision of the source never replaces the catalogue of a run
+ * that scanned a later one; a run that finds the lock held scans and writes nothing. The lock's
+ * directory is checked before and after it is created, as the catalogue's are.
+ */
+async function publishComponents(
+  root: string,
+  config: QfaiConfig,
+  options: CatalogComponentsOptions,
+  target: string,
+): Promise<number> {
+  // Set once the lock is held, so a failure to release it is told from one to take it.
+  const held: { outcome?: ComponentsOutcome } = {};
+  let outcome: ComponentsOutcome;
+  try {
+    await assertDirectoriesInsideProject(root, [CATALOG_LOCK_DIRECTORY]);
+    await mkdir(path.join(root, CATALOG_LOCK_DIRECTORY), { recursive: true });
+    await assertDirectoriesInsideProject(root, [CATALOG_LOCK_DIRECTORY]);
+    const lock = catalogLock("components", COMPONENT_LOCK_PATH);
+    outcome = await withOwnerLock(path.join(root, COMPONENT_LOCK_PATH), lock, async () => {
+      held.outcome = await scanAndWrite(root, config, options, target);
+      return held.outcome;
+    });
+  } catch (caught) {
+    const failed = held.outcome;
+    const line =
+      failed === undefined
+        ? notWritten(target, messageOf(caught))
+        : failed.wrote
+          ? `qfai catalog components: wrote ${target}, but ${messageOf(caught)}`
+          : `${failed.line} ${messageOf(caught)}`;
+    outcome = { code: EXIT_CODES.findings, line, wrote: failed?.wrote ?? false };
+  }
+  if (outcome.code === EXIT_CODES.ok) info(outcome.line);
+  else error(outcome.line);
+  return outcome.code;
+}
+
+function notWritten(target: string, failure: string): string {
+  return `qfai catalog components: could not write ${target}, so any existing catalogue is as it was: ${failure}`;
+}
+
+async function scanAndWrite(
+  root: string,
+  config: QfaiConfig,
+  options: CatalogComponentsOptions,
+  target: string,
+): Promise<ComponentsOutcome> {
+  const scan = await scanSurface(root, config, options);
   if (!scan.readable) {
-    error(
-      `qfai catalog components: ${scan.unread} .tsx/.jsx file(s) cannot be read: the \`typescript\` package cannot be loaded from the project root. Install it as a dev dependency of the project.`,
-    );
-    return EXIT_CODES.findings;
+    return { code: EXIT_CODES.findings, line: unreadableSurface(scan.unread), wrote: false };
   }
-  const text = renderCatalog(scan.components);
-  if (options.check) {
-    const unreadable = await unsafeCatalogPath(root);
-    if (unreadable !== null) {
-      error(
-        `qfai catalog components: could not read ${target}, so nothing was compared: ${unreadable}`,
-      );
-      return EXIT_CODES.findings;
-    }
-    const committed = await readCatalog(root);
-    if (committed.state === "read" && sameCatalogText(committed.text, text)) {
-      info(`${target} is up to date: ${scan.components.length} component(s).`);
-      return EXIT_CODES.ok;
-    }
-    error(
-      committed.state === "absent"
-        ? `${target} does not exist. Run \`qfai catalog components\` and commit it.`
-        : `${target} is out of date with the source. Run \`qfai catalog components\` and commit it.`,
-    );
-    return EXIT_CODES.findings;
-  }
-  const failure = await writeCatalog(root, text);
+  const failure = await writeCatalog(root, renderCatalog(scan.components));
   if (failure !== null) {
-    error(
-      `qfai catalog components: could not write ${target}, so any existing catalogue is as it was: ${failure}`,
-    );
-    return EXIT_CODES.findings;
+    return { code: EXIT_CODES.findings, line: notWritten(target, failure), wrote: false };
   }
   if (scan.files === 0) {
-    info(`Wrote ${target}: 0 component(s); uiux.surfacePaths selects no .tsx or .jsx file.`);
-    return EXIT_CODES.ok;
+    return {
+      code: EXIT_CODES.ok,
+      line: `Wrote ${target}: 0 component(s); uiux.surfacePaths selects no .tsx or .jsx file.`,
+      wrote: true,
+    };
   }
   const files = new Set(scan.components.map((component) => component.file)).size;
   const unsourced = scan.components.filter((component) => component.source === undefined).length;
-  info(
-    `Wrote ${target}: ${scan.components.length} component(s) in ${files} file(s), ${unsourced} with no @source.`,
-  );
-  return EXIT_CODES.ok;
+  return {
+    code: EXIT_CODES.ok,
+    line: `Wrote ${target}: ${scan.components.length} component(s) in ${files} file(s), ${unsourced} with no @source.`,
+    wrote: true,
+  };
 }
 
 /**
@@ -310,7 +379,7 @@ async function writePair(
   }));
   // The lock's directory is checked and created with the pair's, and after them.
   const directories = [
-    ...new Set([...outputs.map((output) => path.dirname(output.file)), DESIGN_LOCK_DIRECTORY]),
+    ...new Set([...outputs.map((output) => path.dirname(output.file)), CATALOG_LOCK_DIRECTORY]),
   ];
   // Set once the lock is held, so a failure to release it is told from one to take it.
   const held: { committed?: PairFailure | null } = {};
@@ -327,7 +396,8 @@ async function writePair(
       await mkdir(path.join(root, directory), { recursive: true });
     }
     await assertDirectoriesInsideProject(root, directories);
-    committed = await withOwnerLock(path.join(root, DESIGN_LOCK_PATH), designLock(), async () => {
+    const lock = catalogLock("design", DESIGN_LOCK_PATH);
+    committed = await withOwnerLock(path.join(root, DESIGN_LOCK_PATH), lock, async () => {
       held.committed = await commitPair(root, entries);
       return held.committed;
     });
@@ -363,25 +433,27 @@ async function removeAsides(root: string, entries: readonly PairEntry[]): Promis
 }
 
 /**
- * The lock that lets one run at a time place or undo the pair. It sits with the project's local
- * state under `.qfai/tools/`, which the graph preparation keeps out of Git, so a lock a killed
- * run leaves is never committed with the catalogue. Unlike the graph state it carries no
- * platform key, so runs from every platform on one checkout share it.
+ * Where the locks that let one run of a catalogue command at a time write its files sit: with the
+ * project's local state under `.qfai/tools/`, which the graph preparation keeps out of Git, so a
+ * lock a killed run leaves is never committed with the catalogue. Unlike the graph state they
+ * carry no platform key, so runs from every platform on one checkout share them.
  */
-const DESIGN_LOCK_DIRECTORY = path.join(".qfai", "tools", "state");
-const DESIGN_LOCK_PATH = path.join(DESIGN_LOCK_DIRECTORY, "design-catalog.lock");
+const CATALOG_LOCK_DIRECTORY = path.join(".qfai", "tools", "state");
+const DESIGN_LOCK_PATH = path.join(CATALOG_LOCK_DIRECTORY, "design-catalog.lock");
+const COMPONENT_LOCK_PATH = path.join(CATALOG_LOCK_DIRECTORY, "component-catalog.lock");
 
-function designLock(): OwnerLockOptions {
-  const lock = DESIGN_LOCK_PATH.split(path.sep).join("/");
+/** The lock of `qfai catalog <command>` at `file`, relative to the root. */
+function catalogLock(command: "components" | "design", file: string): OwnerLockOptions {
+  const lock = file.split(path.sep).join("/");
   return {
-    kind: "design-catalog-lock",
+    kind: command === "design" ? "design-catalog-lock" : "component-catalog-lock",
     maxBytes: 4096,
     invalid: () => new Error(`${lock} is not a plain file.`),
     refused: (active) =>
       new Error(
         active
-          ? `another run of qfai catalog design is writing it and holds ${lock}. Run the command again once that run finishes.`
-          : `${lock} is held by no running qfai catalog design. Remove it once no run is writing the catalogue, then run the command again.`,
+          ? `another run of qfai catalog ${command} is writing it and holds ${lock}. Run the command again once that run finishes.`
+          : `${lock} is held by no running qfai catalog ${command}. Remove it once no run is writing the catalogue, then run the command again.`,
       ),
     changed: () => new Error(`${lock} no longer holds this run's record, so it was left in place.`),
   };
