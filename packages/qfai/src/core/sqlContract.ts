@@ -542,8 +542,10 @@ function canonicalArgumentType(type: string): string {
   let base = arraySuffix ? type.slice(0, arraySuffix.index) : type;
   const floatPrecision = /^float\((\d+)\)$/.exec(base);
   if (floatPrecision) base = Number(floatPrecision[1]) <= 24 ? "real" : "double precision";
+  // A space stands in for the modifier: the caller removed the spaces around
+  // parentheses, so `timestamp(3) with time zone` arrives as `timestamp(3)with`.
   base = base
-    .replace(/\([^()]*\)/g, "")
+    .replace(/\([^()]*\)/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   if (/^interval (?:year|month|day|hour|minute|second)\b/.test(base)) base = "interval";
