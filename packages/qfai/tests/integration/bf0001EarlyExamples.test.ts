@@ -148,6 +148,9 @@ describe("BF-0001 init preserves project content", () => {
         "## Quality targets",
         "## Legal and Compliance Constraints",
       ]);
+      expect(await policy("constraint.md")).toMatch(
+        /^\| TC-01 \| Browser support target: Baseline Widely available +\|/m,
+      );
       expect(await readdir(path.join(spec, "03_contract"))).toEqual(
         expect.arrayContaining(["contracts.md", "tech.md", "api", "db", "ui", "cli"]),
       );

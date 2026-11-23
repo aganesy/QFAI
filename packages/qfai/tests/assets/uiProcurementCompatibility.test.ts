@@ -73,6 +73,46 @@ describe("ui-procurement checks runtime compatibility", () => {
       );
     });
 
+    it(`${tree}: procurement, prototyping and implementation read the browser-support target`, async () => {
+      const read = async (...parts: string[]): Promise<string> =>
+        flat(await readFile(path.join(repoRoot, tree, "assistant", ...parts), "utf-8"));
+      const rule = await read("rule", "ui-procurement.md");
+      expect(rule).toContain("## Platform features and the browser-support target");
+      expect(rule).toContain(
+        "A project that states none is held to Baseline Widely available: features every core browser has supported for at least 30 months.",
+      );
+      expect(rule).toContain("no check parses it");
+      expect(rule).toContain(
+        "A feature newer than the target is used only with a fallback that keeps the screen working where the feature is missing (progressive enhancement)",
+      );
+      expect(rule).toContain("The browser-support target is checked even then");
+
+      const anchor =
+        "`.qfai/assistant/rule/ui-procurement.md#platform-features-and-the-browser-support-target`";
+      for (const guidance of [
+        await read("skill", "qfai-prototyping", "references", "generator-prompt.md"),
+        await read("skill", "qfai-implement", "references", "ui-affecting.md"),
+      ]) {
+        expect(guidance).toContain("Baseline Widely available where none does");
+        expect(guidance).toContain(
+          "only with a fallback that keeps the screen working where the feature is missing",
+        );
+        expect(guidance).toContain(anchor);
+      }
+
+      const constraint = await read(
+        "skill",
+        "qfai-sdd",
+        "templates",
+        "spec",
+        "01_policy",
+        "constraint.md",
+      );
+      expect(constraint).toMatch(
+        /## Technical Constraints \| ID +\| Constraint +\| Rationale +\| \| -+ \| -+ \| -+ \| \| TC-01 \| Browser support target: Baseline Widely available +\|/,
+      );
+    });
+
     it(`${tree}: the prototype review does not block a native element`, async () => {
       const text = flat(await readFile(path.join(repoRoot, tree, REVIEWER), "utf-8"));
 
