@@ -9,6 +9,7 @@ import {
   GRAPH_PYTHON_FLAGS,
   graphLimitCause,
   npmCommand,
+  NpmEntryNotFoundError,
   runGraphProcess,
   type GraphProcess,
   type GraphProcessResult,
@@ -104,7 +105,17 @@ export async function prepareGraphRuntimes(
         { recursive: true },
       );
     } else {
-      const npm = await npmCommand();
+      let npm: Awaited<ReturnType<typeof npmCommand>>;
+      try {
+        npm = await npmCommand();
+      } catch (cause: unknown) {
+        if (!(cause instanceof NpmEntryNotFoundError)) throw cause;
+        return {
+          ...notReady,
+          failedStep: "npm prerequisite",
+          recovery: `Cause: ${cause.message}.`,
+        };
+      }
       const install = await run(
         npm.command,
         [

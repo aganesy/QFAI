@@ -1077,6 +1077,35 @@ describe("migration steps 5 to 8", () => {
       ].join("\n"),
     );
     expect(reportSection(report.output.join(""), "For a person")).toBe("none");
+    const kept = `${legacy} (in a literal, left as test data)`;
+    expect(reportSection(report.output.join(""), "Annotations kept")).toBe(
+      [3, 3, 4, 5].map((line) => `- ${file}:${line}: ${kept}`).join("\n"),
+    );
+  });
+
+  it("leaves a string after a private field's `#` as test data", async () => {
+    const context = await fixture();
+    const legacy = ["QFAI", "SPEC-0001", "TC-0001-0001"].join(":");
+    const file = "tests/integration/model.test.ts";
+    const content = [
+      `// ${legacy}`,
+      "class Model {",
+      `  #id = "${legacy}";`,
+      `  read() { return this.#id === "${legacy}"; }`,
+      "}",
+      "",
+    ].join("\n");
+    await put(context.root, file, content);
+    const report = capture();
+    expect(await executePlannedStep(step08, context, false, report.io)).toBe(0);
+    expect(await readFile(path.join(context.root, file), "utf8")).toBe(
+      content.replace(`// ${legacy}`, `// ${["QFAI", "EX-0001-0001-02"].join(":")}`),
+    );
+    expect(reportSection(report.output.join(""), "Annotations kept")).toBe(
+      [3, 4]
+        .map((line) => `- ${file}:${line}: ${legacy} (in a literal, left as test data)`)
+        .join("\n"),
+    );
   });
 
   it("selects test files with padded globs and exclusions like the unpadded ones", async () => {

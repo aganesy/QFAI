@@ -10,14 +10,23 @@ vi.mock("node:fs/promises", async (original) => {
   return { ...fs, writeFile: vi.fn(fs.writeFile) };
 });
 
-/** The mirror files written into `analysis` since the spy was last cleared. */
+/**
+ * The mirror files written since the spy was last cleared into `analysis` or into a refresh copy
+ * made beside it, relative to the directory they were written into.
+ */
 function copiedInto(analysis: string): string[] {
   const active = path.resolve(analysis);
+  const parent = path.dirname(active);
   return vi
     .mocked(writeFile)
     .mock.calls.map(([target]) => path.resolve(String(target)))
-    .filter((target) => target.startsWith(`${active}${path.sep}`))
-    .map((target) => path.relative(active, target).split(path.sep).join("/"));
+    .filter((target) => target.startsWith(`${parent}${path.sep}`))
+    .map((target) => path.relative(parent, target).split(path.sep))
+    .filter(
+      ([directory]) =>
+        directory === path.basename(active) || directory?.startsWith(".refreshing-codegraph-"),
+    )
+    .map((parts) => parts.slice(1).join("/"));
 }
 
 // Mutation: packages/qfai/src/core/graph/analysis.ts `if (await sameContent(bytes, target)) continue;` -> `if (false) continue;` fails "copies no code corpus file again when a repeated query finds it unchanged"

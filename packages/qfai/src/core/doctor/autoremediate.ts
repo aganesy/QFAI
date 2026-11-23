@@ -27,7 +27,6 @@
  * probe has already refused any entry that is not a registry package name.
  */
 
-import { access } from "node:fs/promises";
 import path from "node:path";
 import type { ReadLineOptions } from "node:readline";
 
@@ -92,51 +91,13 @@ export type NpmInstallInvocation = {
 };
 
 /**
- * npm's JavaScript entry at `node_modules/npm/bin/npm-cli.js` under a
- * directory on `searchPath`, the layout the Node installer and nvm-windows
- * use beside their `npm.cmd` launcher. A directory Windows lists in double
- * quotes is read without them. A relative directory is skipped: it resolves
- * against the project, so a project's own `node_modules/npm` would run as
- * npm. Undefined when no directory on the path holds one.
- */
-export async function npmEntryOnPath(searchPath: string): Promise<string | undefined> {
-  for (const listed of searchPath.split(path.delimiter)) {
-    const dir = unquotePathEntry(listed);
-    if (!path.isAbsolute(dir)) continue;
-    const entry = path.join(dir, "node_modules", "npm", "bin", "npm-cli.js");
-    try {
-      await access(entry);
-      return entry;
-    } catch {
-      // Not in this directory; the next one may hold it.
-    }
-  }
-  return undefined;
-}
-
-/** A `PATH` entry without the double quotes Windows allows around it. */
-function unquotePathEntry(entry: string): string {
-  return entry.length >= 2 && entry.startsWith('"') && entry.endsWith('"')
-    ? entry.slice(1, -1)
-    : entry;
-}
-
-/**
- * The program and arguments the default runner starts for `npm install <name>`.
- * On Windows npm is a `.cmd` launcher that only a shell can start, so the
- * runner starts npm's JavaScript entry with Node instead: the one beside
- * Node, else the one beside an `npm` on `PATH`. With neither, the install
- * fails and says so rather than going through a shell.
+ * The program and arguments the default runner starts for `npm install <name>`:
+ * npm as `npmCommand` finds it, the lookup graph provisioning uses too. On
+ * Windows that is npm's JavaScript entry run with Node, and with no entry
+ * found the install fails and says so rather than going through a shell.
  */
 export async function npmInstallInvocation(name: string): Promise<NpmInstallInvocation> {
   const npm = await npmCommand();
-  if (npm.prefix.length === 0 && process.platform === "win32") {
-    const entry = await npmEntryOnPath(process.env["PATH"] ?? "");
-    if (entry === undefined) {
-      throw new Error("npm's JavaScript entry (npm-cli.js) was not found beside node or on PATH");
-    }
-    return { command: process.execPath, args: [entry, "install", name] };
-  }
   return { command: npm.command, args: [...npm.prefix, "install", name] };
 }
 

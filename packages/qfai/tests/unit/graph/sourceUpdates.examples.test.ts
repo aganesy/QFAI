@@ -19,7 +19,9 @@ async function sourceUpdateFixture() {
   const generation = localCodeGenerationProcess(fixture);
   const run: GraphProcess = async (command, args, options) => {
     const result = await generation(command, args, options);
-    if (!args.includes("status") || args[2] !== fixture.analysis) return result;
+    // The prior database is stale for the active analysis and for any copy refreshed from it.
+    if (!args.includes("status") || path.basename(args[2] ?? "").startsWith(".preparing-"))
+      return result;
     const status: Record<string, unknown> = JSON.parse(result.stdout);
     return {
       ...result,

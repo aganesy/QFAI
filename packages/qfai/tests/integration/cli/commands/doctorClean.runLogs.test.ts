@@ -73,6 +73,7 @@ async function canCreateSymlink(root: string): Promise<boolean> {
 // QFAI:EX-0003-0008-06
 // QFAI:EX-0003-0008-07
 // QFAI:EX-0003-0008-08
+// QFAI:EX-0003-0008-09
 describe("doctor --clean prunes stale validate run logs", () => {
   it("removes a 30-day-old run and keeps the newest ones", async () => {
     const root = await newTempDir("prune");
@@ -157,6 +158,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
 
   it("refuses to prune an outDir shared with another project root", async () => {
     const mono = await newTempDir("shared-outdir");
+    execFileSync("git", ["init", "--quiet"], { cwd: mono });
     await writeFile(path.join(mono, "pnpm-workspace.yaml"), "packages:\n  - '*'\n", "utf-8");
     for (const app of ["app-a", "app-b"]) {
       await mkdir(path.join(mono, app, ".github", "workflows"), { recursive: true });
@@ -202,6 +204,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
       skip();
       return;
     }
+    execFileSync("git", ["init", "--quiet"], { cwd: mono });
     await writeFile(path.join(mono, "pnpm-workspace.yaml"), "packages:\n  - '*'\n", "utf-8");
     const sharedRoot = path.join(mono, "shared-report");
     await mkdir(sharedRoot, { recursive: true });
@@ -288,6 +291,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
     // simply absent from the map. An empty co-owner list would then authorise
     // an irreversible delete on ownership that was never proven.
     const mono = await newTempDir("truncated-scan");
+    execFileSync("git", ["init", "--quiet"], { cwd: mono });
     await writeFile(path.join(mono, "pnpm-workspace.yaml"), "packages:\n  - '*'\n", "utf-8");
     for (const name of ["app-a", "app-b", "app-c"]) {
       const dir = path.join(mono, name);
@@ -306,6 +310,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
 
   it("answers normally when the scan enumerated every config", async () => {
     const mono = await newTempDir("complete-scan");
+    execFileSync("git", ["init", "--quiet"], { cwd: mono });
     await writeFile(path.join(mono, "pnpm-workspace.yaml"), "packages:\n  - '*'\n", "utf-8");
     for (const name of ["app-a", "app-b"]) {
       const dir = path.join(mono, name);
@@ -378,6 +383,41 @@ describe("doctor --clean prunes stale validate run logs", () => {
         process.env.GIT_CONFIG_GLOBAL = previous;
       }
     }
+  });
+
+  it("refuses to prune an outDir outside the project when no Git repository bounds the scan", async () => {
+    // Outside a Git repository the scan stays at the project, so a stray
+    // pnpm-workspace.yaml in the parent widens nothing. app-b is then out
+    // of sight, and an outDir outside the scanned tree cannot be proven
+    // exclusive: the run log stays.
+    const mono = await newTempDir("no-git-parent-workspace");
+    await writeFile(path.join(mono, "pnpm-workspace.yaml"), "packages:\n  - '*'\n", "utf-8");
+    await seedSharedOutDirApps(mono);
+    const appA = path.join(mono, "app-a");
+    await writeFile(
+      path.join(appA, "qfai.config.yaml"),
+      "paths:\n  outDir: ../shared-report\nreport:\n  keepLatestRuns: 1\n",
+      "utf-8",
+    );
+    await mkdir(path.join(appA, ".github", "workflows"), { recursive: true });
+    await writeFile(path.join(appA, ".github", "workflows", "qfai-docs.yml"), "name: qfai-docs\n");
+    const sharedRoot = path.join(mono, "shared-report");
+    const stale = path.join(sharedRoot, "run-20260401120000001");
+    for (const runId of ["run-20260401120000001", "run-20260402120000002"]) {
+      const dir = path.join(sharedRoot, runId);
+      await mkdir(dir, { recursive: true });
+      const mtime = new Date(Date.now() - 30 * DAY_MS);
+      await utimes(dir, mtime, mtime);
+    }
+
+    await expect(findOutDirCoOwners(appA, sharedRoot)).rejects.toThrow(
+      /exclusive ownership .* cannot be proven/u,
+    );
+
+    const exit = await runDoctor({ root: appA, rootExplicit: true, format: "text", clean: true });
+
+    expect(exit).toBe(0);
+    expect(await pathExists(stale)).toBe(true);
   });
 
   it("doctor reports the run-log count so the growth is visible", async () => {

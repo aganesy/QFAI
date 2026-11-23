@@ -435,6 +435,12 @@ describe("story-tree test obligations", () => {
       true,
     ],
     ["a test class in a TypeScript file", "a.test.ts", "// {tag}\nclass TestOrder {}", true],
+    [
+      "a string held by a private field",
+      "a.test.ts",
+      "class Fixture {\n  #note = '{tag}';\n  test() {}\n}",
+      false,
+    ],
     ["a paren-less RSpec block", "a_spec.rb", "# {tag}\nit 'pays' do\nend", true],
     ["a Gherkin feature", "a.feature", "# {tag}\nFeature: Checkout", true],
   ] as const)("reads an annotation before %s", (_name, file, template, counted) => {

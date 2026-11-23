@@ -593,6 +593,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to the end of the line when it is never closed; a bare value is still
   blanked to the next whitespace. Closes #5020.
 
+- **A directory whose name begins with two dots counts as inside its base
+  everywhere.** Several more checks tested whether a path relative to its base
+  began with `..`, so a directory such as `..fixtures` or `..archive` read as
+  outside the tree that holds it: ATDD test-layer resolution and its scan
+  globs, the `qfai init` guard against writing into the package's own
+  assets, the `qfai doctor` output path alignment check, the assistant
+  anchor-reference validator, and the repository-relative paths in
+  assistant-asset messages. Each now asks the shared containment check, where
+  only a `..` path segment leaves the base. Closes #5142.
+
 - **Migration step 11 names a staging directory it could not remove.** When
   step 11 replaced a shipped skill or step but could not remove the hidden
   `.<id>-replace-*` directory it staged in, the failure was ignored: the
@@ -618,12 +628,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now prints as the text output prints it, `\t` or `\u` and four hexadecimal
   digits. Closes #5082.
 
+- **Migration step 8 leaves a string after a private field's `#` alone, and
+  reports each token it leaves in a literal.** Step 8 and the story-tree
+  annotation scan read `#` as a line comment in every test file, so in
+  `this.#id = "QFAI:SPEC-0001:TC-0001-0001";` the string counted as a comment
+  and step 8 rewrote it. `#` now opens a comment only outside JavaScript and
+  TypeScript files. A legacy token step 8 leaves in a literal is now listed
+  under `## Annotations kept` as `(in a literal, left as test data)`, so the
+  report says why it remains. Closes #5125.
+
 - **`qfai validate` takes only a directory for an old spec-pack layout.** An
   ordinary file in the specs directory whose name matched `spec-*` or
   `_policies`, such as `spec-notes.md`, raised `QFAI-LAYOUT-001` and stopped
   every profile validator. Only `spec-*/` and `_policies/` directories now
   count, as `qfai init` already did, and a matching file is no longer listed
   in the finding's message.
+
+- **A failed file replacement removes only its own temporary file.** QFAI
+  replaces a report, a run-log pointer, a `.gitignore` or a migrated document
+  by writing a temporary file beside it and renaming that into place. When
+  creating the temporary file failed because a file of that name already
+  existed, the cleanup still removed that path, deleting a file another
+  process had created. The cleanup now runs only once the temporary file has
+  been created by the same call. Closes #5086.
 
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
@@ -639,12 +666,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   those exceptions, and `triage-owned-cleanup` keeps its own unchanged-tree
   check.
 
+- **A comment in a table cell no longer cuts the table or hides the rest of a
+  document.** The validators that skip markup blanked every line a comment ran
+  into, so a comment opened in one row's cell and closed in a later row ended
+  the table there and lost the rows below it, and a cell holding `<!-- or //`
+  with no `-->` hid every heading and table after it. Only a comment that
+  opens a line is now blanked to the end of its closing line; one opened
+  inside a line keeps the text after its `-->`, and is a comment only when a
+  `-->` closes it within its paragraph. Closes #5167.
+
 - **The README's Actions minutes recipe reads every page of runs and jobs.**
   Its `gh api` commands for a pull request's workflow runs and for a run's
   jobs fetched one page, and the jobs page held at most 100, so a comparison
   with more runs or jobs silently dropped their minutes. Both commands now
   pass `--paginate`, and the per-item `--jq` filters still print one line per
   run or job.
+
+- **`QFAI-DB-002` reads a routine's arguments after its name.** The argument
+  list was read from the statement's first `(`, so a quoted routine name
+  holding one, such as `CREATE FUNCTION "f(x"(a int)`, gave the routine no
+  arguments, and its overloads were reported as one routine defined twice. The
+  list is now read from the parenthesis that follows the name. Closes #5149.
 
 - **`qfai validate` records no pass in its run log when the result write
   fails.** The run log was written, with status `pass`, before `validate.json`;
@@ -673,6 +715,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   category must name an operation after its colon or dash, or inside a closed
   parenthesis. Closes #5046.
 
+- **A failed code graph refresh keeps the previous graph with the files it
+  was built from.** Checking whether the code graph was current copied the
+  changed project files into the active analysis first, so when the
+  replacement graph then failed, the previous graph sat beside inputs it was
+  never built from. As the document graph already does, the check now
+  refreshes and verifies a separate copy when project files changed and makes
+  it active, graph and inputs together, only when the graph is current for
+  them. Closes #5191.
+
 - **The shared workflow rule names the RED exception by its installed path.**
   It pointed at `references/red-not-observable.md`, which the rule's own
   directory does not hold, so a reader entering from any stage other than
@@ -697,6 +748,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `CONCURRENTLY` is read as the index name instead of `concurrently`. A name
   whose quoted part never closes, and a `U&"…"` name, record no object rather
   than a wrong prefix such as `u`. Closes #5150.
+
+- **The HTML mock contrast check reads the background CSS applies.** It took
+  the first `background:` or `background-color:` it found in an inline style,
+  so a longer property name ending in `background` could stand in for the real
+  one, and an `!important` background lost to a later plain declaration. It now
+  reads the colour and the background from the parsed declarations, whatever
+  the case of their property names, so `QFAI-MOCK-008` measures the pair CSS
+  applies. A colour inside a `background` shorthand with an image, and a
+  three-digit hex colour, are now measured too. Closes #5135.
 
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
@@ -725,6 +785,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   one Windows holds open, no longer rejects the command without its message: it
   exits 1 with one line that says both files were written and names the file
   it kept. Closes #5093.
+
+- **`qfai init` downloads CodeGraph on Windows when npm is not beside Node.**
+  Graph provisioning then started a bare `npm` without a shell, which cannot
+  start Windows' `npm.cmd` launcher, so the download failed. It now finds npm
+  the way `qfai doctor --autoremediate` does, through one shared lookup: npm's
+  JavaScript entry beside Node, else under an absolute `PATH` directory, run
+  with Node. When neither holds one, init reports a failed `npm prerequisite`
+  step that names the missing `npm-cli.js` instead of a failed download.
 
 - **`qfai doctor` refuses a skill dependency that npm would install from a
   local tarball.** An unscoped `runtimeDependencies` entry ending in `.tgz`,
@@ -843,6 +911,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prerequisites said Python and `uv` install both graph runtimes. Only
   Graphify is installed with them; init installs CodeGraph with the npm of
   the Node.js that runs `qfai`. Closes #5059.
+
+- **`qfai doctor` no longer reads a `pnpm-workspace.yaml` above a project that
+  is in no Git repository.** A stray one in a shared parent widened the
+  output-directory collision scan to unrelated projects. Outside a Git
+  repository the scan now covers the project directory alone, and
+  `qfai doctor --clean` keeps the run logs of an `outDir` that lies outside the
+  scanned tree, since no scan can prove it unshared. Closes #5117.
 
 - **`qfai validate` reports a `.qfai/waivers.yml` it cannot read.** An
   existence probe that swallowed every error ran first, so a `.qfai` directory
