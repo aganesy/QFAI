@@ -618,6 +618,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now prints as the text output prints it, `\t` or `\u` and four hexadecimal
   digits. Closes #5082.
 
+- **Migration step 8 leaves a string after a private field's `#` alone, and
+  reports each token it leaves in a literal.** Step 8 and the story-tree
+  annotation scan read `#` as a line comment in every test file, so in
+  `this.#id = "QFAI:SPEC-0001:TC-0001-0001";` the string counted as a comment
+  and step 8 rewrote it. `#` now opens a comment only outside JavaScript and
+  TypeScript files. A legacy token step 8 leaves in a literal is now listed
+  under `## Annotations kept` as `(in a literal, left as test data)`, so the
+  report says why it remains. Closes #5125.
+
 - **`qfai validate` takes only a directory for an old spec-pack layout.** An
   ordinary file in the specs directory whose name matched `spec-*` or
   `_policies`, such as `spec-notes.md`, raised `QFAI-LAYOUT-001` and stopped

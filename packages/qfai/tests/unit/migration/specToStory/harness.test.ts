@@ -385,6 +385,11 @@ describe("migration harness", () => {
     const inComment = `expect(parse("${old}")).toBe(1); // ${mapped}\n`;
     expect(await executePlannedStep(rewrite(inComment), ctx, false, capture().io)).toBe(0);
     expect(await readFile(path.join(ctx.root, target), "utf8")).toBe(inComment);
+    const privateField = `class Model {\n  #id = "${old}";\n}\n`;
+    await writeFile(path.join(ctx.root, target), privateField);
+    const afterHash = privateField.replace(old, mapped);
+    expect(await executePlannedStep(rewrite(afterHash), ctx, false, capture().io)).toBe(2);
+    expect(await readFile(path.join(ctx.root, target), "utf8")).toBe(privateField);
   });
 
   it("preserves an executable test file's mode during an atomic annotation rewrite", async () => {
