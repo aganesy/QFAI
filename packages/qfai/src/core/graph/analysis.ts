@@ -8,7 +8,7 @@ import { GraphLocalStateError } from "./localFiles.js";
 import { GRAPH_VERSIONS, graphRuntimePaths, graphAnalysisRoot } from "./layout.js";
 import type { GraphProcess } from "./process.js";
 import { codegraphEnvironment } from "./process.js";
-import { assertGraphStoragePath, assertIndependentAnalysis } from "./storage.js";
+import { assertGraphStoragePath, assertIndependentAnalysis, checkRefreshCopy } from "./storage.js";
 export { graphAnalysisRoot } from "./layout.js";
 
 export interface CodeAnalysisCoverage {
@@ -73,13 +73,22 @@ export async function inspectCurrentCodeAnalysis(
   run: GraphProcess,
 ): Promise<boolean> {
   const analysis = graphAnalysisRoot(root, "codegraph");
-  return inspectCodeAnalysisAt(root, analysis, run);
+  return inspectCodeAnalysisAt(root, analysis, run, "staged");
 }
+
+/**
+ * `in-place` refreshes the inputs of a copy nothing else reads yet. `staged` checks the active
+ * analysis where it stands when its inputs already match the project; otherwise it refreshes and
+ * checks an independent copy and activates it only when it is current, so a failed refresh
+ * leaves the previous graph paired with the inputs it was built from.
+ */
+export type CodeInputRefresh = "in-place" | "staged";
 
 export async function inspectCodeAnalysisAt(
   root: string,
   analysis: string,
   run: GraphProcess,
+  refresh: CodeInputRefresh = "in-place",
 ): Promise<boolean> {
   await assertGraphStoragePath(root, analysis);
   try {
@@ -88,7 +97,19 @@ export async function inspectCodeAnalysisAt(
     if (isEnoent(cause)) return false;
     throw cause;
   }
-  await mirrorGraphCorpus(root, analysis);
+  if (refresh === "in-place") await mirrorGraphCorpus(root, analysis);
+  else if (await graphCorpusChanged(root, analysis))
+    return checkRefreshCopy(
+      root,
+      analysis,
+      "codegraph",
+      async (staged) => {
+        // The mirror checks the copy's independence before it writes anything.
+        await mirrorGraphCorpus(root, staged);
+        return nativeCodeAnalysisCurrent(root, staged, run);
+      },
+      (current) => current,
+    );
   return nativeCodeAnalysisCurrent(root, analysis, run);
 }
 
