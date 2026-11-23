@@ -25,6 +25,7 @@ const { runValidate } = await import("../../src/cli/commands/validate.js");
 const { runReport } = await import("../../src/cli/commands/report.js");
 
 const dirs: string[] = [];
+let stdout: string[] = [];
 
 function cleanResult(): ValidationResult {
   return {
@@ -38,7 +39,11 @@ function cleanResult(): ValidationResult {
 beforeEach(() => {
   validateProjectSpy.mockReset();
   validateProjectSpy.mockImplementation(() => Promise.resolve(cleanResult()));
-  vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+  stdout = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk: string | Uint8Array) => {
+    stdout.push(String(chunk));
+    return true;
+  });
   vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 });
 
@@ -69,6 +74,10 @@ async function tryLinkFile(target: string, linkPath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function printedLines(): string[] {
+  return stdout.join("").split("\n");
 }
 
 function validate(root: string): Promise<number> {
@@ -140,6 +149,72 @@ describe("validation result destinations reached through a link", () => {
       "qfai report: the validation result was not written: .qfai/report/validate-full.json is a symbolic link or junction",
     );
     expect(await readFile(target, "utf-8")).toBe("keep\n");
+    expect(await readdir(reportDir)).toEqual(["validate-full.json"]);
+  });
+
+  // QFAI:EX-0001-0039-57
+  it.each(["text", "github"] as const)(
+    "qfai validate --format %s refuses a validate.json linked to a directory and prints no verdict",
+    async (format) => {
+      // A directory link needs no privilege on any runner, so the refusal at the
+      // file name itself is covered where a file link would be skipped.
+      const root = await newTempDir();
+      const outside = await newTempDir();
+      const reportDir = path.join(root, ".qfai", "report");
+      await mkdir(reportDir, { recursive: true });
+      await linkDirectory(outside, path.join(reportDir, "validate.json"));
+
+      await expect(
+        runValidate({ root, strict: false, format, toolVersionOverride: "0.0.0-test" }),
+      ).rejects.toThrow(
+        "qfai validate: the validation result was not written: .qfai/report/validate.json is a symbolic link or junction",
+      );
+      expect(await readdir(outside)).toEqual([]);
+      const printed = printedLines();
+      expect(printed.some((line) => line.startsWith("qfai validate: passed"))).toBe(false);
+      expect(printed.some((line) => line.startsWith("qfai validate summary:"))).toBe(false);
+    },
+  );
+
+  // QFAI:EX-0001-0039-57
+  it("qfai validate writes neither result file when only the profile-suffixed one is linked to a directory", async () => {
+    const root = await newTempDir();
+    const outside = await newTempDir();
+    const reportDir = path.join(root, ".qfai", "report");
+    await mkdir(reportDir, { recursive: true });
+    await linkDirectory(outside, path.join(reportDir, "validate-full.json"));
+
+    await expect(validate(root)).rejects.toThrow(
+      "qfai validate: the validation result was not written: .qfai/report/validate-full.json is a symbolic link or junction",
+    );
+    expect(await readdir(outside)).toEqual([]);
+    expect((await readdir(reportDir)).filter((name) => name.endsWith(".json"))).toEqual([
+      "validate-full.json",
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-57
+  it("qfai report --run-validate writes neither result file when only the profile-suffixed one is linked to a directory", async () => {
+    const root = await newTempDir();
+    const outside = await newTempDir();
+    const flow = path.join(root, ".qfai", "spec", "02_business-flow", "business-flow-0001");
+    await mkdir(flow, { recursive: true });
+    await writeFile(path.join(flow, "business-flow.md"), "# BF-0001: Checkout\n", "utf-8");
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+      "utf-8",
+    );
+    const reportDir = path.join(root, ".qfai", "report");
+    await mkdir(reportDir, { recursive: true });
+    await linkDirectory(outside, path.join(reportDir, "validate-full.json"));
+
+    await expect(
+      runReport({ root, format: "md", runValidate: true, failOn: "never" }),
+    ).rejects.toThrow(
+      "qfai report: the validation result was not written: .qfai/report/validate-full.json is a symbolic link or junction",
+    );
+    expect(await readdir(outside)).toEqual([]);
     expect(await readdir(reportDir)).toEqual(["validate-full.json"]);
   });
 
