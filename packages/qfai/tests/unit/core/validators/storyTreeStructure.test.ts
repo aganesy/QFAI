@@ -9,6 +9,7 @@ import { defaultConfig } from "../../../../src/core/config.js";
 import { architectureProblems, orderLayers } from "../../../../src/core/storyTree/architecture.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
 import {
+  validateCatalogueRegistry,
   validateConstraintIds,
   validateStoryDirectories,
   validateStoryTreeStructure,
@@ -139,6 +140,46 @@ describe("story-tree structure", () => {
       });
       const findings = await validateStoryTreeStructure(root, defaultConfig, tree);
       expect(findings.some((item) => item.code === "QFAI-STORY-012")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reads constraint IDs outside a fenced sample and a comment", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-constraint-ids-"));
+    try {
+      const specsDir = path.join(root, ".qfai", "spec");
+      const file = path.join(specsDir, "01_policy", "constraint.md");
+      await mkdir(path.dirname(file), { recursive: true });
+      const table = (id: string): string =>
+        `| ID | Constraint | Rationale |\n| --- | --- | --- |\n| ${id} | A | B |`;
+      await writeFile(
+        file,
+        `# Constraints\n\n## Technical Constraints\n\n\`\`\`md\n${table("TC-09")}\n\`\`\`\n\n${table("TC-01")}\n\n## Business Constraints\n\n<!--\n${table("BC-07")}\n-->\n\n${table("BC-01")}\n`,
+      );
+      expect(await validateConstraintIds(specsDir)).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reads the Component catalogue row outside a fenced sample and a comment", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-catalogue-registry-"));
+    try {
+      const contractsDir = path.join(root, ".qfai", "spec", "03_contract");
+      await mkdir(contractsDir, { recursive: true });
+      const table = (choice: string): string =>
+        `| Component | Choice |\n| --- | --- |\n| Component catalogue | ${choice} |`;
+      for (const sample of [
+        `<!--\n${table("`shadcn/ui`")}\n-->`,
+        `\`\`\`md\n${table("`shadcn/ui`")}\n\`\`\``,
+      ]) {
+        await writeFile(
+          path.join(contractsDir, "tech.md"),
+          `# Technology\n\n## Stack\n\n${sample}\n\n${table("none")}\n`,
+        );
+        expect(await validateCatalogueRegistry(contractsDir, defaultConfig), sample).toEqual([]);
+      }
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -328,6 +369,13 @@ describe("story-tree structure", () => {
         "the diagram draws CLI --> Core more than once",
       ]);
       expect(await problems(once, table)).toEqual([]);
+    });
+
+    it("reads the layer table outside a fenced sample and a comment", async () => {
+      const sample = ["| Layer | Responsibility | Depends on |", "| --- | --- | --- |"];
+      const draft = [...sample, "| Draft | Sketches | Nowhere |"];
+      expect(await problems(DIAGRAM, ["<!--", ...draft, "-->", "", ...LAYERS])).toEqual([]);
+      expect(await problems(DIAGRAM, ["```md", ...draft, "```", "", ...LAYERS])).toEqual([]);
     });
 
     it("reads nothing when the tree has no tech.md", async () => {
