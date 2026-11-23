@@ -93,8 +93,8 @@ describe("uiux validators", () => {
     expect(resolved.has("primitive.fail.dependent")).toBe(false);
   });
 
-  // QFAI:EX-0001-0039-62
-  it("raises the depth error once, at the first token past ten, along both arms of a diamond in any order", () => {
+  // QFAI:EX-0001-0039-66
+  it("raises the depth error once, at the token nearest the chain end past ten, in a diamond and a long chain in any order", () => {
     const chain = (name: string, length: number): string[][] =>
       Array.from({ length }, (_, index) => {
         const value =
@@ -154,7 +154,7 @@ describe("uiux validators", () => {
         "loop",
         [
           ["    b:", "      $value: '{primitive.loop.c}'"],
-          ["    c:", "      $value: '{primitive.loop.a}'"],
+          ["    c:", "      $value: '{primitive.loop.a} {primitive.loop.b}'"],
           ["    a:", "      $value: '{primitive.loop.b} {primitive.base.red}'"],
         ],
       ],

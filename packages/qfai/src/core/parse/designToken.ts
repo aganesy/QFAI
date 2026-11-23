@@ -218,7 +218,7 @@ function resolveTokenRef(
       parent.low = Math.min(parent.low, frame.low);
     }
     if (frame.low === frame.index) {
-      const members = open.splice(open.indexOf(frame.path));
+      const members = open.splice(open.lastIndexOf(frame.path));
       settleComponent(members, allTokens, outcomes, result);
     }
   }
