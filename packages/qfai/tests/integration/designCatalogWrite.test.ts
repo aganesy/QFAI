@@ -8,7 +8,16 @@
 
 import { randomUUID } from "node:crypto";
 import type * as fsPromises from "node:fs/promises";
-import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -18,16 +27,19 @@ type FsPromises = typeof fsPromises;
 type RenameFault = (from: string, to: string) => boolean;
 type LstatFault = (file: string) => boolean;
 type RenamePause = (from: string, to: string) => Promise<void>;
+type RmFault = (file: string) => boolean;
 
 const fault = vi.hoisted(
   (): {
     rename: RenameFault | null;
     lstat: LstatFault | null;
+    rm: RmFault | null;
     noInodes: boolean;
     pause: RenamePause | null;
   } => ({
     rename: null,
     lstat: null,
+    rm: null,
     noInodes: false,
     pause: null,
   }),
@@ -63,6 +75,15 @@ vi.mock("node:fs/promises", async () => {
       }
       return actual.lstat(...args);
     },
+    // A file another process holds open, which Windows will not let go of.
+    rm: (...args: Parameters<FsPromises["rm"]>): ReturnType<FsPromises["rm"]> => {
+      if (fault.rm?.(String(args[0])) === true) {
+        return Promise.reject(
+          Object.assign(new Error("EPERM: operation not permitted, rm"), { code: "EPERM" }),
+        );
+      }
+      return actual.rm(...args);
+    },
     rename: async (...args: Parameters<FsPromises["rename"]>): Promise<void> => {
       const [from, to] = args;
       // A run held just before this rename, while another run starts.
@@ -96,6 +117,7 @@ const SAMPLE = path.join(
 afterEach(async () => {
   fault.rename = null;
   fault.lstat = null;
+  fault.rm = null;
   fault.noInodes = false;
   fault.pause = null;
   vi.restoreAllMocks();
@@ -291,7 +313,7 @@ describe("the design catalogue is written only inside the project, by the run th
   });
 
   // QFAI:EX-0001-0312-19
-  it("leaves a placed file it cannot tell apart on a volume with no inode numbers", async () => {
+  it("tells its placed file by its bytes on a volume with no inode numbers and puts both back", async () => {
     const root = await project();
     expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
     const tokens = await readFile(catalogFile(root, "design.tokens.json"));
@@ -301,16 +323,81 @@ describe("the design catalogue is written only inside the project, by the run th
     fault.rename = placesTheme;
     const failed = await cli(["catalog", "design", "--root", root]);
     expect(failed.code).toBe(1);
-    expect(failed.err).toMatch(
-      /^qfai catalog design: could not write the design catalogue, and could not put both files back: EBUSY: resource busy or locked, rename \.qfai\/catalog\/design\.tokens\.json was left in place: the file system gives no inode number, so it cannot be told apart from another run's file\. \.qfai\/catalog\/\.design\.tokens\.json\.[0-9a-f-]+\.old still holds the earlier \.qfai\/catalog\/design\.tokens\.json: another file is at \.qfai\/catalog\/design\.tokens\.json\. \.qfai\/catalog\/theme\.css is as it was\.\n$/,
+    expect(failed.err).toBe(
+      "qfai catalog design: could not write the design catalogue, so both files are as they were: EBUSY: resource busy or locked, rename\n",
     );
+    expect(await readFile(catalogFile(root, "design.tokens.json"))).toEqual(tokens);
     expect(await readFile(catalogFile(root, "theme.css"))).toEqual(theme);
-    expect(await readFile(catalogFile(root, "design.tokens.json"))).not.toEqual(tokens);
+    expect((await readdir(path.join(root, ...CATALOG))).sort()).toEqual([
+      "design.tokens.json",
+      "theme.css",
+    ]);
+  });
+
+  // QFAI:EX-0001-0312-23
+  it.each([
+    ["by its inode number", false],
+    ["by its bytes on a volume with no inode numbers", true],
+  ])(
+    "keeps another run's token file that replaced the one it placed, told %s",
+    async (_how, noInodes) => {
+      const root = await project();
+      expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
+      const tokens = await readFile(catalogFile(root, "design.tokens.json"));
+      const theme = await readFile(catalogFile(root, "theme.css"));
+      await changePrimary(root);
+      fault.noInodes = noInodes;
+      fault.rename = placesTheme;
+      const hold = holdBeforeTheme();
+      const err = captureStderr();
+      const running = runCatalogDesign({ root });
+      await hold.held;
+      // Another file put in place by rename, so it never shares the placed file's inode.
+      const other = catalogFile(root, ".design.tokens.json.other-run");
+      await writeFile(other, '{ "other": "run" }\n', "utf-8");
+      await rename(other, catalogFile(root, "design.tokens.json"));
+      hold.resume();
+      const code = await running;
+      vi.restoreAllMocks();
+      expect(code).toBe(1);
+      expect(err.join("")).toMatch(
+        /^qfai catalog design: could not write the design catalogue, and could not put both files back: EBUSY: resource busy or locked, rename \.qfai\/catalog\/\.design\.tokens\.json\.[0-9a-f-]+\.old still holds the earlier \.qfai\/catalog\/design\.tokens\.json: another file is at \.qfai\/catalog\/design\.tokens\.json\. \.qfai\/catalog\/theme\.css is as it was\.\n$/,
+      );
+      expect(await readFile(catalogFile(root, "design.tokens.json"), "utf-8")).toBe(
+        '{ "other": "run" }\n',
+      );
+      expect(await readFile(catalogFile(root, "theme.css"))).toEqual(theme);
+      const left = await readdir(path.join(root, ...CATALOG));
+      const aside = left.filter((name) => name.endsWith(".old"));
+      expect(left.sort()).toEqual(["design.tokens.json", "theme.css", ...aside].sort());
+      expect(aside).toHaveLength(1);
+      expect(await readFile(catalogFile(root, aside[0] ?? ""))).toEqual(tokens);
+    },
+  );
+
+  // QFAI:EX-0001-0312-24
+  it("names each moved-aside file it could not remove after writing both files", async () => {
+    const root = await project();
+    expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
+    const tokens = await readFile(catalogFile(root, "design.tokens.json"));
+    const theme = await readFile(catalogFile(root, "theme.css"));
+    await changePrimary(root);
+    fault.rm = (file) => file.endsWith(".old");
+    const written = await cli(["catalog", "design", "--root", root]);
+    fault.rm = null;
+    expect(written.code).toBe(1);
+    expect(written.err).toMatch(
+      /^qfai catalog design: wrote \.qfai\/catalog\/design\.tokens\.json and \.qfai\/catalog\/theme\.css, but \.qfai\/catalog\/\.design\.tokens\.json\.[0-9a-f-]+\.old could not be removed: EPERM: operation not permitted, rm \.qfai\/catalog\/\.theme\.css\.[0-9a-f-]+\.old could not be removed: EPERM: operation not permitted, rm\n$/,
+    );
+    expect(await readFile(catalogFile(root, "theme.css"), "utf-8")).toContain(
+      "--color-primary: #202938;",
+    );
     const left = await readdir(path.join(root, ...CATALOG));
-    const aside = left.filter((name) => name.endsWith(".old"));
-    expect(left.sort()).toEqual(["design.tokens.json", "theme.css", ...aside].sort());
-    expect(aside).toHaveLength(1);
-    expect(await readFile(catalogFile(root, aside[0] ?? ""))).toEqual(tokens);
+    const asides = left.filter((name) => name.endsWith(".old")).sort();
+    expect(left.sort()).toEqual(["design.tokens.json", "theme.css", ...asides].sort());
+    expect(asides).toHaveLength(2);
+    expect(await readFile(catalogFile(root, asides[0] ?? ""))).toEqual(tokens);
+    expect(await readFile(catalogFile(root, asides[1] ?? ""))).toEqual(theme);
   });
 
   // QFAI:EX-0001-0312-20
