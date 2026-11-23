@@ -96,6 +96,34 @@ export async function exists(filePath: string): Promise<boolean> {
   }
 }
 
+/**
+ * Whether the path is there, telling "nothing is there" apart from "it could
+ * not be observed": a check may skip the first, but must report the second as
+ * incomplete rather than throw or pass on it.
+ */
+export type PathObservation =
+  | { readonly kind: "present" }
+  | { readonly kind: "absent" }
+  | { readonly kind: "unobservable"; readonly reason: string };
+
+/** Observe a path without throwing: an error other than "absent" is returned as its reason. */
+export async function observePath(filePath: string): Promise<PathObservation> {
+  try {
+    await access(filePath);
+    return { kind: "present" };
+  } catch (error: unknown) {
+    if (isAbsent(error)) {
+      return { kind: "absent" };
+    }
+    return { kind: "unobservable", reason: failureReason(error) };
+  }
+}
+
+/** The errno code of a failed file-system call, else its message. */
+function failureReason(error: unknown): string {
+  return hasErrnoCode(error) ? error.code : error instanceof Error ? error.message : "error";
+}
+
 /** The file's text, or `""` where nothing is there. Any other read failure throws. */
 export async function readSafe(filePath: string): Promise<string> {
   try {
@@ -126,10 +154,7 @@ export async function readPresentFile(filePath: string): Promise<PresentFileRead
     if (isAbsent(error)) {
       return { kind: "absent" };
     }
-    return {
-      kind: "unreadable",
-      reason: hasErrnoCode(error) ? error.code : error instanceof Error ? error.message : "error",
-    };
+    return { kind: "unreadable", reason: failureReason(error) };
   }
 }
 

@@ -620,6 +620,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and refused with `plan-invalid` and `step-missing` as for the route's own
   steps.
 
+- **`qfai validate` reports a self-governance input it cannot observe instead
+  of stopping.** Deciding whether `QFAI-HANDOFF-001` and `QFAI-MANIFEST-001`
+  could run, the check let an error other than "absent", such as a permission
+  error on a parent directory, end the run. That path is now reported as an
+  incomplete check with the same finding as an input that cannot be read, and
+  the code is listed as not evaluated.
+
 - **`qfai validate --format github` shows control characters in an annotation
   as visible escapes.** An `::error::`, `::warning::` or `::notice::` message
   escaped only `%`, CR and LF, so an ESC colour sequence or a bell from

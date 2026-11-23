@@ -55,7 +55,7 @@ export async function detectHandoffSchemaDrift(root: string): Promise<Issue[]> {
   const schema = await readPresentFile(path.join(root, HANDOFF_SCHEMA_REL));
   if (schema.kind === "absent") return [];
   if (schema.kind === "unreadable") {
-    return [unreadableInput(HANDOFF_SCHEMA_REL, schema.reason, "every registered writer")];
+    return [unreadableHandoffInput(HANDOFF_SCHEMA_REL, schema.reason, "every registered writer")];
   }
   const schemaText = schema.text;
   const schemaHasField = schemaText.includes(SCHEMA_TOKEN);
@@ -67,7 +67,7 @@ export async function detectHandoffSchemaDrift(root: string): Promise<Issue[]> {
     const writer = await readPresentFile(path.join(root, pair.writerRel));
     if (writer.kind === "absent") continue;
     if (writer.kind === "unreadable") {
-      issues.push(unreadableInput(pair.writerRel, writer.reason, `clause=${pair.clause}`));
+      issues.push(unreadableHandoffInput(pair.writerRel, writer.reason, `clause=${pair.clause}`));
       continue;
     }
     const writerText = writer.text;
@@ -89,8 +89,10 @@ export async function detectHandoffSchemaDrift(root: string): Promise<Issue[]> {
 /**
  * A present input that cannot be read leaves the pair check undone, which
  * is not the same as in sync, so it is reported rather than skipped.
+ * Exported for the gate group, whose precondition reports a path it cannot
+ * observe with the same finding.
  */
-function unreadableInput(rel: string, reason: string, scope: string): Issue {
+export function unreadableHandoffInput(rel: string, reason: string, scope: string): Issue {
   const message =
     `${FINDING_CODE}: ${rel} could not be read (${reason}), so the handoff schema ` +
     `SSOT-sync check for ${scope} is incomplete. Make it a readable file.`;
