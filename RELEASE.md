@@ -210,17 +210,30 @@ Note: run the commands below from the repository root unless stated otherwise.
 
    ```sh
    gh pr view <PR> --json mergeCommit --jq .mergeCommit.oid
-   git fetch origin main
-   git merge-base --is-ancestor <SHA> origin/main
-   git show <SHA>:packages/qfai/package.json
-   git tag vX.Y.Z <SHA>
-   git rev-parse "vX.Y.Z^{commit}"
+   ```
+
+   `<SHA>` is what that command prints. If it prints nothing or `null`, the pull
+   request has not merged: stop here and create no tag. Otherwise run the checks
+   and the tag as one chain, so the tag is created only when every check passes:
+
+   ```sh
+   git fetch origin main &&
+     git merge-base --is-ancestor <SHA> origin/main &&
+     git show <SHA>:packages/qfai/package.json | grep -F '"version": "X.Y.Z"' &&
+     git tag vX.Y.Z <SHA> &&
+     git rev-parse "vX.Y.Z^{commit}"
+   ```
+
+   The chain stops at the first check that fails: `<SHA>` is not on `main`, or
+   its manifest does not show `"version": "X.Y.Z"`. Push only when it ran to the
+   end and `git rev-parse` printed `<SHA>` again:
+
+   ```sh
    git push origin refs/tags/vX.Y.Z
    ```
 
-   `<SHA>` is what the first command prints. Push only when the ancestry check
-   exits 0, the manifest shows `"version": "X.Y.Z"` and `git rev-parse` prints
-   `<SHA>` again. Otherwise delete the local tag with `git tag -d vX.Y.Z`.
+   If the tag was created but `git rev-parse` printed anything else, delete the
+   local tag with `git tag -d vX.Y.Z` and push nothing.
 
 5. Approve the publish
 
