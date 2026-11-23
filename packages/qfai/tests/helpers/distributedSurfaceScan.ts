@@ -66,6 +66,26 @@ export const STORY_ID_TRAILING_HYPHEN_BOUNDARIES: ReadonlyArray<[string, string]
   ["cli-0009-", "cli-0010-"],
 ];
 
+const SCHEMA_VERSION_CLASS = "schemaVersion field";
+const SCHEMA_VERSION_RE = /"schemaVersion"|schemaVersion\s*:/g;
+
+/**
+ * The post-build guard reads each file whole, so `\s` crosses a line break:
+ * `schemaVersion` with its colon on the next line is one field. Match the
+ * whole content the same way and report each line a field starts on once.
+ */
+function scanSchemaVersion(file: string, content: string): SurfaceHit[] {
+  const found: SurfaceHit[] = [];
+  const re = new RegExp(SCHEMA_VERSION_RE.source, "g");
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(content)) !== null) {
+    const line = content.slice(0, match.index).split("\n").length;
+    if (found.at(-1)?.line === line) continue;
+    found.push({ file, line, match: match[0], className: SCHEMA_VERSION_CLASS });
+  }
+  return found;
+}
+
 const BASE_PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
   // Ten and above is a numeric property. Preserve the case-insensitive
   // spelling that the post-build guard applies to paths and content.
@@ -79,7 +99,7 @@ const BASE_PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
     name: "internal story id",
     re: /\b(?:DEC|OQ)-[0-9]{14}\b|\b(?:DEC|OQ|BF|BR)-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])|\bUS-(?:(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})-[0-9]{4}|[0-9]{4}-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3}))\b|\b(?:AC|EX)-(?:(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})-[0-9]{4}-[0-9]{2}|[0-9]{4}-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})-[0-9]{2}|[0-9]{4}-[0-9]{4}-(?:00|[1-9][0-9]))\b|\bBR-(?:(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})-[0-9]{4}|[0-9]{4}-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3}))\b|\bBR-(?:CLI|API|DB|UI)-(?:(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})-[0-9]{4}|[0-9]{4}-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3}))\b|(?<![A-Za-z0-9_-])(?:CLI|API|DB|UI|DESIGN|cli|api|db|ui)-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])|\bCON-(?:CLI|API|DB|UI|DESIGN)-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])/g,
   },
-  { name: "schemaVersion field", re: /"schemaVersion"|schemaVersion\s*:/g },
+  { name: SCHEMA_VERSION_CLASS, re: SCHEMA_VERSION_RE },
 ];
 
 // The sample-band IDs this repository declares, read from its spec tree by the
@@ -121,7 +141,7 @@ function isScannableTextFile(file: string): boolean {
 function scanPathName(relativePath: string): SurfaceHit[] {
   const found: SurfaceHit[] = [];
   for (const { name, re } of PATTERNS) {
-    if (name === "schemaVersion field") continue;
+    if (name === SCHEMA_VERSION_CLASS) continue;
     re.lastIndex = 0;
     const match = re.exec(relativePath);
     if (match) {
@@ -168,12 +188,15 @@ export async function scanDistributedSurface(root: string): Promise<SurfaceScan>
     const lines = content.split("\n");
     const isPackageJson = path.basename(full) === "package.json";
     for (const { name, re } of PATTERNS) {
+      if (name === SCHEMA_VERSION_CLASS) {
+        if (!isPackageJson) result.hits.push(...scanSchemaVersion(relative, content));
+        continue;
+      }
       for (let index = 0; index < lines.length; index++) {
         const line = lines[index] ?? "";
         if (isPackageJson && name === "internal version marker" && /"version"\s*:/.test(line)) {
           continue;
         }
-        if (isPackageJson && name === "schemaVersion field") continue;
         re.lastIndex = 0;
         const match = re.exec(line);
         if (match) {
