@@ -671,6 +671,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   condition that is a number, a list, a mapping or empty is named as not
   counted. Closes #4787.
 
+- **`QFAI-FLOW-006` gives a business flow a remedy its shape allows.** The
+  warning told every document to split an oversized diagram into an overview
+  and detail diagrams, but a `business-flow.md` holds exactly one Flow diagram,
+  so following the advice failed its shape check. In a business flow the
+  remedy now keeps the main path in that diagram and moves branches and detail
+  into the Alternate and exception paths list; any other document is still
+  told to split the diagram. Closes #4978.
+
 - **`qfai session-review --since` accepts a date with a year below 0100.** The
   calendar check read years 0000 through 0099 as 1900 through 1999, so a valid
   date such as `0099-09-09` was refused. The check now keeps the year as
