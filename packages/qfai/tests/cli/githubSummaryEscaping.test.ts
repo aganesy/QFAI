@@ -6,13 +6,16 @@
  * after it.
  *
  * The emitter is driven rather than the escaping helper, because the property is that the lines
- * written to stdout keep each path on its own line, escaped the way a notice's text is.
+ * written to stdout keep each path on its own line, escaped as a plain log line: a line break
+ * shows as a visible `\r` or `\n`, and `%` stays as written, since the runner decodes `%XX`
+ * only inside a workflow command. The provenance line is printed before the format branch, so
+ * it is checked through the formatter it is printed with.
  */
 import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { emitGitHubOutput } from "../../src/cli/commands/validate.js";
+import { emitGitHubOutput, formatProvenanceLine } from "../../src/cli/commands/validate.js";
 import type { ValidationResult } from "../../src/core/types.js";
 
 /** The command a hostile path would open if it were printed raw. */
@@ -71,5 +74,16 @@ describe("the GitHub summary keeps each path on one log line", () => {
   it("keeps `%` as written, since the runner decodes escapes only inside a command", () => {
     const lines = emittedLines(root, path.join(root, "validate.json"), ".qfai/report/100%");
     expect(lines).toContain("qfai validate note: see .qfai/report/100% for the run-log.");
+  });
+});
+
+describe("the provenance line keeps the install directory on one log line", () => {
+  it("does not let the install directory open a command of its own", () => {
+    const line = formatProvenanceLine("0.0.0-test", `/opt/qfai\n${INJECTED_COMMAND}`);
+    expect(line).toBe(`qfai: 0.0.0-test (/opt/qfai\\n${INJECTED_COMMAND})`);
+  });
+
+  it("says so when the install directory cannot be told", () => {
+    expect(formatProvenanceLine("0.0.0-test", null)).toBe("qfai: 0.0.0-test (resolution unknown)");
   });
 });
