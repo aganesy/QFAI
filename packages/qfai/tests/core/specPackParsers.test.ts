@@ -204,6 +204,71 @@ describe("maskNonSpecRegions", () => {
     expect(visible(["```html", "<div>", "```", "## Scope"].join("\n"))).toEqual(["## Scope"]);
   });
 
+  it("blanks a CDATA section up to its end marker, past blank lines", () => {
+    // Only types 1 and 6 were blanked, so a heading and its obligations in a
+    // CDATA section read as a real section and cleared the gate that needs it.
+    const text = [
+      "# doc",
+      "",
+      "<![CDATA[",
+      "## Reviewer Gate Baseline",
+      "",
+      "- an obligation",
+      "]]>",
+      "",
+      "## Scope",
+    ].join("\n");
+
+    expect(visible(text)).toEqual(["# doc", "## Scope"]);
+    expect(maskNonSpecRegions(text).split("\n")).toHaveLength(9);
+  });
+
+  it("blanks a processing instruction up to its end marker", () => {
+    expect(visible(["<?xml-note", "## Risks", "", "?>", "## Scope"].join("\n"))).toEqual([
+      "## Scope",
+    ]);
+  });
+
+  it("blanks a declaration up to its end marker, and one that closes on its line", () => {
+    expect(visible(["<!DOCTYPE note", "## Risks", "", ">", "## Scope"].join("\n"))).toEqual([
+      "## Scope",
+    ]);
+    expect(visible(["<!DOCTYPE html>", "## Scope"].join("\n"))).toEqual(["## Scope"]);
+  });
+
+  it("masks a custom-element block up to its terminating blank line", () => {
+    const text = [
+      "<review-note data-kind='sample'>",
+      "## Risks",
+      "</review-note>",
+      "",
+      "## Scope",
+    ].join("\n");
+
+    expect(visible(text)).toEqual(["## Scope"]);
+  });
+
+  it("does not let a custom-element tag interrupt a paragraph", () => {
+    // A type-7 block cannot interrupt a paragraph, so the tag line and what
+    // follows it are paragraph text.
+    expect(visible(["Some prose.", "<review-note>", "## Scope"].join("\n"))).toEqual([
+      "Some prose.",
+      "<review-note>",
+      "## Scope",
+    ]);
+  });
+
+  it("opens a custom-element block right under a heading", () => {
+    expect(visible(["## Scope", "<review-note>", "## Risks"].join("\n"))).toEqual(["## Scope"]);
+  });
+
+  it("does not open a custom-element block on a tag with text after it", () => {
+    expect(visible(["<review-note> inline", "## Scope"].join("\n"))).toEqual([
+      "<review-note> inline",
+      "## Scope",
+    ]);
+  });
+
   it("does not open a raw HTML block on prose that merely mentions the tag", () => {
     expect(visible(["Use a `<pre>` block for samples.", "## Scope"].join("\n"))).toEqual([
       "Use a `<pre>` block for samples.",
