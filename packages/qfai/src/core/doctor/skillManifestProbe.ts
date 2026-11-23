@@ -98,16 +98,45 @@ export type SkillManifestProbeResult = {
 const REGISTRY_PACKAGE_NAME = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/u;
 const REGISTRY_PACKAGE_NAME_MAX_LENGTH = 214;
 
+/**
+ * npm's own test for a local tarball (`isFileType` in `npm-package-arg`):
+ * `npm install evil.tgz` installs `./evil.tgz`, not a registry package. npm
+ * applies it to unscoped names only.
+ */
+const TARBALL_FILE_NAME = /\.(?:tgz|tar\.gz|tar)$/iu;
+
 export function isRegistryPackageName(name: string): boolean {
-  return name.length <= REGISTRY_PACKAGE_NAME_MAX_LENGTH && REGISTRY_PACKAGE_NAME.test(name);
+  return (
+    name.length <= REGISTRY_PACKAGE_NAME_MAX_LENGTH &&
+    REGISTRY_PACKAGE_NAME.test(name) &&
+    (name.startsWith("@") || !TARBALL_FILE_NAME.test(name))
+  );
 }
 
 /**
- * Each rejected entry as JSON, so a string reads quoted, a number or `null`
- * reads as itself, and a control character never reaches the terminal raw.
+ * Characters `JSON.stringify` leaves raw that can still reorder or break a
+ * terminal line: C1 controls and DEL, format characters such as U+202E, and
+ * the line and paragraph separators.
+ */
+const UNSAFE_IN_MESSAGE = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu;
+
+function escapeCodeUnits(character: string): string {
+  let escaped = "";
+  for (let index = 0; index < character.length; index += 1) {
+    escaped += `\\u${character.charCodeAt(index).toString(16).padStart(4, "0")}`;
+  }
+  return escaped;
+}
+
+/**
+ * Each rejected entry as JSON, so a string reads quoted and a number or
+ * `null` reads as itself. No control, format or separator character reaches
+ * the terminal raw: each reads as its `\u` escape.
  */
 export function quoteManifestEntries(entries: readonly unknown[]): string {
-  return entries.map((entry) => JSON.stringify(entry)).join(", ");
+  return entries
+    .map((entry) => JSON.stringify(entry).replace(UNSAFE_IN_MESSAGE, escapeCodeUnits))
+    .join(", ");
 }
 
 export type SkillManifestProbeOptions = {

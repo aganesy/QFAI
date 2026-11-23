@@ -428,6 +428,67 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
   });
 
+  // PostgreSQL folds only ASCII A-Z in a bare name under UTF-8; `Äpfel` and
+  // `äpfel` are two tables there. Folding every Unicode letter merged them.
+  it("folds only ASCII letters in a bare name", () => {
+    const { statements } = parseSqlContract(
+      `CREATE TABLE Äpfel (a int);\nCREATE TABLE äpfel (a int);\nCREATE TABLE ÄPFEL (a int);\n`,
+    );
+    expect(collectCreatedObjects(statements).map((object) => object.name)).toEqual([
+      "Äpfel",
+      "äpfel",
+      "Äpfel",
+    ]);
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([
+      { kind: "TABLE", name: "Äpfel", lines: [1, 3] },
+    ]);
+  });
+
+  // A quoted part that never closes, or whose last quote is one half of a
+  // doubled `""`, names nothing; reading a prefix of it would key a wrong name.
+  it.each([
+    ["an unclosed quoted name", `CREATE TABLE "app.users (a int);\n`],
+    ["an unpaired doubled quote", `CREATE TABLE "a"" (x int);\n`],
+    ["an unclosed part after a schema", `CREATE TABLE app."users (a int);\n`],
+  ])("records no object for %s", (_label, sql) => {
+    const { statements } = parseSqlContract(sql);
+    expect(collectCreatedObjects(statements)).toEqual([]);
+  });
+
+  // `ON` and `CONCURRENTLY` are keywords of `CREATE INDEX`, not its name: an
+  // index without a name is named by PostgreSQL, so two of them never collide.
+  it("records no index name for an index created without one", () => {
+    const { statements } = parseSqlContract(
+      `CREATE INDEX ON t (a);\nCREATE INDEX ON t (b);\n` +
+        `CREATE UNIQUE INDEX CONCURRENTLY ON t (c);\nCREATE INDEX CONCURRENTLY ON t (d);\n`,
+    );
+    expect(collectCreatedObjects(statements)).toEqual([]);
+  });
+
+  it("reads the index name after CONCURRENTLY and IF NOT EXISTS", () => {
+    const { statements } = parseSqlContract(
+      `CREATE INDEX CONCURRENTLY i ON t (a);\n` +
+        `CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS j ON t (b);\n` +
+        `CREATE INDEX CONCURRENTLY k ON t (c);\nCREATE INDEX "on" ON t (d);\n`,
+    );
+    expect(collectCreatedObjects(statements).map((object) => object.name)).toEqual([
+      "i",
+      "j",
+      "k",
+      "on",
+    ]);
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
+  // A `U&"…"` name holds Unicode escapes this reader does not decode; it was
+  // read as `u`, so every such table collided with every other.
+  it("records no object for a U& quoted name", () => {
+    const { statements } = parseSqlContract(
+      `CREATE TABLE U&"d\\0061ta" (a int);\nCREATE TABLE u&"other" (a int);\n`,
+    );
+    expect(collectCreatedObjects(statements)).toEqual([]);
+  });
+
   it("stays silent on a file that defines each object once", async () => {
     const issues = await runOn(
       `${HEADER}CREATE TABLE a (x int);\nCREATE TABLE b (y int);\nCREATE INDEX i ON a (x);\n`,

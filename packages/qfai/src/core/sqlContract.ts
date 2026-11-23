@@ -387,6 +387,15 @@ const CREATE_RE = new RegExp(
   "i",
 );
 
+/**
+ * `CONCURRENTLY` and `IF NOT EXISTS`, which `CREATE INDEX` writes in that order
+ * between `INDEX` and the name. {@link CREATE_RE} reads only `IF NOT EXISTS`.
+ */
+const INDEX_OPTIONS_AT = /CONCURRENTLY\s+(?:IF\s+NOT\s+EXISTS\s+)?/iy;
+
+/** A bare `ON` where an index name would start: the index has no name. */
+const UNNAMED_INDEX_AT = new RegExp(`^ON(?!${IDENTIFIER_CHAR_CLASS})`, "i");
+
 /** The first character of a bare identifier, under the rules {@link IDENTIFIER_CHAR} continues. */
 const IDENTIFIER_START = new RegExp(IDENTIFIER_START_CLASS);
 
@@ -394,18 +403,23 @@ const IDENTIFIER_START = new RegExp(IDENTIFIER_START_CLASS);
  * The normalised, possibly qualified object name that starts at `from`.
  *
  * Each dot-separated part follows PostgreSQL's identifier rules: a bare part
- * folds to lower case, and a quoted part keeps its case, with `""` standing for
- * one `"`. A quoted part is written back without its quotes unless it holds a
- * `.` or a `"`, the two characters no bare part can hold; that keeps `"a.b"`,
- * one name, apart from `a.b`, a schema and a table. Returns `""` when no name
- * starts there.
+ * folds ASCII A-Z to lower case and keeps every other letter, and a quoted part
+ * keeps its case, with `""` standing for one `"`. A quoted part is written back
+ * without its quotes unless it holds a `.` or a `"`, the two characters no bare
+ * part can hold; that keeps `"a.b"`, one name, apart from `a.b`, a schema and a
+ * table. Returns `""` when no whole name starts there: a quoted part that never
+ * closes, or a part missing after a `.`, names nothing.
+ *
+ * Ceiling: a `U&"…"` part is not read, because its Unicode escapes are not
+ * decoded, so an object named that way is not recorded at all.
+ * Lift when: a contract needs a `U&` name checked for redefinition.
  */
 function readQualifiedName(text: string, from: number): string {
   const parts: string[] = [];
   let index = from;
   for (;;) {
     const part = readNamePart(text, index);
-    if (!part) break;
+    if (!part) return "";
     parts.push(part.name);
     index = skipSpaces(text, part.end);
     if (text[index] !== ".") break;
@@ -429,7 +443,9 @@ function readNamePart(text: string, from: number): { name: string; end: number }
   if (!IDENTIFIER_START.test(first)) return undefined;
   let end = from + 1;
   while (end < text.length && IDENTIFIER_CHAR.test(text[end] ?? "")) end += 1;
-  return { name: text.slice(from, end).toLowerCase(), end };
+  const bare = text.slice(from, end);
+  if (/^u$/i.test(bare) && text[end] === "&" && text[end + 1] === '"') return undefined;
+  return { name: bare.replace(/[A-Z]/g, (letter) => letter.toLowerCase()), end };
 }
 
 function skipSpaces(text: string, from: number): number {
@@ -440,7 +456,11 @@ function skipSpaces(text: string, from: number): number {
 
 export type CreatedObject = {
   kind: string;
-  /** Normalised name: unquoted, lower-cased, schema-qualification preserved. */
+  /**
+   * Normalised name, schema-qualification preserved: each bare part with ASCII
+   * A-Z lower-cased, each quoted part without its quotes unless it holds a `.`
+   * or a `"`.
+   */
   name: string;
   /** For functions and procedures, the normalised identity argument types. */
   signature: string;
@@ -460,7 +480,14 @@ export function collectCreatedObjects(statements: SqlStatement[]): CreatedObject
     const match = CREATE_RE.exec(statement.text);
     if (!match) continue;
     const kind = (match[1] ?? "").replace(/\s+/g, " ").toUpperCase();
-    const name = readQualifiedName(statement.text, match.index + match[0].length);
+    let nameAt = match.index + match[0].length;
+    if (identityKind(kind) === "INDEX") {
+      INDEX_OPTIONS_AT.lastIndex = nameAt;
+      nameAt += INDEX_OPTIONS_AT.exec(statement.text)?.[0].length ?? 0;
+      // An index created without a name is named by PostgreSQL itself.
+      if (UNNAMED_INDEX_AT.test(statement.text.slice(nameAt))) continue;
+    }
+    const name = readQualifiedName(statement.text, nameAt);
     if (name.length === 0) continue;
     created.push({
       kind,
