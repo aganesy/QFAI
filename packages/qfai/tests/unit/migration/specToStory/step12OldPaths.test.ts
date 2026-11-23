@@ -128,6 +128,23 @@ describe("step 12 project-file scan", () => {
     ]);
   });
 
+  it("tells a file past 16 MiB binary from text by its first 8000 bytes, not its first 16 MiB", async () => {
+    const context = await trackedProject(".qfai/spec", ".qfai/spec/03_contract");
+    const size = 16 * 1024 * 1024 + 1;
+    const late = Buffer.alloc(size, "a");
+    late[8000] = 0;
+    await writeFile(path.join(context.root, "docs", "late.md"), late);
+    const early = Buffer.alloc(size, "a");
+    early[7999] = 0;
+    await writeFile(path.join(context.root, "docs", "early.bin"), early);
+    execFileSync("git", ["add", "."], { cwd: context.root });
+    const scan = await scanOldPaths(context);
+    expect(scan.scanned).toEqual([
+      "files checked for 1.x paths: 1",
+      "not checked for 1.x paths, larger than 16 MiB: docs/late.md",
+    ]);
+  });
+
   it("lists every line of a file with more matching lines than one call takes as arguments", async () => {
     const context = await trackedProject(".qfai/spec", ".qfai/spec/03_contract");
     // 500,000 arguments overflow the call stack, so spreading the hits into one push would throw.
