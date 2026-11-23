@@ -197,6 +197,41 @@ describe("reading a contract's own DDL", () => {
     expect(blankSqlNoise(sql)).toHaveLength(sql.length);
   });
 
+  it("reads a REFERENCES after an escape string holding a backslash-escaped quote", () => {
+    // In `E'it\'s'` the backslash escapes the quote, so the literal ends after
+    // `s`. Ended at `\'`, the stray quote after `s` opens a string that runs to
+    // the next one and blanks the real foreign key between them.
+    const sql = [
+      String.raw`CREATE TABLE t (note TEXT DEFAULT E'it\'s', parent_id int REFERENCES orders(id));`,
+      "COMMENT ON TABLE t IS 'child rows';",
+    ].join("\n");
+    const { references } = readTableEdges(sql);
+
+    expect([...references.keys()]).toEqual(["orders"]);
+    expect(blankSqlNoise(sql)).toHaveLength(sql.length);
+  });
+
+  it("does not read a REFERENCES inside an escape string", () => {
+    // Ended at `\'`, the rest of the literal reads as SQL and its text as a key.
+    const sql = String.raw`COMMENT ON TABLE t IS e'it\'s REFERENCES sessions';`;
+    const { references } = readTableEdges(sql);
+
+    expect(references.size).toBe(0);
+  });
+
+  it("lets a backslash escape nothing in a standard string or after a longer name", () => {
+    // Only a lone `E` or `e` opens an escape string. `'C:\'` is a whole
+    // standard string, and in `name'x\'` the `e` belongs to the name.
+    const sql = [
+      String.raw`CREATE TABLE t (path TEXT DEFAULT 'C:\', parent_id int REFERENCES orders(id));`,
+      String.raw`CREATE TABLE u (kind TEXT DEFAULT typename'x\', owner_id int REFERENCES owners(id));`,
+      "COMMENT ON TABLE t IS 'child rows';",
+    ].join("\n");
+    const { references } = readTableEdges(sql);
+
+    expect([...references.keys()].sort()).toEqual(["orders", "owners"]);
+  });
+
   it("keeps every offset when it blanks a comment", () => {
     // The blanking is a mask, not a delete: a later match has to land where the
     // reader sees it.

@@ -710,6 +710,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   write path's guard before reading and exits 1 naming the linked path, or the
   catalogue path when it is a link or not a file. Closes #5048.
 
+- **`QFAI-CONTRACT-036` reads PostgreSQL escape strings.** The apply-order
+  check ended an `E'…'` string at a backslash-escaped quote, so in
+  `E'it\'s'` the rest of the line could open a stray string that hid a real
+  `REFERENCES`, or text inside the literal could be read as one. It now reads
+  string literals by the rule the statement splitter follows: a lone `E` or
+  `e` before the quote opens an escape string, in which a backslash escapes
+  the next character. Closes #5137.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
