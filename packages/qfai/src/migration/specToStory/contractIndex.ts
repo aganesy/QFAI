@@ -135,7 +135,7 @@ export function renderContractIndex(input: ContractIndexInput): {
       forAPerson.push(hand(`"## ${section.title}" of ${input.sourcePath}`));
       continue;
     }
-    rows.push(...oldRows(body));
+    for (const row of oldRows(body)) rows.push(row);
     if (hasProse(body))
       forAPerson.push(
         hand(`the text of "## Contract Index" in ${input.sourcePath} outside its tables`),
