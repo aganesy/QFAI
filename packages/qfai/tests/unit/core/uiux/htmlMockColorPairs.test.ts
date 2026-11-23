@@ -41,4 +41,13 @@ describe("HTML mock colour pairs", () => {
     ].join("");
     expect(await backgroundsOf(html)).toEqual([]);
   });
+
+  it("records no pair when either colour holds only whitespace", async () => {
+    const html = [
+      '<p style="color: ; background: #ffffff">a</p>',
+      '<p style="color: #000000; background:  ">b</p>',
+      '<p style="color: #000000; background-color: \t">c</p>',
+    ].join("");
+    expect(await backgroundsOf(html)).toEqual([]);
+  });
 });
