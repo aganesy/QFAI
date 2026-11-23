@@ -638,6 +638,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pass `--paginate`, and the per-item `--jq` filters still print one line per
   run or job.
 
+- **`qfai validate` records no pass in its run log when the result write
+  fails.** The run log was written, with status `pass`, before `validate.json`;
+  when the result write then failed, the command exited 1 while `validate.log`,
+  `run.json`, `validator.json` and `summary.md` still recorded a pass. The run
+  log is now written after the result files, and a run that could not write
+  them records the status `fail`.
+
 - **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
   shipped workflow edited to run a job on two operating systems and three
   Node versions was reported as three runner allocations instead of six,
