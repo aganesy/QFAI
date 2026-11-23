@@ -177,7 +177,8 @@ const RUN_DIR_RE = /^run-\d{17}$/;
  * `startedAfter` says, not by run id: the id is a local timestamp, which a
  * daylight-saving fall-back repeats. An unreadable or unparseable pointer
  * counts as "no newer run", so a truncated or hand-edited file self-heals on
- * the next run.
+ * the next run. So does a pointer that is a symbolic link: it is not read,
+ * and the write replaces it.
  *
  * The checks and the write happen under one exclusive guard, so an older run
  * that passed the checks cannot write after a newer run that started checking
@@ -212,6 +213,9 @@ async function readPointerRunStart(input: {
   startedAtLine: RegExp;
 }): Promise<RunStart | null> {
   try {
+    // A pointer that is a link is replaced, not written through, so the run
+    // the file it points to names is not one of this run root's.
+    if ((await lstat(input.pointerPath)).isSymbolicLink()) return null;
     return recordedRunStart(
       await readFile(input.pointerPath, "utf-8"),
       input.runIdLine,

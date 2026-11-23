@@ -22,7 +22,7 @@
  * `error`.
  */
 
-import { readFile } from "node:fs/promises";
+import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig, resolvePath, type QfaiConfig } from "../../core/config.js";
@@ -98,12 +98,17 @@ function renderText(root: string, result: SddPreflightResult): string {
  *
  * Only a missing summary has no carry-over. A directory above it that is a
  * file (`ENOTDIR`) also means no summary: the output-directory check that runs
- * next names that file. Any other read failure throws, naming the path, so the
- * run stops before the summary is replaced.
+ * next names that file. A summary that is a symbolic link is not read either:
+ * the run replaces the link rather than writing through it, so the file it
+ * points to is not this project's summary. Any other read failure throws,
+ * naming the path, so the run stops before the summary is replaced.
  */
 async function readRecordedCarryOver(root: string, summaryPath: string): Promise<string[]> {
   let text: string;
   try {
+    if ((await lstat(summaryPath)).isSymbolicLink()) {
+      return [];
+    }
     text = await readFile(summaryPath, "utf-8");
   } catch (err: unknown) {
     if (isEnoent(err) || (hasErrnoCode(err) && err.code === "ENOTDIR")) {

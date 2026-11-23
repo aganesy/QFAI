@@ -465,7 +465,7 @@ flowchart LR
     or contradicts itself is still `ready`: SDD states each gap in its report.
   - `--assume <text>` (repeatable) records carry-over open questions / assumptions in the summary. Without it
     the carry-over list already present in the `<paths.outDir>/preflight_summary.md` pointer is preserved, not
-    overwritten.
+    overwritten. A pointer that is a symbolic link is not read: it is replaced, and nothing is carried over from it.
 
 ## Test annotations
 
