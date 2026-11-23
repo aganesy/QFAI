@@ -2,6 +2,12 @@ import { randomUUID } from "node:crypto";
 import { cp, lstat, mkdir, readdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { isEnoent } from "../fs/errno.js";
+import {
+  graphAnalysisStaging,
+  graphRetainedDirectory,
+  isGraphAnalysisStaging,
+  type GraphAnalysisEngine,
+} from "./layout.js";
 
 export async function assertGraphStoragePath(root: string, directory: string): Promise<void> {
   const relative = path.relative(root, directory);
@@ -50,7 +56,7 @@ export async function replaceGraphDirectory(
   await assertGraphStoragePath(root, current);
   const parent = path.dirname(current);
   await mkdir(parent, { recursive: true });
-  const previous = path.join(parent, `.previous-${randomUUID()}`);
+  const previous = graphRetainedDirectory(current, randomUUID());
   let retained = false;
   try {
     await rename(current, previous);
@@ -70,17 +76,20 @@ export async function replaceGraphDirectory(
 /**
  * Refreshes and checks an independent copy of the active `analysis`, made beside it, and switches
  * the copy in only when `current` accepts what `check` found, so a failed refresh leaves the
- * previous graph paired with the inputs it was built from. The copy is discarded in every case.
+ * previous graph paired with the inputs it was built from. The copy is discarded in every case,
+ * and so are the copies earlier queries could not discard. The caller holds the graph lock, so no
+ * other query is using one of them.
  */
 export async function checkRefreshCopy<T>(
   root: string,
   analysis: string,
-  engine: string,
+  engine: GraphAnalysisEngine,
   check: (staged: string) => Promise<T>,
   current: (result: T) => boolean,
 ): Promise<T> {
-  const staged = path.join(path.dirname(analysis), `.refreshing-${engine}-${randomUUID()}`);
+  const staged = graphAnalysisStaging(analysis, "refreshing", engine, randomUUID());
   await assertGraphStoragePath(root, staged);
+  await discardLeftoverRefreshCopies(analysis, engine);
   try {
     await cp(analysis, staged, { recursive: true, dereference: false });
     const result = await check(staged);
@@ -89,6 +98,20 @@ export async function checkRefreshCopy<T>(
   } finally {
     await discardRefreshCopy(staged);
   }
+}
+
+/**
+ * Removes, best effort, the refresh copies of `engine` left beside `analysis` by earlier queries,
+ * such as one a Windows process still held open when its query tried to remove it.
+ */
+async function discardLeftoverRefreshCopies(
+  analysis: string,
+  engine: GraphAnalysisEngine,
+): Promise<void> {
+  const parent = path.dirname(analysis);
+  for (const name of await readdir(parent))
+    if (isGraphAnalysisStaging(name, "refreshing", engine))
+      await discardRefreshCopy(path.join(parent, name));
 }
 
 async function discardRefreshCopy(staged: string): Promise<void> {

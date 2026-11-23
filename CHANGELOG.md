@@ -614,6 +614,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to the end of the line when it is never closed; a bare value is still
   blanked to the next whitespace. Closes #5020.
 
+- **A graph query copies the active analysis once and clears the copies
+  earlier queries left.** A document query whose inputs had changed copied
+  and checked the whole active analysis twice when the copy was not current:
+  once to answer, and again before preparing a new analysis. It now prepares
+  straight from the first result. A refresh copy that could not be removed,
+  such as one a Windows process still held open, stayed as a hidden
+  `.refreshing-graphify-<id>` or `.refreshing-codegraph-<id>` folder under
+  `.qfai/tools/analysis/`; the next refresh of that engine removes them first.
+  The corpus walk compares file sizes before it reads any contents, so a file
+  of another size is no longer read in full to find it changed. Closes #5204.
+
 - **A directory whose name begins with two dots counts as inside its base
   everywhere.** Several more checks tested whether a path relative to its base
   began with `..`, so a directory such as `..fixtures` or `..archive` read as
@@ -632,6 +643,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now lists that directory under `## For a person`, asks for it to be deleted
   before the next commit, and exits 3. Closes #5061.
 
+- **The code-graph corpus mirror leaves no empty staged directory behind.** When
+  a source directory disappeared, or its path came to name a file the mirror
+  skips (a hard-linked or non-regular file), the staged copy under
+  `.qfai/tools/analysis/` lost its files but kept the directory tree, empty. The
+  mirror now removes a staged directory left holding nothing. Closes #5104.
+
 - **`qfai workflow plan` refuses a plan whose added specification stage runs a
   step that is not installed.** A request naming the story tree can give a
   route a `spec` stage with `sdd-triage`, `sdd-story` or `sdd-contract`, but
@@ -641,12 +658,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and refused with `plan-invalid` and `step-missing` as for the route's own
   steps.
 
+- **A sample table in a code fence or an HTML comment no longer counts in the
+  decision and question registers, the layer table, the constraint IDs or the
+  component catalogue.** `decisions.md`, `open-questions.md`, the
+  `## Architecture` and `## Stack` tables of `tech.md` and the tables of
+  `constraint.md` were read with every table in the text, so a fenced example
+  of the format or a commented-out draft row declared a decision, broke the
+  one-table rule, stood in for the real layer table, drew a constraint ID
+  finding or named a catalogue the project does not use. These readers now
+  read only tables Markdown renders, as the index and example readers already
+  do. Closes #5328.
+
 - **`qfai validate` reports a self-governance input it cannot observe instead
   of stopping.** Deciding whether `QFAI-HANDOFF-001` and `QFAI-MANIFEST-001`
   could run, the check let an error other than "absent", such as a permission
   error on a parent directory, end the run. That path is now reported as an
   incomplete check with the same finding as an input that cannot be read, and
   the code is listed as not evaluated.
+
+- **`qfai session-review` reads a `.agents/rules/reminders.json` saved with a
+  UTF-8 byte order mark.** A reminders file written by Windows PowerShell 5.1
+  with `Set-Content -Encoding UTF8` starts with one, and the command refused it
+  as not valid JSON. It now drops one leading mark before parsing, as
+  `qfai report --in` does. Closes #5388.
 
 - **`qfai validate --format github` shows control characters in an annotation
   as visible escapes.** An `::error::`, `::warning::` or `::notice::` message
@@ -729,6 +763,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   holding one, such as `CREATE FUNCTION "f(x"(a int)`, gave the routine no
   arguments, and its overloads were reported as one routine defined twice. The
   list is now read from the parenthesis that follows the name. Closes #5149.
+
+- **The graph ignore check covers every name graph setup writes under.** The
+  paths `qfai init` checks against an existing managed graph block missed the
+  CodeGraph install directory in its private home and most hidden directories
+  an analysis is prepared, refreshed, restored or replaced in, so a rule that
+  ignored only the checked paths left those visible to Git while the check
+  passed. The paths are now built from the same layout the writers use, with
+  one for each of those directories. Closes #5194.
 
 - **`qfai validate` records no pass in its run log when the result write
   fails.** The run log was written, with status `pass`, before `validate.json`;

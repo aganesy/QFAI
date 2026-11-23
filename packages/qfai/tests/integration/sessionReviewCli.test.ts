@@ -443,6 +443,30 @@ describe("qfai session-review counts what the sessions show", () => {
       ],
     });
   });
+
+  // Windows PowerShell 5.1 writes `Set-Content -Encoding UTF8` output with a byte order mark.
+  it("reads a reminders.json that starts with a UTF-8 byte order mark as the same file without one", async () => {
+    const setup = await project();
+    await sessions(setup);
+    const file = path.join(setup.root, ".agents", "rules", "reminders.json");
+    const text = JSON.stringify({
+      "api-budget": {
+        hookSpecificOutput: {
+          hookEventName: "PreToolUse",
+          additionalContext: "QFAI API budget (.agents/rules/api-budget.md). Ask git first.",
+        },
+      },
+    });
+    const args = ["session-review", "--root", setup.root, "--agent", "claude", "--format", "json"];
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, text, "utf-8");
+    const plain = await cli(args, setup.root);
+    await writeFile(file, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(text)]));
+    const marked = await cli(args, setup.root);
+    expect(plain.code).toBe(0);
+    expect(plain.out).toContain('"name": "api-budget"');
+    expect(marked).toEqual(plain);
+  });
 });
 
 /** Every source file `entry` reaches through relative imports. */

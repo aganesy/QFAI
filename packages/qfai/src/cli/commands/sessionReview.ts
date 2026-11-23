@@ -33,6 +33,7 @@ import {
   type ReviewedSession,
 } from "../../core/sessionReview/render.js";
 import { reminderIndex, summarise } from "../../core/sessionReview/signals.js";
+import { parseJsonText } from "../../shared/jsonText.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 
 export type SessionReviewOptions = {
@@ -183,7 +184,7 @@ async function reminderTexts(root: string): Promise<Map<string, string>> {
   }
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = parseJsonText(raw);
   } catch (cause) {
     throw new ReminderFileError(`${REMINDERS} is not valid JSON`, { cause });
   }

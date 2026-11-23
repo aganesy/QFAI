@@ -556,6 +556,14 @@ describe.each([
 ])("$kind row diagnostics", ({ kind, id }) => {
   const header = "| ID | Content | Approach |\n| --- | --- | --- |\n";
 
+  it("reads rows outside a fenced sample and a comment", () => {
+    const parsed = parseRecordTable(
+      `\`\`\`md\n${header}| ${id}9 | Sample | Keep |\n\`\`\`\n\n<!--\n${header}| ${id}8 | Draft | Keep |\n-->\n\n${header}| ${id} | Choice | Reason |\n`,
+      kind,
+    );
+    expect(parsed).toEqual({ rows: [{ id, content: "Choice", approach: "Reason" }], errors: [] });
+  });
+
   // QFAI:EX-0001-0053-13
   it.each([2, 4])("reports expected three and actual %i cells", (count) => {
     const cells = [id, "Choice", "Reason", "Extra"].slice(0, count);
@@ -602,6 +610,24 @@ describe("ordered decision pages in the existing story model", () => {
         { origin: { path: "docs/spec/decisions.md", actualRow: 11, rawOrdinal: 2 } },
       ],
     });
+  });
+
+  it("declares no decision a commented-out row holds", () => {
+    const files = new Map([
+      [
+        "docs/spec/decisions.md",
+        page + "| DEC-0001 | Choice | Keep |\n<!--\n| DEC-0007 | Draft | Keep |\n-->\n",
+      ],
+    ]);
+    const model = buildStoryTreeModel(files, { specsDir: "docs/spec" });
+    expect(model.decisionRegisterErrors).toEqual([]);
+    expect(model.decisions).toEqual({
+      rows: [{ id: "DEC-0001", content: "Choice", approach: "Keep" }],
+      errors: [],
+    });
+    expect(model.decisionOccurrences).toMatchObject([
+      { origin: { path: "docs/spec/decisions.md", actualRow: 7, rawOrdinal: 1 } },
+    ]);
   });
 });
 

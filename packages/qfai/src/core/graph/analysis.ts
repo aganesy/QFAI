@@ -1,6 +1,6 @@
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, readdir, rm, rmdir, writeFile } from "node:fs/promises";
 import { readInspectedRegularFile } from "../../shared/boundedRead.js";
 import { isDirectoryInsideRoot, loadConfig, resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
@@ -256,8 +256,9 @@ export async function graphCorpusChanged(
 /**
  * In `write` mode, mirrors the corpus into `destination` and returns false; a file whose bytes
  * already match its source is left untouched, so a repeated mirror of an unchanged corpus writes
- * nothing. In `compare` mode it writes nothing and returns true at the first entry a mirror would
- * add, replace or remove.
+ * nothing. Only contents are mirrored: neither engine reads a file's mode, so a change of
+ * permissions alone is not copied. In `compare` mode it writes nothing and returns true at the
+ * first entry a mirror would add, replace or remove.
  */
 async function walkGraphCorpus(
   root: string,
@@ -302,6 +303,13 @@ async function walkGraphCorpus(
         const source = path.join(root, ...next.split("/"));
         const stats = await lstat(source);
         if (!stats.isFile() || stats.nlink > 1) continue;
+        // Sizes are compared before any contents are read, so a changed file of another size costs
+        // no read of its copy, and in `compare` mode no read of the source either.
+        const copied = await regularFileSize(target);
+        if (mode === "compare" && copied !== stats.size) {
+          changed = true;
+          continue;
+        }
         // Read from the file `stats` describes: a source replaced since that check is left out of
         // this mirror, and the next one checks and copies whatever the path then names. Any other
         // read failure fails the mirror, so the corpus is never quietly incomplete.
@@ -313,7 +321,7 @@ async function walkGraphCorpus(
         });
         if (bytes === undefined) continue;
         files.add(next);
-        if (await sameContent(bytes, target)) continue;
+        if (copied === bytes.length && bytes.equals(await readFile(target))) continue;
         if (mode === "compare") {
           changed = true;
           continue;
@@ -325,20 +333,33 @@ async function walkGraphCorpus(
     }
   }
 
-  async function removeAbsent(relative: string): Promise<void> {
+  /**
+   * Removes every staged entry the walk did not mirror, and returns whether the directory still
+   * holds one it did. A mirror creates no empty directory, so in `write` mode a staged directory
+   * left holding nothing is removed too: one whose source is gone, or whose source path now names
+   * an entry the mirror skips. In `compare` mode an empty directory alone is not a change, as it
+   * holds no input.
+   */
+  async function removeAbsent(relative: string): Promise<boolean> {
+    let kept = false;
     for (const entry of await readdir(path.join(destination, ...relative.split("/")), {
       withFileTypes: true,
     })) {
-      if (changed) return;
+      if (changed) return true;
       const next = relative ? `${relative}/${entry.name}` : entry.name;
-      if (entry.name === ".codegraph" || entry.name === ".git" || entry.name === "graphify-out")
+      if (entry.name === ".codegraph" || entry.name === ".git" || entry.name === "graphify-out") {
+        kept = true;
         continue;
+      }
       const target = path.join(destination, ...next.split("/"));
-      if (entry.isDirectory()) await removeAbsent(next);
-      else if (files.has(next)) continue;
+      if (entry.isDirectory()) {
+        if (await removeAbsent(next)) kept = true;
+        else if (mode === "write") await rmdir(target);
+      } else if (files.has(next)) kept = true;
       else if (mode === "compare") changed = true;
       else await rm(target);
     }
+    return kept;
   }
 }
 
@@ -353,9 +374,15 @@ async function entryKind(target: string): Promise<"directory" | "file" | "other"
   }
 }
 
-async function sameContent(source: Buffer, target: string): Promise<boolean> {
-  if ((await entryKind(target)) !== "file") return false;
-  return source.equals(await readFile(target));
+/** The size of the regular file at `target`, or `undefined` when it holds anything else or nothing. */
+async function regularFileSize(target: string): Promise<number | undefined> {
+  try {
+    const stats = await lstat(target);
+    return stats.isFile() ? stats.size : undefined;
+  } catch (cause: unknown) {
+    if (isEnoent(cause)) return undefined;
+    throw cause;
+  }
 }
 
 /**

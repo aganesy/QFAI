@@ -1,6 +1,6 @@
 import path from "node:path";
 import { withOwnerLock } from "../fs/ownerLock.js";
-import { graphEnvironmentKey } from "./layout.js";
+import { graphEnvironmentKey, GRAPH_LOCK_FILE } from "./layout.js";
 import {
   graphStateDirectory,
   GraphLocalStateError,
@@ -11,7 +11,7 @@ import {
 export async function withGraphLock<T>(root: string, action: () => Promise<T>): Promise<T> {
   const directory = await graphStateDirectory(root);
   return withOwnerLock(
-    path.join(directory, "analysis.lock"),
+    path.join(directory, GRAPH_LOCK_FILE),
     {
       kind: "graph-lock",
       maxBytes: GRAPH_STATE_BYTES,

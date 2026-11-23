@@ -483,6 +483,11 @@ export function parseAllMarkdownTables(text: string): MarkdownTable[] {
   return tables;
 }
 
+/** The tables Markdown renders, so a sample in a fence or comment declares nothing. */
+export function parseRenderedMarkdownTables(text: string): MarkdownTable[] {
+  return parseAllMarkdownTables(maskNonSpecRegions(text));
+}
+
 /**
  * Encode one value for a GFM table cell — the inverse of
  * {@link splitMarkdownRow}, and the only correct way to put author-supplied
