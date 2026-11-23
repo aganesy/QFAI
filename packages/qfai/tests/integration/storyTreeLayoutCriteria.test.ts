@@ -518,8 +518,8 @@ describe("the document schema entries of the story tree", () => {
     };
     const flow = `${SPECS}/02_business-flow/business-flow-0001/business-flow.md`;
     const legacy = `${SPECS}/02_business-flow/business-flow-0002/business-flow.md`;
-    const legacyText =
-      "# flow: a heading the schema does not accept\n\n## Metadata\n\n- something\n";
+    // The root heading matches, so the schema itself grades the document at both revisions.
+    const legacyText = "# BF-0002: Legacy flow\n\n## Metadata\n\n- something\n";
     git("init", "-q", "-b", "main", ".");
     git("config", "core.autocrlf", "false");
     git("config", "user.email", "lane@example.com");

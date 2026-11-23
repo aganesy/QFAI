@@ -365,7 +365,9 @@ describe("check-mdschema driver", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("cannot diff against no/such/ref (");
+    expect(result.stderr).toContain("checking every document instead (fail open)");
     expect(result.stderr).toContain("story-business-flow");
+    expect(result.stderr).toContain("business-flow-0001");
   });
 
   it("reads paths.specsDir from the tree's own qfai.config.yaml", async () => {
@@ -874,6 +876,23 @@ describe("the ratchet in --scope changed", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("no new violations");
     expect(result.stdout).toContain("already failing at the merge base");
+  });
+
+  // QFAI:EX-0001-0011-29
+  it("leaves a schema failure already there at the merge base to its own change", async () => {
+    // Unlike LEGACY, this document's root heading matches, so mdschema itself
+    // grades both revisions and the ratchet reads its verdicts, not the
+    // root-heading check.
+    const root = await twoCommits(
+      { "business-flow-0002": NON_CONFORMING_FLOW },
+      { "business-flow-0002": `${NON_CONFORMING_FLOW}\nOne more paragraph.\n` },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main", "--summary"]);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("pre-existing, not this branch's");
+    expect(result.stdout).toContain("PASS  story-business-flow (1 file(s), 1 pre-existing)");
   });
 
   // QFAI:EX-0001-0011-29
