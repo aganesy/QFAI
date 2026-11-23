@@ -9,11 +9,17 @@ import {
   restoreCompletedDocumentAnalysis,
   safeDocumentCopy,
 } from "./documentReuse.js";
-import { graphAnalysisRoot, graphRuntimePaths, GRAPH_VERSIONS } from "./layout.js";
+import {
+  graphAnalysisRoot,
+  graphAnalysisStaging,
+  graphRuntimePaths,
+  GRAPH_VERSIONS,
+} from "./layout.js";
 import { withGraphLock } from "./locks.js";
 import {
   GRAPH_PROCESS_LIMITS,
   GRAPH_PYTHON_FLAGS,
+  codeAnalysisLimitRecovery,
   graphifyConfigurationSafe,
   graphifyCorpusEnvironment,
   graphLimitCause,
@@ -74,7 +80,7 @@ export async function prepareGraphifyCodeAnalysis(
 ): Promise<DocumentPreparation> {
   if (!(await graphifyConfigurationSafe(root))) return providerConflict();
   const current = graphAnalysisRoot(root, "graphify-code");
-  const staged = path.join(path.dirname(current), `.preparing-graphify-code-${randomUUID()}`);
+  const staged = graphAnalysisStaging(current, "preparing", "graphify-code", randomUUID());
   await assertGraphStoragePath(root, staged);
   await mkdir(staged, { recursive: true });
   try {
@@ -105,12 +111,11 @@ export async function prepareGraphifyCodeAnalysis(
       result.exitCode !== 0 ||
       !(await currentGraphifyCorpus(root, staged, graphRuntimePaths(root).python, run, "ast"))
     ) {
-      const cause = graphLimitCause("Graphify code analysis", result);
       return {
         status: "failed",
-        recovery: cause
-          ? `${cause} Retry the graph query.`
-          : "Repair local Graphify code analysis.",
+        recovery:
+          codeAnalysisLimitRecovery("Graphify code analysis", result) ??
+          "Repair local Graphify code analysis.",
       };
     }
     await writeFile(
@@ -238,7 +243,7 @@ export async function prepareDocumentAnalysisLocked(
     }
   }
   const current = graphAnalysisRoot(root, "graphify");
-  const staged = path.join(path.dirname(current), `.preparing-graphify-${randomUUID()}`);
+  const staged = graphAnalysisStaging(current, "preparing", "graphify", randomUUID());
   await assertGraphStoragePath(root, staged);
   await mkdir(staged, { recursive: true });
   try {

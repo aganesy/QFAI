@@ -65,11 +65,37 @@ type PatternRule = {
    * open must not be skipped there.
    */
   scanShippedComments?: boolean;
+  /**
+   * Match from this line through the end of the file, so the pattern's `\s`
+   * crosses a line break as the post-build guard's whole-file read does. A
+   * match is reported at the line it starts on.
+   */
+  crossesLines?: boolean;
 };
 
 /** The rule's own flags, plus `g`. Never a bare `"g"` — see the call sites. */
 function withGlobal(flags: string): string {
   return flags.includes("g") ? flags : `${flags}g`;
+}
+
+/**
+ * Every match of `rule` that starts on line `index`. A `crossesLines` rule
+ * reads on into the lines after it, so a match may end on a later line.
+ */
+function matchesStartingOnLine(
+  rule: PatternRule,
+  lines: ReadonlyArray<string>,
+  index: number,
+): RegExpExecArray[] {
+  const line = lines[index] ?? "";
+  const text = rule.crossesLines === true ? lines.slice(index).join("\n") : line;
+  const globalRe = new RegExp(rule.re.source, withGlobal(rule.re.flags));
+  const found: RegExpExecArray[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = globalRe.exec(text)) !== null && match.index < line.length) {
+    found.push(match);
+  }
+  return found;
 }
 
 const PATTERNS: ReadonlyArray<PatternRule> = [
@@ -309,6 +335,9 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     suggestion:
       "The `schemaVersion` field is forbidden in distributed surfaces (artifacts use `package.json#version` only). Do not document it in src/ JSDoc.",
     appliesTo: ["src-comment"],
+    // The post-build guard reads each file whole, so `schemaVersion` with its
+    // colon on the next line is one field there and must be one here.
+    crossesLines: true,
   },
 ];
 
@@ -522,9 +551,7 @@ async function lintFile(
         // spec-id rules, so `SPEC-9999` in JSDoc passed here while the
         // post-build guard and the smoke test — both case-insensitive — caught
         // it. The same distributed content, three answers.
-        const globalRe = new RegExp(rule.re.source, withGlobal(rule.re.flags));
-        let match: RegExpExecArray | null;
-        while ((match = globalRe.exec(line)) !== null) {
+        for (const match of matchesStartingOnLine(rule, lines, i)) {
           violations.push({
             file: relPath,
             line: i + 1,

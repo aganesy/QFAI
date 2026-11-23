@@ -3,8 +3,9 @@ import { access, lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import {
-  graphEnvironmentKey,
+  graphCodegraphInstallDirectory,
   graphExecutionEnvironment,
+  graphPrivateHome,
   type GraphExecutionEnvironment,
 } from "./layout.js";
 import { assertGraphStoragePath } from "./storage.js";
@@ -78,7 +79,7 @@ function privateEngineEnvironment(
     const canonical = allowed[name.toLowerCase()];
     if (canonical) environment[canonical] = value;
   }
-  const home = path.join(root, ".qfai", "tools", "home", graphEnvironmentKey(execution), engine);
+  const home = graphPrivateHome(root, engine, execution);
   return {
     ...environment,
     HOME: home,
@@ -115,7 +116,7 @@ export function codegraphEnvironment(
   const home = privateEnvironment.HOME ?? "";
   return {
     ...privateEnvironment,
-    CODEGRAPH_INSTALL_DIR: path.join(home, ".codegraph"),
+    CODEGRAPH_INSTALL_DIR: graphCodegraphInstallDirectory(home),
     CODEGRAPH_NO_DOWNLOAD: "1",
     CODEGRAPH_NO_UPDATE_CHECK: "1",
     CODEGRAPH_TELEMETRY: "0",
@@ -224,6 +225,21 @@ function byteSize(bytes: number): string {
  */
 export function graphLimitCause(step: string, result: GraphProcessResult): string | undefined {
   return result.limit && result.failure ? `Cause: the ${step} ${result.failure}.` : undefined;
+}
+
+/**
+ * The recovery for a code analysis QFAI stopped at its limit. The time limit is fixed and the
+ * analysis has nothing to resume, so after a time limit a retry would stop the same way.
+ */
+export function codeAnalysisLimitRecovery(
+  step: string,
+  result: GraphProcessResult,
+): string | undefined {
+  const cause = graphLimitCause(step, result);
+  if (!cause) return undefined;
+  return result.limit === "time"
+    ? `${cause} The analysis needs longer than QFAI allows, so a retry stops the same way.`
+    : `${cause} Retry the graph query.`;
 }
 
 /** Windows has npm's JavaScript entry neither beside Node nor under a directory on `PATH`. */

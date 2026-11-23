@@ -3,9 +3,9 @@ import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import {
+  codeAnalysisLimitRecovery,
   codegraphEnvironment,
   GRAPH_PROCESS_LIMITS,
-  graphLimitCause,
   type GraphProcess,
   type GraphProcessResult,
 } from "./process.js";
@@ -14,7 +14,7 @@ import {
   restoreCompletedCodeAnalysis,
   type GraphReuseEnvironment,
 } from "./reuse.js";
-import { graphAnalysisRoot, graphRuntimePaths } from "./layout.js";
+import { graphAnalysisRoot, graphAnalysisStaging, graphRuntimePaths } from "./layout.js";
 import {
   GraphConfigUnreadableError,
   inspectCodeAnalysisAt,
@@ -40,7 +40,7 @@ export async function prepareCodeAnalysis(
   environment?: GraphReuseEnvironment,
 ): Promise<CodePreparation> {
   const current = graphAnalysisRoot(root, "codegraph");
-  const staged = path.join(path.dirname(current), `.preparing-codegraph-${randomUUID()}`);
+  const staged = graphAnalysisStaging(current, "preparing", "codegraph", randomUUID());
   let created = false;
   try {
     if (await inspectCurrentCodeAnalysis(root, run))
@@ -80,11 +80,10 @@ export async function prepareCodeAnalysis(
 }
 
 function failed(result?: GraphProcessResult): CodePreparation {
-  const cause = result && graphLimitCause("CodeGraph analysis", result);
   return {
     status: "failed",
-    recovery: cause
-      ? `${cause} Retry the graph query.`
-      : "Repair the local CodeGraph runtime and prepare independent analysis.",
+    recovery:
+      (result && codeAnalysisLimitRecovery("CodeGraph analysis", result)) ??
+      "Repair the local CodeGraph runtime and prepare independent analysis.",
   };
 }
