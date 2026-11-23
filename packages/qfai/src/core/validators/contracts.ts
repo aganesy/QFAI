@@ -304,7 +304,8 @@ const DO_BLOCK = /^DO\b/i;
 const DYNAMIC_EXECUTE = /\bEXECUTE\b/i;
 /** A statement that runs a routine it names. */
 const RUNS_ROUTINE = /\b(?:SELECT|CALL|PERFORM)\b/i;
-const ROUTINE_NAME_PART = String.raw`[A-Za-z_\u0080-￿]${IDENTIFIER_CHAR.source}*`;
+/** One bare name part: the identifier start `sqlContract.ts` reads names with, then identifier characters. */
+const ROUTINE_NAME_PART = String.raw`[A-Za-z_\u0080-\uFFFF]${IDENTIFIER_CHAR.source}*`;
 /** A bare, possibly qualified name followed by `(`: a call of that routine. */
 const CALLED_ROUTINE = new RegExp(
   `(?<!${IDENTIFIER_CHAR.source}|\\.)(${ROUTINE_NAME_PART}(?:\\s*\\.\\s*${ROUTINE_NAME_PART})*)\\s*\\(`,
@@ -330,9 +331,14 @@ type DestructiveRoutines = Map<string, Set<string>>;
  *
  * Ceiling: a call is matched on the bare name the definition used, so a quoted
  * name, a call without its schema, or a call outside those three statements
- * (an assignment in PL/pgSQL, a trigger) is not followed, and a redefinition
- * with a harmless body leaves the earlier operations remembered.
- * Lift when: a contract runs a destructive routine through one of those.
+ * (an assignment in PL/pgSQL, a trigger) is not followed. A body is read when
+ * it is defined, so a call in it to a routine defined later in the file is not
+ * followed either. In the other direction, routines are keyed by name, not
+ * signature, so overloads share their operations; a redefinition with a
+ * harmless body leaves the earlier operations remembered; and a `SELECT` that
+ * runs nothing on apply, such as the one in a `CREATE VIEW`, still warns.
+ * Lift when: a contract runs a destructive routine through one of the missed
+ * forms, or a reviewed contract is warned on through one of the others.
  */
 function collectDangerousOperations(
   text: string,
