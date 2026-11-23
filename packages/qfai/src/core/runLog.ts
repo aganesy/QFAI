@@ -3,6 +3,7 @@ import {
   chmod,
   lstat,
   mkdir,
+  open,
   readdir,
   readFile,
   rename,
@@ -443,6 +444,10 @@ export async function writeReportFiles(
  *
  * The new file's name does not include the target's, so a target whose name is
  * already near the file system's name length limit can still be replaced.
+ *
+ * A failure removes the new file only once this call has created it. The
+ * create is exclusive, so when it fails, with `EEXIST` or anything else, the
+ * entry at that name, if any, is not this call's and is left alone.
  */
 export async function replaceFile(filePath: string, contents: string): Promise<void> {
   const mode = await regularFileMode(filePath);
@@ -450,8 +455,13 @@ export async function replaceFile(filePath: string, contents: string): Promise<v
     path.dirname(filePath),
     `.qfai-replace-${randomBytes(6).toString("hex")}.tmp`,
   );
+  const handle = await open(tempPath, "wx", mode === undefined ? undefined : 0o600);
   try {
-    await writeNewFile(tempPath, contents, mode === undefined ? undefined : 0o600);
+    try {
+      await writeFile(handle, contents, "utf-8");
+    } finally {
+      await handle.close();
+    }
     if (mode !== undefined) await chmod(tempPath, mode);
     await rename(tempPath, filePath);
   } finally {
