@@ -841,6 +841,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   destination that does not exist. Both now name the SDD report, matching the
   contract artifact rules. Closes #4933.
 
+- **`qfai sdd merge-docs` keeps the original error and names the kept text.**
+  When the merged text could not take a working file's name and the working
+  file could not be put back either, the run reported the put-back's error and
+  left the document's text in a hidden `.<name>.merge-docs-<hex>.old` file no
+  message named. It now reports the failure to place the merged text and names
+  that file. The story directories are also checked again just before the
+  temporary file is created, so a directory replaced by a link while the
+  document is merged receives no file, and the pinned file reader sizes its
+  buffer from the file instead of always allocating its ceiling, so each
+  document no longer costs two zero-filled 16 MiB buffers. Closes #5056.
+
 - **Reviewer cards read the technology contract from the configured contracts
   directory.** The architecture, implementation, product-surface and
   requirements reviewer cards, the quality rule and the discussion skill named

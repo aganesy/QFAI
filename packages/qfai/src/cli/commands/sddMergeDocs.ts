@@ -152,6 +152,12 @@ function utf8Text(bytes: Buffer): string | null {
  * temporary file is renamed into the name only after the name is found empty, so a file created
  * there in that instant is overwritten. A story-tree document is edited by the person running the
  * merge, so neither is expected; a file system that supports `renameat2` exchange would lift both.
+ * The directories are checked again just before the temporary file is created, so one swapped for
+ * a link in the instant between that check and the creation is followed; the check before the
+ * working file is set aside then refuses it, and the temporary file is removed. Creating the file
+ * through a directory handle (`openat`), which Node does not offer, would lift that.
+ * When the merged text cannot be placed and the working file cannot be put back either, the
+ * failure to place is thrown naming the set-aside file that keeps the working text.
  * The replacement is a new file with the old file's mode, so its owner is whoever runs the command
  * and a hard link to the old file keeps the old text.
  *
@@ -170,6 +176,9 @@ async function replacePinned(
   );
   const temporary = `${stem}.new`;
   const aside = `${stem}.old`;
+  // Checked again here: the merge awaited Git, and a directory swapped for a link meanwhile would
+  // take the temporary file outside the project.
+  if ((await findUnsafeHostFileComponent(root, segments)) !== undefined) return UNSAFE_PATH;
   const handle = await open(temporary, "wx", pinned.mode);
   try {
     try {
@@ -192,8 +201,15 @@ async function replacePinned(
     try {
       placed = await placeWithoutOverwrite(temporary, target);
     } catch (failure) {
-      await putBack(aside, target);
-      throw failure;
+      // The failure to place is what the run reports; a put-back that fails as well only leaves the
+      // working text in the set-aside file, which is then named.
+      await putBack(aside, target).catch(() => undefined);
+      if ((await lstat(aside).catch(() => undefined)) === undefined) throw failure;
+      const kept = path.relative(root, aside).split(path.sep).join("/");
+      throw new Error(
+        `${failure instanceof Error ? failure.message : String(failure)}; the working file's text is kept as ${kept}`,
+        { cause: failure },
+      );
     }
     await rm(aside, { force: true, maxRetries: RENAME_TRIES });
     return placed ? null : CHANGED;
