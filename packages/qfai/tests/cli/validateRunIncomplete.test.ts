@@ -23,6 +23,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type * as ReportCommandModule from "../../src/cli/commands/report.js";
+import type { ValidationResult } from "../../src/core/types.js";
 import type * as CoreValidateModule from "../../src/core/validate.js";
 import { graphProcessFixture } from "../helpers/graphProcess.js";
 
@@ -481,8 +482,20 @@ describe("validate reports a run it could not finish", () => {
 
   it("does not report an incomplete run when validation completes", async () => {
     // The negative control. Without it a handler that always reported would
-    // pass every row above.
-    const root = await project();
+    // pass every row above. The subject is the handler, not the validators, so
+    // the spy resolves a completed result and the root holds only the output
+    // directory `runValidate` writes into: no installation is needed.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-incomplete-"));
+    dirs.push(root);
+    await mkdir(path.join(root, ".qfai", "report"), { recursive: true });
+    const completed: ValidationResult = {
+      toolVersion: "0.0.0-test",
+      profile: "full",
+      profileValidatorsRan: true,
+      issues: [],
+      counts: { info: 0, warning: 0, error: 0 },
+    };
+    validateProjectSpy.mockImplementation(() => Promise.resolve(completed));
 
     const lines: string[] = [];
     const write = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
@@ -490,11 +503,23 @@ describe("validate reports a run it could not finish", () => {
       return true;
     });
     try {
-      await runValidate({ root, strict: false, format: "text", failOn: "never" });
+      expect(await runValidate({ root, strict: false, format: "text", failOn: "never" })).toBe(0);
     } finally {
       write.mockRestore();
     }
 
-    expect(lines.join("")).not.toContain("QFAI-SCAN-002");
+    expect(validateProjectSpy).toHaveBeenCalledTimes(1);
+    const out = lines.join("");
+    expect(out).not.toContain("QFAI-SCAN-002");
+    // The positive half: an early return would print no pass summary and
+    // write no result, so the absence above alone could not tell it apart.
+    expect(out).toMatch(/^qfai validate: passed \(fail-on never\): profile full, 0 errors/m);
+    const parsed = JSON.parse(
+      await readFile(path.join(root, ".qfai", "report", "validate.json"), "utf-8"),
+    ) as { counts: { error: number }; issues: { code: string }[] };
+    expect(parsed.counts.error).toBe(0);
+    expect(parsed.issues.map((entry) => entry.code)).not.toContain("QFAI-SCAN-002");
+    const run = await readRunLog(root);
+    expect(run.validateLog).toMatch(/^- status: pass$/m);
   });
 });

@@ -17,8 +17,10 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { ensureGraphGitignore } from "../../src/core/graph/ignore.js";
+import type { GraphProcess } from "../../src/core/graph/process.js";
 import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
 import { runInit } from "../helpers/legacyInit.js";
 import { captureStdout } from "../helpers/stdout.js";
@@ -26,6 +28,30 @@ import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
+
+/** Git outside a repository: nothing is tracked, and the file alone decides what is ignored. */
+const outsideRepository: GraphProcess = () => Promise.resolve({ exitCode: 128, stdout: "" });
+
+/**
+ * The `.gitignore` steps `qfai init` runs, in its order, without the rest of the install: the
+ * managed block, the graph ignore lines appended below it, and the block rebuilt once more when
+ * those lines were new. Returns the progress lines init would print. One row below keeps the
+ * command itself, so the init-level wiring stays pinned.
+ */
+async function runInitIgnoreSteps(root: string, dryRun = false): Promise<string> {
+  const reported: string[] = [];
+  const report = (line: string): void => {
+    reported.push(line);
+  };
+  await ensureRootGitignoreEntries(root, dryRun, report);
+  if (!dryRun) {
+    const graph = await ensureGraphGitignore(root, outsideRepository);
+    if (graph.files.includes(".gitignore")) {
+      await ensureRootGitignoreEntries(root, false, report);
+    }
+  }
+  return reported.join(NL);
+}
 
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-gitignore-migration-"));
@@ -45,7 +71,7 @@ describe("re-init preserves what the project chose to track", () => {
   // QFAI:EX-0001-0033-09
   it("does not resurrect an ignore line the project removed from the block", async () => {
     await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       // The project tracks its evidence: drop the evidence ignore, and drop one
       // governance negation so the freshness check fails on re-init.
@@ -55,7 +81,7 @@ describe("re-init preserves what the project chose to track", () => {
         .join("\n");
       await writeFile(path.join(root, ".gitignore"), pruned, "utf-8");
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       const after = await readGitignore(root);
       expect(after.split("\n")).not.toContain(".qfai/evidence/*");
@@ -69,7 +95,7 @@ describe("re-init preserves what the project chose to track", () => {
     // Git applies the last matching pattern; a negation above its ignore is
     // inert, which is the failure `governanceNegationsEffective` exists for.
     await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
       const lines = (await readGitignore(root)).split("\n");
       const evidenceIgnore = lines.indexOf(".qfai/evidence/*");
       for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
@@ -124,7 +150,7 @@ describe("an unrecognised line inside the block does not truncate it", () => {
 
   it("leaves a block carrying an unrecognised line completely alone", async () => {
     await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       // Put the project's line inside the block, between two lines the writer emits.
       const seeded = (await readGitignore(root))
@@ -133,7 +159,7 @@ describe("an unrecognised line inside the block does not truncate it", () => {
         .join(NL);
       await writeFile(path.join(root, ".gitignore"), seeded, "utf-8");
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
       const after = await readGitignore(root);
 
       expect(
@@ -149,16 +175,16 @@ describe("an unrecognised line inside the block does not truncate it", () => {
 
   it("appends each governance negation exactly once, however often init runs", async () => {
     await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
       const seeded = (await readGitignore(root))
         .split(NL)
         .flatMap((line) => (line === ".qfai/report/*" ? [line, OWN_LINE_INSIDE_BLOCK] : [line]))
         .join(NL);
       await writeFile(path.join(root, ".gitignore"), seeded, "utf-8");
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
       const once = await readGitignore(root);
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
       const twice = await readGitignore(root);
 
       expect(twice, "init must be idempotent on its own output").toBe(once);
@@ -180,7 +206,7 @@ describe("an unrecognised line inside the block does not truncate it", () => {
     // between — hoisting one above the governance negations would flip git's verdict for the
     // paths it covers, from ignored to tracked.
     await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
       // Deliberately NOT a `.qfai/**` path. A project line that re-ignores what a governance
       // negation re-includes has its own designed behaviour — the block is rebuilt BELOW it, so
       // the negations win again — and two rows above already pin that. This row is about the
@@ -205,7 +231,7 @@ describe("an unrecognised line inside the block does not truncate it", () => {
       const seeded = `${trimmed.join(NL)}${NL}${PROJECT_LINE}${NL}`;
       await writeFile(path.join(root, ".gitignore"), seeded, "utf-8");
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
       const lines = (await readGitignore(root)).split(NL);
 
       const project = lines.lastIndexOf(PROJECT_LINE);
@@ -231,7 +257,7 @@ describe("a duplicated managed block keeps every ignore line it carries", () => 
     // deleted and never rebuilt — `.qfai/review/*` came back tracked and
     // local review records could be committed.
     await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       const first = await readGitignore(root);
       expect(first).toContain(".qfai/review/*");
@@ -255,7 +281,7 @@ describe("a duplicated managed block keeps every ignore line it carries", () => 
         "utf-8",
       );
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       const rebuilt = await readGitignore(root);
       expect(rebuilt).toContain(".qfai/review/*");
@@ -275,7 +301,7 @@ describe("a project rule after the managed block does not win", () => {
     // check read the block only, called the negations effective and returned
     // early — while `git check-ignore -v` named the project's line.
     await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       const before = await readGitignore(root);
       await writeFile(
@@ -284,7 +310,7 @@ describe("a project rule after the managed block does not win", () => {
         "utf-8",
       );
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       const lines = (await readGitignore(root)).split(NL).map((l) => l.trimEnd());
       const projectRule = lines.lastIndexOf(".qfai/assistant/**/*.json");
@@ -298,10 +324,10 @@ describe("a project rule after the managed block does not win", () => {
 
   it("leaves a file whose negations already win alone", async () => {
     await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
       const first = await readGitignore(root);
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
       expect(await readGitignore(root)).toBe(first);
     });
   });
@@ -328,7 +354,7 @@ describe("a project rule after the managed block keeps its place", () => {
 
   /** A stale block — one governance negation short — plus a project negation below it. */
   const staleBlockWithNegationBelow = async (root: string): Promise<void> => {
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    await runInitIgnoreSteps(root);
     const stale = (await readGitignore(root))
       .split(NL)
       .filter((line) => line !== droppedNegation())
@@ -349,7 +375,7 @@ describe("a project rule after the managed block keeps its place", () => {
     await withProject(async (root) => {
       await staleBlockWithNegationBelow(root);
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       const lines = (await readGitignore(root)).split(NL).map((l) => l.trimEnd());
       const projectNegation = lines.lastIndexOf("!.qfai/report/dashboard.md");
@@ -370,9 +396,9 @@ describe("a project rule after the managed block keeps its place", () => {
     await withProject(async (root) => {
       await staleBlockWithNegationBelow(root);
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
       const once = await readGitignore(root);
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       expect(await readGitignore(root)).toBe(once);
     });
@@ -391,16 +417,7 @@ describe("a project rule after the managed block keeps its place", () => {
         "utf-8",
       );
 
-      const lines: string[] = [];
-      const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
-        lines.push(String(chunk));
-        return true;
-      });
-      try {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      } finally {
-        spy.mockRestore();
-      }
+      const reported = await runInitIgnoreSteps(root);
 
       const after = (await readGitignore(root)).split(NL).map((l) => l.trimEnd());
       // The block moved below the project's ignore line, as the conflict requires…
@@ -408,7 +425,7 @@ describe("a project rule after the managed block keeps its place", () => {
         after.lastIndexOf(".qfai/assistant/**/*.json"),
       );
       // …and the negation that lost is reported, not swallowed.
-      expect(lines.join("")).toContain("!.qfai/report/dashboard.md");
+      expect(reported).toContain("!.qfai/report/dashboard.md");
     });
   });
 });
@@ -451,7 +468,7 @@ describe("nothing under a review directory reaches a commit", () => {
   it("ignores every review path a fresh init leaves behind", async () => {
     await withProject(async (root) => {
       await gitProject(root);
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       const reachable = REVIEW_PATHS.filter((sample) => !ignoredByGit(root, sample));
       expect(reachable, "a review artifact must not be committable").toEqual([]);
@@ -465,7 +482,7 @@ describe("nothing under a review directory reaches a commit", () => {
     // dropping only the review lines.
     await withProject(async (root) => {
       await gitProject(root);
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       const hidden = [".qfai/assistant/rule/drift-protocol.md"].filter((sample) =>
         ignoredByGit(root, sample),
@@ -478,6 +495,8 @@ describe("nothing under a review directory reaches a commit", () => {
 describe("the managed block does not repeat a line the project already has", () => {
   // QFAI:EX-0001-0033-10
   it("leaves /tmp/ to the project's own line and says so", async () => {
+    // The one row that runs the command: it pins that `qfai init` performs these steps and
+    // prints what they report. Every other row calls the steps directly.
     await withProject(async (root) => {
       await writeFile(
         path.join(root, ".gitignore"),
@@ -502,7 +521,7 @@ describe("the managed block does not repeat a line the project already has", () 
     await withProject(async (root) => {
       await writeFile(path.join(root, ".gitignore"), `tmp/${NL}`, "utf-8");
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       expect((await readGitignore(root)).split(NL)).not.toContain("/tmp/");
     });
@@ -518,9 +537,7 @@ describe("the managed block does not repeat a line the project already has", () 
         "utf-8",
       );
 
-      const output = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
+      const output = await runInitIgnoreSteps(root);
 
       const lines = (await readGitignore(root)).split(NL);
       expect(lines.filter((line) => line === ".qfai/review/*")).toHaveLength(2);
@@ -534,9 +551,7 @@ describe("the managed block does not repeat a line the project already has", () 
     await withProject(async (root) => {
       await writeFile(path.join(root, ".gitignore"), `/tmp/${NL}`, "utf-8");
 
-      const output = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: true, yes: true });
-      });
+      const output = await runInitIgnoreSteps(root, true);
 
       expect(output).toContain("left out of the QFAI entries: /tmp/");
       expect(await readGitignore(root)).toBe(`/tmp/${NL}`);
@@ -549,7 +564,7 @@ describe("the managed block does not repeat a line the project already has", () 
     await withProject(async (root) => {
       await writeFile(path.join(root, ".gitignore"), ` /tmp/${NL}`, "utf-8");
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       expect((await readGitignore(root)).split(NL)).toContain("/tmp/");
     });
@@ -559,10 +574,10 @@ describe("the managed block does not repeat a line the project already has", () 
   it("settles on identical bytes when init runs again", async () => {
     await withProject(async (root) => {
       await writeFile(path.join(root, ".gitignore"), `/tmp/${NL}`, "utf-8");
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
       const first = await readGitignore(root);
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       expect(await readGitignore(root)).toBe(first);
     });
@@ -573,7 +588,7 @@ describe("the managed block does not repeat a line the project already has", () 
     await withProject(async (root) => {
       await writeFile(path.join(root, ".gitignore"), `/tmp/${NL}!/tmp/${NL}`, "utf-8");
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInitIgnoreSteps(root);
 
       const lines = (await readGitignore(root)).split(NL);
       expect(lines.filter((line) => line === "/tmp/")).toHaveLength(2);
