@@ -10,6 +10,7 @@
 import { randomUUID } from "node:crypto";
 import type * as fsPromises from "node:fs/promises";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
@@ -98,6 +99,10 @@ describe("a catalogue that cannot be inspected stops the command", () => {
   });
 });
 
+/** This package's own `typescript`, which a temporary project cannot resolve from its root. */
+const packageRequire = createRequire(import.meta.url);
+const loadTypescript = (): unknown => packageRequire("typescript");
+
 const catalogFile = (root: string): string => path.join(root, ...CATALOG.split("/"));
 const lockFile = (root: string): string =>
   path.join(root, ".qfai", "tools", "state", "component-catalog.lock");
@@ -161,13 +166,13 @@ describe("one run at a time scans and writes the catalogue", () => {
   it("refuses a second run while the first writes, so the catalogue is the first run's", async () => {
     const root = await project();
     await addComponent(root, "Alpha", "a.tsx");
-    expect((await cli(["catalog", "components", "--root", root])).code).toBe(0);
+    expect(await runCatalogComponents({ root, loadTypescript })).toBe(0);
     const hold = holdBeforeRename();
     const err = collectStderr();
-    const first = runCatalogComponents({ root });
+    const first = runCatalogComponents({ root, loadTypescript });
     await hold.held;
     await addComponent(root, "Beta", "b.tsx");
-    const second = await runCatalogComponents({ root });
+    const second = await runCatalogComponents({ root, loadTypescript });
     hold.resume();
     expect(await first).toBe(0);
     vi.restoreAllMocks();
@@ -206,7 +211,7 @@ describe("one run at a time scans and writes the catalogue", () => {
     await addComponent(root, "Alpha", "a.tsx");
     const hold = holdBeforeRename();
     const err = collectStderr();
-    const running = runCatalogComponents({ root });
+    const running = runCatalogComponents({ root, loadTypescript });
     await hold.held;
     const lock = otherRecord(process.pid);
     await writeFile(lockFile(root), lock, "utf-8");
