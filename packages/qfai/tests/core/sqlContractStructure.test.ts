@@ -489,6 +489,24 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(collectCreatedObjects(statements)).toEqual([]);
   });
 
+  // The argument list was read from the statement's first `(`, which a quoted
+  // routine name may hold, so both overloads below were read with no
+  // arguments and reported as one routine defined twice.
+  it("reads a routine's arguments after a quoted name holding a parenthesis", () => {
+    const { statements } = parseSqlContract(
+      `CREATE FUNCTION "f(x"(a int) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE FUNCTION "f(x"(a text) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n` +
+        `CREATE PROCEDURE "s(".p(a bigint) LANGUAGE sql AS $$ SELECT 3 $$;\n`,
+    );
+    const created = collectCreatedObjects(statements);
+    expect(created.map((object) => [object.name, object.signature])).toEqual([
+      ["f(x", "integer"],
+      ["f(x", "text"],
+      ["s(.p", "bigint"],
+    ]);
+    expect(findRedefinitions(created)).toEqual([]);
+  });
+
   it("stays silent on a file that defines each object once", async () => {
     const issues = await runOn(
       `${HEADER}CREATE TABLE a (x int);\nCREATE TABLE b (y int);\nCREATE INDEX i ON a (x);\n`,

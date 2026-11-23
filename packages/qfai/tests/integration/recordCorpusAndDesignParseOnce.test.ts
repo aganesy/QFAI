@@ -275,7 +275,7 @@ describe("the Graphify document corpus", () => {
             stdout: JSON.stringify({
               initialized: true,
               version: GRAPH_VERSIONS.codegraph,
-              projectPath: analysis,
+              projectPath: args[args.indexOf("status") + 1],
               worktreeMismatch: null,
               pendingChanges: { added: 0, modified: 0, removed: 0 },
               index: {

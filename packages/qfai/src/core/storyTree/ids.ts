@@ -2,7 +2,7 @@ import path from "node:path";
 
 import {
   ANNOTATION_ANCHOR_PATTERNS,
-  DECLARATION_MASK,
+  declarationMask,
   declarationPatterns,
   LOCALISED_GHERKIN_RE,
 } from "../testDeclarations.js";
@@ -173,8 +173,9 @@ export function nextId(
 export function parseCountedExampleAnnotations(text: string, file: string): string[] {
   const extension = path.extname(file).slice(1).toLowerCase();
   const lines = (source: string) => source.split(/\r?\n/);
-  const commentsKept = lines(maskJsNonCode(text, { ...DECLARATION_MASK, comments: false }));
-  const code = lines(maskJsNonCode(text, DECLARATION_MASK)).map((line) => line.trim());
+  const mask = declarationMask(file);
+  const commentsKept = lines(maskJsNonCode(text, { ...mask, comments: false }));
+  const code = lines(maskJsNonCode(text, mask)).map((line) => line.trim());
   const raw = lines(text).map((line) => line.trim());
   const patterns = declarationPatterns(extension, text);
   const anyLineDeclares = extension === "feature" && LOCALISED_GHERKIN_RE.test(text);

@@ -251,7 +251,7 @@ async function assertAnnotationOnly(target: string, content: string): Promise<vo
     throw new MigrationRefusal(`Annotation rewrite changes line count: ${target}`);
   }
   const withoutCommentAnnotations = (text: string): string[] => {
-    const inComment = commentSpanTest(text);
+    const inComment = commentSpanTest(text, target);
     let lineStart = 0;
     return text.split("\n").map((line) => {
       const offset = lineStart;
