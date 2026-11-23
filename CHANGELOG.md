@@ -717,6 +717,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   write path's guard before reading and exits 1 naming the linked path, or the
   catalogue path when it is a link or not a file. Closes #5048.
 
+- **`qfai catalog design` puts both files back on a volume with no inode
+  numbers, and names a moved-aside file it cannot remove.** On such a volume a
+  failed write left the new token file and a hidden moved-aside file behind;
+  the undo now tells its own placed file by its bytes and restores the pair.
+  After a successful write, a moved-aside file that cannot be removed, such as
+  one Windows holds open, no longer rejects the command without its message: it
+  exits 1 with one line that says both files were written and names the file
+  it kept. Closes #5093.
+
 - **`qfai doctor` refuses a skill dependency that npm would install from a
   local tarball.** An unscoped `runtimeDependencies` entry ending in `.tgz`,
   `.tar.gz` or `.tar` passed the package-name check, and
