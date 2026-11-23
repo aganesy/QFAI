@@ -18,7 +18,7 @@ import type { Issue } from "../../src/core/types.js";
 const INJECTED_COMMAND = "::stop-commands::7f3a9c";
 
 /** The lines `emitGitHub` writes for one issue whose `file` is `file`. */
-function emittedLines(file: string): string[] {
+function emittedLines(file: string, message = "Undeclared annotation"): string[] {
   const chunks: string[] = [];
   const writeSpy = vi
     .spyOn(process.stdout, "write")
@@ -31,7 +31,7 @@ function emittedLines(file: string): string[] {
       code: "QFAI-STORY-008",
       severity: "error",
       category: "canonical",
-      message: "Undeclared annotation",
+      message,
       file,
       rule: "storyTree.undeclaredAnnotation",
     };
@@ -64,5 +64,21 @@ describe("a workflow command's location metadata is escaped, not interpolated", 
   it("escapes `%` first, so the escapes that follow are not encoded twice", () => {
     const [line = ""] = emittedLines("100%:a");
     expect(line).toContain("file=100%25%3Aa");
+  });
+});
+
+describe("a workflow command's message shows every other control character as a visible escape", () => {
+  it("prints an ESC colour sequence and a bell as `\\u` escapes after the command escapes", () => {
+    // The runner decodes `%0A` back into a line break, so the command escapes stay as they are;
+    // ESC and BEL cannot open a command, but left raw they recolour the log and ring the viewer.
+    const [line = "", ...rest] = emittedLines("a.md", "\u001b[31mred\u001b[0m\u0007 100%\nnext");
+    expect(rest).toEqual([]);
+    expect(line).toMatch(/^::error file=a\.md::QFAI-STORY-008: /);
+    expect(line).toContain(String.raw`\u001B[31mred\u001B[0m\u0007 100%25%0Anext expected=`);
+    const controls = [...line].filter((char) => {
+      const code = char.codePointAt(0) ?? 0;
+      return code < 0x20 || (code >= 0x7f && code <= 0x9f);
+    });
+    expect(controls).toEqual([]);
   });
 });

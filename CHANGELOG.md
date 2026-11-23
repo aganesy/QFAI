@@ -610,6 +610,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and refused with `plan-invalid` and `step-missing` as for the route's own
   steps.
 
+- **`qfai validate --format github` shows control characters in an annotation
+  as visible escapes.** An `::error::`, `::warning::` or `::notice::` message
+  escaped only `%`, CR and LF, so an ESC colour sequence or a bell from
+  repository text reached the log raw and changed how the log and the
+  annotation looked. After the command escapes, every other control character
+  now prints as the text output prints it, `\t` or `\u` and four hexadecimal
+  digits. Closes #5082.
+
 - **`qfai validate` takes only a directory for an old spec-pack layout.** An
   ordinary file in the specs directory whose name matched `spec-*` or
   `_policies`, such as `spec-notes.md`, raised `QFAI-LAYOUT-001` and stopped
