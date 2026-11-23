@@ -48,7 +48,11 @@ and `.qfai/assistant/rule/shared-skill-delegation-baseline.md`. Questions to
 the user follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 A step whose `What it writes` says "No file git tracks" still writes the run's
-deliberation record when it asks the user a question or takes an agent decision.
+deliberation record when it asks the user a question or takes an agent decision,
+except in a private security intake: a run where `triage-security-intake` takes
+a vulnerability report in privately writes no deliberation record that could
+disclose it. Its questions, decisions and severity stay in the ignored intake
+record that step names.
 
 ## Steps
 
@@ -93,6 +97,10 @@ except these:
 - the approval row, if any, that `qfai-run` records in `decisions.md` before
   `triage-handoff` runs.
 
+A private security intake allows none of these: when `triage-security-intake`
+ran, any tracked file the stage changed fails the review, its deliberation
+record included.
+
 `triage-owned-cleanup` keeps its own check that tracked contents and the index
 are unchanged.
 
@@ -103,7 +111,9 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contr
 `git status --porcelain --untracked-files=no` lists no file the stage did not
 find changed when it started, and the commits the stage made touch only the
 run's deliberation record, the `open-questions.md` rows the run wrote and the
-`decisions.md` approval row the Reviewer Gate allows.
+`decisions.md` approval row the Reviewer Gate allows. After a private security
+intake, the stage made no commit, and its report stays private, as
+`triage-security-intake` says.
 
 The report states the outcome `triage-close` recorded and lists each follow-up
 request. It never says a tracked change is done. `cleaned` says only that the
@@ -125,4 +135,4 @@ project_memory:
 - Only `triage-owned-cleanup` and `triage-operate` execute an operation.
 - Other work it finds is a follow-up request.
 - A follow-up is recorded, never routed inside the run that found it.
-- A security report stays private until the fix is ready to disclose.
+- A security report stays private until the fix is ready to disclose; its intake writes no deliberation record and changes no tracked file.

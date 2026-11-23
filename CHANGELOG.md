@@ -633,6 +633,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   carries, and says `qfai report` writes `report.md`. Closes #4906, #4909,
   #4911, #4913, #4915, #4917 and #4919.
 
+- **The `qfai-triage` skill keeps a private security intake out of the
+  deliberation record.** The skill told every step that changes no tracked
+  file to still write the run's deliberation record, and its review gate and
+  completion check allowed that record, with no exception for a vulnerability
+  report taken in privately. It now says such a run writes no record that
+  could disclose the report, that any tracked file it changed fails the
+  review, and that it makes no commit, as `triage-security-intake` already
+  said. Closes #5012.
+
 - **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
   with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
   `Set-Content -Encoding UTF8`, and both commands refused such a file as

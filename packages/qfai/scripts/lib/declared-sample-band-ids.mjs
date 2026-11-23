@@ -16,7 +16,7 @@
  *   node packages/qfai/scripts/lib/declared-sample-band-ids.mjs
  *     prints one extended regular expression that matches any declared ID.
  */
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -30,27 +30,55 @@ export function repoRootFromHere() {
 }
 
 /**
- * Visits every file under `dir`. Only a root that is not there is an empty
- * scan; any other listing failure, and any failure below the root, throws
- * naming the directory, because a directory passed over would drop its
- * declarations from every guard.
+ * Visits every file under `root`. Only a root that is not there is an empty
+ * scan. A root that is a link throws, and so does a link anywhere below it:
+ * the walk never follows one, so it cannot read declarations from outside the
+ * contract tree or loop, and it stops rather than pass over what the link
+ * stands for.
  */
-function walk(dir, visit, isRoot = true) {
+function walk(root, visit) {
+  let rootEntry;
+  try {
+    rootEntry = lstatSync(root);
+  } catch (error) {
+    if (isEnoent(error)) return;
+    throw listingError(root, error);
+  }
+  if (rootEntry.isSymbolicLink()) throw linkError(root);
+  walkDirectory(root, visit);
+}
+
+/**
+ * Visits every file under `dir`. Any listing failure throws naming the
+ * directory, because a directory passed over would drop its declarations
+ * from every guard.
+ */
+function walkDirectory(dir, visit) {
   let entries;
   try {
-    entries = readdirSync(dir);
+    entries = readdirSync(dir, { withFileTypes: true });
   } catch (error) {
-    if (isRoot && isEnoent(error)) return;
-    throw new Error(
-      `cannot list contract directory ${dir}: ${error instanceof Error ? error.message : String(error)}`,
-      { cause: error },
-    );
+    throw listingError(dir, error);
   }
   for (const entry of entries) {
-    const full = path.join(dir, entry);
-    if (statSync(full).isDirectory()) walk(full, visit, false);
-    else visit(full, entry);
+    const full = path.join(dir, entry.name);
+    if (entry.isSymbolicLink()) throw linkError(full);
+    if (entry.isDirectory()) walkDirectory(full, visit);
+    else visit(full, entry.name);
   }
+}
+
+function listingError(dir, error) {
+  return new Error(
+    `cannot list contract directory ${dir}: ${error instanceof Error ? error.message : String(error)}`,
+    { cause: error },
+  );
+}
+
+function linkError(link) {
+  return new Error(
+    `contract tree holds a link at ${link}; the declared-ID scan does not follow links, so replace it with the files it points at`,
+  );
 }
 
 function isEnoent(error) {
@@ -61,7 +89,8 @@ function isEnoent(error) {
  * Declared sample-band business-rule IDs and contract names under
  * `<repoRoot>/.qfai/spec/03_contract`. Both lists are empty when that
  * directory does not exist, as in a package checked out on its own. A
- * directory that exists but cannot be listed throws, naming it.
+ * directory that exists but cannot be listed, and a link in the tree, throw,
+ * naming it.
  *
  * @param {string} repoRoot
  * @returns {{ businessRules: string[]; contractNames: string[] }}
