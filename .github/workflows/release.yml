@@ -964,6 +964,8 @@ jobs:
           # 5xx or a secondary rate limit would otherwise delete a correct Release and fail the
           # job. So an unreadable tag is asked again, a few seconds apart, before it is treated as
           # gone. An answer naming another commit, or no commit, is final and is not asked again.
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped templates create no GitHub Release, so no step there reads a tag back after a create.
           attempt=1
           while :; do
             read_status=0
