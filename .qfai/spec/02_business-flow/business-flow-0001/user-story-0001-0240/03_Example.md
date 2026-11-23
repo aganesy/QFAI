@@ -16,3 +16,5 @@
 | EX-0001-0240-10 | AC-0001-0240-03 | validation.diagramBudget sets nodes 20 and edges 30; a flowchart with 13 nodes           | No QFAI-FLOW-006                                                                                 |
 | EX-0001-0240-11 | AC-0001-0240-03 | validation.diagramBudget sets nodes 0                                                    | QFAI-CFG-002 naming validation.diagramBudget.nodes; the node limit keeps its default             |
 | EX-0001-0240-12 | AC-0001-0240-03 | validation.diagramBudget is a list                                                       | QFAI-CFG-002 naming validation.diagramBudget; both limits keep their defaults                    |
+| EX-0001-0240-13 | AC-0001-0240-01 | A `business-flow.md` Flow diagram with 13 nodes                                          | QFAI-FLOW-006 remedy moves branches into the Alternate and exception paths list                  |
+| EX-0001-0240-14 | AC-0001-0240-01 | A user-story document diagram with 13 nodes                                              | QFAI-FLOW-006 remedy splits the diagram into an overview and detail diagrams                     |

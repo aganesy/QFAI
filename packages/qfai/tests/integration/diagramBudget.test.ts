@@ -52,6 +52,27 @@ describe("the diagram budget", () => {
     );
   });
 
+  // QFAI:EX-0001-0240-13
+  it("tells a business flow to move branches into its alternate-path list, not to add a diagram", async () => {
+    await write(FLOW, chain(13));
+    const [finding] = await budgetFindings();
+    expect(finding?.suggested_action).toBe(
+      "Keep the main path in the one Flow diagram, within the budget, and move branches and detail into the Alternate and exception paths list.",
+    );
+  });
+
+  // QFAI:EX-0001-0240-14
+  it("tells any other document to split the diagram into an overview and detail diagrams", async () => {
+    const story =
+      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md";
+    await write(story, chain(13));
+    const [finding] = await budgetFindings();
+    expect(finding?.file).toBe(story);
+    expect(finding?.suggested_action).toBe(
+      "Split the diagram into an overview diagram and detail diagrams, each within the budget.",
+    );
+  });
+
   // QFAI:EX-0001-0240-02
   it("warns on 6 nodes with 17 edges", async () => {
     const links = Array.from(
