@@ -2529,8 +2529,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pointed. A story-tree seed path under a link was refused only after the root
   assets and `AGENTS.md` had already been written. Init now checks `.qfai` and
   the seed paths before it writes anything, and stops with the path named when
-  `.qfai` is a link or not a directory, leaving every project file as it was.
-  Closes #4471.
+  `.qfai` is a link or not a directory, or when a contract kind directory under
+  `.qfai/spec/03_contract/` is a link or not a directory, leaving every project
+  file as it was. Any link at `.qfai` is refused, including a dangling one and
+  one that resolves inside the project. Closes #4471.
 
 - **`qfai init --force` no longer removes another run's staging file.** Each
   run first removed every leftover `.qfai-init-*` staging file in
