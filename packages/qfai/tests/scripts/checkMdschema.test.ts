@@ -2092,3 +2092,43 @@ describe("decision-register filesystem causes", () => {
     }
   });
 });
+
+describe("bounding each mdschema run in the lane", () => {
+  // QFAI:EX-0001-0011-28
+  it("stops a run past its time limit and exits 2 for a check that did not finish", async () => {
+    const root = await newTempDir();
+    await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
+    // An mdschema that never exits and ignores SIGTERM, found through `--tools`.
+    const tools = await newTempDir();
+    const packageDir = path.join(tools, "node_modules", "@jackchuka", "mdschema");
+    await mkdir(path.join(packageDir, "bin"), { recursive: true });
+    await writeFile(
+      path.join(packageDir, "bin", "cli.js"),
+      'process.on("SIGTERM", () => undefined);\nsetInterval(() => undefined, 1000);\n',
+      "utf-8",
+    );
+    await writeFile(
+      path.join(packageDir, "package.json"),
+      JSON.stringify({ name: "@jackchuka/mdschema", bin: { mdschema: "bin/cli.js" } }),
+      "utf-8",
+    );
+
+    const argv = process.argv;
+    const stderr = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const stdout = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      process.argv = ["node", SCRIPT, "--root", root, "--tools", tools, "--scope", "all"];
+      const started = Date.now();
+
+      expect(main({ timeoutMs: 500 })).toBe(2);
+      expect(Date.now() - started).toBeLessThan(30_000);
+      expect(stderr.mock.calls.flat().join("\n")).toContain(
+        "check-mdschema: mdschema did not finish: it ran longer than 500 ms and was stopped",
+      );
+    } finally {
+      process.argv = argv;
+      stderr.mockRestore();
+      stdout.mockRestore();
+    }
+  });
+});
