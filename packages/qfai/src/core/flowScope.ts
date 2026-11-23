@@ -4,12 +4,12 @@ import { isStoryTreeId } from "./storyTree/ids.js";
 import type { StoryTreeModel } from "./storyTree/tree.js";
 
 export type FlowScope = {
-  flowIds: string[];
+  flowIds: readonly string[];
   invalidValues: string[];
-  storyIds: string[];
-  acceptanceCriteriaIds: string[];
-  exampleIds: string[];
-  ruleIds: string[];
+  storyIds: readonly string[];
+  acceptanceCriteriaIds: readonly string[];
+  exampleIds: readonly string[];
+  ruleIds: readonly string[];
   flowDirectories: string[];
   ruleFiles: string[];
   /** Every flow, story, criterion, example and rule ID above, built once for lookups. */
