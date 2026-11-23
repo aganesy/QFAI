@@ -46,8 +46,16 @@ const TABLE_NAME = String.raw`(?:${NAME_PART})(?:\s*\.\s*(?:${NAME_PART}))*`;
 const NAME_PARTS = new RegExp(NAME_PART, "g");
 
 /**
- * A double-quoted identifier, `CREATE TABLE [IF NOT EXISTS] <name>`, or
- * `REFERENCES <name>`, whichever starts first.
+ * The words PostgreSQL allows between `CREATE` and `TABLE`:
+ * `[ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ]`. PostgreSQL has no
+ * `CREATE OR REPLACE TABLE`. Any other word there makes it another statement,
+ * such as `CREATE PUBLICATION … FOR TABLE`, which creates no table.
+ */
+const CREATE_TABLE_MODIFIERS = String.raw`(?:(?:(?:GLOBAL|LOCAL)\s+)?(?:TEMPORARY|TEMP)\s+|UNLOGGED\s+)?`;
+
+/**
+ * A double-quoted identifier, `CREATE [modifiers] TABLE [IF NOT EXISTS] <name>`,
+ * or `REFERENCES <name>`, whichever starts first.
  *
  * The quoted identifier is an alternative of its own so that a scan steps over
  * it whole: a `REFERENCES` spelled inside one is part of a name, not a clause.
@@ -56,7 +64,7 @@ const NAME_PARTS = new RegExp(NAME_PART, "g");
  */
 const TABLE_EDGE = new RegExp(
   QUOTED_IDENTIFIER +
-    String.raw`|\bCREATE\s+(?:\w+\s+)*?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?<created>${TABLE_NAME})` +
+    String.raw`|\bCREATE\s+${CREATE_TABLE_MODIFIERS}TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?<created>${TABLE_NAME})` +
     String.raw`|\bREFERENCES\s+(?<referenced>${TABLE_NAME})`,
   "gi",
 );

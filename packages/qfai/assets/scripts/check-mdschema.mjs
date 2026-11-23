@@ -266,7 +266,7 @@ function isMapping(value) {
  * @param {Record<string, unknown> | undefined} paths The parsed `paths` mapping.
  * @param {string} key
  * @param {string} fallback
- * @param {string} config The configuration file, for the message.
+ * @param {string} config The configuration file relative to the tree, for the message.
  * @returns {string}
  */
 function readTreeDir(paths, key, fallback, config) {
@@ -291,18 +291,20 @@ function readTreeDir(paths, key, fallback, config) {
  *
  * A missing file means the documented defaults, which is what a fresh tree has.
  * A file that cannot be read or parsed, a document or a `paths` value that is
- * not a mapping, and a key that is not a non-blank string throw
- * `ConfigurationError`. The message quotes nothing from the file.
+ * not a mapping (an empty or comment-only file parses to no document), and a
+ * key that is not a non-blank string throw `ConfigurationError`. The message
+ * names the file relative to the tree, so it carries no absolute path, and
+ * quotes nothing from the file.
  *
  * @param {string} root
  * @returns {{ specsDir: string, contractsDir: string }} Tree-relative, forward-slashed.
  */
 export function configuredPaths(root) {
-  const config = path.join(root, "qfai.config.yaml");
+  const config = "qfai.config.yaml";
   /** @type {unknown} */
   let document;
   try {
-    document = parseYaml(readFileSync(config, "utf-8"));
+    document = parseYaml(readFileSync(path.join(root, config), "utf-8"));
   } catch (error) {
     if (isMissing(error)) {
       return { specsDir: ".qfai/spec", contractsDir: ".qfai/spec/03_contract" };

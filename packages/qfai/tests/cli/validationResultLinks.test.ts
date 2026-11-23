@@ -118,7 +118,7 @@ describe("validation result destinations reached through a link", () => {
       "qfai validate: the validation result was not written: .qfai/report/validate-full.json is a symbolic link or junction",
     );
     expect(await readFile(target, "utf-8")).toBe("keep\n");
-    // The run log is written beside it before the result, so only the result
+    // The run log is still written beside it after the refusal, so only the result
     // files are counted.
     expect((await readdir(reportDir)).filter((name) => name.endsWith(".json"))).toEqual([
       "validate-full.json",

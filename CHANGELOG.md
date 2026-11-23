@@ -652,6 +652,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   arguments, and its overloads were reported as one routine defined twice. The
   list is now read from the parenthesis that follows the name. Closes #5149.
 
+- **`qfai validate` records no pass in its run log when the result write
+  fails.** The run log was written, with status `pass`, before `validate.json`;
+  when the result write then failed, the command exited 1 while `validate.log`,
+  `run.json`, `validator.json` and `summary.md` still recorded a pass. The run
+  log is now written after the result files, and a run that could not write
+  them records the status `fail`.
+
 - **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
   shipped workflow edited to run a job on two operating systems and three
   Node versions was reported as three runner allocations instead of six,
@@ -716,11 +723,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   write path's guard before reading and exits 1 naming the linked path, or the
   catalogue path when it is a link or not a file. Closes #5048.
 
+- **`qfai doctor` refuses a skill dependency that npm would install from a
+  local tarball.** An unscoped `runtimeDependencies` entry ending in `.tgz`,
+  `.tar.gz` or `.tar` passed the package-name check, and
+  `doctor --autoremediate --yes` then installed the file of that name from the
+  project root. Such a manifest is now an error and nothing is installed. On
+  Windows the install no longer takes npm from a relative `PATH` directory,
+  which could run the project's own `node_modules/npm` as npm, and finds it
+  under a quoted one. Refused entries escape format and separator characters
+  such as U+202E in the doctor message. Closes #5092.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
   names the selected backend, the model and the origin of the service it
   called.
+
+- **`QFAI-CONTRACT-036` takes only a real `CREATE TABLE` as creating a
+  table.** Any words between `CREATE` and `TABLE` were accepted, so a statement
+  such as `CREATE PUBLICATION feed FOR TABLE orders` made its contract the owner
+  of `orders`. Only the PostgreSQL modifiers `TEMP`, `TEMPORARY`, `GLOBAL`,
+  `LOCAL` and `UNLOGGED` may now sit there.
 
 - **`qfai catalog components` stops when it cannot inspect the catalogue.** A
   catalogue whose metadata could not be read, for example because access was
@@ -751,6 +774,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   rule-shaped `rule` a waiver also accepts, drops the `dl_id` field no finding
   carries, and says `qfai report` writes `report.md`. Closes #4906, #4909,
   #4911, #4913, #4915, #4917 and #4919.
+
+- **`uiux.audit.maxDuplicateFindingsPerRule` must be an integer of 1 or
+  more.** At `0`, `qfai validate --format text` printed only
+  `[error] QFAI-AUD-001 and <n> more` for an audit group, with no message.
+  `0`, a negative or fractional number, or a non-number now raises the error
+  `QFAI-CFG-002` naming the key, and the text output prints five findings per
+  audit code as when the key is unset. Closes #5099.
 
 - **The `qfai-triage` skill keeps a private security intake out of the
   deliberation record.** The skill told every step that changes no tracked
@@ -2387,10 +2417,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   comment, or a flow mapping, sent it to the default `.qfai/spec` tree while
   `qfai validate` checked the configured one, and a file it could not read
   was silently treated as absent. It now parses the file with the YAML parser
-  `qfai validate` uses and the same rules for both keys. A file that cannot be
-  read or parsed, a `paths` that is not a mapping, or a key that is not a
-  non-blank string stops the lane with exit 2 naming the problem;
-  `checkDocuments` returns that the check did not run. Closes #4490.
+  `qfai validate` uses and the same rules for both keys. A file that is empty
+  or holds only comments, a file that cannot be read or parsed, a `paths` that
+  is not a mapping, or a key that is not a non-blank string stops the lane with
+  exit 2, naming `qfai.config.yaml` relative to the tree and the problem;
+  `checkDocuments` returns that the check did not run. Closes #4490, #5096.
 
 - **`qfai doctor --autoremediate` exits 1 when an install fails.** A failed
   `npm install` for a skill's runtime dependency was printed, but doctor still
@@ -2496,8 +2527,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pointed. A story-tree seed path under a link was refused only after the root
   assets and `AGENTS.md` had already been written. Init now checks `.qfai` and
   the seed paths before it writes anything, and stops with the path named when
-  `.qfai` is a link or not a directory, leaving every project file as it was.
-  Closes #4471.
+  `.qfai` is a link or not a directory, or when a contract kind directory under
+  `.qfai/spec/03_contract/` is a link or not a directory, leaving every project
+  file as it was. Any link at `.qfai` is refused, including a dangling one and
+  one that resolves inside the project. Closes #4471.
 
 - **`qfai init --force` no longer removes another run's staging file.** Each
   run first removed every leftover `.qfai-init-*` staging file in
