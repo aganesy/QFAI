@@ -710,6 +710,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   write path's guard before reading and exits 1 naming the linked path, or the
   catalogue path when it is a link or not a file. Closes #5048.
 
+- **`qfai doctor` refuses a skill dependency that npm would install from a
+  local tarball.** An unscoped `runtimeDependencies` entry ending in `.tgz`,
+  `.tar.gz` or `.tar` passed the package-name check, and
+  `doctor --autoremediate --yes` then installed the file of that name from the
+  project root. Such a manifest is now an error and nothing is installed. On
+  Windows the install no longer takes npm from a relative `PATH` directory,
+  which could run the project's own `node_modules/npm` as npm, and finds it
+  under a quoted one. Refused entries escape format and separator characters
+  such as U+202E in the doctor message. Closes #5092.
+
 - **`QFAI-CONTRACT-036` reads PostgreSQL escape strings.** The apply-order
   check ended an `E'…'` string at a backslash-escaped quote, so in
   `E'it\'s'` the rest of the line could open a stray string that hid a real
@@ -2395,10 +2405,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   comment, or a flow mapping, sent it to the default `.qfai/spec` tree while
   `qfai validate` checked the configured one, and a file it could not read
   was silently treated as absent. It now parses the file with the YAML parser
-  `qfai validate` uses and the same rules for both keys. A file that cannot be
-  read or parsed, a `paths` that is not a mapping, or a key that is not a
-  non-blank string stops the lane with exit 2 naming the problem;
-  `checkDocuments` returns that the check did not run. Closes #4490.
+  `qfai validate` uses and the same rules for both keys. A file that is empty
+  or holds only comments, a file that cannot be read or parsed, a `paths` that
+  is not a mapping, or a key that is not a non-blank string stops the lane with
+  exit 2, naming `qfai.config.yaml` relative to the tree and the problem;
+  `checkDocuments` returns that the check did not run. Closes #4490, #5096.
 
 - **`qfai doctor --autoremediate` exits 1 when an install fails.** A failed
   `npm install` for a skill's runtime dependency was printed, but doctor still
