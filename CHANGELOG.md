@@ -584,6 +584,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   expression, an `exclude` key that is not an axis, and a written-out matrix
   with no leg, which GitHub rejects, are named as not counted. Closes #4780.
 
+- **A skill's auto-decide entries skip HTML comments and need an operation
+  after their separator.** `QFAI-POLICY-002` joined an indented
+  `<!-- rationale -->` to the entry above it, so `output formatting` with a
+  comment under it matched no category, and it read a commented-out entry as
+  one. It also passed `output formatting:` and `equivalent-option pick (`,
+  whose separator opens nothing. HTML comments in a policy bucket are now
+  dropped before its entries are read, and an entry that instantiates a
+  category must name an operation after its colon or dash, or inside a closed
+  parenthesis. Closes #5046.
+
 - **The shared workflow rule names the RED exception by its installed path.**
   It pointed at `references/red-not-observable.md`, which the rule's own
   directory does not hold, so a reader entering from any stage other than
