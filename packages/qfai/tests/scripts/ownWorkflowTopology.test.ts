@@ -2390,6 +2390,8 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
     after?: Record<string, string>;
     eventSha?: string;
     deleteFails?: boolean;
+    /** How many API calls after the create fail with an HTTP 502 before `after` answers. */
+    afterOutages?: number;
   }): { status: number | null; output: string } => {
     const step = releaseSteps().find((candidate) => candidate["name"] === CREATE_STEP);
     const body = step?.["run"];
@@ -2397,6 +2399,8 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
       "string",
     );
     const fake = [
+      // The step waits between reads after the create; the fake only says it was asked to.
+      'sleep() { echo "fake-gh: sleep $1"; }',
       "gh() {",
       '  if [ "$1" = "release" ]; then',
       '    echo "fake-gh: release $2"',
@@ -2405,6 +2409,14 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
       "    return 0",
       "  fi",
       '  if [ -n "${FAKE_CREATED:-}" ]; then',
+      // Counted in a file: the step reads the tag inside `$(...)`, where a variable would not
+      // survive the call.
+      "    outages=$(cat tmp/fake-outages)",
+      '    if [ "$outages" -gt 0 ]; then',
+      '      echo "$((outages - 1))" > tmp/fake-outages',
+      "      echo 'gh: Server Error (HTTP 502)' >&2",
+      "      return 1",
+      "    fi",
       ...apiCases(run.after ?? run.before),
       '  elif [ -n "${FAKE_LOOKED:-}" ]; then',
       ...apiCases(run.looked ?? run.before),
@@ -2421,6 +2433,7 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
       // The notes step leaves its output here, and the step reads it relative to the checkout.
       mkdirSync(path.join(dir, "tmp"));
       writeFileSync(path.join(dir, "tmp", "release-notes.md"), `${NOTES}\n`, "utf-8");
+      writeFileSync(path.join(dir, "tmp", "fake-outages"), `${run.afterOutages ?? 0}\n`, "utf-8");
       const result = spawnSync("bash", [script], {
         cwd: dir,
         env: {
@@ -2499,6 +2512,52 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
     });
     expect(stuck.status, "a Release that could not be deleted must fail the job").not.toBe(0);
     expect(stuck.output).toContain("by hand");
+  });
+
+  // A transient API error right after the create used to read as a moved tag and delete a
+  // correct Release.
+  it("asks for the tag again when the API fails right after the create, keeping a correct Release", () => {
+    const recovered = create({ before: ANNOTATED, afterOutages: 2 });
+    expect(recovered.status, recovered.output).toBe(0);
+    expect(recovered.output).toContain(CREATED);
+    expect(recovered.output).toContain("fake-gh: sleep");
+    expect(recovered.output).not.toContain(DELETED);
+  });
+
+  it("deletes the Release after three unreadable answers, saying a rerun is safe", () => {
+    const down = create({ before: ANNOTATED, afterOutages: 3 });
+    expect(down.status, "a tag still unreadable after its retries must fail the job").not.toBe(0);
+    expect(down.output).toContain(DELETED);
+    expect(down.output).toContain("on 3 attempts");
+    expect(down.output).toContain("rerunning this job is safe");
+  });
+
+  it("does not ask again when the tag moved during the create", () => {
+    const raced = create({ before: ANNOTATED, after: { [REF]: `commit ${OTHER}` } });
+    expect(raced.output, "a definite answer is final").not.toContain("fake-gh: sleep");
+    expect(raced.output).not.toContain("rerunning this job is safe");
+  });
+
+  it("refuses a tag that does not resolve to a commit, and creates nothing", () => {
+    const TREE = "d".repeat(40);
+    // A lightweight tag of a tree, an annotated tag of a tree, and a tag chain deeper than the
+    // four hops the step follows.
+    const chain = Object.fromEntries(
+      ["1", "2", "3", "4", "5"].map((hop, index) => [
+        `repos/owner/repo/git/tags/${hop.repeat(40)}`,
+        `tag ${String(index + 2).repeat(40)}`,
+      ]),
+    );
+    for (const before of [
+      { [REF]: `tree ${TREE}` },
+      { [REF]: `tag ${TAG_OBJECT}`, [OBJECT]: `tree ${TREE}` },
+      { [REF]: `tag ${"1".repeat(40)}`, ...chain },
+    ]) {
+      const refused = create({ before });
+      expect(refused.status, "a tag that names no commit must stop the Release").not.toBe(0);
+      expect(refused.output).toContain("does not resolve to a commit");
+      expect(refused.output).not.toContain(CREATED);
+    }
   });
 
   // A re-run of the job after its create succeeded used to fail on the Release it had made.
