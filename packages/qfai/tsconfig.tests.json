@@ -54,10 +54,14 @@
     "tests/unit/graph/cacheFailures.examples.test.ts",
     "tests/unit/graph/replacementFailure.examples.test.ts",
     "tests/unit/graph/unreadableCacheCandidate.test.ts",
+    "tests/unit/graph/failedCacheCopy.test.ts",
     "tests/unit/graph/inventoryFiles.test.ts",
     "tests/unit/graph/completedCorpus.test.ts",
     "tests/unit/graph/corpusSourceSwap.test.ts",
+    "tests/unit/graph/npmCommand.test.ts",
+    "tests/unit/graph/npmPrerequisite.examples.test.ts",
     "tests/unit/graph/documentUpdateFailure.examples.test.ts",
+    "tests/unit/graph/codeRefreshFailure.examples.test.ts",
     "tests/unit/graph/graphGitignore.examples.test.ts",
     "tests/unit/graph/ciPolicy.examples.test.ts",
     "tests/integration/graph/processingOrigin.examples.test.ts",
@@ -245,6 +249,7 @@
     "tests/cli/validationProfiles.test.ts",
     "tests/cli/validateVerdictAfterResultWrite.test.ts",
     "tests/core/assistantAnchorReferences.test.ts",
+    "tests/core/dotDotNameContainment.test.ts",
     "tests/core/sessionReview.test.ts",
     "tests/integration/sessionReviewCli.test.ts",
     "tests/integration/init/turnEndHook.test.ts",
@@ -256,6 +261,7 @@
     "tests/core/htmlMockLazyLoad.test.ts",
     "tests/core/htmlMockBlocks.test.ts",
     "tests/core/htmlMockLiteralCss.test.ts",
+    "tests/unit/core/uiux/htmlMockColorPairs.test.ts",
     "tests/unit/core/uiux/htmlMockEventHandlers.test.ts",
     "tests/unit/core/uiux/htmlMockInteractiveElements.test.ts",
     "tests/unit/core/uiux/htmlMockResourceReferences.test.ts",
@@ -714,6 +720,7 @@
     "tests/scripts/syncInitToRoot.test.ts",
     "tests/core/waiversReadErrors.test.ts",
     "tests/unit/outputCapture.test.ts",
-    "tests/core/replaceFileTempCleanup.test.ts"
+    "tests/core/replaceFileTempCleanup.test.ts",
+    "tests/core/runLogValidateLog.test.ts"
   ]
 }

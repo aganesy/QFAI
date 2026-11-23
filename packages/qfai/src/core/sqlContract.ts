@@ -27,6 +27,7 @@ export type SqlParseError = {
     | "unterminated-comment"
     | "unterminated-dollar-quote"
     | "unbalanced-parens"
+    | "unbalanced-brackets"
     | "unmatched-close-paren";
   /** 1-based line where the offending construct opened, or where a stray `)` sits. */
   line: number;
@@ -83,9 +84,19 @@ const DOLLAR_QUOTE_AT = new RegExp(DOLLAR_QUOTE_MARKER.source, "y");
  * as a dozen malformed fragments, which is worse than not checking at all.
  *
  * Recognised: single-quoted strings with `''` escaping, `E'…'` escape strings
- * whose backslash escapes the next character, double-quoted identifiers, `--`
- * line comments, C-style block comments (nested, as PostgreSQL allows), and
+ * whose backslash escapes the next character, double-quoted identifiers and
+ * MySQL backtick identifiers with a doubled quote as its escape, `--` line
+ * comments, C-style block comments (nested, as PostgreSQL allows), and
  * `$tag$ … $tag$` dollar quoting.
+ *
+ * `[ … ]` is a SQL Server identifier and a PostgreSQL array subscript or
+ * constructor, so it is read as a nesting group: a `(`, `)` or `;` inside it
+ * is not counted, while a string inside it is still a string.
+ *
+ * Ceiling: a SQL Server bracket name holding a quote, a `[` or the escaped
+ * `]]` is not read, since PostgreSQL gives those characters their own meaning
+ * inside a subscript.
+ * Lift when: a contract needs such a name.
  */
 export function parseSqlContract(text: string): SqlParseResult {
   const statements: SqlStatement[] = [];
@@ -95,6 +106,8 @@ export function parseSqlContract(text: string): SqlParseResult {
   let line = 1;
   let depth = 0;
   let openParenLine = 0;
+  let bracketDepth = 0;
+  let openBracketLine = 0;
   let current = "";
   let currentLine = 0;
 
@@ -195,7 +208,7 @@ export function parseSqlContract(text: string): SqlParseResult {
     }
 
     // String literal / quoted identifier
-    if (ch === "'" || ch === '"') {
+    if (ch === "'" || ch === '"' || ch === "`") {
       const openedAt = line;
       const quote = ch;
       const escapes = quote === "'" && opensEscapeString(text, index);
@@ -238,10 +251,16 @@ export function parseSqlContract(text: string): SqlParseResult {
       continue;
     }
 
-    if (ch === "(") {
+    if (ch === "[") {
+      if (bracketDepth === 0) openBracketLine = line;
+      bracketDepth += 1;
+    } else if (ch === "]") {
+      if (bracketDepth > 0) bracketDepth -= 1;
+    } else if (ch === "(" && bracketDepth === 0) {
+      // Inside a bracket a parenthesis is part of the name or subscript.
       if (depth === 0) openParenLine = line;
       depth += 1;
-    } else if (ch === ")") {
+    } else if (ch === ")" && bracketDepth === 0) {
       if (depth === 0) {
         // A `)` that closes nothing makes the statement unrunnable; it is
         // reported where it sits, and the depth stays at zero.
@@ -255,7 +274,7 @@ export function parseSqlContract(text: string): SqlParseResult {
       }
     }
 
-    if (ch === ";" && depth === 0) {
+    if (ch === ";" && depth === 0 && bracketDepth === 0) {
       push();
       index += 1;
       continue;
@@ -271,6 +290,13 @@ export function parseSqlContract(text: string): SqlParseResult {
       kind: "unbalanced-parens",
       line: openParenLine || lineOf(text.length),
       detail: `${depth} unclosed "(" at end of file`,
+    });
+  }
+  if (bracketDepth > 0) {
+    errors.push({
+      kind: "unbalanced-brackets",
+      line: openBracketLine,
+      detail: `${bracketDepth} unclosed "[" at end of file`,
     });
   }
   push();
@@ -325,7 +351,7 @@ export function separateLiterals(statement: string): StatementParts {
         continue;
       }
     }
-    if (ch === "'" || ch === '"') {
+    if (ch === "'" || ch === '"' || ch === "`") {
       const escapes = ch === "'" && opensEscapeString(statement, index);
       let cursor = index + 1;
       let value = "";
@@ -407,25 +433,25 @@ const IDENTIFIER_START = new RegExp(IDENTIFIER_START_CLASS);
  * keeps its case, with `""` standing for one `"`. A quoted part is written back
  * without its quotes unless it holds a `.` or a `"`, the two characters no bare
  * part can hold; that keeps `"a.b"`, one name, apart from `a.b`, a schema and a
- * table. Returns `""` when no whole name starts there: a quoted part that never
- * closes, or a part missing after a `.`, names nothing.
+ * table. `end` is the index just past the name's last part. Returns undefined
+ * when no whole name starts there: a quoted part that never closes, or a part
+ * missing after a `.`, names nothing.
  *
  * Ceiling: a `U&"…"` part is not read, because its Unicode escapes are not
  * decoded, so an object named that way is not recorded at all.
  * Lift when: a contract needs a `U&` name checked for redefinition.
  */
-function readQualifiedName(text: string, from: number): string {
+function readQualifiedName(text: string, from: number): { name: string; end: number } | undefined {
   const parts: string[] = [];
   let index = from;
   for (;;) {
     const part = readNamePart(text, index);
-    if (!part) return "";
+    if (!part) return undefined;
     parts.push(part.name);
     index = skipSpaces(text, part.end);
-    if (text[index] !== ".") break;
+    if (text[index] !== ".") return { name: parts.join("."), end: part.end };
     index = skipSpaces(text, index + 1);
   }
-  return parts.join(".");
 }
 
 function readNamePart(text: string, from: number): { name: string; end: number } | undefined {
@@ -488,13 +514,13 @@ export function collectCreatedObjects(statements: SqlStatement[]): CreatedObject
       if (UNNAMED_INDEX_AT.test(statement.text.slice(nameAt))) continue;
     }
     const name = readQualifiedName(statement.text, nameAt);
-    if (name.length === 0) continue;
+    if (!name) continue;
     created.push({
       kind,
-      name,
+      name: name.name,
       signature:
         kind === "FUNCTION" || kind === "PROCEDURE"
-          ? identityArgumentTypes(argumentList(statement.text), kind)
+          ? identityArgumentTypes(argumentList(statement.text, name.end), kind)
           : "",
       line: statement.line,
     });
@@ -502,10 +528,15 @@ export function collectCreatedObjects(statements: SqlStatement[]): CreatedObject
   return created;
 }
 
-/** The text inside the parentheses of a `CREATE FUNCTION` / `PROCEDURE`. */
-function argumentList(statement: string): string {
-  const open = statement.indexOf("(");
-  if (open === -1) return "";
+/**
+ * The text inside the parentheses that follow a `CREATE FUNCTION` /
+ * `PROCEDURE` routine name ending at `nameEnd`. A quoted name may itself hold
+ * a `(`, so the search starts after the name rather than at the statement's
+ * first parenthesis.
+ */
+function argumentList(statement: string, nameEnd: number): string {
+  const open = skipSpaces(statement, nameEnd);
+  if (statement[open] !== "(") return "";
   let depth = 0;
   for (let index = open; index < statement.length; index += 1) {
     const ch = statement[index];

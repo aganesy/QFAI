@@ -143,6 +143,41 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     const { errors } = parseSqlContract(`SELECT ')', ")" FROM t; -- )\n/* ) */ SELECT $$ ) $$;\n`);
     expect(errors).toEqual([]);
   });
+
+  it("ignores a parenthesis or `;` inside a MySQL backtick identifier", () => {
+    const { statements, errors } = parseSqlContract(
+      "CREATE TABLE t (`a)` int);\nCREATE TABLE u (`b(` int, `c;``d` int);\n",
+    );
+    expect(errors).toEqual([]);
+    expect(statements.map((statement) => statement.line)).toEqual([1, 2]);
+  });
+
+  it("ignores a parenthesis or `;` inside a SQL Server bracket identifier", () => {
+    const { statements, errors } = parseSqlContract(
+      "CREATE TABLE t ([a)] int);\nCREATE TABLE u ([b(] int, [c;d] int);\n",
+    );
+    expect(errors).toEqual([]);
+    expect(statements.map((statement) => statement.line)).toEqual([1, 2]);
+  });
+
+  it("reports a backtick or bracket identifier that never closes", () => {
+    expect(parseSqlContract("SELECT 1;\nSELECT `a FROM t;\n").errors).toEqual([
+      { kind: "unterminated-string", line: 2, detail: "quoted identifier is never closed" },
+    ]);
+    expect(parseSqlContract("SELECT 1;\nSELECT [a FROM t;\n").errors).toEqual([
+      { kind: "unbalanced-brackets", line: 2, detail: '1 unclosed "[" at end of file' },
+    ]);
+  });
+
+  it("still reads PostgreSQL array brackets, nested and holding strings", () => {
+    // `]]` closes two nested subscripts in PostgreSQL, so it is not read as
+    // SQL Server's escaped `]`, and a `]` inside a string closes nothing.
+    const { statements, errors } = parseSqlContract(
+      "CREATE TABLE t (m int[][] DEFAULT ARRAY[[1,2],[3,4]], s text[] DEFAULT ARRAY['a]', 'b(']);\nSELECT 2;\n",
+    );
+    expect(errors).toEqual([]);
+    expect(statements).toHaveLength(2);
+  });
 });
 
 describe("the identifier character class is written with escapes", () => {
@@ -487,6 +522,24 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
       `CREATE TABLE U&"d\\0061ta" (a int);\nCREATE TABLE u&"other" (a int);\n`,
     );
     expect(collectCreatedObjects(statements)).toEqual([]);
+  });
+
+  // The argument list was read from the statement's first `(`, which a quoted
+  // routine name may hold, so both overloads below were read with no
+  // arguments and reported as one routine defined twice.
+  it("reads a routine's arguments after a quoted name holding a parenthesis", () => {
+    const { statements } = parseSqlContract(
+      `CREATE FUNCTION "f(x"(a int) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE FUNCTION "f(x"(a text) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n` +
+        `CREATE PROCEDURE "s(".p(a bigint) LANGUAGE sql AS $$ SELECT 3 $$;\n`,
+    );
+    const created = collectCreatedObjects(statements);
+    expect(created.map((object) => [object.name, object.signature])).toEqual([
+      ["f(x", "integer"],
+      ["f(x", "text"],
+      ["s(.p", "bigint"],
+    ]);
+    expect(findRedefinitions(created)).toEqual([]);
   });
 
   it("stays silent on a file that defines each object once", async () => {

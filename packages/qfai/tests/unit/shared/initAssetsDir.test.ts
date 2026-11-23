@@ -14,7 +14,7 @@
  * ship. It is reported as incomplete instead.
  */
 
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -57,6 +57,8 @@ async function installedPackage(withAssets: boolean): Promise<{ project: string;
   await writeManifest(pkg, "qfai");
   await mkdir(path.join(pkg, "dist", "cli"), { recursive: true });
   await mkdir(path.join(pkg, "dist", "shared"), { recursive: true });
+  await mkdir(path.join(pkg, "dist", "graph"), { recursive: true });
+  await mkdir(path.join(pkg, "dist", "hook"), { recursive: true });
   await mkdir(path.join(pkg, "src", "shared"), { recursive: true });
   if (withAssets) await writeInitAssets(pkg);
   return { project, pkg };
@@ -67,6 +69,8 @@ describe("resolveInitAssetsDir", () => {
     ["dist/index.mjs (public entry, bundled)", ["dist"]],
     ["dist/cli/index.mjs (CLI entry)", ["dist", "cli"]],
     ["dist/shared/ (unbundled build)", ["dist", "shared"]],
+    ["dist/graph/cli.mjs (graph CLI entry)", ["dist", "graph"]],
+    ["dist/hook/turn-end.mjs (turn-end hook entry)", ["dist", "hook"]],
     ["src/shared/ (running from source)", ["src", "shared"]],
   ])("finds the package's own assets/init from %s", async (_layout, segments) => {
     const { pkg } = await installedPackage(true);
@@ -108,5 +112,31 @@ describe("resolveInitAssetsDir", () => {
     expect(() => resolveInitAssetsDir(path.join(other, "dist"))).toThrow(
       `${path.join(other, "package.json")} is not the qfai package`,
     );
+  });
+
+  it.each([
+    ["a truncated package.json", "parse"],
+    ["a directory named package.json", "read"],
+  ])("reports %s as unreadable, not as another package", async (_case, failure) => {
+    const { pkg } = await installedPackage(true);
+    const manifestPath = path.join(pkg, "package.json");
+    await rm(manifestPath);
+    if (failure === "parse") await writeFile(manifestPath, '{"name": "qf', "utf8");
+    else await mkdir(manifestPath);
+
+    let thrown: unknown;
+    try {
+      resolveInitAssetsDir(path.join(pkg, "dist"));
+    } catch (error: unknown) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    const message = thrown instanceof Error ? thrown.message : "";
+    expect(message).toContain(`${manifestPath} could not be read: `);
+    expect(message).not.toContain("is not the qfai package");
+    // The cause names what went wrong with the file itself.
+    const cause = thrown instanceof Error ? thrown.cause : undefined;
+    expect(cause).toBeInstanceOf(Error);
+    expect(message).toContain(cause instanceof Error ? cause.message : "<no cause>");
   });
 });

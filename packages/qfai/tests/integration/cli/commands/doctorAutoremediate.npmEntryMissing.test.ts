@@ -1,8 +1,8 @@
 // On Windows npm's `.cmd` launcher needs a shell, so the default install runner
 // starts npm's JavaScript entry with Node. When that entry is neither beside
 // node nor under a directory on PATH, the install fails instead of falling back
-// to a shell. `npmCommand` is replaced with the answer it gives when no entry is
-// beside node, and `spawn` with a stand-in that records any call; `vi.mock` is
+// to a shell. `npmCommand` is pointed at a Node directory without npm beside it,
+// and `spawn` replaced with a stand-in that records any call; `vi.mock` is
 // hoisted to module scope, so this case lives in its own file.
 
 import type * as ChildProcess from "node:child_process";
@@ -36,9 +36,14 @@ vi.mock("../../../../src/core/graph/process.js", async () => {
   );
   return {
     ...actual,
-    npmCommand: async () => {
-      await Promise.resolve();
-      return { command: "npm", prefix: [] };
+    // A Node directory that does not exist, so no entry is beside node.
+    npmCommand: async (lookup: GraphProcess.NpmLookup = {}) => {
+      const os = await import("node:os");
+      const path = await import("node:path");
+      return actual.npmCommand({
+        ...lookup,
+        nodeDirectory: path.join(os.tmpdir(), "qfai-autoremediate-no-node", "bin"),
+      });
     },
   };
 });

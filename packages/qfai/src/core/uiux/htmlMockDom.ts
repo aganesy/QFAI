@@ -111,7 +111,7 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
   // Script tags
   result.scriptTags = doc.querySelectorAll("script").length;
 
-  const dimensionProbe = doc.createElement("div");
+  const declarationProbe = doc.createElement("div");
 
   for (const el of allElements) {
     // State and breakpoint markers, read before the inline-style checks below so that an element
@@ -133,15 +133,16 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
       });
     }
 
-    // Inline dimensions, read from parsed declarations so that `min-width` or `border-width` is
-    // never taken for `width`. jsdom drops a declaration whose property name is not lower-case,
-    // while CSS property names are case-insensitive, so the attribute is lower-cased and parsed
-    // on one detached element. Only the pixel values of `width` and `height` are read from it,
-    // and lower-casing cannot change those. The detached element also gives every element,
+    // Inline dimensions and colours, read from parsed declarations so that `min-width` is never
+    // taken for `width`, nor a longer name ending in `background` for the background, and an
+    // `!important` declaration wins as it does in CSS. jsdom drops a declaration whose property
+    // name is not lower-case, while CSS property names are case-insensitive, so the attribute is
+    // lower-cased and parsed on one detached element. Only pixel lengths and colours are read
+    // from it, and lower-casing changes neither. The detached element also gives every element,
     // MathML included, the same reading.
-    dimensionProbe.style.cssText = style.toLowerCase();
-    const width = readPixelLength(dimensionProbe.style.getPropertyValue("width"));
-    const height = readPixelLength(dimensionProbe.style.getPropertyValue("height"));
+    declarationProbe.style.cssText = style.toLowerCase();
+    const width = readPixelLength(declarationProbe.style.getPropertyValue("width"));
+    const height = readPixelLength(declarationProbe.style.getPropertyValue("height"));
     if (width !== null || height !== null) {
       result.inlineDimensions.push({
         element: el.tagName.toLowerCase(),
@@ -151,20 +152,11 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
       });
     }
 
-    // Color pairs
-    const colorMatch = /(?:^|;)\s*color\s*:\s*([^;]+)/i.exec(style);
-    const bgMatch = /background(?:-color)?\s*:\s*([^;]+)/i.exec(style);
-    if (colorMatch && bgMatch) {
-      const color = colorMatch[1];
-      const backgroundColor = bgMatch[1];
-      if (!color || !backgroundColor) {
-        continue;
-      }
-      result.colorPairs.push({
-        element: el.tagName.toLowerCase(),
-        color: color.trim(),
-        backgroundColor: backgroundColor.trim(),
-      });
+    // Color pairs. A `background` shorthand sets `background-color`, so one read covers both.
+    const color = declarationProbe.style.getPropertyValue("color");
+    const backgroundColor = declarationProbe.style.getPropertyValue("background-color");
+    if (color && backgroundColor) {
+      result.colorPairs.push({ element: el.tagName.toLowerCase(), color, backgroundColor });
     }
   }
 

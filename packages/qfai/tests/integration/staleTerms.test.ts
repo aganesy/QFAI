@@ -84,7 +84,7 @@ describe("a spec document that states a term the project lists as stale", () => 
     expect(await validateStaleTerms(root, config, model)).toEqual([]);
   });
 
-  // QFAI:EX-0001-0057-01
+  // QFAI:EX-0001-0057-04
   it("keeps the warning for the named flow when --flow scopes the run", async () => {
     const otherStory = `${specs}/02_business-flow/business-flow-0002/user-story-0002-0001/01_User-story.md`;
     for (const id of ["0001", "0002"]) {

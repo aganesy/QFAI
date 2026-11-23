@@ -6,6 +6,7 @@ import { resolvePath } from "./config.js";
 import { unusableGlobReason } from "./fs.js";
 import { braceRangeMembers, BraceRangeRefused } from "./globBraceRange.js";
 import { isGlobExclusion } from "./testGlobExtensions.js";
+import { isInside } from "./validators/utils.js";
 /**
  * Extension set used when the project declares no
  * `validation.traceability.testFileGlobs`. It is a fallback, not the rule: its
@@ -263,10 +264,7 @@ export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string 
 
 function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
   const relativeTestsRoot = path.relative(root, testsRoot);
-  const isInsideRoot =
-    relativeTestsRoot.length === 0 ||
-    (!relativeTestsRoot.startsWith("..") && !path.isAbsolute(relativeTestsRoot));
-  const base = isInsideRoot
+  const base = isInside(root, testsRoot)
     ? toPosixPath(relativeTestsRoot.length === 0 ? "." : relativeTestsRoot)
     : toPosixPath(testsRoot);
   const normalizedBase = base.replace(/\/+$/, "");
@@ -378,13 +376,13 @@ export function resolveTestKind(filePath: string, roots: TestLayerRoots): AtddTe
 }
 
 function resolveTestLayer(filePath: string, roots: TestLayerRoots): TestLayer | null {
-  if (isWithinPath(roots.e2eRoot, filePath)) {
+  if (isInside(roots.e2eRoot, filePath)) {
     return { kind: "e2e", layerDir: roots.e2eRoot };
   }
-  if (isWithinPath(roots.apiRoot, filePath)) {
+  if (isInside(roots.apiRoot, filePath)) {
     return { kind: "api", layerDir: roots.apiRoot };
   }
-  if (isWithinPath(roots.integrationRoot, filePath)) {
+  if (isInside(roots.integrationRoot, filePath)) {
     return { kind: "integration", layerDir: roots.integrationRoot };
   }
   return resolveTestLayerFromPath(roots.root, filePath, roots.testsDirName, roots.isPackageRoot);
@@ -431,7 +429,7 @@ function resolveTestLayerFromPath(
   isPackageRoot: (absoluteDir: string) => boolean,
 ): TestLayer | null {
   const relative = path.relative(root, filePath);
-  if (relative.length === 0 || relative.startsWith("..") || path.isAbsolute(relative)) {
+  if (relative.length === 0 || !isInside(root, filePath)) {
     return null;
   }
   const directories = toPosixPath(relative).split("/").slice(0, -1);
@@ -729,14 +727,6 @@ export function atddAcceptanceLayerFilter(
   // repository (`testsDir: "."`) puts the layer directories at the top level,
   // where no test-root segment precedes them and only containment answers.
   return (relativePath) => resolveTestKind(path.resolve(root, relativePath), roots) !== null;
-}
-
-function isWithinPath(base: string, target: string): boolean {
-  const relative = path.relative(base, target);
-  if (relative === "") {
-    return true;
-  }
-  return !relative.startsWith("..") && !path.isAbsolute(relative);
 }
 
 function toPosixPath(value: string): string {

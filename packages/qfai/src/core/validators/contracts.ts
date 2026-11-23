@@ -231,6 +231,7 @@ const SQL_PARSE_ERROR_MESSAGE: Record<SqlParseError["kind"], string> = {
   "unterminated-comment": "The block comment /* is not closed",
   "unterminated-dollar-quote": "A body opened with a dollar quote is not closed",
   "unbalanced-parens": "There is an unclosed parenthesis",
+  "unbalanced-brackets": "There is an unclosed square bracket",
   "unmatched-close-paren": "A closing parenthesis has no matching opening one",
 };
 
@@ -258,7 +259,7 @@ function validateSqlStructure(text: string, file: string): Issue[] {
         "contracts.parse",
         undefined,
         "change",
-        "Fix the unterminated string, comment or dollar quote, or the unclosed or unmatched parenthesis.",
+        "Fix the unterminated string, comment or dollar quote, the unclosed square bracket, or the unclosed or unmatched parenthesis.",
       ),
     );
   }

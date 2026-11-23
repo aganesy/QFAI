@@ -593,6 +593,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to the end of the line when it is never closed; a bare value is still
   blanked to the next whitespace. Closes #5020.
 
+- **A directory whose name begins with two dots counts as inside its base
+  everywhere.** Several more checks tested whether a path relative to its base
+  began with `..`, so a directory such as `..fixtures` or `..archive` read as
+  outside the tree that holds it: ATDD test-layer resolution and its scan
+  globs, the `qfai init` guard against writing into the package's own
+  assets, the `qfai doctor` output path alignment check, the assistant
+  anchor-reference validator, and the repository-relative paths in
+  assistant-asset messages. Each now asks the shared containment check, where
+  only a `..` path segment leaves the base. Closes #5142.
+
 - **Migration step 11 names a staging directory it could not remove.** When
   step 11 replaced a shipped skill or step but could not remove the hidden
   `.<id>-replace-*` directory it staged in, the failure was ignored: the
@@ -634,6 +644,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   count, as `qfai init` already did, and a matching file is no longer listed
   in the finding's message.
 
+- **A saved graph analysis whose copy fails no longer stops restoration.**
+  Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
+  `analysis` folder. When a file inside it could not be read, the copy threw:
+  CodeGraph preparation failed and Graphify rebuilt instead of trying later
+  entries. A failed copy now makes only that entry ineligible, its partial copy
+  is removed, and the next saved entry is tried. Closes #5188.
+
 - **A failed file replacement removes only its own temporary file.** QFAI
   replaces a report, a run-log pointer, a `.gitignore` or a migrated document
   by writing a temporary file beside it and renaming that into place. When
@@ -656,12 +673,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   those exceptions, and `triage-owned-cleanup` keeps its own unchanged-tree
   check.
 
+- **A comment in a table cell no longer cuts the table or hides the rest of a
+  document.** The validators that skip markup blanked every line a comment ran
+  into, so a comment opened in one row's cell and closed in a later row ended
+  the table there and lost the rows below it, and a cell holding `<!-- or //`
+  with no `-->` hid every heading and table after it. Only a comment that
+  opens a line is now blanked to the end of its closing line; one opened
+  inside a line keeps the text after its `-->`, and is a comment only when a
+  `-->` closes it within its paragraph. Closes #5167.
+
 - **The README's Actions minutes recipe reads every page of runs and jobs.**
   Its `gh api` commands for a pull request's workflow runs and for a run's
   jobs fetched one page, and the jobs page held at most 100, so a comparison
   with more runs or jobs silently dropped their minutes. Both commands now
   pass `--paginate`, and the per-item `--jq` filters still print one line per
   run or job.
+
+- **`QFAI-DB-002` reads a routine's arguments after its name.** The argument
+  list was read from the statement's first `(`, so a quoted routine name
+  holding one, such as `CREATE FUNCTION "f(x"(a int)`, gave the routine no
+  arguments, and its overloads were reported as one routine defined twice. The
+  list is now read from the parenthesis that follows the name. Closes #5149.
 
 - **`qfai validate` records no pass in its run log when the result write
   fails.** The run log was written, with status `pass`, before `validate.json`;
@@ -680,6 +712,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   expression, an `exclude` key that is not an axis, and a written-out matrix
   with no leg, which GitHub rejects, are named as not counted. Closes #4780.
 
+- **`qfai catalog design` no longer says both files could not be put back when
+  only its staging file is left.** When a write failed and both files were put
+  back but one of the run's own staging files could not be removed, the line
+  said the files could not be put back and, in the same line, that they were
+  as they were. It now says both files are as they were and names the staging
+  file it could not remove after the cause. Closes #5110.
+
 - **A skill's auto-decide entries skip HTML comments and need an operation
   after their separator.** `QFAI-POLICY-002` joined an indented
   `<!-- rationale -->` to the entry above it, so `output formatting` with a
@@ -689,6 +728,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   dropped before its entries are read, and an entry that instantiates a
   category must name an operation after its colon or dash, or inside a closed
   parenthesis. Closes #5046.
+
+- **The SQL contract lexer reads backtick and bracket identifiers.** It
+  skipped only `'` and `"` quoting, so in ``CREATE TABLE t (`a)` int);`` the
+  `)` inside the MySQL name raised `QFAI-CONTRACT-021`, and so did one inside a
+  SQL Server name such as `[a)]`. A backtick identifier is now read like a
+  double-quoted one, and a `(`, `)` or `;` inside `[ … ]` is not counted.
+  Brackets nest and a string inside them stays a string, so PostgreSQL arrays
+  such as `ARRAY[[1,2],[3,4]]` still parse, and a `[` left open is reported.
+  Closes #5136.
+
+- **A failed code graph refresh keeps the previous graph with the files it
+  was built from.** Checking whether the code graph was current copied the
+  changed project files into the active analysis first, so when the
+  replacement graph then failed, the previous graph sat beside inputs it was
+  never built from. As the document graph already does, the check now
+  refreshes and verifies a separate copy when project files changed and makes
+  it active, graph and inputs together, only when the graph is current for
+  them. Closes #5191.
 
 - **The shared workflow rule names the RED exception by its installed path.**
   It pointed at `references/red-not-observable.md`, which the rule's own
@@ -714,6 +771,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `CONCURRENTLY` is read as the index name instead of `concurrently`. A name
   whose quoted part never closes, and a `U&"…"` name, record no object rather
   than a wrong prefix such as `u`. Closes #5150.
+
+- **The HTML mock contrast check reads the background CSS applies.** It took
+  the first `background:` or `background-color:` it found in an inline style,
+  so a longer property name ending in `background` could stand in for the real
+  one, and an `!important` background lost to a later plain declaration. It now
+  reads the colour and the background from the parsed declarations, whatever
+  the case of their property names, so `QFAI-MOCK-008` measures the pair CSS
+  applies. A colour inside a `background` shorthand with an image, and a
+  three-digit hex colour, are now measured too. Closes #5135.
 
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
@@ -742,6 +808,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   one Windows holds open, no longer rejects the command without its message: it
   exits 1 with one line that says both files were written and names the file
   it kept. Closes #5093.
+
+- **`qfai init` downloads CodeGraph on Windows when npm is not beside Node.**
+  Graph provisioning then started a bare `npm` without a shell, which cannot
+  start Windows' `npm.cmd` launcher, so the download failed. It now finds npm
+  the way `qfai doctor --autoremediate` does, through one shared lookup: npm's
+  JavaScript entry beside Node, else under an absolute `PATH` directory, run
+  with Node. When neither holds one, init reports a failed `npm prerequisite`
+  step that names the missing `npm-cli.js` instead of a failed download.
 
 - **`qfai doctor` refuses a skill dependency that npm would install from a
   local tarball.** An unscoped `runtimeDependencies` entry ending in `.tgz`,
@@ -772,6 +846,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such as `CREATE PUBLICATION feed FOR TABLE orders` made its contract the owner
   of `orders`. Only the PostgreSQL modifiers `TEMP`, `TEMPORARY`, `GLOBAL`,
   `LOCAL` and `UNLOGGED` may now sit there.
+
+- **A package.json QFAI cannot read is reported as unreadable.** While
+  locating its init templates (for `qfai init`, `qfai doctor` and the graph
+  commands), a nearest `package.json` that failed to read or parse
+  (a permission error, a truncated file, a directory of that name) was reported
+  as "not the qfai package". The message now names the file and the read or
+  parse error. Closes #5155.
 
 - **`qfai catalog components` stops when it cannot inspect the catalogue.** A
   catalogue whose metadata could not be read, for example because access was
@@ -860,6 +941,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prerequisites said Python and `uv` install both graph runtimes. Only
   Graphify is installed with them; init installs CodeGraph with the npm of
   the Node.js that runs `qfai`. Closes #5059.
+
+- **`qfai doctor` no longer reads a `pnpm-workspace.yaml` above a project that
+  is in no Git repository.** A stray one in a shared parent widened the
+  output-directory collision scan to unrelated projects. Outside a Git
+  repository the scan now covers the project directory alone, and
+  `qfai doctor --clean` keeps the run logs of an `outDir` that lies outside the
+  scanned tree, since no scan can prove it unshared. Closes #5117.
 
 - **`qfai validate` reports a `.qfai/waivers.yml` it cannot read.** An
   existence probe that swallowed every error ran first, so a `.qfai` directory

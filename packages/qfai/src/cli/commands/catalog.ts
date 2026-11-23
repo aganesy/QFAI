@@ -399,14 +399,19 @@ async function commitPair(root: string, entries: PairEntry[]): Promise<PairFailu
     return null;
   } catch (caught) {
     const undo = await undoPair(root, entries);
-    if (undo.left.length === 0) return { message: messageOf(caught), state: "restored" };
+    if (undo.left.length === 0) {
+      return { message: [messageOf(caught), ...undo.strays].join(" "), state: "restored" };
+    }
     const kept =
       undo.restored.length === 0
         ? []
         : [
             `${undo.restored.join(" and ")} ${undo.restored.length === 1 ? "is as it was" : "are as they were"}.`,
           ];
-    return { message: [messageOf(caught), ...undo.left, ...kept].join(" "), state: "left" };
+    return {
+      message: [messageOf(caught), ...undo.left, ...kept, ...undo.strays].join(" "),
+      state: "left",
+    };
   }
 }
 
@@ -458,16 +463,19 @@ async function place(entry: PairEntry): Promise<void> {
 
 /**
  * Undoes what this run did to the pair after a failed write. Returns a sentence for each step
- * that could not be undone, and each target that is as it was. A placed file that another run has
+ * that left a target other than it was, each target that is as it was, and, apart, a sentence
+ * for each staging file of this run that could not be removed, which changes no target. A placed
+ * file that another run has
  * since replaced is left in place, as is one that cannot be inspected, and the moved-aside file is
  * then kept under its own name rather than renamed over it.
  */
 async function undoPair(
   root: string,
   entries: readonly PairEntry[],
-): Promise<{ left: string[]; restored: string[] }> {
+): Promise<{ left: string[]; restored: string[]; strays: string[] }> {
   const left: string[] = [];
   const restored: string[] = [];
+  const strays: string[] = [];
   for (const entry of entries) {
     const target = relativeTo(root, entry.file);
     let intact = true;
@@ -502,12 +510,12 @@ async function undoPair(
     const staging = entry.staging;
     if (staging !== null) {
       await rm(staging, { force: true }).catch((caught: unknown) => {
-        left.push(`${relativeTo(root, staging)} could not be removed: ${messageOf(caught)}`);
+        strays.push(`${relativeTo(root, staging)} could not be removed: ${messageOf(caught)}`);
       });
     }
     if (intact) restored.push(target);
   }
-  return { left, restored };
+  return { left, restored, strays };
 }
 
 /** The entry's metadata, or null when nothing is there; any other failure to read it throws. */

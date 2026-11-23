@@ -29,6 +29,7 @@ import { getInitAssetsDir } from "../../shared/assets.js";
 import { error, info, warn } from "../../core/logger.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
+import { isInside } from "../../core/validators/utils.js";
 import {
   loadConfig,
   readSkippedWorkflows,
@@ -279,7 +280,7 @@ type InitSymlinkRuntime = {
  * cannot be resolved, for the same reason the dependency guard does — a guard
  * that mistakes a normal project for this one breaks the product.
  */
-async function refuseWritingThroughToOwnAssets(
+export async function refuseWritingThroughToOwnAssets(
   destRoot: string,
   assistantAssets: string,
 ): Promise<void> {
@@ -295,9 +296,7 @@ async function refuseWritingThroughToOwnAssets(
     resolve(assistantAssets),
   ]);
   if (destAssistant === null || sourceAssistant === null) return;
-  const relative = path.relative(sourceAssistant, destAssistant);
-  const inside = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
-  if (!inside) return;
+  if (!isInside(sourceAssistant, destAssistant)) return;
   throw new Error(
     [
       `qfai init: ${formatReportPath(path.join(destRoot, ASSISTANT_DIR))} resolves to ${formatReportPath(destAssistant)},`,
