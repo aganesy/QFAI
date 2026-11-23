@@ -134,6 +134,42 @@ export async function readBoundedRegularFile(
   });
 }
 
+/**
+ * The bytes of the regular file the caller inspected as `inspected`, or `undefined` when the path no
+ * longer names that file.
+ *
+ * For a caller that has already judged the file by its own `lstat`: the bytes come from a descriptor
+ * that is the object that `lstat` described. `undefined` means the file was replaced or removed after
+ * that judgement — the path is gone, now names a link or a non-regular file, names another object,
+ * or the file grew past the size the descriptor reported while it was read. Every other failure to
+ * open or read is thrown, so a file that could not be read is not mistaken for one that moved.
+ */
+export async function readInspectedRegularFile(
+  filePath: string,
+  inspected: Stats,
+): Promise<Buffer | undefined> {
+  if (inspected.isSymbolicLink() || !inspected.isFile()) return undefined;
+  let handle;
+  try {
+    handle = await open(filePath, readOnlyNoFollowFlags());
+  } catch (cause: unknown) {
+    // ENOENT: removed since the check. ELOOP: replaced by a link `O_NOFOLLOW` refused.
+    if (errnoCode(cause) === "ENOENT" || errnoCode(cause) === "ELOOP") return undefined;
+    throw cause;
+  }
+  try {
+    const stats = await handle.stat();
+    if (!stats.isFile() || !sameObject(inspected, stats)) return undefined;
+    return await readHandleWithin(handle, stats.size);
+  } finally {
+    await handle.close().catch(() => undefined);
+  }
+}
+
+function errnoCode(cause: unknown): unknown {
+  return typeof cause === "object" && cause !== null && "code" in cause ? cause.code : undefined;
+}
+
 /** The one `FileHandle` method {@link readHandleWithin} reads through. */
 export type PositionalReader = {
   read(

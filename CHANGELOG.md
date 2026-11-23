@@ -806,6 +806,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   into the Alternate and exception paths list; any other document is still
   told to split the diagram. Closes #4978.
 
+- **The graph corpus copies the source file it checked.** Each source file was
+  checked by its path and then copied by its path again, so a file replaced
+  between the two was copied in place of the one that passed the check. The
+  mirror now opens the file once, confirms the open file is the one it
+  checked, and copies from it; a file replaced in between is left out of that
+  mirror and picked up by the next one. Closes #5019.
+
 - **`qfai session-review --since` accepts a date with a year below 0100.** The
   calendar check read years 0000 through 0099 as 1900 through 1999, so a valid
   date such as `0099-09-09` was refused. The check now keeps the year as
