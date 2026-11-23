@@ -705,6 +705,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   category must name an operation after its colon or dash, or inside a closed
   parenthesis. Closes #5046.
 
+- **A failed code graph refresh keeps the previous graph with the files it
+  was built from.** Checking whether the code graph was current copied the
+  changed project files into the active analysis first, so when the
+  replacement graph then failed, the previous graph sat beside inputs it was
+  never built from. As the document graph already does, the check now
+  refreshes and verifies a separate copy when project files changed and makes
+  it active, graph and inputs together, only when the graph is current for
+  them. Closes #5191.
+
 - **The shared workflow rule names the RED exception by its installed path.**
   It pointed at `references/red-not-observable.md`, which the rule's own
   directory does not hold, so a reader entering from any stage other than

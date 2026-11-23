@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { isEnoent } from "../fs/errno.js";
@@ -24,6 +24,7 @@ import type { GraphReuseEnvironment } from "./reuse.js";
 import {
   assertGraphStoragePath,
   assertIndependentAnalysis,
+  checkRefreshCopy,
   replaceGraphDirectory,
 } from "./storage.js";
 
@@ -420,26 +421,17 @@ async function refreshStagedDocumentScope(
   run: GraphProcess,
   scope: readonly string[] | undefined,
 ): Promise<DocumentScopeStatus> {
-  const staged = path.join(path.dirname(analysis), `.refreshing-graphify-${randomUUID()}`);
-  await assertGraphStoragePath(root, staged);
-  try {
-    await cp(analysis, staged, { recursive: true, dereference: false });
-    // The mirror checks the copy's independence before it writes anything.
-    await mirrorGraphCorpus(root, staged, scope);
-    const status = await nativeGraphifyScope(root, staged, graphRuntimePaths(root).python, run);
-    if (status.current) await replaceGraphDirectory(staged, analysis, root);
-    return status;
-  } finally {
-    await discardRefreshCopy(staged);
-  }
-}
-
-async function discardRefreshCopy(staged: string): Promise<void> {
-  try {
-    await rm(staged, { recursive: true, force: true, maxRetries: 3 });
-  } catch {
-    // The status already decided stands: a left-over hidden copy is never read as analysis.
-  }
+  return checkRefreshCopy(
+    root,
+    analysis,
+    "graphify",
+    async (staged) => {
+      // The mirror checks the copy's independence before it writes anything.
+      await mirrorGraphCorpus(root, staged, scope);
+      return nativeGraphifyScope(root, staged, graphRuntimePaths(root).python, run);
+    },
+    (status) => status.current,
+  );
 }
 
 async function processingForCompletedQuery(
