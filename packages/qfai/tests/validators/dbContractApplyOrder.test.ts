@@ -120,6 +120,33 @@ describe("reading a contract's own DDL", () => {
     expect(creates.has("staging_rows")).toBe(true);
   });
 
+  it("reads CREATE TABLE through every PostgreSQL temporary-table modifier", () => {
+    const { creates } = readTableEdges(
+      [
+        "CREATE TEMP TABLE a (id TEXT);",
+        "CREATE TEMPORARY TABLE b (id TEXT);",
+        "CREATE GLOBAL TEMPORARY TABLE c (id TEXT);",
+        "CREATE LOCAL TEMP TABLE IF NOT EXISTS d (id TEXT);",
+      ].join("\n"),
+    );
+
+    expect([...creates.keys()].sort()).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("does not read a table from another statement that names TABLE later on", () => {
+    // `CREATE PUBLICATION pub FOR TABLE orders` creates a publication. Read as a
+    // CREATE TABLE, it makes this file the owner of `orders`, and a contract
+    // that really creates `orders` loses the attribution its references need.
+    const { creates } = readTableEdges(
+      [
+        "CREATE PUBLICATION order_feed FOR TABLE orders;",
+        "CREATE OR REPLACE TABLE archive (id TEXT);",
+      ].join("\n"),
+    );
+
+    expect(creates.size).toBe(0);
+  });
+
   it("does not read a REFERENCES inside a comment or a string", () => {
     // Prose and data. Counted, either would send the author to declare a
     // dependency the file does not have.

@@ -672,6 +672,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **`QFAI-CONTRACT-036` takes only a real `CREATE TABLE` as creating a
+  table.** Any words between `CREATE` and `TABLE` were accepted, so a statement
+  such as `CREATE PUBLICATION feed FOR TABLE orders` made its contract the owner
+  of `orders`. Only the PostgreSQL modifiers `TEMP`, `TEMPORARY`, `GLOBAL`,
+  `LOCAL` and `UNLOGGED` may now sit there.
+
 - **`qfai catalog components` stops when it cannot inspect the catalogue.** A
   catalogue whose metadata could not be read, for example because access was
   denied, counted as absent, so the command replaced it without checking that it
