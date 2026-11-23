@@ -205,6 +205,80 @@ describe("the catalogue is written only inside the project", () => {
     expect(await readdir(outside)).toEqual(["components.yaml"]);
   });
 
+  // QFAI:EX-0001-0307-24
+  it.each([
+    {
+      entry: "a .qfai junction",
+      shown: ".qfai is a symbolic link",
+      kept: path.join("catalog", "components.yaml"),
+      arrange: async (root: string, outside: string): Promise<boolean> => {
+        await mkdir(path.join(outside, "catalog"), { recursive: true });
+        await writeFile(path.join(outside, "catalog", "components.yaml"), "keep\n", "utf-8");
+        await symlink(
+          outside,
+          path.join(root, ".qfai"),
+          process.platform === "win32" ? "junction" : "dir",
+        );
+        return true;
+      },
+    },
+    {
+      entry: "a components.yaml file symbolic link",
+      shown: `${CATALOG} is a symbolic link`,
+      kept: "components.yaml",
+      arrange: async (root: string, outside: string): Promise<boolean> => {
+        await writeFile(path.join(outside, "components.yaml"), "keep\n", "utf-8");
+        await mkdir(path.join(root, ".qfai", "catalog"), { recursive: true });
+        try {
+          await symlink(
+            path.join(outside, "components.yaml"),
+            path.join(root, ...CATALOG.split("/")),
+            "file",
+          );
+        } catch {
+          // A host without symlink permission cannot exercise this case.
+          return false;
+        }
+        return true;
+      },
+    },
+    {
+      entry: "a .qfai/catalog entry that is a file",
+      shown: ".qfai/catalog is not a directory",
+      kept: null,
+      arrange: async (root: string): Promise<boolean> => {
+        await mkdir(path.join(root, ".qfai"), { recursive: true });
+        await writeFile(path.join(root, ".qfai", "catalog"), "keep\n", "utf-8");
+        return true;
+      },
+    },
+  ])(
+    "refuses $entry with and without --check, writing nothing",
+    async ({ shown, kept, arrange }) => {
+      const root = await projectWith({ "src/a.tsx": component("Alpha", []) });
+      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-component-catalog-outside-"));
+      roots.push(outside);
+      if (!(await arrange(root, outside))) return;
+      const written = await cli(["catalog", "components", "--root", root]);
+      expect(written.code).toBe(1);
+      expect(written.err).toBe(
+        `qfai catalog components: could not write ${CATALOG}, so any existing catalogue is as it was: ${shown}.\n`,
+      );
+      const checked = await cli(["catalog", "components", "--check", "--root", root]);
+      expect(checked.code).toBe(1);
+      expect(checked.err).toBe(
+        `qfai catalog components: could not read ${CATALOG}, so nothing was compared: ${shown}.\n`,
+      );
+      if (kept === null) {
+        expect(await readFile(path.join(root, ".qfai", "catalog"), "utf-8")).toBe("keep\n");
+        expect(await readdir(outside)).toEqual([]);
+      } else {
+        expect(await readFile(path.join(outside, kept), "utf-8")).toBe("keep\n");
+        expect(await readdir(path.join(outside, path.dirname(kept)))).toEqual(["components.yaml"]);
+      }
+    },
+  );
+
   // QFAI:EX-0001-0307-23
   it("under --check refuses a catalogue directory that links outside and reads nothing through it", async () => {
     const root = await projectWith({ "src/a.tsx": component("Alpha", []) });

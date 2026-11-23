@@ -185,6 +185,7 @@
     "tests/integration/skillDescriptionTrigger.test.ts",
     "tests/integration/uiPlainText.test.ts",
     "tests/integration/componentCatalog.test.ts",
+    "tests/integration/componentCatalogWrite.test.ts",
     "tests/integration/designCatalog.test.ts",
     "tests/helpers/cliCapture.ts",
     "tests/integration/designCatalogWrite.test.ts",
