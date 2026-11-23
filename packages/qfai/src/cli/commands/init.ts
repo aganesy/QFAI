@@ -1414,7 +1414,13 @@ async function ensureReminderHooks(
   if (plan.kind === "create") {
     // Booked into `copied` and nothing more: the create-only root copy announces
     // every other seeded file the same way, through the run report alone.
-    if (!dryRun) await writeReminderHooks(plan);
+    if (!dryRun) {
+      const refusal = await writeReminderHooks(plan);
+      if (refusal !== undefined) {
+        error(`  WARNING: ${refusal}`);
+        return { copied: [], skipped: [target] };
+      }
+    }
     return { copied: [target], skipped: [] };
   }
   // Every run, so an edited reminder is never mistaken for one this release wrote.
@@ -1430,7 +1436,11 @@ async function ensureReminderHooks(
     info(`  would update: ${relativePath} (${detail})`);
     return { copied: [target], skipped: [] };
   }
-  await writeReminderHooks(plan);
+  const refusal = await writeReminderHooks(plan);
+  if (refusal !== undefined) {
+    error(`  WARNING: ${refusal}`);
+    return { copied: [], skipped: [target] };
+  }
   info(`  updated: ${relativePath} (${detail}; existing settings kept)`);
   return { copied: [target], skipped: [] };
 }
