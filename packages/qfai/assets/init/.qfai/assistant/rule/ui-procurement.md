@@ -46,6 +46,27 @@ Per screen region, stop at the first rung that holds.
 5. **Can it be composed from primitives already present?**
 6. **Only then author it**, and record why.
 
+## Platform features and the browser-support target
+
+The browser-support target is the Baseline level a project's UI code may rely
+on without a fallback. A `## Technical Constraints` row of
+`01_policy/constraint.md` states it, such as `Browser support target: Baseline
+2024` or `Baseline Widely available`. A project that states none is held to
+Baseline Widely available: features every core browser has supported for at
+least 30 months. The row is prose that agents and reviewers read; no check
+parses it.
+
+Read the target before choosing a platform feature: a native element on rung 2,
+a CSS property or selector, or a script API.
+
+- A feature within the target is used as it is.
+- A feature newer than the target is used only with a fallback that keeps the
+  screen working where the feature is missing (progressive enhancement), such
+  as an `@supports` block or a polyfill loaded only where the feature is
+  absent. `.qfai/assistant/rule/references/locale/ja.md` does this for
+  `word-break: auto-phrase`.
+- A feature newer than the target with no such fallback is not used.
+
 ## Widgets that are not hand-authored
 
 An interactive widget is correct only with its focus handling, keyboard
@@ -118,7 +139,10 @@ Three things decide it, and none is taste:
   server rendering, behaviour without script and an accessibility target. A
   catalogue whose components break one is not adopted for the regions they
   would serve. Where those sections name none of these, there is nothing to
-  check, and the procurement record says so.
+  check, and the procurement record says so. The browser-support target is
+  checked even then: a component that relies without a fallback on a feature
+  newer than the target breaks it, as "Platform features and the
+  browser-support target" says.
 
 The same check applies to each item procured from the catalogue. An item that
 breaks a constraint is not installed, and the ladder moves to its next rung.

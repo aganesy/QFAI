@@ -4,6 +4,7 @@
 
 - Inputs
 - Component catalogue
+- Platform features
 - Design catalogue
 - Legacy patterns
 - Plain text in UI source
@@ -52,6 +53,15 @@ The widget `@pattern` names it reads, compared without case, spaces, hyphens or 
 `autocomplete`, `listbox`, `select`, `tooltip`, `popover`, `toast`, `date picker`, `disclosure` and
 `accordion`. A component with one of them and a filled `@a11y` spares its own file the hand-written
 markup warning.
+
+## Platform features
+
+Before choosing a platform feature, such as a native element, a CSS property or selector, or a script
+API, read the browser-support target: the `## Technical Constraints` row of `01_policy/constraint.md`
+that names it, or Baseline Widely available where none does. A feature newer than the target goes in
+only with a fallback that keeps the screen working where the feature is missing, such as an `@supports`
+block or a polyfill loaded only where the feature is absent; one with no such fallback is not used.
+`.qfai/assistant/rule/ui-procurement.md#platform-features-and-the-browser-support-target` holds the rule.
 
 ## Design catalogue
 

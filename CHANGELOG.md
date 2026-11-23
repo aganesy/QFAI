@@ -50,6 +50,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   forge remote or API access it says so in the announcement and continues;
   under a no-question mode it continues and the final report lists the match.
 
+- **A project states which browsers its UI must work in.** Nothing said which
+  browsers a screen had to support, so an agent picked platform features from
+  memory: an old pattern a native feature now replaces, or a new feature some
+  supported browsers lack, with no fallback. The constraint template that
+  `qfai init` writes now starts with a Technical Constraints row,
+  `Browser support target: Baseline Widely available`, which a project changes
+  to its own level, such as `Baseline 2024`. A project that states none is held
+  to Baseline Widely available. `ui-procurement.md`, the prototyping generator
+  prompt and the implementation UI guidance read the target before choosing a
+  platform feature, and use a feature newer than it only with a fallback that
+  keeps the screen working where the feature is missing, such as an
+  `@supports` block or a polyfill loaded only where the feature is absent.
+
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date
@@ -604,6 +617,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   expression, an `exclude` key that is not an axis, and a written-out matrix
   with no leg, which GitHub rejects, are named as not counted. Closes #4780.
 
+- **A skill's auto-decide entries skip HTML comments and need an operation
+  after their separator.** `QFAI-POLICY-002` joined an indented
+  `<!-- rationale -->` to the entry above it, so `output formatting` with a
+  comment under it matched no category, and it read a commented-out entry as
+  one. It also passed `output formatting:` and `equivalent-option pick (`,
+  whose separator opens nothing. HTML comments in a policy bucket are now
+  dropped before its entries are read, and an entry that instantiates a
+  category must name an operation after its colon or dash, or inside a closed
+  parenthesis. Closes #5046.
+
 - **The shared workflow rule names the RED exception by its installed path.**
   It pointed at `references/red-not-observable.md`, which the rule's own
   directory does not hold, so a reader entering from any stage other than
@@ -616,6 +639,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   20,000 files, so a large tree could run out of file descriptors and fail
   validation with `QFAI-SCAN-002`. The files are now read in batches, in the
   same order and with the same truncation result. Closes #4943.
+
+- **`qfai catalog components --check` no longer reads the catalogue through a
+  link.** When `.qfai/catalog`, or a directory above it, was a symbolic link
+  or junction, the check compared a file outside the project. It now runs the
+  write path's guard before reading and exits 1 naming the linked path, or the
+  catalogue path when it is a link or not a file. Closes #5048.
 
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project

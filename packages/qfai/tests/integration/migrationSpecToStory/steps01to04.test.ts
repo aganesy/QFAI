@@ -1,5 +1,16 @@
 import { createHash } from "node:crypto";
-import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import {
+  cp,
+  link,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -413,6 +424,28 @@ describe("migration steps 1 to 4", () => {
       );
       expect((await run(step01, await context(root))).output).toContain("## Operations\nnone");
     });
+  });
+
+  it("replaces a written file's entry and leaves another hard-linked name of it as it was", async () => {
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-migrate-hardlink-"));
+    try {
+      await withProject(async (root) => {
+        const config = path.join(root, "qfai.config.yaml");
+        await put(root, "qfai.config.yaml", "paths:\n  specsDir: .qfai/specs\n");
+        await put(root, ".qfai/specs/spec-0001/01_Spec.md", "old pack\n");
+        const other = path.join(outside, "shared.yaml");
+        await link(config, other);
+        const before = await readFile(other);
+        const real = await run(step01, await context(root));
+        expect(real.code, real.errors).toBe(0);
+        expect(await readFile(config, "utf8")).toContain("specsDir: .qfai/spec\n");
+        expect(await readFile(other)).toEqual(before);
+        expect((await stat(other)).nlink).toBe(1);
+        expect((await stat(config)).ino).not.toBe((await stat(other)).ino);
+      });
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
   });
 
   it("merges decision, question, delta and change request records before deleting sources", async () => {
