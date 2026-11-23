@@ -611,6 +611,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now lists that directory under `## For a person`, asks for it to be deleted
   before the next commit, and exits 3. Closes #5061.
 
+- **The code-graph corpus mirror leaves no empty staged directory behind.** When
+  a source directory disappeared, or its path came to name a file the mirror
+  skips (a hard-linked or non-regular file), the staged copy under
+  `.qfai/tools/analysis/` lost its files but kept the directory tree, empty. The
+  mirror now removes a staged directory left holding nothing. Closes #5104.
+
 - **`qfai workflow plan` refuses a plan whose added specification stage runs a
   step that is not installed.** A request naming the story tree can give a
   route a `spec` stage with `sdd-triage`, `sdd-story` or `sdd-contract`, but
