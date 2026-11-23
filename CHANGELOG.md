@@ -625,6 +625,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   count, as `qfai init` already did, and a matching file is no longer listed
   in the finding's message.
 
+- **A failed file replacement removes only its own temporary file.** QFAI
+  replaces a report, a run-log pointer, a `.gitignore` or a migrated document
+  by writing a temporary file beside it and renaming that into place. When
+  creating the temporary file failed because a file of that name already
+  existed, the cleanup still removed that path, deleting a file another
+  process had created. The cleanup now runs only once the temporary file has
+  been created by the same call. Closes #5086.
+
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
   no `id` was reported under an ID made up from its file name, which
