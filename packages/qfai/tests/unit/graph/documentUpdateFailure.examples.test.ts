@@ -7,6 +7,7 @@ import { prepareDocumentAnalysis } from "../../../src/core/graph/documents.js";
 import { exploreGraph } from "../../../src/core/graph/query.js";
 import type { GraphProcess } from "../../../src/core/graph/process.js";
 import { graphCliResult } from "../../helpers/graphCli.js";
+import { completedDocumentSnapshotFixture } from "../../helpers/graphReuse.js";
 
 const removal = vi.hoisted(() => ({ fail: false }));
 vi.mock("node:fs/promises", async (original) => {
@@ -178,7 +179,7 @@ function analysisWalks(matches: (directory: string) => boolean): number {
     ).length;
 }
 
-// Mutation: packages/qfai/src/core/graph/documents.ts `if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope, "checked")))` -> `if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope)))` fails "walks the active analysis once for safety and once for changes when its inputs are unchanged"
+// Mutation: packages/qfai/src/core/graph/documents.ts `if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope, checked)))` -> `if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope)))` fails "walks the active analysis once for safety and once for changes when its inputs are unchanged"
 it("walks the active analysis once for safety and once for changes when its inputs are unchanged", async () => {
   const fixture = await documentAnalysisFixture();
   try {
@@ -190,6 +191,29 @@ it("walks the active analysis once for safety and once for changes when its inpu
     const active = path.toNamespacedPath(path.resolve(fixture.documentAnalysis));
     // The safety walk, the fixture's stand-in for the inventory process, and the change check.
     expect(analysisWalks((directory) => directory === active)).toBe(3);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+// Mutation: packages/qfai/src/core/graph/documents.ts `if (refresh === "in-place") await mirrorGraphCorpus(root, analysis, scope, checked);` -> `if (refresh === "in-place") await mirrorGraphCorpus(root, analysis, scope);` fails "walks a restored copy once for independence, once for safety and once to mirror its inputs"
+it("walks a restored copy once for independence, once for safety and once to mirror its inputs", async () => {
+  const fixture = await completedDocumentSnapshotFixture();
+  try {
+    vi.mocked(readdir).mockClear();
+    await expect(
+      prepareDocumentAnalysis(fixture.root, fixture.run, undefined, fixture.environment),
+    ).resolves.toMatchObject({ status: "prepared", source: "restored" });
+    const parent = path.toNamespacedPath(path.resolve(path.dirname(fixture.documentAnalysis)));
+    // The restore's independence check, the safety walk and the mirror's removal pass. The
+    // fixture's inventory names its files without reading the copy.
+    expect(
+      analysisWalks(
+        (directory) =>
+          path.dirname(directory) === parent &&
+          path.basename(directory).startsWith(".restoring-graphify-"),
+      ),
+    ).toBe(3);
   } finally {
     await fixture.dispose();
   }

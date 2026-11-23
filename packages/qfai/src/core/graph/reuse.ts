@@ -261,11 +261,40 @@ export function sameEnvironment(value: unknown, environment: GraphReuseEnvironme
   );
 }
 
+/**
+ * Names a directory `safeCompletedCorpus` walked and found no link, shared file or excluded input
+ * in. Only that walk makes one: the class itself is not exported.
+ */
+class CheckedCorpus {
+  readonly #directory: string;
+
+  constructor(directory: string) {
+    this.#directory = directory;
+  }
+
+  /** Whether the walk that made this covered `directory`, named by the same path. */
+  covers(directory: string): boolean {
+    return this.#directory === directory;
+  }
+}
+
+export type { CheckedCorpus };
+
 export async function safeCompletedCorpus(
   directory: string,
   deliberationDir: string,
-  relative = "",
   engineDirectory = ".codegraph",
+): Promise<CheckedCorpus | undefined> {
+  return (await safeCorpusEntries(directory, deliberationDir, "", engineDirectory))
+    ? new CheckedCorpus(directory)
+    : undefined;
+}
+
+async function safeCorpusEntries(
+  directory: string,
+  deliberationDir: string,
+  relative: string,
+  engineDirectory: string,
 ): Promise<boolean> {
   try {
     for (const entry of await readdir(path.join(directory, ...relative.split("/")), {
@@ -285,7 +314,7 @@ export async function safeCompletedCorpus(
       if (stats.isSymbolicLink() || (stats.isFile() && stats.nlink !== 1)) return false;
       if (
         stats.isDirectory() &&
-        !(await safeCompletedCorpus(directory, deliberationDir, next, engineDirectory))
+        !(await safeCorpusEntries(directory, deliberationDir, next, engineDirectory))
       )
         return false;
       if (!stats.isDirectory() && !stats.isFile()) return false;

@@ -8,6 +8,7 @@ import { GraphLocalStateError } from "./localFiles.js";
 import { GRAPH_VERSIONS, graphRuntimePaths, graphAnalysisRoot } from "./layout.js";
 import type { GraphProcess } from "./process.js";
 import { codegraphEnvironment } from "./process.js";
+import type { CheckedCorpus } from "./reuse.js";
 import { assertGraphStoragePath, assertIndependentAnalysis, checkRefreshCopy } from "./storage.js";
 export { graphAnalysisRoot } from "./layout.js";
 
@@ -228,19 +229,18 @@ export function excludedGraphInput(relative: string, deliberationDir: string): b
 }
 
 /**
- * `checked` says the caller has just walked `destination` with a check that refuses every shared
- * file and link `assertIndependentAnalysis` refuses, such as `safeDocumentCopy`, so the walk is
- * not repeated. Any other caller leaves it `unchecked`.
+ * `checked` is what a `safeCompletedCorpus` walk the caller has just made of `destination`
+ * returned, directly or through `safeDocumentCopy`. That walk refuses every shared file and link
+ * `assertIndependentAnalysis` refuses, so the independence walk is skipped; without it, or when
+ * it names another directory, the independence walk runs.
  */
-export type DestinationIndependence = "unchecked" | "checked";
-
 export async function mirrorGraphCorpus(
   root: string,
   destination: string,
   scope?: readonly string[],
-  independence: DestinationIndependence = "unchecked",
+  checked?: CheckedCorpus,
 ): Promise<void> {
-  await walkGraphCorpus(root, destination, scope, "write", independence);
+  await walkGraphCorpus(root, destination, scope, "write", checked);
 }
 
 /** Whether mirroring the corpus into `destination` would change any file there. Writes nothing. */
@@ -248,9 +248,9 @@ export async function graphCorpusChanged(
   root: string,
   destination: string,
   scope?: readonly string[],
-  independence: DestinationIndependence = "unchecked",
+  checked?: CheckedCorpus,
 ): Promise<boolean> {
-  return walkGraphCorpus(root, destination, scope, "compare", independence);
+  return walkGraphCorpus(root, destination, scope, "compare", checked);
 }
 
 /**
@@ -265,10 +265,10 @@ async function walkGraphCorpus(
   destination: string,
   scope: readonly string[] | undefined,
   mode: "write" | "compare",
-  independence: DestinationIndependence,
+  checked: CheckedCorpus | undefined,
 ): Promise<boolean> {
   await assertGraphStoragePath(root, destination);
-  if (independence === "unchecked") await assertIndependentAnalysis(destination);
+  if (!checked?.covers(destination)) await assertIndependentAnalysis(destination);
   const files = new Set<string>();
   const deliberationDir = await graphDeliberationDir(root);
   let changed = false;

@@ -32,7 +32,8 @@ it.each([".codegraph", "graphify-out"])(
   async (engineDirectory) => {
     await mkdir(path.join(analysis, engineDirectory));
     await writeFile(path.join(analysis, engineDirectory, "graph.json"), "{}\n");
-    expect(await safeCompletedCorpus(analysis, DELIBERATION, "", engineDirectory)).toBe(true);
+    const checked = await safeCompletedCorpus(analysis, DELIBERATION, engineDirectory);
+    expect(checked?.covers(analysis)).toBe(true);
   },
 );
 
@@ -45,5 +46,5 @@ it.each([
   const file = path.join(analysis, engineDirectory, ...marker.split("/"));
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, "");
-  expect(await safeCompletedCorpus(analysis, DELIBERATION, "", engineDirectory)).toBe(false);
+  expect(await safeCompletedCorpus(analysis, DELIBERATION, engineDirectory)).toBeUndefined();
 });

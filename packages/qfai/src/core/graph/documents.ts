@@ -454,14 +454,15 @@ async function inspectDocumentScopeAt(
   )
     return notCurrent();
   // This walk refuses every shared file and link the corpus walks below would, so they skip theirs.
-  if (!(await safeDocumentCopy(root, analysis, run))) return notCurrent();
+  const checked = await safeDocumentCopy(root, analysis, run);
+  if (!checked) return notCurrent();
   const scope =
     object(processing) && validDocumentScope(processing.scope)
       ? slashScope(processing.scope)
       : undefined;
-  if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope, "checked")))
+  if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope, checked)))
     return refreshStagedDocumentScope(root, analysis, run, scope);
-  if (refresh === "in-place") await mirrorGraphCorpus(root, analysis, scope, "checked");
+  if (refresh === "in-place") await mirrorGraphCorpus(root, analysis, scope, checked);
   return nativeGraphifyScope(root, analysis, graphRuntimePaths(root).python, run);
 }
 
