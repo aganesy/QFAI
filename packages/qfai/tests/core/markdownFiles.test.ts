@@ -97,19 +97,45 @@ describe("Markdown under the specs directory in the UI/UX group", () => {
     expect(files.map((file) => path.basename(file.filePath))).toEqual(["screens.md"]);
   });
 
-  it("fails the read when a file is there but cannot be read, naming the file", async () => {
+  it("fails the read with the read's own error when a file is there but cannot be read", async () => {
+    // The reader passes the failure on unchanged. Naming the file is the error's job: Node's
+    // message carries the path, which `validateRunUnreadableMarkdown.test.ts` shows with a real
+    // unreadable file. Matching the path here would only match the text this stub wrote.
     const root = await projectWithMockAndFlow();
     const specsDir = path.join(root, ".qfai", "specs");
-    const denied = path.join(specsDir, "denied.md");
-    await writeFile(denied, "# Denied\n", "utf-8");
+    await writeFile(path.join(specsDir, "denied.md"), "# Denied\n", "utf-8");
+    const failure = errnoError("EACCES", path.join(specsDir, "denied.md"));
     const reader = markdownFileReader(async (filePath) => {
-      if (filePath.endsWith("denied.md")) throw errnoError("EACCES", filePath);
+      if (filePath.endsWith("denied.md")) throw failure;
       return readFile(filePath, "utf-8");
     });
 
-    await expect(reader(specsDir)).rejects.toThrow(/denied\.md/);
-    await expect(validateHtmlMock(root, "web", config, undefined, reader)).rejects.toThrow(
-      /EACCES/,
-    );
+    await expect(reader(specsDir)).rejects.toBe(failure);
   });
+
+  it.each([
+    [
+      "HTML mock",
+      (root: string, reader: MarkdownFileReader) =>
+        validateHtmlMock(root, "web", config, undefined, reader),
+    ],
+    [
+      "Mermaid screen flow",
+      (root: string, reader: MarkdownFileReader) => validateMermaidScreenFlow(root, config, reader),
+    ],
+    [
+      "UI definition consistency",
+      (root: string, reader: MarkdownFileReader) =>
+        validateUiDefinitionConsistency(root, config, reader),
+    ],
+  ])(
+    "fails the %s check when the read fails, rather than passing over the files",
+    async (_name, check) => {
+      const root = await projectWithMockAndFlow();
+      const failure = errnoError("EACCES", path.join(root, ".qfai", "specs", "screens.md"));
+      const reader: MarkdownFileReader = () => Promise.reject(failure);
+
+      await expect(check(root, reader)).rejects.toBe(failure);
+    },
+  );
 });

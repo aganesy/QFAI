@@ -241,6 +241,7 @@
     "tests/cli/usageExitCodes.test.ts",
     "tests/cli/staleInstall.test.ts",
     "tests/cli/validateRunIncomplete.test.ts",
+    "tests/cli/validateRunUnreadableMarkdown.test.ts",
     "tests/cli/validationResultLinks.test.ts",
     "tests/cli/validationProfiles.test.ts",
     "tests/cli/validateVerdictAfterResultWrite.test.ts",
