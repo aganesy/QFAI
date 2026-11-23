@@ -112,7 +112,7 @@ describe("validateExternalReferences", () => {
     });
   });
 
-  // QFAI:EX-0001-0057-01
+  // QFAI:EX-0001-0057-04
   it("counts only the files of the flows --flow names", async () => {
     const storyOf = (id: string) =>
       `.qfai/spec/02_business-flow/business-flow-${id}/user-story-${id}-0001/01_User-story.md`;
