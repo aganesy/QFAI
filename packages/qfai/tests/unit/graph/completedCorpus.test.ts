@@ -36,13 +36,18 @@ it.each([".codegraph", "graphify-out"])(
   },
 );
 
+// Each marker path is relative to the analysis copy. An engine folder in another
+// letter case, or one nested below the top, is not the engine's own storage, so
+// it is refused as an excluded graph input.
 it.each([
-  [".codegraph", "analysis.lock"],
-  [".codegraph", "engine.pid"],
-  ["graphify-out", "cache/run.lock"],
-  ["graphify-out", "worker.PID"],
-])("rejects a live engine marker in %s: %s", async (engineDirectory, marker) => {
-  const file = path.join(analysis, engineDirectory, ...marker.split("/"));
+  [".codegraph", ".codegraph/analysis.lock"],
+  [".codegraph", ".codegraph/engine.pid"],
+  ["graphify-out", "graphify-out/cache/run.lock"],
+  ["graphify-out", "graphify-out/worker.PID"],
+  [".codegraph", ".CodeGraph/analysis.lock"],
+  [".codegraph", "crates/.codegraph/x.lock"],
+])("with engine directory %s, rejects a marker at %s", async (engineDirectory, marker) => {
+  const file = path.join(analysis, ...marker.split("/"));
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, "");
   expect(await safeCompletedCorpus(analysis, DELIBERATION, "", engineDirectory)).toBe(false);
