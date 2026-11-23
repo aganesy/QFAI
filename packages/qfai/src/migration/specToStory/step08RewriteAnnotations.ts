@@ -126,7 +126,8 @@ export const step08: MigrationStep = {
     for (const file of specificationFiles.files.sort()) {
       const content = await readMigrationInput(file);
       if (content === null) continue;
-      annotationsKept.push(...lineItems(content, DEFERRAL, file, context.root));
+      for (const item of lineItems(content, DEFERRAL, file, context.root))
+        annotationsKept.push(item);
     }
     return { operations, annotationTargets, forAPerson, annotationsKept };
   },

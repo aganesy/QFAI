@@ -1108,6 +1108,18 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  it("keeps every deferral line of a specification file with more of them than one call takes as arguments", async () => {
+    const context = await fixture();
+    // 500,000 arguments overflow the call stack, so spreading the lines into one push would throw.
+    const lines = 500_000;
+    await put(context.root, ".qfai/spec/notes.md", "x-qfai-status: planned\n".repeat(lines));
+    const plan = await step08.plan(context);
+    expect(plan.annotationsKept).toHaveLength(lines);
+    expect(plan.annotationsKept?.at(-1)).toBe(
+      `.qfai/spec/notes.md:${String(lines)}: x-qfai-status: planned`,
+    );
+  });
+
   it("selects test files with padded globs and exclusions like the unpadded ones", async () => {
     const context = await fixture();
     context.config.validation.traceability.testFileGlobs = [

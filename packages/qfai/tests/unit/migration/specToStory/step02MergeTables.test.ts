@@ -71,7 +71,47 @@ function runStartsAt(iso: string): void {
 
 const HEADER = "| ID | Content | Approach |\n| --- | --- | --- |\n";
 
+// 500,000 arguments overflow the call stack, so spreading one file's records into one push would throw.
+const MANY = 500_000;
+const many = (line: (index: number) => string) =>
+  Array.from({ length: MANY }, (_, index) => line(index)).join("");
+
 describe("migration decision table merge", () => {
+  it.each([
+    {
+      file: "08_Decisions.md",
+      text: `# Decisions\n\n${many((index) => `### DR-${String(index)}: Choice\n\n- Status: accepted\n\n`)}`,
+      register: "decisions.md",
+      last: `#DR-${String(MANY - 1)}:`,
+    },
+    {
+      file: "09_Open-questions.md",
+      text: `# Questions\n\n## Open Questions\n\n| OQ-ID | Question | Status | Notes |\n| --- | --- | --- | --- |\n${many((index) => `| OQ-${String(index)} | Open? | open | Later |\n`)}`,
+      register: "open-questions.md",
+      last: `#OQ-${String(MANY - 1)}:`,
+    },
+    {
+      file: "10_delta.md",
+      text: `# Delta\n\n## Triage\n\n| Subject | Operation |\n| --- | --- |\n${many((index) => `| item-${String(index)} | CREATE |\n`)}`,
+      register: "decisions.md",
+      last: `#Triage-${String(MANY)}:`,
+    },
+  ])(
+    "writes every record of a $file with more of them than one call takes as arguments",
+    async ({ file, text, register, last }) => {
+      const context = await fixture();
+      await writeFile(path.join(context.specsDir, "_policies", file), text, "utf8");
+      const plan = await step02.plan(context);
+      const written = plan.operations.find(
+        (operation) => operation.kind === "write" && operation.target === `.qfai/spec/${register}`,
+      );
+      const content = written?.kind === "write" ? written.content : "";
+      const rows = content.split("\n").filter((line) => /^\| (?:DEC|OQ)-\d{14} \|/.test(line));
+      expect(rows).toHaveLength(MANY);
+      expect(rows.at(-1)).toContain(`.qfai/spec/_policies/${file}${last}`);
+    },
+  );
+
   it("keeps suffixed legacy IDs distinct and reruns without changing the table", async () => {
     const context = await fixture();
     await writeFile(

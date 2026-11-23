@@ -706,6 +706,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   count, as `qfai init` already did, and a matching file is no longer listed
   in the finding's message.
 
+- **The 1.x migration reads a file with very many records or findings.**
+  Several steps collect what one file holds: the decisions, open questions
+  and triage rows step 2 merges, the old contract index rows and undeclared
+  old contract IDs of step 3, the rule, example and test-case table rows
+  steps 4, 5 and 7 read, and the `x-qfai-status` lines step 8 keeps. A file
+  with hundreds of thousands of them ended the step with
+  `RangeError: Maximum call stack size exceeded`. Every one is now
+  collected, in the same order.
+
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
   `analysis` folder. When a file inside it could not be read, the copy threw:
