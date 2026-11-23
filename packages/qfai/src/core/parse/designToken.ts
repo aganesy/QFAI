@@ -165,13 +165,17 @@ function resolveAllReferences(result: DesignTokenParseResult): void {
  */
 type Outcome = { value: string; height: number } | "failed";
 
-type Frame = { path: string; refs: readonly string[]; next: number };
+/** `index` is the token's discovery order in this walk, `low` the smallest index it reaches back to. */
+type Frame = { path: string; refs: readonly string[]; next: number; index: number; low: number };
 
 /**
  * Resolves `start` and every token it reaches, walking an explicit stack so a
- * long chain cannot exhaust the call stack. Each token's outcome is decided
- * once, from its own references alone, so it does not depend on the order the
- * file declares tokens in or on which token the walk started from.
+ * long chain cannot exhaust the call stack. The walk groups tokens into sets
+ * that reference one another (Tarjan's strongly connected components) and
+ * settles each set once every token it references outside the set is settled.
+ * Each token's outcome, and the token a reference cycle is named at, depend on
+ * the references alone, not on the order the file declares tokens in or on
+ * which token the walk started from.
  */
 function resolveTokenRef(
   start: string,
@@ -182,30 +186,65 @@ function resolveTokenRef(
   if (outcomes.has(start)) {
     return;
   }
-  const onStack = new Set<string>([start]);
-  const stack: Frame[] = [{ path: start, refs: referencesOf(start, allTokens), next: 0 }];
+  const openIndex = new Map<string, number>();
+  const open: string[] = [];
+  const frames: Frame[] = [];
+  const enter = (path: string): void => {
+    const index = openIndex.size;
+    openIndex.set(path, index);
+    open.push(path);
+    frames.push({ path, refs: referencesOf(path, allTokens), next: 0, index, low: index });
+  };
+  enter(start);
 
-  while (stack.length > 0) {
-    const frame = stack[stack.length - 1];
+  while (frames.length > 0) {
+    const frame = frames[frames.length - 1];
     if (!frame) break;
     const refPath = frame.refs[frame.next];
     if (refPath !== undefined) {
       frame.next += 1;
       if (outcomes.has(refPath) || !allTokens.has(refPath)) continue;
-      if (onStack.has(refPath)) {
-        result.errors.push({ message: `Circular reference detected: ${refPath}`, path: refPath });
-        outcomes.set(refPath, "failed");
-        continue;
+      const refIndex = openIndex.get(refPath);
+      if (refIndex === undefined) {
+        enter(refPath);
+      } else {
+        frame.low = Math.min(frame.low, refIndex);
       }
-      onStack.add(refPath);
-      stack.push({ path: refPath, refs: referencesOf(refPath, allTokens), next: 0 });
       continue;
     }
-    stack.pop();
-    onStack.delete(frame.path);
-    if (!outcomes.has(frame.path)) {
-      settleToken(frame.path, allTokens, outcomes, result);
+    frames.pop();
+    const parent = frames[frames.length - 1];
+    if (parent) {
+      parent.low = Math.min(parent.low, frame.low);
     }
+    if (frame.low === frame.index) {
+      const members = open.splice(open.lastIndexOf(frame.path));
+      settleComponent(members, allTokens, outcomes, result);
+    }
+  }
+}
+
+/**
+ * Settles one set of tokens that reference one another. A set of two or more,
+ * or one token referencing itself, is a reference cycle: it is reported once,
+ * at its member whose name sorts first, and none of its members resolves.
+ */
+function settleComponent(
+  members: readonly string[],
+  allTokens: Map<string, DesignTokenValue>,
+  outcomes: Map<string, Outcome>,
+  result: DesignTokenParseResult,
+): void {
+  const sorted = [...members].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const [first] = sorted;
+  if (first === undefined) {
+    return;
+  }
+  if (sorted.length > 1 || referencesOf(first, allTokens).includes(first)) {
+    result.errors.push({ message: `Circular reference detected: ${first}`, path: first });
+  }
+  for (const path of sorted) {
+    settleToken(path, allTokens, outcomes, result);
   }
 }
 
