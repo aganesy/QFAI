@@ -719,6 +719,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   expression, an `exclude` key that is not an axis, and a written-out matrix
   with no leg, which GitHub rejects, are named as not counted. Closes #4780.
 
+- **`qfai catalog design` no longer says both files could not be put back when
+  only its staging file is left.** When a write failed and both files were put
+  back but one of the run's own staging files could not be removed, the line
+  said the files could not be put back and, in the same line, that they were
+  as they were. It now says both files are as they were and names the staging
+  file it could not remove after the cause. Closes #5110.
+
 - **A skill's auto-decide entries skip HTML comments and need an operation
   after their separator.** `QFAI-POLICY-002` joined an indented
   `<!-- rationale -->` to the entry above it, so `output formatting` with a
