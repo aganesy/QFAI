@@ -103,7 +103,9 @@ async function writeLockFile(
  * How long a lock without a complete owner record counts as still being written. The exclusive
  * create publishes an empty file before its owner record lands, a gap of one write; the ceiling
  * leaves room for slow disks and coarse modification times. After it, an incomplete record is
- * abandoned and kept for manual recovery.
+ * abandoned and kept for manual recovery. So is one whose modification time lies ahead of this
+ * clock (clock skew between hosts, a network filesystem, a copied time): no writer can still be
+ * creating it, and waiting for the clock to catch up would advise retries for that long.
  */
 const INITIALIZING_LOCK_MS = 10_000;
 
@@ -135,7 +137,10 @@ async function lockIsActive(file: string, options: OwnerLockOptions): Promise<bo
 async function lockIsInitializing(file: string): Promise<boolean> {
   try {
     const { mtimeMs } = await lstat(file);
-    return Date.now() - mtimeMs < INITIALIZING_LOCK_MS;
+    // Whole milliseconds, as Date.now() counts them: a file created in the current millisecond
+    // carries a fraction past it and would otherwise read as written in the future.
+    const age = Date.now() - Math.floor(mtimeMs);
+    return age >= 0 && age < INITIALIZING_LOCK_MS;
   } catch (cause: unknown) {
     if (isEnoent(cause)) return true;
     throw cause;
