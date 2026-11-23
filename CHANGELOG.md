@@ -715,6 +715,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   category must name an operation after its colon or dash, or inside a closed
   parenthesis. Closes #5046.
 
+- **The SQL contract lexer reads backtick and bracket identifiers.** It
+  skipped only `'` and `"` quoting, so in ``CREATE TABLE t (`a)` int);`` the
+  `)` inside the MySQL name raised `QFAI-CONTRACT-021`, and so did one inside a
+  SQL Server name such as `[a)]`. A backtick identifier is now read like a
+  double-quoted one, and a `(`, `)` or `;` inside `[ … ]` is not counted.
+  Brackets nest and a string inside them stays a string, so PostgreSQL arrays
+  such as `ARRAY[[1,2],[3,4]]` still parse, and a `[` left open is reported.
+  Closes #5136.
+
 - **A failed code graph refresh keeps the previous graph with the files it
   was built from.** Checking whether the code graph was current copied the
   changed project files into the active analysis first, so when the
