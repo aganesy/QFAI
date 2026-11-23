@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   escapeTableCell,
   maskNonSpecRegions,
+  parseAllMarkdownTables,
   splitMarkdownRow,
 } from "../../src/core/specPackParsers.js";
 
@@ -274,5 +275,47 @@ describe("maskNonSpecRegions", () => {
       "Use a `<pre>` block for samples.",
       "## Scope",
     ]);
+  });
+
+  it("keeps the table rows after the row a cell's comment closes in", () => {
+    // Every line an open comment ran into was blanked whole, so the row
+    // holding `-->` became a blank line, the table ended there, and every row
+    // below it was lost.
+    const text = [
+      "| ID | Note |",
+      "| --- | --- |",
+      "| CLI-0001 | a <!-- todo |",
+      "| CLI-0002 | b --> |",
+      "| CLI-0003 | c |",
+    ].join("\n");
+
+    const [table] = parseAllMarkdownTables(maskNonSpecRegions(text));
+    expect(table?.rows.map((row) => row[0])).toContain("CLI-0003");
+  });
+
+  it("reads no heading or fence in the text after a mid-line comment closes", () => {
+    expect(visible(["Text <!-- a", "b --> ## Risks", "", "## Scope"].join("\n"))).toEqual([
+      "Text ",
+      "## Scope",
+    ]);
+    expect(visible(["Text <!-- a", "b --> ```", "", "## Scope"].join("\n"))).toEqual([
+      "Text ",
+      " ```",
+      "## Scope",
+    ]);
+  });
+
+  it("reads a mid-line `<!--` that no later `-->` closes as text", () => {
+    // The unclosed marker opened a comment that hid the rest of the document.
+    expect(visible(["| x | <!-- or // |", "", "## Scope"].join("\n"))).toEqual([
+      "| x | <!-- or // |",
+      "## Scope",
+    ]);
+  });
+
+  it("still hides the rest of the document after a line-opening comment that never closes", () => {
+    // CommonMark runs an unclosed comment block to the end of the document,
+    // and a renderer shows nothing after it.
+    expect(visible(["# doc", "", "<!-- draft", "", "## Scope"].join("\n"))).toEqual(["# doc"]);
   });
 });

@@ -618,6 +618,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   those exceptions, and `triage-owned-cleanup` keeps its own unchanged-tree
   check.
 
+- **A comment in a table cell no longer cuts the table or hides the rest of a
+  document.** The validators that skip markup blanked every line a comment ran
+  into, so a comment opened in one row's cell and closed in a later row ended
+  the table there and lost the rows below it, and a cell holding `<!-- or //`
+  with no `-->` hid every heading and table after it. Only a comment that
+  opens a line is now blanked to the end of its closing line; one opened
+  inside a line keeps the text after its `-->`, and is a comment only when a
+  later `-->` closes it. Closes #5167.
+
 - **The README's Actions minutes recipe reads every page of runs and jobs.**
   Its `gh api` commands for a pull request's workflow runs and for a run's
   jobs fetched one page, and the jobs page held at most 100, so a comparison

@@ -28,10 +28,16 @@ const FENCE_CLOSE_LINE = /^ {0,3}(`{3,}|~{3,})[ \t]*$/;
  * Exported so every reader that has to tell a document's own text from a
  * commented-out sample carries the state the same way — a second, private copy
  * of this loop is how one reader ends up parsing what another one hides.
+ *
+ * `closesLater` says whether a `-->` appears on a later line. Without one, a
+ * `<!--` that does not close on its own line is literal text, as CommonMark
+ * reads an inline comment that never ends: a table cell holding `<!-- or //`
+ * would otherwise hide every row and heading below it.
  */
 export function maskLineComments(
   line: string,
   inComment: boolean,
+  closesLater: boolean,
 ): { text: string; open: boolean } {
   let visible = "";
   let index = 0;
@@ -73,6 +79,11 @@ export function maskLineComments(
     if (start === -1) {
       visible += line.slice(index);
       break;
+    }
+    if (!closesLater && !line.includes("-->", start + 4)) {
+      visible += line.slice(index, start + 4);
+      index = start + 4;
+      continue;
     }
     visible += line.slice(index, start);
     index = start + 4;
@@ -238,6 +249,12 @@ const NON_PARAGRAPH_LINE = /^ {0,3}(?:#{1,6}(?:[ \t]|$)|=+[ \t]*$|-+[ \t]*$|(?:[
  * document. Comments are stripped before the fence check on a line, so a fence
  * marker that only appears inside a comment does not open a block either.
  *
+ * **A comment is blanked as CommonMark reads it.** One that opens a line is an
+ * HTML block: every line through the one holding `-->` is blanked whole, and
+ * with no `-->` it runs to the end of the document. One opened inside a line
+ * is inline: only the comment is removed, the text after its `-->` stays, and
+ * a `<!--` that no later `-->` closes is literal text.
+ *
  * **Raw HTML blocks are blanked too**, all seven CommonMark types. A `<pre>`, a
  * CDATA section, a `<div>` or a custom element such as `<review-note>` holds
  * literal text, so a `## Risks` line inside one is not a heading and a
@@ -254,6 +271,11 @@ export function maskNonSpecRegions(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   let open: { marker: string; length: number } | null = null;
   let inComment = false;
+  // Whether the open comment opened a line, and so is an HTML block.
+  let inBlockComment = false;
+  // The last line holding a `-->`, the closer a comment opened on any line
+  // before it can still find.
+  const lastCloseLine = lines.map((line) => line.includes("-->")).lastIndexOf(true);
   let inIndentedCode = false;
   let rawHtmlEnd: RegExp | null = null;
   let inBlankTerminatedHtml = false;
@@ -268,7 +290,7 @@ export function maskNonSpecRegions(text: string): string {
   // row and needs it blanked, which none in this tree does.
   let paragraphOpen = false;
 
-  const maskLine = (line: string): string => {
+  const maskLine = (line: string, index: number): string => {
     if (open !== null) {
       const closing = FENCE_CLOSE_LINE.exec(line)?.[1];
       if (closing && closing.charAt(0) === open.marker && closing.length >= open.length) {
@@ -334,17 +356,29 @@ export function maskNonSpecRegions(text: string): string {
       }
     }
 
-    const masked = maskLineComments(line, inComment);
-    // A line that opens with a comment, or that an open comment runs into,
-    // is comment through its end: CommonMark makes it an HTML block up to
-    // the line holding `-->`. Stripping the comment alone would hand back
-    // what follows it at the start of a line, so `<!-- note --> ## Risks`
-    // would read as a heading and a ```` ``` ```` after a closing `-->` as a
-    // fence that hides the rest of the document.
-    const commentLine = inComment || COMMENT_BLOCK_START.test(line);
+    // A comment that opens a line is a CommonMark HTML block, which runs to the
+    // end of the document when nothing closes it; only a comment opened inside
+    // a line needs a later `-->` to be one.
+    const blockStart = !inComment && COMMENT_BLOCK_START.test(line);
+    const masked = maskLineComments(line, inComment, blockStart || index < lastCloseLine);
+    const inInlineComment = inComment && !inBlockComment;
+    // A line that opens with a comment, or that a comment opened at the start
+    // of a line runs into, is comment through its end: CommonMark makes it an
+    // HTML block up to the line holding `-->`. Stripping the comment alone
+    // would hand back what follows it at the start of a line, so
+    // `<!-- note --> ## Risks` would read as a heading and a ```` ``` ````
+    // after a closing `-->` as a fence that hides the rest of the document.
+    const commentLine = blockStart || (inComment && inBlockComment);
     inComment = masked.open;
+    inBlockComment = masked.open && commentLine;
     if (commentLine) {
       return "";
+    }
+    if (inInlineComment) {
+      // A comment opened inside a line ends inside one, so what follows its
+      // `-->` continues that paragraph or table row and cannot open a block.
+      // Blanking it whole cut a table at the row a cell's comment closed in.
+      return NON_PARAGRAPH_LINE.test(masked.text) ? "" : masked.text;
     }
 
     const fence = FENCE_LINE.exec(masked.text)?.[1];
@@ -374,8 +408,8 @@ export function maskNonSpecRegions(text: string): string {
   };
 
   return lines
-    .map((line) => {
-      const visibleLine = maskLine(line);
+    .map((line, index) => {
+      const visibleLine = maskLine(line, index);
       paragraphOpen = visibleLine.trim().length > 0 && !NON_PARAGRAPH_LINE.test(visibleLine);
       return visibleLine;
     })

@@ -286,6 +286,7 @@ describe("QFAI-DELIB-001 reads nothing but the layout", () => {
     }
   });
 
+  // QFAI:EX-0001-0302-17
   it("does not open a fence after the end of an HTML comment", async () => {
     const text = [
       "## Interview",
@@ -300,6 +301,7 @@ describe("QFAI-DELIB-001 reads nothing but the layout", () => {
     expect(found[0]?.message).toContain("5 cells");
   });
 
+  // QFAI:EX-0001-0302-17
   it("keeps each row's line number after an HTML comment", async () => {
     const text = [
       "## Interview",
@@ -312,6 +314,15 @@ describe("QFAI-DELIB-001 reads nothing but the layout", () => {
     const found = await findings();
     expect(found).toHaveLength(1);
     expect(found[0]?.message).toContain("row at line 16 has 5 cells");
+  });
+
+  // QFAI:EX-0001-0302-18
+  it("reads a cell's `<!--` that no `-->` closes as text", async () => {
+    await put(
+      RECORD,
+      record(table(HEADER, "| Pick <!-- or // | a | b | c | | 1 |"), table(HEADER, DECISION_ROW)),
+    );
+    expect(await findings()).toEqual([]);
   });
 
   // QFAI:AC-0001-0302-03
