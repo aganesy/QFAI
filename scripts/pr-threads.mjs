@@ -9,8 +9,9 @@
  *
  * - `list` prints each unresolved thread and each comment that carries a Codex
  *   review, which arrives as a comment with no thread. It reads every page, so
- *   its counts cover the whole pull request; when a call fails or the reserve
- *   stops it before the last page of comments, it says the count is incomplete.
+ *   its counts cover the whole pull request; when a call fails, an answer is
+ *   not a list of comments, or the reserve stops it before the last page of
+ *   comments, it says the count is incomplete.
  * - `reply` answers one thread with the text of a file.
  * - `resolve` resolves the threads it is given.
  * - `defer` records one thread's finding in a follow-up issue, replies to the
@@ -290,8 +291,9 @@ function readThreads(owner, repo, number) {
 /**
  * The comments of a pull request, page by page until a page is not full.
  *
- * `complete` is false when a call failed, or the reserve stopped the reading
- * after a full page, so the comments read may be short. `budget` is the last
+ * `complete` is false when a call failed, an answer was not a list, or the
+ * reserve stopped the reading after a full page, so the comments read may be
+ * short. `budget` is the last
  * remaining-budget line, printed once after the answer.
  */
 function readComments(slug, number) {
@@ -304,8 +306,8 @@ function readComments(slug, number) {
       `repos/${slug}/issues/${number}/comments?per_page=${String(PAGE_SIZE)}&page=${String(page)}`,
       (body) => {
         const items = JSON.parse(body);
-        read = true;
         if (Array.isArray(items)) {
+          read = true;
           comments.push(...items);
           full = items.length === PAGE_SIZE;
         }

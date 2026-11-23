@@ -6,6 +6,8 @@
  * nothing open: a resolved thread counted, a changed response shape taken for an
  * empty list, or a Codex comment from another author reported as a review.
  */
+import type * as NodeFs from "node:fs";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const calls = vi.hoisted(() => ({
@@ -36,6 +38,18 @@ vi.mock("node:child_process", () => ({
 vi.mock("../../../../scripts/lib/bounded-read.mjs", () => ({
   readBoundedText: (): undefined => undefined,
 }));
+
+// No reading is saved either: the cache directory cannot be created, so a case
+// that answers with a low budget leaves nothing behind to stop a real call.
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof NodeFs>();
+  return {
+    ...actual,
+    mkdirSync: (): never => {
+      throw Object.assign(new Error("EACCES: permission denied, mkdir"), { code: "EACCES" });
+    },
+  };
+});
 
 import {
   codexFindings,
@@ -475,6 +489,31 @@ describe("listing a pull request that holds more than one page", () => {
     expect(code).toBe(2);
     expect(out).toContain("Codex review comments: 100");
     expect(out).toContain("Incomplete: not every page of comments was read");
+  });
+
+  it("says the count is incomplete when a page of comments is not a list", () => {
+    calls.threadPages.push(threadPage([], null));
+    calls.commentPages.push(`HTTP/2.0 200 OK\n\n${JSON.stringify({ message: "x" })}`);
+    const { out } = listOutput();
+    expect(out).toContain("Codex review comments: 0");
+    expect(out).toContain("Incomplete: not every page of comments was read");
+  });
+
+  it("stops after a full page when the budget falls below the reserve, and says so", () => {
+    calls.threadPages.push(threadPage([], null));
+    const lowBudget = [
+      "X-Ratelimit-Limit: 5000",
+      "X-Ratelimit-Remaining: 499",
+      "X-Ratelimit-Reset: 4102444800",
+      "X-Ratelimit-Resource: core",
+    ].join("\r\n");
+    const fullPage = JSON.stringify(Array.from({ length: 100 }, () => codexComment));
+    calls.commentPages.push(`HTTP/2.0 200 OK\n${lowBudget}\r\n\r\n${fullPage}`, commentPage(1));
+    const { code, out } = listOutput();
+    expect(code).toBe(1);
+    expect(out).toContain("Codex review comments: 100");
+    expect(out).toContain("Incomplete: not every page of comments was read");
+    expect(calls.list.filter((call) => call[2] === "-i")).toHaveLength(1);
   });
 });
 
