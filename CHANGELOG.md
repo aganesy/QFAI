@@ -729,6 +729,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   larger than 16 MiB from its size; a NUL byte past those 8000 bytes no longer
   makes the file count as binary. Closes #5054.
 
+- **The `qfai: <version> (<install dir>)` line no longer prints a line break raw.**
+  It was written before the format branch with the install directory as found,
+  so under `--format github` a directory holding a line break started a line the
+  runner read as a workflow command. The directory now prints as log data, a line
+  break as a visible `\n`, in every format. Closes #5058.
+
 - **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
   with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
   `Set-Content -Encoding UTF8`, and both commands refused such a file as
@@ -805,6 +811,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   remedy now keeps the main path in that diagram and moves branches and detail
   into the Alternate and exception paths list; any other document is still
   told to split the diagram. Closes #4978.
+
+- **The graph corpus copies the source file it checked.** Each source file was
+  checked by its path and then copied by its path again, so a file replaced
+  between the two was copied in place of the one that passed the check. The
+  mirror now opens the file once, confirms the open file is the one it
+  checked, and copies from it; a file replaced in between is left out of that
+  mirror and picked up by the next one. Closes #5019.
 
 - **`qfai session-review --since` accepts a date with a year below 0100.** The
   calendar check read years 0000 through 0099 as 1900 through 1999, so a valid

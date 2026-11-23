@@ -966,9 +966,17 @@ export function formatRunLogLine(runLogPath: string): string {
  * stdout is safe in both formats — neither puts machine-readable JSON there.
  */
 async function emitProvenance(toolVersion: string): Promise<void> {
-  const packageDir = await resolveToolPackageDir();
+  process.stdout.write(`${formatProvenanceLine(toolVersion, await resolveToolPackageDir())}\n`);
+}
+
+/**
+ * The provenance line. It is printed before the format branch, so under `--format github` the
+ * runner reads it like any other log line: the install directory is printed as log data, or a
+ * directory holding a line break would start a line the runner reads as a workflow command.
+ */
+export function formatProvenanceLine(toolVersion: string, packageDir: string | null): string {
   const where = packageDir === null ? "resolution unknown" : packageDir;
-  process.stdout.write(`qfai: ${toolVersion} (${where})\n`);
+  return `qfai: ${escapePlainLine(toolVersion)} (${escapePlainLine(where)})`;
 }
 
 export function emitGitHubOutput(
@@ -1654,6 +1662,11 @@ function escapeGitHubCommandValue(value: string): string {
  * a tab as `\t`, and any other as `\u` and four hexadecimal digits, so a terminal or a CI log
  * viewer does not act on it. The runner decodes `%XX` only inside a workflow command, so a plain
  * line keeps `%` as written.
+ *
+ * A `\` already in the value is not escaped, so a value holding a real line break and one holding
+ * the two characters `\` and `n` print the same. The escape keeps a line from carrying a command;
+ * it is not meant to be decoded back, and doubling every `\` would garble each Windows path the
+ * output prints.
  *
  * `##[` prints as `##\[`: the runner also reads the older `##[<command>]` form, and it looks for
  * that one anywhere in a line, so neither the issue's own prefix nor a continuation bar would
