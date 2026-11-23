@@ -3626,25 +3626,102 @@ describe("release automation performs decisions rather than making them", () => 
     // human typed into the dispatch form, tag-release reads what the tree declares, and the
     // publish workflow reads a tag a dispatcher can name by hand — and a manifest can be edited
     // by hand without any of them being involved.
-    for (const name of ["prepare-release.yml", "tag-release.yml", "release.yml"]) {
+    //
+    // EXECUTED, not grepped. Matching the `0*)` arm in the text stayed green with
+    // `"$after_minor"` dropped from the loop, or with the arm moved where it never runs. So the
+    // step's own body runs under bash, cut before its first command that reaches outside the
+    // tree's version checks (a fetch, the manifest, the CHANGELOG), and each sample's exit
+    // status is the verdict.
+    const releaseWorkflows: Array<{
+      name: string;
+      /** The environment the step reads the version from, given a `vX.Y.Z` sample. */
+      input: (tag: string) => Record<string, string>;
+      /** The first line past the version checks; the body is run up to it. */
+      stopBefore: RegExp;
+      /** Shell functions defined before the body, standing in for what it reads the version with. */
+      stubs?: string;
+    }> = [
+      {
+        name: "prepare-release.yml",
+        input: (tag) => ({ RELEASE_VERSION: tag.slice(1) }),
+        stopBefore: /^current="\$\(node -p /,
+      },
+      {
+        name: "tag-release.yml",
+        // tag-release reads the manifest with `node -p`; the stub answers with the sample.
+        input: (tag) => ({ SAMPLE_VERSION: tag.slice(1) }),
+        stopBefore: /^heading_status=0$/,
+        stubs: `node() { printf '%s\\n' "$SAMPLE_VERSION"; }`,
+      },
+      {
+        name: "release.yml",
+        input: (tag) => ({ RELEASE_TAG: tag }),
+        stopBefore: /^git fetch /,
+      },
+    ];
+    const samples: Array<[tag: string, accepted: boolean]> = [
+      ["v01.2.3", false],
+      ["v1.02.3", false],
+      ["v1.2.03", false],
+      ["v0.0.0", true],
+    ];
+    const PASSED = "PASSED_VERSION_CHECKS";
+
+    for (const { name, input, stopBefore, stubs } of releaseWorkflows) {
       const document = workflow(name);
       const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
-      const commands = Object.values(jobs)
+      const bodies = Object.values(jobs)
         .flatMap((job) => (isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : []))
-        .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
-        .join("\n")
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter((line) => line !== "" && !line.startsWith("#"))
-        .join("\n");
-      // The case ARM, which is the refusal itself. The paragraph beside it names every one of
-      // `01.11.0`, `node-semver` and `leading zero`, so matching any of those would match the
-      // explanation and survive the check being deleted.
+        .map((step) => (isRecord(step) && typeof step["run"] === "string" ? step["run"] : ""))
+        .filter((body) => /^\s*0\*\)/m.test(body));
+      expect(bodies, `${name} must have exactly one step refusing a leading zero`).toHaveLength(1);
+      const lines = (bodies[0] ?? "").split(/\r?\n/);
+      const stop = lines.findIndex((line) => stopBefore.test(line.trim()));
       expect(
-        commands,
-        `${name} must refuse a component with a leading zero: npm would refuse the publish, ` +
-          `and by then the release pull request has merged and the tag exists`,
-      ).toMatch(/0\*\)/);
+        stop,
+        `${name} has no line matching ${String(stopBefore)} to stop before`,
+      ).toBeGreaterThan(0);
+      const checks = lines.slice(0, stop).join("\n");
+
+      const dir = mkdtempSync(path.join(tmpdir(), "qfai-leading-zero-"));
+      try {
+        const script = path.join(dir, "check.sh");
+        writeFileSync(script, [stubs ?? "", checks, `echo ${PASSED}`].join("\n"), "utf-8");
+        for (const [tag, accepted] of samples) {
+          const result = spawnSync("bash", [script], {
+            cwd: dir,
+            env: { ...process.env, ...input(tag) },
+            encoding: "utf-8",
+          });
+          if (result.error !== undefined) {
+            throw new Error(
+              `this case runs each release workflow's version checks under bash, which could not ` +
+                `be started (${result.error.message}); put bash on PATH to run it`,
+            );
+          }
+          const output = `${result.stdout}${result.stderr}`;
+          if (accepted) {
+            expect.soft(result.status, `${name} must accept ${tag}:\n${output}`).toBe(0);
+            expect
+              .soft(output, `${name} must pass ${tag} through every version check`)
+              .toContain(PASSED);
+          } else {
+            expect
+              .soft(
+                result.status,
+                `${name} must refuse ${tag}: npm would refuse the publish, and by then the ` +
+                  `release pull request has merged and the tag exists:\n${output}`,
+              )
+              .toBe(1);
+            expect
+              .soft(output, `${name} must refuse ${tag} for its leading zero`)
+              .toMatch(/::error::.*leading zero/);
+            expect.soft(output, `${name} must stop at ${tag}`).not.toContain(PASSED);
+          }
+        }
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
     }
   });
 
