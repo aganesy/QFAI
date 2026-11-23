@@ -1650,9 +1650,16 @@ function plainLines(value: string): string[] {
   return value.split(/\r\n|\n/).map(escapePlainLine);
 }
 
-/** A workflow command's message under `--format github`, which the runner decodes back. */
+/**
+ * A workflow command's message under `--format github`. The runner decodes `%25`, `%0D` and
+ * `%0A` back, so a multi-line message stays multi-line in the annotation. Every other control
+ * character then shows as the visible escape the text output uses (`escapeControlCharacter`):
+ * it cannot open a command, but left raw an ESC sequence or a bell would act on the log viewer.
+ */
 function escapeGitHubCommandValue(value: string): string {
-  return value.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+  return escapeControlCharacters(
+    value.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A"),
+  );
 }
 
 /**
@@ -1673,11 +1680,16 @@ function escapeGitHubCommandValue(value: string): string {
  * stop `##[stop-commands]<token>`.
  */
 function escapePlainLine(value: string): string {
+  return escapeControlCharacters(value).replace(/##\[/g, "##\\[");
+}
+
+/** Every character of `value` as `escapeControlCharacter` prints it. */
+function escapeControlCharacters(value: string): string {
   let escaped = "";
   for (const char of value) {
     escaped += escapeControlCharacter(char);
   }
-  return escaped.replace(/##\[/g, "##\\[");
+  return escaped;
 }
 
 /** One character as `escapePlainLine` prints it. */
