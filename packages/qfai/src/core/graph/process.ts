@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { access, lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
+import { isEnoent } from "../fs/errno.js";
 import {
   graphCodegraphInstallDirectory,
   graphExecutionEnvironment,
@@ -9,7 +10,6 @@ import {
   type GraphExecutionEnvironment,
 } from "./layout.js";
 import { assertGraphStoragePath } from "./storage.js";
-import { isEnoent } from "../fs/errno.js";
 
 const execute = promisify(execFile);
 export const GRAPH_PYTHON_FLAGS = ["-I", "-X", "utf8"] as const;

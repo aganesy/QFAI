@@ -2,6 +2,15 @@ import { randomBytes } from "node:crypto";
 import { access, cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { isEnoent } from "../fs/errno.js";
+import { formatReportPath } from "../init/reportPath.js";
+import { GraphConfigUnreadableError, inspectCurrentCodeAnalysis } from "./analysis.js";
+import {
+  GRAPH_VERSIONS,
+  graphRuntimeFiles,
+  graphRuntimePaths,
+  graphRuntimeStaging,
+} from "./layout.js";
 import {
   codegraphEnvironment,
   graphifyEnvironment,
@@ -14,16 +23,7 @@ import {
   type GraphProcess,
   type GraphProcessResult,
 } from "./process.js";
-import { isEnoent } from "../fs/errno.js";
-import { GraphConfigUnreadableError, inspectCurrentCodeAnalysis } from "./analysis.js";
-import {
-  GRAPH_VERSIONS,
-  graphRuntimeFiles,
-  graphRuntimePaths,
-  graphRuntimeStaging,
-} from "./layout.js";
 import { assertGraphStoragePath, replaceGraphDirectory } from "./storage.js";
-import { formatReportPath } from "../init/reportPath.js";
 export { GRAPH_VERSIONS, graphRuntimePaths } from "./layout.js";
 
 /** The oldest Python that uv may pick for the Graphify environment. */
