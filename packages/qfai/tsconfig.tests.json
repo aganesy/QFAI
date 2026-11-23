@@ -54,6 +54,7 @@
     "tests/unit/graph/cacheFailures.examples.test.ts",
     "tests/unit/graph/replacementFailure.examples.test.ts",
     "tests/unit/graph/unreadableCacheCandidate.test.ts",
+    "tests/unit/graph/failedCacheCopy.test.ts",
     "tests/unit/graph/inventoryFiles.test.ts",
     "tests/unit/graph/completedCorpus.test.ts",
     "tests/unit/graph/corpusSourceSwap.test.ts",
@@ -719,6 +720,7 @@
     "tests/scripts/syncInitToRoot.test.ts",
     "tests/core/waiversReadErrors.test.ts",
     "tests/unit/outputCapture.test.ts",
-    "tests/core/replaceFileTempCleanup.test.ts"
+    "tests/core/replaceFileTempCleanup.test.ts",
+    "tests/core/runLogValidateLog.test.ts"
   ]
 }

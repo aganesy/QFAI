@@ -59,16 +59,6 @@ function cleanResult(): ValidationResult {
     toolVersion: "0.0.0-test",
     issues: [],
     counts: { info: 0, warning: 0, error: 0 },
-    traceability: {
-      sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
-      testFiles: {
-        globs: [],
-        excludeGlobs: [],
-        matchedFileCount: 0,
-        truncated: false,
-        limit: 0,
-      },
-    },
   };
 }
 
@@ -337,9 +327,7 @@ describe("validate.log freshness under out-of-order completion", () => {
       publishPointer(runRoot, pointerPath, run, {
         guard: {
           platform: "linux",
-          createGuard: async () => {
-            throw Object.assign(new Error("EACCES"), { code: "EACCES" });
-          },
+          createGuard: () => Promise.reject(Object.assign(new Error("EACCES"), { code: "EACCES" })),
         },
       }),
     ).rejects.toThrow("EACCES");
