@@ -19,9 +19,11 @@ import {
 import {
   collectCreatedObjects,
   findRedefinitions,
+  IDENTIFIER_CHAR,
   parseSqlContract,
   separateLiterals,
   type SqlParseError,
+  type SqlStatement,
 } from "../sqlContract.js";
 import type { Issue } from "../types.js";
 import { validateContractConsistency } from "./contractConsistency.js";
@@ -300,6 +302,17 @@ export function lintSql(text: string, file: string): Issue[] {
 
 const DO_BLOCK = /^DO\b/i;
 const DYNAMIC_EXECUTE = /\bEXECUTE\b/i;
+/** A statement that runs a routine it names. */
+const RUNS_ROUTINE = /\b(?:SELECT|CALL|PERFORM)\b/i;
+const ROUTINE_NAME_PART = String.raw`[A-Za-z_\u0080-￿]${IDENTIFIER_CHAR.source}*`;
+/** A bare, possibly qualified name followed by `(`: a call of that routine. */
+const CALLED_ROUTINE = new RegExp(
+  `(?<!${IDENTIFIER_CHAR.source}|\\.)(${ROUTINE_NAME_PART}(?:\\s*\\.\\s*${ROUTINE_NAME_PART})*)\\s*\\(`,
+  "g",
+);
+
+/** Each function or procedure defined so far, by name, with the dangerous operations its body runs. */
+type DestructiveRoutines = Map<string, Set<string>>;
 
 /**
  * Adds the label of each dangerous operation `text` runs when applied.
@@ -307,21 +320,61 @@ const DYNAMIC_EXECUTE = /\bEXECUTE\b/i;
  * Each statement is checked on its own, and only its code: a keyword in a
  * comment, a string, a quoted name or a quoted function body runs nothing on
  * apply. A `DO` block is the exception, since it runs its body on apply, so the
- * body is checked as statements of its own (`inDoBody`). There an `EXECUTE`
- * runs its string as SQL, so that string is checked as statements too.
+ * body is checked as statements of its own (`inBody`). There an `EXECUTE` runs
+ * its string as SQL, so that string is checked as statements too.
+ *
+ * A function or procedure body is checked the same way, but its operations are
+ * remembered under the routine's name rather than found, since defining it runs
+ * nothing. A later `SELECT`, `CALL` or `PERFORM` that calls it by that name runs
+ * the body, so it adds them.
+ *
+ * Ceiling: a call is matched on the bare name the definition used, so a quoted
+ * name, a call without its schema, or a call outside those three statements
+ * (an assignment in PL/pgSQL, a trigger) is not followed, and a redefinition
+ * with a harmless body leaves the earlier operations remembered.
+ * Lift when: a contract runs a destructive routine through one of those.
  */
-function collectDangerousOperations(text: string, found: Set<string>, inDoBody = false): void {
+function collectDangerousOperations(
+  text: string,
+  found: Set<string>,
+  routines: DestructiveRoutines = new Map(),
+  inBody = false,
+): void {
   for (const statement of parseSqlContract(text).statements) {
     const { code, literals } = separateLiterals(statement.text);
     for (const { pattern, label } of SQL_DANGEROUS_PATTERNS) {
       if (pattern.test(code)) found.add(label);
     }
-    if (DO_BLOCK.test(code)) {
-      for (const body of literals) collectDangerousOperations(body, found, true);
-    } else if (inDoBody && DYNAMIC_EXECUTE.test(code)) {
-      for (const sql of literals) collectDangerousOperations(sql, found);
+    if (RUNS_ROUTINE.test(code)) {
+      for (const name of calledRoutineNames(code)) {
+        for (const label of routines.get(name) ?? []) found.add(label);
+      }
+    }
+    const routine = definedRoutineName(statement);
+    if (routine !== undefined) {
+      const bodyFound = routines.get(routine) ?? new Set<string>();
+      for (const body of literals) collectDangerousOperations(body, bodyFound, routines, true);
+      if (bodyFound.size > 0) routines.set(routine, bodyFound);
+    } else if (DO_BLOCK.test(code)) {
+      for (const body of literals) collectDangerousOperations(body, found, routines, true);
+    } else if (inBody && DYNAMIC_EXECUTE.test(code)) {
+      for (const sql of literals) collectDangerousOperations(sql, found, routines);
     }
   }
+}
+
+/** The name of the function or procedure `statement` creates, if it creates one. */
+function definedRoutineName(statement: SqlStatement): string | undefined {
+  return collectCreatedObjects([statement]).find(
+    ({ kind }) => kind === "FUNCTION" || kind === "PROCEDURE",
+  )?.name;
+}
+
+/** The names `code` calls, folded the way an unquoted name is. */
+function calledRoutineNames(code: string): string[] {
+  return Array.from(code.matchAll(CALLED_ROUTINE), (match) =>
+    (match[1] ?? "").replace(/\s+/g, "").replace(/[A-Z]/g, (letter) => letter.toLowerCase()),
+  );
 }
 
 function validateDeclaredContractIds(ids: string[], file: string, kind: ContractKind): Issue[] {

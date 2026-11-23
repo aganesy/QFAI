@@ -594,6 +594,64 @@ describe("the existing DB checks are unchanged", () => {
     ]);
   });
 
+  // Creating a function runs nothing, but calling it later in the same file
+  // runs its body when the file is applied.
+  it.each([
+    [
+      "a SELECT of a function",
+      "CREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\nSELECT reset();\n",
+      "TRUNCATE",
+    ],
+    [
+      "a CALL of a procedure",
+      "CREATE PROCEDURE wipe() LANGUAGE sql AS $$ DROP TABLE orders; $$;\nCALL wipe();\n",
+      "DROP TABLE",
+    ],
+    [
+      "a PERFORM in a DO block",
+      "CREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\nDO $$ BEGIN PERFORM reset(); END $$;\n",
+      "TRUNCATE",
+    ],
+    [
+      "a schema-qualified call in another case",
+      "CREATE FUNCTION app.reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\nSELECT App.Reset();\n",
+      "TRUNCATE",
+    ],
+    [
+      "a call of a function whose body calls a destructive one",
+      "CREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\n" +
+        "CREATE FUNCTION reset_all() RETURNS void AS $$ SELECT reset(); $$ LANGUAGE sql;\nSELECT reset_all();\n",
+      "TRUNCATE",
+    ],
+  ])("warns on a destructive function body run by %s", async (_how, sql, label) => {
+    const issues = await runOn(`${HEADER}${sql}`);
+    expect(issues.filter((i) => i.code === "QFAI-DB-001").map((i) => i.message)).toEqual([
+      expect.stringContaining(`Dangerous SQL operation found: ${label}.`),
+    ]);
+  });
+
+  it.each([
+    [
+      "a call before the definition",
+      "SELECT reset();\nCREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\n",
+    ],
+    [
+      "a call of a harmless function",
+      "CREATE FUNCTION touch() RETURNS void AS $$ UPDATE orders SET note = ''; $$ LANGUAGE sql;\nSELECT touch();\n",
+    ],
+    [
+      "a call of a function with a longer name",
+      "CREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\nSELECT reset_all();\n",
+    ],
+    [
+      "a name in a string",
+      "CREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\nSELECT 'reset()';\n",
+    ],
+  ])("does not warn on %s", async (_where, sql) => {
+    const issues = await runOn(`${HEADER}${sql}`);
+    expect(issues.filter((i) => i.code === "QFAI-DB-001")).toEqual([]);
+  });
+
   it("reports each dangerous operation once per file", async () => {
     const issues = await runOn(`${HEADER}DROP TABLE a;\nDROP TABLE b;\n`);
     expect(issues.filter((i) => i.code === "QFAI-DB-001")).toHaveLength(1);

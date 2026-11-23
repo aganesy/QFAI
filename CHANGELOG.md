@@ -579,6 +579,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`QFAI-DB-001` warns when a DB contract calls a destructive function it
+  defines.** A function or procedure body was skipped because creating it runs
+  nothing, so a file that created one holding `TRUNCATE` and then ran
+  `SELECT reset();` applied the body with no warning. Each destructive body is
+  now remembered by name, and a later `SELECT`, `CALL` or `PERFORM` in the same
+  file that calls it, directly or through another routine, raises the warning.
+  Closes #5180.
+
 - **`qfai sdd preflight` reads no previous summary through a link.** A
   `preflight_summary.md` that was a link to a file elsewhere was read before
   being replaced: the run copied that file's carry-over list into its own

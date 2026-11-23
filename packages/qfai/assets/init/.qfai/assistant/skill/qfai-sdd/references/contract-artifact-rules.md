@@ -188,7 +188,10 @@ comment, a `$$ … $$` body or parentheses does not end a statement.
 `QFAI-DB-001` reads each statement on its own and only its code: a keyword in a
 comment, a literal, a quoted name or a quoted (`$ … $` or `'…'`) function body
 does not warn. A `DO` block's body runs when the file is applied, so its
-statements are read too, with the string each `EXECUTE` in it runs.
+statements are read too, with the string each `EXECUTE` in it runs. A function
+or procedure body runs when it is called, so a later `SELECT`, `CALL` or
+`PERFORM` in the same file that calls it by the bare name it was created under
+warns on what the body destroys.
 
 **Not checked**: nothing here type-checks a query, resolves a column, or
 verifies the schema against the API contract. A green run means the file could
