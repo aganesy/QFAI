@@ -697,11 +697,13 @@ describe("doctor", () => {
     }
   });
 
+  // The roster check needs only the prototyping fixture, so it runs on an
+  // otherwise empty root. The initialized-project scenario stays with
+  // "adds prototyping profile checks when preflight prerequisites exist".
   it("TC-3.7.9: existing prototyping checks still fire (additive)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
     try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
       expect(findCheck(parsed.checks, "prototyping.primaryUiContract")).toBeDefined();
