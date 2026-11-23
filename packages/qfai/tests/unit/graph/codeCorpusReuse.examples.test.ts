@@ -10,12 +10,12 @@ vi.mock("node:fs/promises", async (original) => {
   return { ...fs, writeFile: vi.fn(fs.writeFile) };
 });
 
-/** The mirror files copied into `analysis` since the spy was last cleared. */
+/** The mirror files written into `analysis` since the spy was last cleared. */
 function copiedInto(analysis: string): string[] {
   const active = path.resolve(analysis);
   return vi
     .mocked(writeFile)
-    .mock.calls.map(([, target]) => path.resolve(String(target)))
+    .mock.calls.map(([target]) => path.resolve(String(target)))
     .filter((target) => target.startsWith(`${active}${path.sep}`))
     .map((target) => path.relative(active, target).split(path.sep).join("/"));
 }
