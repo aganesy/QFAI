@@ -50,6 +50,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   forge remote or API access it says so in the announcement and continues;
   under a no-question mode it continues and the final report lists the match.
 
+- **A project states which browsers its UI must work in.** Nothing said which
+  browsers a screen had to support, so an agent picked platform features from
+  memory: an old pattern a native feature now replaces, or a new feature some
+  supported browsers lack, with no fallback. The constraint template that
+  `qfai init` writes now starts with a Technical Constraints row,
+  `Browser support target: Baseline Widely available`, which a project changes
+  to its own level, such as `Baseline 2024`. A project that states none is held
+  to Baseline Widely available. `ui-procurement.md`, the prototyping generator
+  prompt and the implementation UI guidance read the target before choosing a
+  platform feature, and use a feature newer than it only with a fallback that
+  keeps the screen working where the feature is missing, such as an
+  `@supports` block or a polyfill loaded only where the feature is absent.
+
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date
@@ -613,6 +626,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   20,000 files, so a large tree could run out of file descriptors and fail
   validation with `QFAI-SCAN-002`. The files are now read in batches, in the
   same order and with the same truncation result. Closes #4943.
+
+- **`qfai catalog components --check` no longer reads the catalogue through a
+  link.** When `.qfai/catalog`, or a directory above it, was a symbolic link
+  or junction, the check compared a file outside the project. It now runs the
+  write path's guard before reading and exits 1 naming the linked path, or the
+  catalogue path when it is a link or not a file. Closes #5048.
 
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
