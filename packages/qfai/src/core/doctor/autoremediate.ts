@@ -92,13 +92,17 @@ export type NpmInstallInvocation = {
 };
 
 /**
- * npm's JavaScript entry beside an `npm.cmd` launcher on `searchPath`, the
- * layout the Node installer and nvm-windows use. Undefined when no
- * directory on the path holds one.
+ * npm's JavaScript entry at `node_modules/npm/bin/npm-cli.js` under a
+ * directory on `searchPath`, the layout the Node installer and nvm-windows
+ * use beside their `npm.cmd` launcher. A directory Windows lists in double
+ * quotes is read without them. A relative directory is skipped: it resolves
+ * against the project, so a project's own `node_modules/npm` would run as
+ * npm. Undefined when no directory on the path holds one.
  */
 export async function npmEntryOnPath(searchPath: string): Promise<string | undefined> {
-  for (const dir of searchPath.split(path.delimiter)) {
-    if (dir.length === 0) continue;
+  for (const listed of searchPath.split(path.delimiter)) {
+    const dir = unquotePathEntry(listed);
+    if (!path.isAbsolute(dir)) continue;
     const entry = path.join(dir, "node_modules", "npm", "bin", "npm-cli.js");
     try {
       await access(entry);
@@ -108,6 +112,13 @@ export async function npmEntryOnPath(searchPath: string): Promise<string | undef
     }
   }
   return undefined;
+}
+
+/** A `PATH` entry without the double quotes Windows allows around it. */
+function unquotePathEntry(entry: string): string {
+  return entry.length >= 2 && entry.startsWith('"') && entry.endsWith('"')
+    ? entry.slice(1, -1)
+    : entry;
 }
 
 /**

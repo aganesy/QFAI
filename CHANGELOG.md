@@ -710,6 +710,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   write path's guard before reading and exits 1 naming the linked path, or the
   catalogue path when it is a link or not a file. Closes #5048.
 
+- **`qfai doctor` refuses a skill dependency that npm would install from a
+  local tarball.** An unscoped `runtimeDependencies` entry ending in `.tgz`,
+  `.tar.gz` or `.tar` passed the package-name check, and
+  `doctor --autoremediate --yes` then installed the file of that name from the
+  project root. Such a manifest is now an error and nothing is installed. On
+  Windows the install no longer takes npm from a relative `PATH` directory,
+  which could run the project's own `node_modules/npm` as npm, and finds it
+  under a quoted one. Refused entries escape format and separator characters
+  such as U+202E in the doctor message. Closes #5092.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
