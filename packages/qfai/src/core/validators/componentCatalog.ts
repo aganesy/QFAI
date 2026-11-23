@@ -26,6 +26,7 @@ import {
   scanComponents,
   widgetPatternKey,
   type CatalogComponent,
+  type CatalogRead,
   type ComponentScan,
 } from "../uiux/componentCatalog.js";
 import type { Issue } from "../types.js";
@@ -43,8 +44,7 @@ export async function validateComponentCatalog(
 ): Promise<Issue[]> {
   const catalog = await readCatalog(root);
   const listed = catalog.state === "read" ? catalog.components : [];
-  const installed =
-    Object.keys(config.uiux?.registries ?? {}).length > 0 || listed.some(isProcured);
+  const installed = isCatalogueInstalled(config, catalog);
   if (catalog.state !== "read" && !installed) {
     return catalog.state === "invalid" ? [invalidCatalogFinding()] : [];
   }
@@ -106,6 +106,15 @@ export async function validateComponentCatalog(
     );
   }
   return [...issues, ...widgets];
+}
+
+/**
+ * Whether the project has a component catalogue installed: `uiux.registries` declares an entry
+ * or the committed catalogue lists a component procured from a catalogue.
+ */
+export function isCatalogueInstalled(config: QfaiConfig, catalog: CatalogRead): boolean {
+  if (Object.keys(config.uiux?.registries ?? {}).length > 0) return true;
+  return catalog.state === "read" && catalog.components.some(isProcured);
 }
 
 function invalidCatalogFinding(): Issue {

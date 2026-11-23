@@ -86,6 +86,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   import silences it too, and the accessibility gate is what shows the routes
   pass. QFAI itself takes no axe dependency. Closes #4309 and #4565.
 
+- **`qfai validate` warns about legacy patterns a Widely available feature
+  replaces.** In the `prototyping`, `saas-package`, `verify` and `full`
+  profiles it reads the `.css` files `uiux.surfacePaths` selects beside the
+  `.html`, `.tsx`, `.jsx`, `.vue` and `.svelte` ones, and warns about a script
+  from another origin with no `integrity` attribute (`QFAI-LEGACY-001`), error
+  styling on `:invalid` where `:user-invalid` serves (`QFAI-LEGACY-002`), and,
+  in a project with no component catalogue installed, a `role="dialog"` or
+  `aria-modal` modal built on another element where `<dialog>` serves
+  (`QFAI-LEGACY-003`). Each replacement is Baseline Widely available in the
+  web-features data, so the check reads no browser-support target. The
+  `interpolate-size` replacement for the `max-height` hack is not Baseline and
+  is left to review. Closes #5026.
+
 - **Browser tests survive a rebuild that keeps the behaviour.** QFAI said
   nothing about how a browser test finds an element or injects a failure, so
   tests tied to class names, CSS values and the module files a page loads broke

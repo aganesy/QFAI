@@ -56,6 +56,7 @@ import {
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateComponentCatalog } from "./validators/componentCatalog.js";
 import { validateDesignCatalog } from "./validators/designCatalog.js";
+import { validateLegacyPatterns } from "./validators/legacyPatterns.js";
 import { validateUiPlainText } from "./validators/uiPlainText.js";
 import { validateUiAccessibilityLayer } from "./validators/uiAccessibilityLayer.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
@@ -906,6 +907,7 @@ async function runPrototypingValidators(
     ...(await timed(timings, "ui-plain-text", () => validateUiPlainText(root, config))),
     ...(await timed(timings, "component-catalog", () => validateComponentCatalog(root, config))),
     ...(await timed(timings, "design-catalog", () => validateDesignCatalog(root, config))),
+    ...(await timed(timings, "legacy-patterns", () => validateLegacyPatterns(root, config))),
   ];
 }
 
