@@ -19,10 +19,10 @@ export type ReportData = {
   };
   flows: Array<{
     id: string;
-    stories: string[];
-    acceptanceCriteria: string[];
-    examples: string[];
-    rules: string[];
+    stories: readonly string[];
+    acceptanceCriteria: readonly string[];
+    examples: readonly string[];
+    rules: readonly string[];
   }>;
   waivers?: ValidationResult["waivers"];
   issues: Issue[];
