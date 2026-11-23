@@ -4,7 +4,23 @@ import { isEnoent } from "../fs/errno.js";
 import { findUnsafeHostFileComponent } from "../init/fsGuards.js";
 import { isPathIgnored } from "../gitignore.js";
 import { replaceFile } from "../runLog.js";
-import { graphEnvironmentKey } from "./layout.js";
+import {
+  GRAPH_ANALYSIS_ENGINES,
+  GRAPH_CLI_ENTRYPOINT,
+  GRAPH_ENTRYPOINT_RECORD,
+  GRAPH_LOCK_FILE,
+  GRAPH_STAGING_STEPS,
+  graphAnalysisRoot,
+  graphAnalysisStaging,
+  graphCodegraphInstallDirectory,
+  graphPrivateHome,
+  graphRetainedDirectory,
+  graphRuntimeFiles,
+  graphRuntimePaths,
+  graphRuntimeStaging,
+  graphStatePath,
+  graphToolsDirectory,
+} from "./layout.js";
 import type { GraphProcess } from "./process.js";
 
 /** The files a graph preparation step wrote, and the conflicts it left for the adopter. */
@@ -15,30 +31,52 @@ export interface GraphPreparedFiles {
 
 export const GRAPH_IGNORE_MARKER = "# QFAI graph analysis (local)";
 
+/** Stands for the random id each staging or retained directory carries. */
+const SAMPLE_ID = "00000000-0000-4000-8000-000000000000";
+
 /**
- * One path inside each place graph preparation and queries write: analysis and its staging,
- * runtimes and their staging, local state, each engine's private home and cache, and the
- * entrypoints. A rule more specific than `/.qfai/tools/` can leave any one of them visible.
+ * One path inside each place graph preparation and queries write, built from the helpers that
+ * decide where each writer puts it: analysis, every name it is staged or retained under, runtimes
+ * and theirs, local state, each engine's private home and cache, the CodeGraph install directory,
+ * and the entrypoints. A rule more specific than `/.qfai/tools/` can leave any one of them visible.
  */
-export function graphOutputSamples(key: string = graphEnvironmentKey()): string[] {
-  const tools = ".qfai/tools";
-  const analysis = `${tools}/analysis/${key}`;
-  const runtimes = `${tools}/runtimes`;
-  const home = `${tools}/home/${key}`;
-  return [
-    `${analysis}/codegraph/.codegraph/codegraph.db`,
-    `${analysis}/graphify/graphify-out/graph.json`,
-    `${analysis}/graphify-code/graphify-out/graph.json`,
-    `${analysis}/.preparing-graphify-code-00000000-0000-4000-8000-000000000000/graphify-out/managed.json`,
-    `${runtimes}/${key}/codegraph/node_modules/@colbymchenry/codegraph/npm-shim.js`,
-    `${runtimes}/${key}/graphify/pyvenv.cfg`,
-    `${runtimes}/.p-00000000/graphify/pyvenv.cfg`,
-    `${tools}/state/${key}/analysis.lock`,
-    `${home}/codegraph/.cache/entry.json`,
-    `${home}/graphify/.cache/entry.json`,
-    `${tools}/graph-cli.mjs`,
-    `${tools}/graph-entrypoints.json`,
-  ];
+function graphOutputSamples(): string[] {
+  const root = "";
+  const samples: string[] = [];
+  for (const engine of GRAPH_ANALYSIS_ENGINES) {
+    const current = graphAnalysisRoot(root, engine);
+    const output =
+      engine === "codegraph"
+        ? path.join(".codegraph", "codegraph.db")
+        : path.join("graphify-out", "graph.json");
+    samples.push(path.join(current, output));
+    for (const step of GRAPH_STAGING_STEPS)
+      samples.push(path.join(graphAnalysisStaging(current, step, engine, SAMPLE_ID), output));
+  }
+  samples.push(
+    path.join(
+      graphRetainedDirectory(graphAnalysisRoot(root, "codegraph"), SAMPLE_ID),
+      "graph.json",
+    ),
+  );
+  const runtime = graphRuntimePaths(root);
+  const staged = graphRuntimeFiles(graphRuntimeStaging(runtime.directory, SAMPLE_ID.slice(0, 8)));
+  samples.push(
+    runtime.codegraph,
+    runtime.python,
+    staged.python,
+    path.join(graphRetainedDirectory(runtime.directory, SAMPLE_ID), "pyvenv.cfg"),
+    path.join(graphStatePath(root), GRAPH_LOCK_FILE),
+  );
+  for (const engine of ["codegraph", "graphify"] as const)
+    samples.push(path.join(graphPrivateHome(root, engine), ".cache", "entry.json"));
+  samples.push(
+    path.join(graphCodegraphInstallDirectory(graphPrivateHome(root, "codegraph")), "entry.json"),
+    path.join(graphToolsDirectory(root), GRAPH_CLI_ENTRYPOINT),
+    path.join(graphToolsDirectory(root), GRAPH_ENTRYPOINT_RECORD),
+  );
+  // Git names each path with forward slashes, relative to the root.
+  return samples.map((sample) => sample.split(path.sep).join(path.posix.sep));
 }
 
 export async function ensureGraphGitignore(

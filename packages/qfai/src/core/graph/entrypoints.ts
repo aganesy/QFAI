@@ -5,17 +5,18 @@ import { pathToFileURL } from "node:url";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { isEnoent } from "../fs/errno.js";
 import { findUnsafeHostFileComponent, readPinnedRegularFile } from "../init/fsGuards.js";
+import { GRAPH_CLI_ENTRYPOINT, GRAPH_ENTRYPOINT_RECORD, graphToolsDirectory } from "./layout.js";
 import { assertGraphStoragePath } from "./storage.js";
 import type { GraphPreparedFiles } from "./ignore.js";
 
 export async function installGraphEntrypoints(root: string): Promise<GraphPreparedFiles> {
-  const directory = path.join(root, ".qfai", "tools");
+  const directory = graphToolsDirectory(root);
   await assertGraphStoragePath(root, directory);
   const bundle = path.resolve(getInitAssetsDir(), "..", "..", "dist", "graph");
   const sources: Record<string, string> = {
-    "graph-cli.mjs": wrapper(path.join(bundle, "cli.mjs"), "runInstalledGraphCli"),
+    [GRAPH_CLI_ENTRYPOINT]: wrapper(path.join(bundle, "cli.mjs"), "runInstalledGraphCli"),
   };
-  const record = "graph-entrypoints.json";
+  const record = GRAPH_ENTRYPOINT_RECORD;
   const names = [...Object.keys(sources), record];
   for (const name of names) {
     if (await findUnsafeHostFileComponent(root, [".qfai", "tools", name])) return conflict();
