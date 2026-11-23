@@ -18,10 +18,16 @@ const COPILOT_FILE = ".github/copilot-instructions.md";
 
 /**
  * The most bytes of one file the scan reads. A text file past it is
- * named as not checked rather than read whole. Lifting it means matching lines
+ * named as not checked from its size. Lifting it means matching lines
  * across blocks, which no project has needed yet.
  */
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
+/**
+ * How much of a file past {@link MAX_FILE_BYTES} the scan reads to tell binary
+ * from text: a NUL byte in it marks the file binary. It is the prefix git
+ * itself judges a file by.
+ */
+const BINARY_PROBE_BYTES = 8000;
 const TOO_LARGE = "larger than 16 MiB";
 const UNREADABLE = "could not be read";
 
@@ -195,7 +201,9 @@ async function insidePath(boundary: string, file: string): Promise<string | null
 /**
  * Reads a regular file of the working tree inside `boundary` a block at a
  * time, and stops at its first NUL byte. The read checks the file it opened,
- * so what was inspected is what is read.
+ * so what was inspected is what is read. A file `lstat` measures past
+ * {@link MAX_FILE_BYTES} is read only as far as {@link BINARY_PROBE_BYTES},
+ * enough to tell binary from text, and is then reported by that size.
  *
  * Shortcut: the directory is resolved by name before the open and once more
  * after the read, not pinned to a descriptor. A directory swapped for a link
@@ -206,14 +214,19 @@ async function insidePath(boundary: string, file: string): Promise<string | null
 async function readableText(boundary: string, file: string): Promise<FileRead> {
   const target = await insidePath(boundary, file);
   if (target === null) return { kind: "skip" };
+  let size: number;
   try {
-    if (!(await lstat(target)).isFile()) return { kind: "skip" };
+    const stats = await lstat(target);
+    if (!stats.isFile()) return { kind: "skip" };
+    size = stats.size;
   } catch (error) {
     if (isAbsentPath(error)) return { kind: "skip" };
     throw error;
   }
+  // A file that shrinks between `lstat` and the read is judged by the size `lstat` gave.
+  const limit = size > MAX_FILE_BYTES ? BINARY_PROBE_BYTES : MAX_FILE_BYTES;
   const blocks: Buffer[] = [];
-  const outcome = await scanBoundedRegularFile(target, MAX_FILE_BYTES, (block) => {
+  const outcome = await scanBoundedRegularFile(target, limit, (block) => {
     if (block.includes(0)) return "stop";
     blocks.push(Buffer.from(block));
     return "continue";

@@ -140,12 +140,40 @@ describe("migration overwrites", () => {
 
     failure.on = true;
     await expect(
-      writeReminderHooks({ kind: "create", target, text: '{\n  "hooks": {}\n}\n' }),
+      writeReminderHooks({
+        kind: "update",
+        target,
+        relativePath: ".claude/settings.json",
+        read: original,
+        text: '{\n  "hooks": {}\n}\n',
+        events: [],
+        permissionsAdded: false,
+        edited: [],
+      }),
     ).rejects.toThrow("ENOSPC");
     failure.on = false;
 
     expect(await readFile(target, "utf8")).toBe(original);
     expect(await readdir(path.dirname(target))).toEqual(["settings.json"]);
+  });
+
+  // QFAI:EX-0001-0196-78
+  it("refuses hook settings another writer edited after step 11 planned them", async () => {
+    const ctx = await context();
+    const shown = ".claude/settings.json";
+    const target = path.join(ctx.root, ...shown.split("/"));
+    await put(target, '{\n  "env": { "OWN": "1" }\n}\n');
+    const plan = await step11.plan(ctx);
+    const update = plan.operations.find(
+      (operation) => operation.kind === "delegate" && operation.target === shown,
+    );
+    if (update?.kind !== "delegate") throw new Error(`step 11 planned no write of ${shown}`);
+    const edited = '{\n  "env": { "OTHER": "2" }\n}\n';
+    await put(target, edited);
+
+    await expect(update.apply()).rejects.toThrow(`${shown} was left unchanged`);
+
+    expect(await readFile(target, "utf8")).toBe(edited);
   });
 
   it("leaves the original reminder text when step 11 fails to replace it", async () => {

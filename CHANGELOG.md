@@ -621,6 +621,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`, as
   the `implement-tdd` step does. Closes #4965.
 
+- **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
+  The duplicate check compared each argument type as written, so
+  `f(int)` and `f(integer)`, or `f(varchar(10))` and `f(varchar(20))`, went
+  unreported although PostgreSQL takes them for one routine. Each argument type
+  now drops its modifiers and array bounds and maps its alias to one spelling
+  (`int`/`int4` to `integer`, `bool` to `boolean`, `varchar` to
+  `character varying`, `timestamptz` and the other built-in aliases);
+  `float(p)` becomes `real` or `double precision` by its precision. Closes
+  #5047.
+
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
   20,000 files, so a large tree could run out of file descriptors and fail
@@ -690,6 +700,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it. The intake now runs first, as the `fix-vulnerability` plan already
   ran it. Closes #5013.
 
+- **Migration step 12 reads at most 8000 bytes of a file larger than 16 MiB.**
+  It read up to 16 MiB of such a file before naming it as not checked for 1.x
+  paths, although `lstat` had already given its size. It now reads only the
+  first 8000 bytes, enough to tell binary from text, and names a text file as
+  larger than 16 MiB from its size; a NUL byte past those 8000 bytes no longer
+  makes the file count as binary. Closes #5054.
+
 - **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
   with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
   `Set-Content -Encoding UTF8`, and both commands refused such a file as
@@ -713,6 +730,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   record outside the session directory, and fails with an `AggregateError`,
   while the cached sessions and storage states are removed either way.
   Closes #4929. Closes #4931.
+
+- **`qfai init` keeps reminder-hook settings another writer changed while it
+  ran.** The hook merge read `.claude/settings.json` or `.codex/hooks.json`,
+  planned the new text, and renamed it into place later, so a file created or
+  edited in between was replaced. A file the merge found absent is now created
+  only if nothing is there yet, and an existing one is replaced only while its
+  text is still what the merge read; otherwise the file is left as the other
+  writer made it, a warning names it, and init carries on. Migration step 11,
+  which uses the same merge, stops naming the file instead. Closes #5017.
 
 - **`qfai sdd preflight` keeps a carry-over entry that starts with `<`.** A
   flagless re-run dropped every recorded entry opening with a less-than sign,
@@ -775,6 +801,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `paths.contractsDir` elsewhere sent its reviewers to a missing or stale file,
   which they treat as absent evidence. They now name
   `<paths.contractsDir>/tech.md`.
+
+- **The document-schema checker stops an mdschema run that never exits.** Run
+  from the command line, as the shipped document lane runs it, the checker
+  waited on each mdschema run with no time limit, so a run that never exited
+  held the lane until the CI job timed out. It now stops a run after 120
+  seconds, the limit `qfai validate` already applied, and exits 2 saying that
+  mdschema did not finish, never reading the run as a pass or a schema
+  failure. Closes #5033.
 
 - **`qfai doctor` names a shipped workflow it cannot read in
   `workflows.cost`.** The check skipped every read failure as if the workflow
