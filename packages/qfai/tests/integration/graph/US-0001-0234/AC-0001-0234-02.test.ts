@@ -5,7 +5,7 @@ import { documentAnalysisFixture } from "../../../helpers/graphAnalysis.js";
 import { graphCliResult } from "../../../helpers/graphCli.js";
 
 describe("AC-0001-0234-02", () => {
-  it("routes rationale through Graphify and requires a specific code question for a follow-up", async () => {
+  it("routes rationale through Graphify and passes only the stated code question to CodeGraph", async () => {
     const fixture = await documentAnalysisFixture();
 
     try {
