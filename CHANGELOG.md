@@ -626,6 +626,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **`qfai catalog components` stops when it cannot inspect the catalogue.** A
+  catalogue whose metadata could not be read, for example because access was
+  denied, counted as absent, so the command replaced it without checking that it
+  was a file. Only a missing catalogue now counts as absent; any other failure
+  exits 1 with one line naming the catalogue and the cause, and writes or
+  compares nothing. Closes #5114.
+
 - **`qfai validate` compares the decision register when a tracked name under
   the specs directory contains a newline.** One such file anywhere beneath the
   configured specs directory made the base inventory unreadable, and the drift
