@@ -5,6 +5,7 @@ import { isEnoent } from "../fs/errno.js";
 import {
   graphAnalysisStaging,
   graphRetainedDirectory,
+  isGraphAnalysisStaging,
   type GraphAnalysisEngine,
 } from "./layout.js";
 
@@ -75,7 +76,9 @@ export async function replaceGraphDirectory(
 /**
  * Refreshes and checks an independent copy of the active `analysis`, made beside it, and switches
  * the copy in only when `current` accepts what `check` found, so a failed refresh leaves the
- * previous graph paired with the inputs it was built from. The copy is discarded in every case.
+ * previous graph paired with the inputs it was built from. The copy is discarded in every case,
+ * and so are the copies earlier queries could not discard. The caller holds the graph lock, so no
+ * other query is using one of them.
  */
 export async function checkRefreshCopy<T>(
   root: string,
@@ -86,6 +89,7 @@ export async function checkRefreshCopy<T>(
 ): Promise<T> {
   const staged = graphAnalysisStaging(analysis, "refreshing", engine, randomUUID());
   await assertGraphStoragePath(root, staged);
+  await discardLeftoverRefreshCopies(analysis, engine);
   try {
     await cp(analysis, staged, { recursive: true, dereference: false });
     const result = await check(staged);
@@ -94,6 +98,20 @@ export async function checkRefreshCopy<T>(
   } finally {
     await discardRefreshCopy(staged);
   }
+}
+
+/**
+ * Removes, best effort, the refresh copies of `engine` left beside `analysis` by earlier queries,
+ * such as one a Windows process still held open when its query tried to remove it.
+ */
+async function discardLeftoverRefreshCopies(
+  analysis: string,
+  engine: GraphAnalysisEngine,
+): Promise<void> {
+  const parent = path.dirname(analysis);
+  for (const name of await readdir(parent))
+    if (isGraphAnalysisStaging(name, "refreshing", engine))
+      await discardRefreshCopy(path.join(parent, name));
 }
 
 async function discardRefreshCopy(staged: string): Promise<void> {

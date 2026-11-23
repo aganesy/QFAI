@@ -614,6 +614,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to the end of the line when it is never closed; a bare value is still
   blanked to the next whitespace. Closes #5020.
 
+- **A graph query copies the active analysis once and clears the copies
+  earlier queries left.** A document query whose inputs had changed copied
+  and checked the whole active analysis twice when the copy was not current:
+  once to answer, and again before preparing a new analysis. It now prepares
+  straight from the first result. A refresh copy that could not be removed,
+  such as one a Windows process still held open, stayed as a hidden
+  `.refreshing-graphify-<id>` or `.refreshing-codegraph-<id>` folder under
+  `.qfai/tools/analysis/`; the next refresh of that engine removes them first.
+  The corpus walk compares file sizes before it reads any contents, so a file
+  of another size is no longer read in full to find it changed. Closes #5204.
+
 - **A directory whose name begins with two dots counts as inside its base
   everywhere.** Several more checks tested whether a path relative to its base
   began with `..`, so a directory such as `..fixtures` or `..archive` read as
