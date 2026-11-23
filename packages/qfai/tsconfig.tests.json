@@ -57,6 +57,8 @@
     "tests/unit/graph/inventoryFiles.test.ts",
     "tests/unit/graph/completedCorpus.test.ts",
     "tests/unit/graph/corpusSourceSwap.test.ts",
+    "tests/unit/graph/npmCommand.test.ts",
+    "tests/unit/graph/npmPrerequisite.examples.test.ts",
     "tests/unit/graph/documentUpdateFailure.examples.test.ts",
     "tests/unit/graph/graphGitignore.examples.test.ts",
     "tests/unit/graph/ciPolicy.examples.test.ts",

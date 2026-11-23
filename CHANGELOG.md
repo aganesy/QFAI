@@ -646,6 +646,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pass `--paginate`, and the per-item `--jq` filters still print one line per
   run or job.
 
+- **`qfai init` downloads CodeGraph on Windows when npm is not beside Node.**
+  Graph provisioning then started a bare `npm` without a shell, which cannot
+  start Windows' `npm.cmd` launcher, so the download failed. It now finds npm
+  the way `qfai doctor --autoremediate` does, through one shared lookup: npm's
+  JavaScript entry beside Node, else under an absolute `PATH` directory, run
+  with Node. When neither holds one, init reports a failed `npm prerequisite`
+  step that names the missing `npm-cli.js` instead of a failed download.
+
 - **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
   shipped workflow edited to run a job on two operating systems and three
   Node versions was reported as three runner allocations instead of six,
