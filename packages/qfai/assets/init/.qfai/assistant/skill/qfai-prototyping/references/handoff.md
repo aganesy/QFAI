@@ -45,7 +45,15 @@ keys. The prototyping handoff carries three of its own:
       {
         "screen": "<screen id>",
         "region": "<what part of the screen>",
-        "item": "<catalogue item, or the project component it already had>"
+        "item": "<catalogue item, or the project component it already had>",
+        "platformFeatures": [
+          {
+            "feature": "<native element, CSS property or selector, or script API>",
+            "source": "<URL it was looked up in>",
+            "baseline": "<Baseline status that source gave>",
+            "fallback": "<only for a feature newer than the target>"
+          }
+        ]
       }
     ],
     "authored": [
@@ -65,6 +73,10 @@ keys. The prototyping handoff carries three of its own:
 - `procurement` says what realises each screen region, so the implementer
   installs rather than reconstructs. Every screen a UI contract declares
   appears in one of the three lists, with one row per region.
+- `platformFeatures`, on a `procured` or `authored` row, lists each platform
+  feature the region relies on as `progress.md` recorded it, so the
+  implementation uses the same feature. A row whose region relies on none
+  leaves it out.
 - A screen drawn entirely from what the project already had goes under
   `drawn-from-project` rather than being left out. An omitted screen reads
   the same as one the loop recorded nothing for, and an implementer taking

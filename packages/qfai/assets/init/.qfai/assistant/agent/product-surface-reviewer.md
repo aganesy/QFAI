@@ -125,6 +125,22 @@ specialization_tags:
 - Where the `Component catalogue` row of `<paths.contractsDir>/tech.md#stack` names a catalogue, report a
   screen that hand-builds a control that catalogue has, and name the catalogue item. A named catalogue that
   the project never installed is one finding against the setup, not one per screen.
+- Read the browser-support target before the next two items: the `## Technical Constraints` row of
+  `<paths.specsDir>/01_policy/constraint.md` that names it, or Baseline Widely available where none does
+  (`.qfai/assistant/rule/ui-procurement.md#platform-features-and-the-browser-support-target`).
+- Check the procurement record against the code: each platform feature a changed region relies on is
+  recorded with the source URL and the Baseline status it was looked up with, in the handoff's
+  `procurement` row or on a `@platform` line of the component's doc comment
+  (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#platform-features`), and a feature newer
+  than the target has its recorded fallback in the code. A missing record, or such a feature with no
+  fallback, is a finding naming the feature and the region.
+- Report a legacy pattern: changed UI code that a platform feature within the target now replaces, such as
+  a script-built modal where `dialog` serves, a `max-height` hack for an expanding panel, or duplicated
+  `prefers-color-scheme` blocks where `light-dark()` serves. A replacement newer than Baseline Widely
+  available but within the target is this item's to catch, since no `npx qfai validate` warning reads the
+  target. Look the replacement up as that rule section says. File it as excess under the `native` tag; the
+  finding names the legacy code, the replacement and the source URL that shows the replacement's Baseline
+  status. A replacement newer than the target is not a finding.
 - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 - Judge each `qfai-text` and `qfai-text-file` reason comment in the UI source; a reason before an element and a file reason must hold for every text they cover.
   `npx qfai validate` checks only that a reason
