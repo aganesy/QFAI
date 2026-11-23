@@ -739,6 +739,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   whose quoted part never closes, and a `U&"…"` name, record no object rather
   than a wrong prefix such as `u`. Closes #5150.
 
+- **The HTML mock contrast check reads the background CSS applies.** It took
+  the first `background:` or `background-color:` it found in an inline style,
+  so a longer property name ending in `background` could stand in for the real
+  one, and an `!important` background lost to a later plain declaration. It now
+  reads the colour and the background from the parsed declarations, whatever
+  the case of their property names, so `QFAI-MOCK-008` measures the pair CSS
+  applies. A colour inside a `background` shorthand with an image, and a
+  three-digit hex colour, are now measured too. Closes #5135.
+
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
   20,000 files, so a large tree could run out of file descriptors and fail
