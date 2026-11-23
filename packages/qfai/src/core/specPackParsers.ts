@@ -91,15 +91,27 @@ const INDENTED_CODE_LINE = /^(?: {4}|\t)/;
 const LIST_ITEM_LINE = /^\s*(?:[-*+]|\d+[.)])\s/;
 
 /**
- * Start of a CommonMark type-1 raw HTML block. These four tags are the ones
- * whose contents are never parsed as Markdown, and the block runs to its
- * closing tag regardless of blank lines — unlike `<div>` and friends, which end
- * at a blank line and do let Markdown resume.
+ * The CommonMark raw HTML blocks that run to an end marker regardless of blank
+ * lines, in the order CommonMark tries them. The end marker may sit on the
+ * opening line, which then closes the block by itself.
+ *
+ * - Type 1: `<pre>`, `<script>`, `<style>` and `<textarea>`, whose contents are
+ *   never parsed as Markdown, to any of the four closing tags.
+ * - Type 3: a processing instruction, `<?` to `?>`.
+ * - Type 4: a declaration, `<!` and an ASCII letter, to `>`.
+ * - Type 5: a CDATA section, `<![CDATA[` to `]]>`.
+ *
+ * Type 2, the comment, is carried by {@link maskLineComments} instead.
  */
-const RAW_HTML_BLOCK_START = /^ {0,3}<(?:pre|script|style|textarea)(?=[\s/>]|$)/i;
-
-/** End of a type-1 raw HTML block: any of the four closing tags, per CommonMark. */
-const RAW_HTML_BLOCK_END = /<\/(?:pre|script|style|textarea)>/i;
+const END_TERMINATED_HTML_BLOCKS: readonly { start: RegExp; end: RegExp }[] = [
+  {
+    start: /^ {0,3}<(?:pre|script|style|textarea)(?=[\s/>]|$)/i,
+    end: /<\/(?:pre|script|style|textarea)>/i,
+  },
+  { start: /^ {0,3}<\?/, end: /\?>/ },
+  { start: /^ {0,3}<![A-Za-z]/, end: />/ },
+  { start: /^ {0,3}<!\[CDATA\[/, end: /\]\]>/ },
+];
 
 /**
  * CommonMark's type-6 block-level tag names. A line opening or closing one of
@@ -186,6 +198,29 @@ const BLANK_TERMINATED_HTML_START = new RegExp(
   "i",
 );
 
+/** A CommonMark attribute: a name and an optional unquoted or quoted value. */
+const HTML_ATTRIBUTE = String.raw`\s+[A-Za-z_:][A-Za-z0-9_.:-]*(?:\s*=\s*(?:[^\s"'=<>\x60]+|'[^']*'|"[^"]*"))?`;
+
+/** A CommonMark tag name, other than the four type-1 names. */
+const SINGLE_TAG_NAME = String.raw`(?!(?:pre|script|style|textarea)(?![A-Za-z0-9-]))[A-Za-z][A-Za-z0-9-]*`;
+
+/**
+ * Start of a CommonMark type-7 raw HTML block: a line holding nothing but one
+ * complete open or closing tag of any name, a custom element such as
+ * `<review-note>` included. Like type 6 it runs to the next blank line, but
+ * unlike type 6 it cannot interrupt a paragraph.
+ */
+const SINGLE_TAG_HTML_START = new RegExp(
+  String.raw`^ {0,3}(?:<${SINGLE_TAG_NAME}(?:${HTML_ATTRIBUTE})*\s*/?>|</${SINGLE_TAG_NAME}\s*>)\s*$`,
+  "i",
+);
+
+/**
+ * A visible line that leaves no paragraph open behind it: an ATX heading, a
+ * setext underline or a thematic break.
+ */
+const NON_PARAGRAPH_LINE = /^ {0,3}(?:#{1,6}(?:[ \t]|$)|=+[ \t]*$|-+[ \t]*$|(?:[-*_][ \t]*){3,}$)/;
+
 /**
  * Blanks the regions of a spec document that are not the spec, preserving line
  * count: fenced code blocks, HTML comments, raw HTML blocks, and top-level
@@ -203,10 +238,11 @@ const BLANK_TERMINATED_HTML_START = new RegExp(
  * document. Comments are stripped before the fence check on a line, so a fence
  * marker that only appears inside a comment does not open a block either.
  *
- * **Raw HTML blocks are blanked too.** `<pre>`, `<script>`, `<style>` and
- * `<textarea>` hold literal text, so a `## Risks` line inside one is not a
- * heading and a `| TC-ID |` row inside one is not a table row — reading either
- * as spec content lets a document satisfy a gate with markup it never wrote.
+ * **Raw HTML blocks are blanked too**, all seven CommonMark types. A `<pre>`, a
+ * CDATA section, a `<div>` or a custom element such as `<review-note>` holds
+ * literal text, so a `## Risks` line inside one is not a heading and a
+ * `| TC-ID |` row inside one is not a table row — reading either as spec
+ * content lets a document satisfy a gate with markup it never wrote.
  *
  * **Indented code is recognised only at the top level.** Under a list item,
  * four-space indentation is continuation rather than code, and telling the two
@@ -219,109 +255,129 @@ export function maskNonSpecRegions(text: string): string {
   let open: { marker: string; length: number } | null = null;
   let inComment = false;
   let inIndentedCode = false;
-  let inRawHtml = false;
+  let rawHtmlEnd: RegExp | null = null;
   let inBlankTerminatedHtml = false;
   let listOpen = false;
   let prevBlank = true;
+  // Whether the line before is visible paragraph text, which a type-7 block
+  // cannot interrupt.
+  //
+  // SIMPLIFIED: every visible line other than a heading, a setext underline or
+  // a thematic break counts as paragraph text, a table row included.
+  // Lift when: a document opens a custom-element block straight under a table
+  // row and needs it blanked, which none in this tree does.
+  let paragraphOpen = false;
+
+  const maskLine = (line: string): string => {
+    if (open !== null) {
+      const closing = FENCE_CLOSE_LINE.exec(line)?.[1];
+      if (closing && closing.charAt(0) === open.marker && closing.length >= open.length) {
+        open = null;
+      }
+      return "";
+    }
+
+    if (rawHtmlEnd !== null) {
+      // The line holding the end marker belongs to the block, so it is
+      // blanked as well.
+      if (rawHtmlEnd.test(line)) {
+        rawHtmlEnd = null;
+      }
+      return "";
+    }
+
+    const blank = line.trim().length === 0;
+
+    if (inBlankTerminatedHtml) {
+      // The blank line ends the block and is itself outside it, so it is kept
+      // — it is what lets the next line open a paragraph or a heading again.
+      if (blank) {
+        inBlankTerminatedHtml = false;
+        prevBlank = true;
+        return line;
+      }
+      return "";
+    }
+
+    if (inIndentedCode) {
+      // A blank line does not end the block — an indented sample may contain
+      // one — but the first non-blank line at a shallower indent does.
+      if (blank || INDENTED_CODE_LINE.test(line)) {
+        prevBlank = blank;
+        return "";
+      }
+      inIndentedCode = false;
+    } else if (!listOpen && prevBlank && !blank && INDENTED_CODE_LINE.test(line)) {
+      inIndentedCode = true;
+      prevBlank = false;
+      return "";
+    }
+
+    if (LIST_ITEM_LINE.test(line)) {
+      listOpen = true;
+    } else if (!blank && !/^\s/.test(line)) {
+      // A non-blank line at column zero that is not a list item ends the list,
+      // so indentation after it is code again.
+      listOpen = false;
+    }
+    prevBlank = blank;
+
+    // The fence opener is read before the comment scan, because a `<!--` in
+    // an info string labels the sample rather than opening a comment. Only
+    // when a comment is already open does the scan come first: a fence marker
+    // inside one is comment text.
+    if (!inComment) {
+      const opener = FENCE_LINE.exec(line)?.[1];
+      if (opener) {
+        open = { marker: opener.charAt(0), length: opener.length };
+        return "";
+      }
+    }
+
+    const masked = maskLineComments(line, inComment);
+    // A line that opens with a comment, or that an open comment runs into,
+    // is comment through its end: CommonMark makes it an HTML block up to
+    // the line holding `-->`. Stripping the comment alone would hand back
+    // what follows it at the start of a line, so `<!-- note --> ## Risks`
+    // would read as a heading and a ```` ``` ```` after a closing `-->` as a
+    // fence that hides the rest of the document.
+    const commentLine = inComment || COMMENT_BLOCK_START.test(line);
+    inComment = masked.open;
+    if (commentLine) {
+      return "";
+    }
+
+    const fence = FENCE_LINE.exec(masked.text)?.[1];
+    if (fence) {
+      open = { marker: fence.charAt(0), length: fence.length };
+      return "";
+    }
+
+    const block = END_TERMINATED_HTML_BLOCKS.find(({ start }) => start.test(masked.text));
+    if (block) {
+      // A one-line `<pre>…</pre>` or `<!DOCTYPE html>` opens and closes on
+      // the same line.
+      rawHtmlEnd = block.end.test(masked.text) ? null : block.end;
+      return "";
+    }
+
+    // Checked after types 1 to 5, which win where they overlap, and after
+    // the fence check, so `<div>` inside a fenced sample is sample text.
+    if (
+      BLANK_TERMINATED_HTML_START.test(masked.text) ||
+      (!paragraphOpen && SINGLE_TAG_HTML_START.test(masked.text))
+    ) {
+      inBlankTerminatedHtml = true;
+      return "";
+    }
+    return masked.text;
+  };
 
   return lines
     .map((line) => {
-      if (open !== null) {
-        const closing = FENCE_CLOSE_LINE.exec(line)?.[1];
-        if (closing && closing.charAt(0) === open.marker && closing.length >= open.length) {
-          open = null;
-        }
-        return "";
-      }
-
-      if (inRawHtml) {
-        // The closing-tag line belongs to the block, so it is blanked as well.
-        if (RAW_HTML_BLOCK_END.test(line)) {
-          inRawHtml = false;
-        }
-        return "";
-      }
-
-      const blank = line.trim().length === 0;
-
-      if (inBlankTerminatedHtml) {
-        // The blank line ends the block and is itself outside it, so it is kept
-        // — it is what lets the next line open a paragraph or a heading again.
-        if (blank) {
-          inBlankTerminatedHtml = false;
-          prevBlank = true;
-          return line;
-        }
-        return "";
-      }
-
-      if (inIndentedCode) {
-        // A blank line does not end the block — an indented sample may contain
-        // one — but the first non-blank line at a shallower indent does.
-        if (blank || INDENTED_CODE_LINE.test(line)) {
-          prevBlank = blank;
-          return "";
-        }
-        inIndentedCode = false;
-      } else if (!listOpen && prevBlank && !blank && INDENTED_CODE_LINE.test(line)) {
-        inIndentedCode = true;
-        prevBlank = false;
-        return "";
-      }
-
-      if (LIST_ITEM_LINE.test(line)) {
-        listOpen = true;
-      } else if (!blank && !/^\s/.test(line)) {
-        // A non-blank line at column zero that is not a list item ends the list,
-        // so indentation after it is code again.
-        listOpen = false;
-      }
-      prevBlank = blank;
-
-      // The fence opener is read before the comment scan, because a `<!--` in
-      // an info string labels the sample rather than opening a comment. Only
-      // when a comment is already open does the scan come first: a fence marker
-      // inside one is comment text.
-      if (!inComment) {
-        const opener = FENCE_LINE.exec(line)?.[1];
-        if (opener) {
-          open = { marker: opener.charAt(0), length: opener.length };
-          return "";
-        }
-      }
-
-      const masked = maskLineComments(line, inComment);
-      // A line that opens with a comment, or that an open comment runs into,
-      // is comment through its end: CommonMark makes it an HTML block up to
-      // the line holding `-->`. Stripping the comment alone would hand back
-      // what follows it at the start of a line, so `<!-- note --> ## Risks`
-      // would read as a heading and a ```` ``` ```` after a closing `-->` as a
-      // fence that hides the rest of the document.
-      const commentLine = inComment || COMMENT_BLOCK_START.test(line);
-      inComment = masked.open;
-      if (commentLine) {
-        return "";
-      }
-
-      const fence = FENCE_LINE.exec(masked.text)?.[1];
-      if (fence) {
-        open = { marker: fence.charAt(0), length: fence.length };
-        return "";
-      }
-
-      if (RAW_HTML_BLOCK_START.test(masked.text)) {
-        // A one-line `<pre>…</pre>` opens and closes on the same line.
-        inRawHtml = !RAW_HTML_BLOCK_END.test(masked.text);
-        return "";
-      }
-
-      // Checked after type 1, which wins where the two overlap, and after the
-      // fence check, so `<div>` inside a fenced sample is sample text.
-      if (BLANK_TERMINATED_HTML_START.test(masked.text)) {
-        inBlankTerminatedHtml = true;
-        return "";
-      }
-      return masked.text;
+      const visibleLine = maskLine(line);
+      paragraphOpen = visibleLine.trim().length > 0 && !NON_PARAGRAPH_LINE.test(visibleLine);
+      return visibleLine;
     })
     .join("\n");
 }

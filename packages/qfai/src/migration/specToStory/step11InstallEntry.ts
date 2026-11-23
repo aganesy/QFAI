@@ -231,19 +231,23 @@ function installOperation(
  * undone. A failure at any point leaves the project's copy where it was. When
  * the undo fails too, the project's copy stays where the first rename put it
  * and the error names that path. The staging directory is removed otherwise;
- * a failure to remove it does not fail the operation.
+ * a failure to remove it does not fail the operation. When the replacement is
+ * in place but its staging directory, which then holds the project's earlier
+ * copy, could not be removed, `onLeftover` is given that directory.
  */
 async function replaceFromPackage(
   layer: Layer,
   id: string,
   dir: string,
   shipped: ReadonlyMap<string, ComparedFile>,
+  onLeftover: (holder: string) => void,
 ): Promise<void> {
   const holder = await mkdtemp(path.join(path.dirname(dir), `.${id}-replace-`));
   const staged = path.join(holder, "new");
   const previous = path.join(holder, "previous");
   // True while `previous` holds the project's only copy, which cleanup must keep.
   let projectCopyAside = false;
+  let replaced = false;
   try {
     await copyTemplatePaths(path.join(packageQfaiAssets(), "assistant", layer), holder, [id], {
       force: false,
@@ -267,8 +271,10 @@ async function replaceFromPackage(
       throw error;
     }
     projectCopyAside = false;
+    replaced = true;
   } finally {
-    await removeQuietly(projectCopyAside ? staged : holder);
+    const removed = await removeQuietly(projectCopyAside ? staged : holder);
+    if (replaced && !removed) onLeftover(holder);
   }
 }
 
@@ -296,14 +302,16 @@ async function restoreProjectCopy(
 }
 
 /**
- * Removes a staging path. A failure here comes after the outcome is settled, so
- * it neither fails a finished replacement nor hides the error of a failed one.
+ * Removes a staging path, and says whether it is gone. A failure here comes
+ * after the outcome is settled, so it neither fails a finished replacement nor
+ * hides the error of a failed one.
  */
-async function removeQuietly(target: string): Promise<void> {
+async function removeQuietly(target: string): Promise<boolean> {
   try {
     await rm(target, { recursive: true, force: true, maxRetries: 3 });
+    return true;
   } catch {
-    // Left under a hidden `.<id>-replace-*` directory beside the layer; nothing reads it.
+    return false;
   }
 }
 
@@ -312,6 +320,7 @@ function replaceOperation(
   layer: Layer,
   id: string,
   shipped: ReadonlyMap<string, ComparedFile>,
+  plan: StepPlan,
 ): MigrationOperation {
   const dir = layerDir(context, layer, id);
   const shown = projectPath(context, dir);
@@ -327,7 +336,13 @@ function replaceOperation(
       `${shown}: delete the project's copy`,
       ...installed.map((target) => `${target}: install from the package`),
     ],
-    apply: () => replaceFromPackage(layer, id, dir, shipped),
+    apply: () =>
+      replaceFromPackage(layer, id, dir, shipped, (holder) => {
+        // The directory sits under the tracked `.qfai/assistant/` tree, so a commit would take it.
+        plan.forAPerson?.push(
+          `${projectPath(context, holder)}: step 11 could not remove this staging directory, which holds the project's earlier copy of ${shown}; delete it before you commit`,
+        );
+      }),
   };
 }
 
@@ -346,7 +361,7 @@ async function planLayerEntry(
   const current = await treeFiles(layerDir(context, layer, id));
   if (current !== null && (await sameTree(current, shipped))) return;
   if (current !== null) {
-    plan.operations.push(replaceOperation(context, layer, id, shipped));
+    plan.operations.push(replaceOperation(context, layer, id, shipped, plan));
     return;
   }
   const install = installOperation(context, layer, id, [...shipped.keys()].sort());

@@ -107,7 +107,9 @@ export async function readPinnedRegularFileBytes(
     handle = await open(filePath, OPEN_READ_FLAGS);
     const pinned = await handle.stat();
     if (!pinned.isFile() || pinned.size > maxBytes) return null;
-    const content = await readHandleWithin(handle, maxBytes);
+    // Sized from this `fstat`, so a small file costs a small buffer; a file that grew past it since
+    // is answered `null`, as a file past the ceiling is, never as a prefix.
+    const content = await readHandleWithin(handle, Math.min(pinned.size, maxBytes));
     if (content === undefined) return null;
     // The metadata comes from this `fstat`, not from a separate `stat` on the
     // pathname. Two operations could land on two inodes: content read from a

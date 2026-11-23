@@ -1,15 +1,18 @@
 /**
  * The pinned text reader answers what the pinned byte reader answers, decoded
  * as UTF-8: the whole text of a bounded regular file, and `null` for a file
- * past the ceiling or a directory.
+ * past the ceiling or a directory. Neither holds more memory than the file needs.
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { readPinnedRegularFile } from "../../../src/core/init/fsGuards.js";
+import {
+  readPinnedRegularFile,
+  readPinnedRegularFileBytes,
+} from "../../../src/core/init/fsGuards.js";
 
 const tempDirs: string[] = [];
 
@@ -54,5 +57,20 @@ describe("readPinnedRegularFile", () => {
     await mkdir(sub);
 
     expect(await readPinnedRegularFile(sub, 64)).toBeNull();
+  });
+
+  it("sizes its buffer from the file, not from the ceiling", async () => {
+    const dir = await newTempDir();
+    const file = path.join(dir, "small.txt");
+    await writeFile(file, "small", "utf-8");
+    const alloc = vi.spyOn(Buffer, "alloc");
+    try {
+      const read = await readPinnedRegularFileBytes(file, 16 * 1024 * 1024);
+      expect(read?.content.toString("utf-8")).toBe("small");
+      const sizes = alloc.mock.calls.map(([size]) => size);
+      expect(sizes.every((size) => size <= "small".length + 1)).toBe(true);
+    } finally {
+      alloc.mockRestore();
+    }
   });
 });

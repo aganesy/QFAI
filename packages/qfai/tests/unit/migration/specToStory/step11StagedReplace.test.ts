@@ -15,6 +15,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type * as templateCopyModule from "../../../../src/core/fs/templateCopy.js";
+import type { StepPlan } from "../../../../src/migration/specToStory/harness.js";
 
 type FsPromises = typeof fsPromises;
 type TemplateCopy = typeof templateCopyModule;
@@ -81,7 +82,8 @@ async function customisedProject(): Promise<string> {
   return root;
 }
 
-async function replaceSkill(root: string): Promise<void> {
+/** Applies step 11's skill operations and returns the plan, as the harness reports it afterwards. */
+async function replaceSkill(root: string): Promise<StepPlan> {
   const plan = await step11.plan({
     root,
     specsDir: path.join(root, ".qfai", "spec"),
@@ -97,6 +99,7 @@ async function replaceSkill(root: string): Promise<void> {
     }
     await operation.apply();
   }
+  return plan;
 }
 
 async function skillText(root: string): Promise<string> {
@@ -209,12 +212,26 @@ describe("step 11 stages a replacement before it moves the project's copy", () =
       }
       return actual.rm(...args);
     });
-    await replaceSkill(root);
+    const plan = await replaceSkill(root);
     const shipped = await readFile(
       path.join(getInitAssetsDir(), ".qfai", "assistant", "skill", SKILL, "SKILL.md"),
       "utf8",
     );
     expect(await skillText(root)).toBe(shipped);
+    // The leftover directory holds the project's earlier copy under the tracked tree,
+    // so the report names it for a person to delete.
+    const leftover = (await skillParent(root)).filter(isStagingPath);
+    expect(leftover).toHaveLength(1);
+    const shown = [".qfai", "assistant", "skill", leftover[0] ?? ""].join("/");
+    expect(plan.forAPerson?.filter((item) => item.includes(`.${SKILL}-replace-`))).toEqual([
+      `${shown}: step 11 could not remove this staging directory, which holds the project's earlier copy of .qfai/assistant/skill/${SKILL}; delete it before you commit`,
+    ]);
+  });
+
+  it("names no staging directory for a person when it is removed", async () => {
+    const root = await customisedProject();
+    const plan = await replaceSkill(root);
+    expect(plan.forAPerson?.filter((item) => item.includes(`.${SKILL}-replace-`))).toEqual([]);
   });
 
   it("puts the package's copy in place and leaves nothing beside it", async () => {

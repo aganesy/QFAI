@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { runSddPreflightCommand } from "../../../src/cli/commands/sddPreflight.js";
 import { resolveToolPackageDir } from "../../../src/core/version.js";
+import { createSymlinkFixture } from "../../helpers/symlinkFixture.js";
 
 const RECORD_NAME = "20261112093000-task-dashboard.md";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../..");
@@ -444,6 +445,36 @@ describe("qfai sdd preflight", () => {
       "- OQ-0001 carried over to the next phase\n",
     );
     await expect(stat(path.join(root, ".qfai", "report", "preflight"))).rejects.toThrow();
+  });
+
+  // QFAI:EX-0001-0151-04
+  it("reads no carry-over from a previous summary that links outside the project", async (ctx) => {
+    // The linked summary is replaced, not written through, so what it links to
+    // is not this project's previous summary either.
+    const root = await newTempRoot();
+    const outside = await newTempRoot();
+    await seedRecord(root);
+    const escapee = path.join(outside, "someone-elses.md");
+    const foreign = "## Open Questions (Carry-over)\n\n- someone else's note\n";
+    await writeFile(escapee, foreign, "utf-8");
+    const summaryPath = path.join(root, ".qfai", "report", "preflight_summary.md");
+    await mkdir(path.dirname(summaryPath), { recursive: true });
+    if (!(await createSymlinkFixture(escapee, summaryPath, "file"))) ctx.skip();
+
+    const sinks = newSinks();
+    expect(
+      await runSddPreflightCommand({
+        root,
+        recordPath: RECORD_NAME,
+        write: sinks.write,
+        writeErr: sinks.writeErr,
+      }),
+    ).toBe(0);
+
+    expect(await readFile(escapee, { encoding: "utf-8" })).toBe(foreign);
+    const summary = await readFile(summaryPath, { encoding: "utf-8" });
+    expect(summary).not.toContain("someone else's note");
+    expect(summary.slice(summary.indexOf("## Open Questions (Carry-over)"))).toContain("- none");
   });
 
   it("names the output directory, not the summary, when the output directory is a file", async () => {
