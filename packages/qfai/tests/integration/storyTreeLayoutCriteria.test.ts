@@ -464,9 +464,8 @@ describe("the document schema entries of the story tree", () => {
     ).toEqual(["docs/spec/open-questions.md"]);
   });
 
-  // QFAI:AC-0001-0011-02
-  it("passes the document-schema and Mermaid lanes on the sample tree built from the templates", async () => {
-    const root = await newRoot();
+  /** The sample tree built from the templates, with one flow and one story, under `root`. */
+  async function writeSampleTree(root: string): Promise<void> {
     await put(
       root,
       "qfai.config.yaml",
@@ -485,21 +484,72 @@ describe("the document schema entries of the story tree", () => {
           : template,
       );
     }
+  }
 
-    const lane = (script: string, args: string[]) => {
-      const run = spawnSync(process.execPath, [path.join(REPO_ROOT, "scripts", script), ...args], {
-        cwd: REPO_ROOT,
-        encoding: "utf8",
-        timeout: 120_000,
-      });
-      return { status: run.status, stdout: run.stdout ?? "", stderr: run.stderr ?? "" };
-    };
+  /** One repository lane script run from the repository root. */
+  function lane(script: string, args: string[]) {
+    const run = spawnSync(process.execPath, [path.join(REPO_ROOT, "scripts", script), ...args], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+      timeout: 120_000,
+    });
+    return { status: run.status, stdout: run.stdout ?? "", stderr: run.stderr ?? "" };
+  }
+
+  // QFAI:AC-0001-0011-02
+  it("passes the document-schema and Mermaid lanes on the sample tree built from the templates", async () => {
+    const root = await newRoot();
+    await writeSampleTree(root);
+
     const schema = lane("check-mdschema.mjs", ["--root", root, "--scope", "all"]);
     expect(schema.status, schema.stderr).toBe(0);
     expect(schema.stdout).toContain("17 file(s) conform");
     const mermaid = lane("check-mermaid.mjs", [root]);
     expect(mermaid.status, mermaid.stderr).toBe(0);
     expect(mermaid.stdout).toMatch(/\d+ diagram\(s\) parsed/);
+  }, 240_000);
+
+  // QFAI:AC-0001-0011-08
+  it("holds a branch under --scope changed to what it changed since the merge base", async () => {
+    const root = await newRoot();
+    const git = (...args: string[]): void => {
+      const done = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+      expect(done.status, done.stderr).toBe(0);
+    };
+    const flow = `${SPECS}/02_business-flow/business-flow-0001/business-flow.md`;
+    const legacy = `${SPECS}/02_business-flow/business-flow-0002/business-flow.md`;
+    const legacyText =
+      "# flow: a heading the schema does not accept\n\n## Metadata\n\n- something\n";
+    git("init", "-q", "-b", "main", ".");
+    git("config", "core.autocrlf", "false");
+    git("config", "user.email", "lane@example.com");
+    git("config", "user.name", "lane");
+    await writeSampleTree(root);
+    await put(root, legacy, legacyText);
+    git("add", "-A");
+    git("commit", "-qm", "base");
+    git("checkout", "-q", "-b", "work");
+
+    // The branch edits a document that already failed at the merge base and
+    // only re-normalises the line endings of a conforming one.
+    const conforming = await readFile(path.join(root, flow), "utf8");
+    await put(root, legacy, `${legacyText}- one more line\n`);
+    await put(root, flow, conforming.replace(/\n/g, "\r\n"));
+    git("commit", "-qam", "edit");
+    const changed = ["--root", root, "--scope", "changed", "--base", "main", "--summary"];
+    const inherited = lane("check-mdschema.mjs", changed);
+    expect(inherited.status, inherited.stderr).toBe(0);
+    expect(inherited.stdout).toContain("pre-existing, not this branch's");
+    expect(inherited.stdout).toContain("business-flow-0002");
+    expect(inherited.stdout).not.toContain("business-flow-0001");
+
+    // Breaking the document that conformed at the merge base is the branch's own failure.
+    await put(root, flow, conforming.replace(/^## Flow\n[\s\S]*?(?=^## |(?![\s\S]))/m, ""));
+    git("commit", "-qam", "break");
+    const owed = lane("check-mdschema.mjs", changed);
+    expect(owed.status).toBe(1);
+    expect(owed.stderr).toContain("business-flow-0001");
+    expect(owed.stderr).not.toContain("business-flow-0002");
   }, 240_000);
 });
 
