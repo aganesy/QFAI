@@ -27,6 +27,7 @@ export type SqlParseError = {
     | "unterminated-comment"
     | "unterminated-dollar-quote"
     | "unbalanced-parens"
+    | "unbalanced-brackets"
     | "unmatched-close-paren";
   /** 1-based line where the offending construct opened, or where a stray `)` sits. */
   line: number;
@@ -83,9 +84,19 @@ const DOLLAR_QUOTE_AT = new RegExp(DOLLAR_QUOTE_MARKER.source, "y");
  * as a dozen malformed fragments, which is worse than not checking at all.
  *
  * Recognised: single-quoted strings with `''` escaping, `E'…'` escape strings
- * whose backslash escapes the next character, double-quoted identifiers, `--`
- * line comments, C-style block comments (nested, as PostgreSQL allows), and
+ * whose backslash escapes the next character, double-quoted identifiers and
+ * MySQL backtick identifiers with a doubled quote as its escape, `--` line
+ * comments, C-style block comments (nested, as PostgreSQL allows), and
  * `$tag$ … $tag$` dollar quoting.
+ *
+ * `[ … ]` is a SQL Server identifier and a PostgreSQL array subscript or
+ * constructor, so it is read as a nesting group: a `(`, `)` or `;` inside it
+ * is not counted, while a string inside it is still a string.
+ *
+ * Ceiling: a SQL Server bracket name holding a quote, a `[` or the escaped
+ * `]]` is not read, since PostgreSQL gives those characters their own meaning
+ * inside a subscript.
+ * Lift when: a contract needs such a name.
  */
 export function parseSqlContract(text: string): SqlParseResult {
   const statements: SqlStatement[] = [];
@@ -95,6 +106,8 @@ export function parseSqlContract(text: string): SqlParseResult {
   let line = 1;
   let depth = 0;
   let openParenLine = 0;
+  let bracketDepth = 0;
+  let openBracketLine = 0;
   let current = "";
   let currentLine = 0;
 
@@ -195,7 +208,7 @@ export function parseSqlContract(text: string): SqlParseResult {
     }
 
     // String literal / quoted identifier
-    if (ch === "'" || ch === '"') {
+    if (ch === "'" || ch === '"' || ch === "`") {
       const openedAt = line;
       const quote = ch;
       const escapes = quote === "'" && opensEscapeString(text, index);
@@ -238,10 +251,16 @@ export function parseSqlContract(text: string): SqlParseResult {
       continue;
     }
 
-    if (ch === "(") {
+    if (ch === "[") {
+      if (bracketDepth === 0) openBracketLine = line;
+      bracketDepth += 1;
+    } else if (ch === "]") {
+      if (bracketDepth > 0) bracketDepth -= 1;
+    } else if (ch === "(" && bracketDepth === 0) {
+      // Inside a bracket a parenthesis is part of the name or subscript.
       if (depth === 0) openParenLine = line;
       depth += 1;
-    } else if (ch === ")") {
+    } else if (ch === ")" && bracketDepth === 0) {
       if (depth === 0) {
         // A `)` that closes nothing makes the statement unrunnable; it is
         // reported where it sits, and the depth stays at zero.
@@ -255,7 +274,7 @@ export function parseSqlContract(text: string): SqlParseResult {
       }
     }
 
-    if (ch === ";" && depth === 0) {
+    if (ch === ";" && depth === 0 && bracketDepth === 0) {
       push();
       index += 1;
       continue;
@@ -271,6 +290,13 @@ export function parseSqlContract(text: string): SqlParseResult {
       kind: "unbalanced-parens",
       line: openParenLine || lineOf(text.length),
       detail: `${depth} unclosed "(" at end of file`,
+    });
+  }
+  if (bracketDepth > 0) {
+    errors.push({
+      kind: "unbalanced-brackets",
+      line: openBracketLine,
+      detail: `${bracketDepth} unclosed "[" at end of file`,
     });
   }
   push();
@@ -325,7 +351,7 @@ export function separateLiterals(statement: string): StatementParts {
         continue;
       }
     }
-    if (ch === "'" || ch === '"') {
+    if (ch === "'" || ch === '"' || ch === "`") {
       const escapes = ch === "'" && opensEscapeString(statement, index);
       let cursor = index + 1;
       let value = "";
