@@ -659,6 +659,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   process had created. The cleanup now runs only once the temporary file has
   been created by the same call. Closes #5086.
 
+- **A lock dated in the future is no longer read as still being taken.** A
+  graph lock, or a `qfai catalog design` lock, with no complete owner record
+  and a modification time ahead of the clock (clock skew between hosts, a
+  network filesystem, a copied time) told the caller to retry until the clock
+  caught up. It is now reported for manual recovery straight away, as an
+  incomplete lock older than ten seconds is. Closes #5190.
+
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
   no `id` was reported under an ID made up from its file name, which

@@ -52,8 +52,8 @@ it("retains contended and abandoned analysis locks with retry or exact manual re
 });
 
 // QFAI:EX-0001-0236-20
-it("reports a lock whose owner record is still being written as contention, and an old one as abandoned", async () => {
-  for (const state of ["initializing", "abandoned"] as const) {
+it("reports a lock whose owner record is still being written as contention, and an old or future-dated one as abandoned", async () => {
+  for (const state of ["initializing", "abandoned", "future"] as const) {
     const fixture = await codeAnalysisFixture();
     try {
       const directory = path.join(fixture.root, ".qfai", "tools", "state", graphEnvironmentKey());
@@ -61,9 +61,10 @@ it("reports a lock whose owner record is still being written as contention, and 
       const lock = path.join(directory, "analysis.lock");
       // The exclusive create publishes an empty file before the owner record lands in it.
       await writeFile(lock, "");
-      if (state === "abandoned") {
-        const old = new Date(Date.now() - 60_000);
-        await utimes(lock, old, old);
+      if (state !== "initializing") {
+        // A future time stands for clock skew between hosts: no writer is still creating it.
+        const stamp = new Date(Date.now() + (state === "abandoned" ? -60_000 : 60_000));
+        await utimes(lock, stamp, stamp);
       }
       const answer = await graphCliResult(fixture.root, ["code", "checkout callers"], fixture.run);
       expect(answer.value).toMatchObject({
