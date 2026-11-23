@@ -69,6 +69,13 @@ export async function runCatalogComponents(options: CatalogComponentsOptions): P
   }
   const text = renderCatalog(scan.components);
   if (options.check) {
+    const unreadable = await unsafeCatalogPath(root);
+    if (unreadable !== null) {
+      error(
+        `qfai catalog components: could not read ${target}, so nothing was compared: ${unreadable}`,
+      );
+      return EXIT_CODES.findings;
+    }
     const committed = await readCatalog(root);
     if (committed.state === "read" && sameCatalogText(committed.text, text)) {
       info(`${target} is up to date: ${scan.components.length} component(s).`);
@@ -116,10 +123,7 @@ async function writeCatalog(root: string, text: string): Promise<string | null> 
     await assertInsideProject(root, segments);
     await mkdir(path.dirname(file), { recursive: true });
     await assertInsideProject(root, segments);
-    const existing = await lstat(file).catch(() => null);
-    if (existing !== null && !existing.isFile()) {
-      throw new Error(`${segments.join("/")} is not a file.`);
-    }
+    await assertFileOrAbsent(file, segments);
     temporary = path.join(path.dirname(file), `.${path.basename(file)}.${randomUUID()}.tmp`);
     const handle = await open(temporary, "wx");
     try {
@@ -144,6 +148,30 @@ async function writeCatalog(root: string, text: string): Promise<string | null> 
 
 function messageOf(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
+}
+
+/**
+ * Why the committed catalogue cannot be read inside the project, by the guard the write uses: a
+ * linked or non-directory entry on its path, or a catalogue path that is a link or not a file.
+ * Null when it can be read, or is absent.
+ */
+async function unsafeCatalogPath(root: string): Promise<string | null> {
+  const segments = COMPONENT_CATALOG_PATH.split(path.sep);
+  try {
+    await assertInsideProject(root, segments);
+    await assertFileOrAbsent(path.join(root, ...segments), segments);
+    return null;
+  } catch (caught) {
+    return messageOf(caught);
+  }
+}
+
+/** Throws when an entry is at the catalogue path and it is not a file. */
+async function assertFileOrAbsent(file: string, segments: readonly string[]): Promise<void> {
+  const existing = await lstat(file).catch(() => null);
+  if (existing !== null && !existing.isFile()) {
+    throw new Error(`${segments.join("/")} is not a file.`);
+  }
 }
 
 /** Throws when a component of the catalogue path would lead a write outside the project. */
