@@ -557,6 +557,12 @@ function declared(files) {
   return new Set(files.flatMap((file) => file.ids));
 }
 
+/** What a failed git call printed, else the error's message. */
+function failureText(cause) {
+  const stderr = cause?.stderr === undefined ? "" : String(cause.stderr).trim();
+  return stderr === "" ? String(cause?.message ?? cause) : stderr;
+}
+
 /**
  * Fetches main and every listed head into refs only this run writes, and
  * returns main's commit and each head's commit.
@@ -566,7 +572,8 @@ function declared(files) {
  * which commits are compared. The run's refs keep the fetched commits
  * reachable while `use` reads them, and are deleted when it returns. The
  * refspecs go on stdin: every open pull request's refspec can outgrow a
- * Windows command line.
+ * Windows command line. A deletion that fails is reported with the namespace
+ * to delete, and leaves the fetch's or the caller's outcome in place.
  */
 function withFetchedHeads(reader, pulls, use) {
   const namespace = `refs/story-ids/${String(process.pid)}-${randomBytes(6).toString("hex")}`;
@@ -584,8 +591,15 @@ function withFetchedHeads(reader, pulls, use) {
     const refs = reader.text(["for-each-ref", "--format=%(objectname) %(refname)", namespace]);
     return use(fetchedHeads(refs, namespace, pulls));
   } finally {
-    const written = reader.text(["for-each-ref", "--format=delete %(refname)", namespace]);
-    if (written !== "") reader.git(["update-ref", "--stdin"], written);
+    try {
+      const written = reader.text(["for-each-ref", "--format=delete %(refname)", namespace]);
+      if (written !== "") reader.git(["update-ref", "--stdin"], written);
+    } catch (cause) {
+      console.error(`The refs under ${namespace}/ were not deleted: ${failureText(cause)}`);
+      console.error(
+        `Delete them with: git for-each-ref --format="delete %(refname)" ${namespace} | git update-ref --stdin`,
+      );
+    }
   }
 }
 
@@ -730,8 +744,7 @@ export async function run(argv, options = {}) {
         : checkCommand(reader, pulls, heads),
     );
   } catch (cause) {
-    const stderr = cause?.stderr === undefined ? "" : String(cause.stderr).trim();
-    console.error(stderr === "" ? String(cause?.message ?? cause) : stderr);
+    console.error(failureText(cause));
     return 2;
   }
   return code === 0 ? listed : code;
