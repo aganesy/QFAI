@@ -667,6 +667,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   while the cached sessions and storage states are removed either way.
   Closes #4929. Closes #4931.
 
+- **`qfai init` keeps reminder-hook settings another writer changed while it
+  ran.** The hook merge read `.claude/settings.json` or `.codex/hooks.json`,
+  planned the new text, and renamed it into place later, so a file created or
+  edited in between was replaced. A file the merge found absent is now created
+  only if nothing is there yet, and an existing one is replaced only while its
+  text is still what the merge read; otherwise the file is left as the other
+  writer made it, a warning names it, and init carries on. Migration step 11,
+  which uses the same merge, stops naming the file instead. Closes #5017.
+
 - **`qfai sdd preflight` keeps a carry-over entry that starts with `<`.** A
   flagless re-run dropped every recorded entry opening with a less-than sign,
   such as a tag or a comparison, as if it were the template's placeholder.

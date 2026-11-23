@@ -36,7 +36,13 @@ import { findUnsafeHostFileComponent } from "../../core/init/fsGuards.js";
 import { replaceFile } from "../../core/runLog.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { normalizeNewlines } from "../../shared/text.js";
-import type { MigrationContext, MigrationOperation, MigrationStep, StepPlan } from "./harness.js";
+import {
+  MigrationInputError,
+  type MigrationContext,
+  type MigrationOperation,
+  type MigrationStep,
+  type StepPlan,
+} from "./harness.js";
 import { step10 } from "./step10UpdateGitignore.js";
 
 const AGENTS_RULES_DIR = ".agents/rules";
@@ -437,7 +443,10 @@ async function planReminderHookFiles(context: MigrationContext, plan: StepPlan):
         hooks.kind === "create"
           ? "write from the package's hook template"
           : `update (${reminderHooksUpdateDetail(hooks.events, hooks.permissionsAdded)}; existing settings kept)`,
-      apply: () => writeReminderHooks(hooks),
+      apply: async () => {
+        const refusal = await writeReminderHooks(hooks);
+        if (refusal !== undefined) throw new MigrationInputError(refusal);
+      },
     });
     if (relativePath === CODEX_HOOKS_RELATIVE_PATH) {
       plan.reminderHooks?.push(CODEX_HOOKS_TRUST_NOTE);
