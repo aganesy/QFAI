@@ -63,6 +63,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps the screen working where the feature is missing, such as an
   `@supports` block or a polyfill loaded only where the feature is absent.
 
+- **Platform features are looked up per screen region, and reviews catch the
+  legacy patterns they replace.** An agent decided from memory whether a
+  platform feature such as `popover`, `dialog` or `:user-invalid` did the job,
+  and nothing recorded where the choice came from. Before starting a new screen
+  region, the prototyping generator and the implementation now look each
+  feature up in MDN, web.dev or the web-features data, and the region's
+  procurement record names the source URL and the Baseline status: the
+  prototype lists them in `progress.md` and the handoff's `procurement` row
+  (`platformFeatures`), and the implementation on a `@platform` line of the
+  component's doc comment. The prototype reviewer, the implementation reviewer
+  and the product-surface reviewer check that record against the code. The
+  implementation and product-surface reviewers also report code that a
+  platform feature within the browser-support target now replaces, such as a
+  script-built modal where `dialog` serves, naming the legacy code, the
+  replacement and the source that shows its Baseline status.
+
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date
