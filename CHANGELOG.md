@@ -717,6 +717,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai doctor --clean` keeps the run logs of an `outDir` that lies outside the
   scanned tree, since no scan can prove it unshared. Closes #5117.
 
+- **`qfai doctor` refuses a skill dependency that npm would install from a
+  local tarball.** An unscoped `runtimeDependencies` entry ending in `.tgz`,
+  `.tar.gz` or `.tar` passed the package-name check, and
+  `doctor --autoremediate --yes` then installed the file of that name from the
+  project root. Such a manifest is now an error and nothing is installed. On
+  Windows the install no longer takes npm from a relative `PATH` directory,
+  which could run the project's own `node_modules/npm` as npm, and finds it
+  under a quoted one. Refused entries escape format and separator characters
+  such as U+202E in the doctor message. Closes #5092.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
@@ -758,6 +768,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   rule-shaped `rule` a waiver also accepts, drops the `dl_id` field no finding
   carries, and says `qfai report` writes `report.md`. Closes #4906, #4909,
   #4911, #4913, #4915, #4917 and #4919.
+
+- **`uiux.audit.maxDuplicateFindingsPerRule` must be an integer of 1 or
+  more.** At `0`, `qfai validate --format text` printed only
+  `[error] QFAI-AUD-001 and <n> more` for an audit group, with no message.
+  `0`, a negative or fractional number, or a non-number now raises the error
+  `QFAI-CFG-002` naming the key, and the text output prints five findings per
+  audit code as when the key is unset. Closes #5099.
 
 - **The `qfai-triage` skill keeps a private security intake out of the
   deliberation record.** The skill told every step that changes no tracked

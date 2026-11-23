@@ -1284,15 +1284,15 @@ function normalizeUiuxAudit(
   if (raw.maxDuplicateFindingsPerRule !== undefined) {
     if (
       typeof raw.maxDuplicateFindingsPerRule === "number" &&
-      Number.isFinite(raw.maxDuplicateFindingsPerRule) &&
-      raw.maxDuplicateFindingsPerRule >= 0
+      Number.isInteger(raw.maxDuplicateFindingsPerRule) &&
+      raw.maxDuplicateFindingsPerRule >= 1
     ) {
       result.maxDuplicateFindingsPerRule = raw.maxDuplicateFindingsPerRule;
     } else {
       issues.push(
         configIssue(
           configPath,
-          "uiux.audit.maxDuplicateFindingsPerRule must be a number greater than or equal to 0.",
+          "uiux.audit.maxDuplicateFindingsPerRule must be an integer of 1 or more.",
         ),
       );
     }
