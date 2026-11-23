@@ -710,6 +710,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   write path's guard before reading and exits 1 naming the linked path, or the
   catalogue path when it is a link or not a file. Closes #5048.
 
+- **`qfai doctor` no longer reads a `pnpm-workspace.yaml` above a project that
+  is in no Git repository.** A stray one in a shared parent widened the
+  output-directory collision scan to unrelated projects. Outside a Git
+  repository the scan now covers the project directory alone, and
+  `qfai doctor --clean` keeps the run logs of an `outDir` that lies outside the
+  scanned tree, since no scan can prove it unshared. Closes #5117.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now

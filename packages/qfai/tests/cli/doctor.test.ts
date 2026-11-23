@@ -346,6 +346,9 @@ describe("doctor", () => {
     const monorepoRoot = path.join(root, "repo");
     try {
       await mkdir(monorepoRoot, { recursive: true });
+      // Outside a Git repository the scan stays at the project, so the
+      // workspace is a repository for its pnpm-workspace.yaml to be read.
+      execFileSync("git", ["init", "--quiet"], { cwd: monorepoRoot });
       await writeFile(
         path.join(monorepoRoot, "pnpm-workspace.yaml"),
         ["packages:", '  - "packages/*"', ""].join("\n"),
@@ -375,6 +378,33 @@ describe("doctor", () => {
     try {
       // A shared parent holding an empty `.git` directory is not a repository.
       await mkdir(path.join(root, ".git"), { recursive: true });
+      const app = path.join(root, "app");
+      const unrelated = path.join(root, "unrelated");
+      await mkdir(app, { recursive: true });
+      await mkdir(unrelated, { recursive: true });
+      await writeFile(path.join(app, "qfai.config.yaml"), "paths:\n  outDir: out\n", "utf-8");
+      await writeFile(
+        path.join(unrelated, "qfai.config.yaml"),
+        "paths:\n  outDir: ../app/out\n",
+        "utf-8",
+      );
+
+      const parsed = await readDoctorData(app);
+      const check = findCheck(parsed.checks, "output.outDirCollision");
+
+      expect(check?.severity).toBe("ok");
+      expect(check?.details?.configRoots).toEqual(["."]);
+      expect(check?.details?.collisions).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the collision scan at the project when a non-Git parent holds pnpm-workspace.yaml", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      // A stray workspace file in a shared parent outside any Git repository.
+      await writeFile(path.join(root, "pnpm-workspace.yaml"), "packages:\n  - '*'\n", "utf-8");
       const app = path.join(root, "app");
       const unrelated = path.join(root, "unrelated");
       await mkdir(app, { recursive: true });
