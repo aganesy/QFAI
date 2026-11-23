@@ -653,6 +653,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   validation with `QFAI-SCAN-002`. The files are now read in batches, in the
   same order and with the same truncation result. Closes #4943.
 
+- **A heading inside a CDATA section, a processing instruction, a declaration
+  or a custom-element block no longer counts as document content.** The
+  validators that skip markup blanked only `<pre>`-style blocks, `<div>`-style
+  blocks and comments, so a `## Reviewer Gate Baseline` inside `<![CDATA[ … ]]>`
+  satisfied the gate that requires that section. Every CommonMark raw HTML
+  block type is now blanked. Closes #5071.
+
 - **`qfai catalog components --check` no longer reads the catalogue through a
   link.** When `.qfai/catalog`, or a directory above it, was a symbolic link
   or junction, the check compared a file outside the project. It now runs the
