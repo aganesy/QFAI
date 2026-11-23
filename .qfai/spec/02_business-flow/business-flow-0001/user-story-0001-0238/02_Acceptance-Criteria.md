@@ -25,7 +25,7 @@ Feature: Merge conflicted story-tree documents by sentence
 
   # AC-0001-0238-04
   Scenario: Stop when the command cannot run
-    Given no Git work tree, or a configuration with issues
+    Given no Git work tree, a configuration with issues, or a merged text that cannot be written in place of the working file
     When I run qfai sdd merge-docs
-    Then no file is written and the command exits 2
+    Then the command exits 2, and no file is written or the file that keeps the working file's text is named
 ```

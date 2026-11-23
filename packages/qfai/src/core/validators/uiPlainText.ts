@@ -29,7 +29,14 @@ import { issue, readSafe } from "./utils.js";
 
 const RULE = "uiux.plainText";
 const PROTOTYPE_DIR = path.join(".qfai", "prototype");
-const SOURCE_EXTENSIONS = new Set([".html", ".tsx", ".jsx", ".vue", ".svelte"]);
+/** The UI source formats the surface checks read; the legacy-pattern check also reads `.css`. */
+export const SOURCE_EXTENSIONS: ReadonlySet<string> = new Set([
+  ".html",
+  ".tsx",
+  ".jsx",
+  ".vue",
+  ".svelte",
+]);
 const NON_SOURCE_NAME = /\.(test|spec|stories)\./;
 const EXEMPT_ELEMENTS: ReadonlySet<string> = new Set(UI_TEXT_EXEMPT_ELEMENTS);
 const LINK_ALIASES = new Set(["routerlink", "nuxtlink"]);
@@ -265,12 +272,13 @@ async function selectFiles(root: string, surfacePaths: readonly string[]): Promi
 
 /**
  * The UI source files the `uiux.surfacePaths` globs select from the root, repository-relative,
- * posix and sorted: the `.html`, `.tsx`, `.jsx`, `.vue` and `.svelte` files outside
- * `node_modules` that are not test, spec or story files.
+ * posix and sorted: the files of `extensions`, by default the `.html`, `.tsx`, `.jsx`, `.vue`
+ * and `.svelte` files, outside `node_modules` that are not test, spec or story files.
  */
 export async function selectSurfaceFiles(
   root: string,
   surfacePaths: readonly string[],
+  extensions: ReadonlySet<string> = SOURCE_EXTENSIONS,
 ): Promise<string[]> {
   if (surfacePaths.length === 0) return [];
   const matched = await fg([...surfacePaths], {
@@ -280,7 +288,7 @@ export async function selectSurfaceFiles(
   });
   const selected = new Set<string>();
   for (const file of matched) {
-    if (!SOURCE_EXTENSIONS.has(path.extname(file))) continue;
+    if (!extensions.has(path.extname(file))) continue;
     if (NON_SOURCE_NAME.test(path.basename(file))) continue;
     selected.add(toPosix(path.normalize(file)));
   }
