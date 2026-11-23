@@ -647,6 +647,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `float(p)` becomes `real` or `double precision` by its precision. Closes
   #5047.
 
+- **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
+  folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
+  are two tables, not one redefinition. An index created without a name
+  (`CREATE INDEX ON t (a)`) is no longer keyed as `on`, and the name after
+  `CONCURRENTLY` is read as the index name instead of `concurrently`. A name
+  whose quoted part never closes, and a `U&"…"` name, record no object rather
+  than a wrong prefix such as `u`. Closes #5150.
+
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
   20,000 files, so a large tree could run out of file descriptors and fail
