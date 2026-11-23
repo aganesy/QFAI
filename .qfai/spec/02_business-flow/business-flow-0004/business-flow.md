@@ -15,21 +15,12 @@ flowchart TD
   Plan --> Dry[Dry-run each of the ten migration steps]
   Dry --> Apply[Run step and read its report]
   Apply --> Check{Step result}
-  Check -->|Exit 2| Correct[Correct plan or source before first write]
-  Correct --> Dry
-  Check -->|Exit 3| Person[Resolve listed item from the source left in place]
-  Person --> Verify[Verify destination]
-  Check -->|Exit 0| Verify
+  Check -->|Exit 0| Verify[Verify destination]
   Verify --> More{Steps remain?}
   More -->|Yes| Dry
   More -->|No| Recheck[Repeat steps and confirm zero-file change]
   Recheck --> Entry[Install, then check, the free-text entry: steps 11 and 12]
   Entry --> EntryCheck{Step 12 result}
-  EntryCheck -->|Exit 2| Repair[Fix the cause on standard error, such as an unreadable git index]
-  Repair --> Rerun[Rerun step 12]
-  Rerun --> EntryCheck
-  EntryCheck -->|Exit 3| Resolve[Resolve each listed item]
-  Resolve --> Entry
   EntryCheck -->|Exit 0| Validate[Validate the story tree]
   Validate --> Handover[Hand the first free-text change request to qfai-run]
 ```
@@ -37,9 +28,12 @@ flowchart TD
 ## Alternate and exception paths
 
 - A dry run writes no file. Exit 2 identifies a blocked operation and stops
-  before the step's first write.
+  before the step's first write. The person corrects the plan or the source
+  and dry-runs the step again.
 - Exit 3 lists source paths and unresolved items under `For a person`. The
-  source stays in the old pack until a person resolves it.
+  source stays in the old pack until a person resolves it. Once each listed
+  item is resolved from that source, the destination is verified and the
+  remaining steps continue.
 - A source with no destination is deleted, an untracked file and an
   uncommitted edit included; the person is told so before the first real run.
 - Step 4 writes the ID map once, under `tmp/qfai-migration/`. A later plan
@@ -51,8 +45,10 @@ flowchart TD
 - Step 11 replaces a customised skill or step with the package's copy. A host
   link path it does not own stays as it was and is listed for a person.
 - Step 12 writes nothing and lists for a person every check a shipped plan
-  would fail. The first free-text change request goes to `qfai-run` once none
-  is left.
+  would fail, and exits 3. Once each listed item is resolved, the free-text
+  entry is installed and checked again with steps 11 and 12. The first
+  free-text change request goes to `qfai-run` once none is left.
 - Step 12 exits 2 with git's message when git cannot scan the project, such as
-  an unreadable index. Once the index is usable again, rerunning step 12
-  changes no file.
+  an unreadable index. The person fixes the cause named on standard error and
+  reruns step 12. Once the index is usable again, rerunning step 12 changes no
+  file.
