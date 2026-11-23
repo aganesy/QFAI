@@ -654,6 +654,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   incomplete check with the same finding as an input that cannot be read, and
   the code is listed as not evaluated.
 
+- **`qfai session-review` reads a `.agents/rules/reminders.json` saved with a
+  UTF-8 byte order mark.** A reminders file written by Windows PowerShell 5.1
+  with `Set-Content -Encoding UTF8` starts with one, and the command refused it
+  as not valid JSON. It now drops one leading mark before parsing, as
+  `qfai report --in` does. Closes #5388.
+
 - **`qfai validate --format github` shows control characters in an annotation
   as visible escapes.** An `::error::`, `::warning::` or `::notice::` message
   escaped only `%`, CR and LF, so an ESC colour sequence or a bell from
