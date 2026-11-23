@@ -12,16 +12,19 @@
  * Scope of the new lane is apply-ability, not semantic correctness.
  */
 
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import {
   collectCreatedObjects,
+  DOLLAR_QUOTE_MARKER,
   findRedefinitions,
+  IDENTIFIER_CHAR,
   parseSqlContract,
 } from "../../src/core/sqlContract.js";
 import type { Issue } from "../../src/core/types.js";
@@ -139,6 +142,33 @@ describe("the statement splitter knows SQL's quoting rules", () => {
   it("ignores a closing parenthesis inside a string, quoted identifier, comment or dollar quote", () => {
     const { errors } = parseSqlContract(`SELECT ')', ")" FROM t; -- )\n/* ) */ SELECT $$ ) $$;\n`);
     expect(errors).toEqual([]);
+  });
+});
+
+describe("the identifier character class is written with escapes", () => {
+  it("matches the ASCII identifier characters and every character above ASCII", () => {
+    expect(IDENTIFIER_CHAR.source).toBe(String.raw`[A-Za-z0-9_$\u0080-\uFFFF]`);
+    for (const char of ["a", "Z", "0", "_", "$", "\u0080", "\uD800", String.fromCharCode(0xffff)]) {
+      expect(IDENTIFIER_CHAR.test(char)).toBe(true);
+    }
+    for (const char of ["\u007F", " ", "-", "'", ""]) {
+      expect(IDENTIFIER_CHAR.test(char)).toBe(false);
+    }
+  });
+
+  it("is the class the dollar-quote marker's lookbehind uses", () => {
+    expect(DOLLAR_QUOTE_MARKER.source).toBe(
+      String.raw`(?<![A-Za-z0-9_$\u0080-\uFFFF])\$(?:[A-Za-z_\u0080-\uFFFF][A-Za-z0-9_\u0080-\uFFFF]*)?\$`,
+    );
+    expect(DOLLAR_QUOTE_MARKER.source.startsWith(`(?<!${IDENTIFIER_CHAR.source})`)).toBe(true);
+  });
+
+  it("leaves no raw U+FFFF in the module source", async () => {
+    const source = await readFile(
+      fileURLToPath(new URL("../../src/core/sqlContract.ts", import.meta.url)),
+      "utf-8",
+    );
+    expect(source).not.toContain(String.fromCharCode(0xffff));
   });
 });
 
