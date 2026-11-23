@@ -780,15 +780,17 @@ describe("the constraint document states each limit in plain words", () => {
   const CONSTRAINT_TEMPLATE = path.join(TEMPLATE_ROOT, "01_policy/constraint.md");
   const CONSTRAINT_SCHEMA = path.join(SCHEMA_ROOT, "story/01_policy/constraint.mdschema.yml");
   const TECHNICAL = "| ID  | Constraint | Rationale |\n| --- | ---------- | --------- |\n";
+  /** The template's Technical Constraints table: its header, delimiter and rows. */
+  const TECHNICAL_TABLE = /(?<=^## Technical Constraints\r?\n\r?\n)(?:\|[^\n]*\n)+/m;
 
   /** The template with its Technical Constraints table replaced by `table`. */
   function check(table: string): { status: number | null; output: string } {
     const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-constraint-"));
     try {
       const template = readFileSync(CONSTRAINT_TEMPLATE, "utf-8");
-      expect(template).toContain(TECHNICAL);
+      expect(template).toMatch(TECHNICAL_TABLE);
       const file = path.join(dir, "constraint.md");
-      writeFileSync(file, template.replace(TECHNICAL, table), "utf-8");
+      writeFileSync(file, template.replace(TECHNICAL_TABLE, table), "utf-8");
       const result = spawnSync(
         process.execPath,
         [MDSCHEMA_CLI, "check", "--schema", CONSTRAINT_SCHEMA, file],

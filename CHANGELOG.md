@@ -50,6 +50,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   forge remote or API access it says so in the announcement and continues;
   under a no-question mode it continues and the final report lists the match.
 
+- **A project states which browsers its UI must work in.** Nothing said which
+  browsers a screen had to support, so an agent picked platform features from
+  memory: an old pattern a native feature now replaces, or a new feature some
+  supported browsers lack, with no fallback. The constraint template that
+  `qfai init` writes now starts with a Technical Constraints row,
+  `Browser support target: Baseline Widely available`, which a project changes
+  to its own level, such as `Baseline 2024`. A project that states none is held
+  to Baseline Widely available. `ui-procurement.md`, the prototyping generator
+  prompt and the implementation UI guidance read the target before choosing a
+  platform feature, and use a feature newer than it only with a fallback that
+  keeps the screen working where the feature is missing, such as an
+  `@supports` block or a polyfill loaded only where the feature is absent.
+
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date
