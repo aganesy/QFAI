@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   appendFile,
+  chmod,
   cp,
   link,
   lstat,
@@ -1416,6 +1417,35 @@ describe("migration step 12: project files that still name a 1.x path", () => {
       "not checked for 1.x paths, larger than 16 MiB: docs/huge.md",
     ]);
   });
+
+  // QFAI:AC-0004-0042-06
+  // QFAI:EX-0004-0042-17
+  // A file mode does not deny Windows or the root account a read.
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "names a tracked file it cannot read as not checked and exits 0",
+    async () => {
+      const root = await indexedProject(migrated11, {
+        "docs/secret.md": "Read .qfai/specs\n",
+        "README.md": "# Project\n",
+      });
+      const secret = path.join(root, "docs/secret.md");
+      const before = await fingerprint(root);
+      await chmod(secret, 0o000);
+      let result: Run;
+      try {
+        result = await stepIn(root, 12);
+      } finally {
+        await chmod(secret, 0o644);
+      }
+      expect(await fingerprint(root), "step 12 changed a file").toBe(before);
+      expect(result.code, result.output).toBe(0);
+      expect(section(result.output, "For a person")).toEqual([]);
+      expect(section(result.output, "Files scanned")).toEqual([
+        ...scanned(1),
+        "not checked for 1.x paths, could not be read: docs/secret.md",
+      ]);
+    },
+  );
 
   // QFAI:AC-0004-0042-02
   // QFAI:EX-0004-0042-12
