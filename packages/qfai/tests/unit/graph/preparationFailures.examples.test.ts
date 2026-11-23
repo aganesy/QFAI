@@ -19,7 +19,7 @@ import {
 } from "../../../src/core/graph/process.js";
 
 // QFAI:EX-0001-0237-05
-// Mutation: packages/qfai/src/core/graph/prepare.ts `recovery: "Install Python 3.10 or later and uv, then run qfai init again."` -> `recovery: "Install Python 3.9 and uv, then run qfai init again."` fails "reports an unmet interpreter prerequisite with a recovery action"
+// Mutation: packages/qfai/src/core/graph/prepare.ts `Install Python ${GRAPHIFY_PYTHON_MINIMUM} or later and uv, then run qfai init again.` -> `Install Python 3.9 and uv, then run qfai init again.` fails "reports an unmet interpreter prerequisite with a recovery action"
 it("reports an unmet interpreter prerequisite with a recovery action", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-prerequisite-"));
   const fixture = graphProcessFixture();

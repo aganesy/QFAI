@@ -20,6 +20,9 @@ import { assertGraphStoragePath, replaceGraphDirectory } from "./storage.js";
 import { formatReportPath } from "../init/reportPath.js";
 export { GRAPH_VERSIONS, graphRuntimePaths } from "./layout.js";
 
+/** The oldest Python that uv may pick for the Graphify environment. */
+export const GRAPHIFY_PYTHON_MINIMUM = "3.10";
+
 export interface GraphPreparation {
   runtime: "installed" | "not-ready";
   tools?: {
@@ -160,7 +163,7 @@ export async function prepareGraphRuntimes(
         [
           "venv",
           "--python",
-          ">=3.10",
+          `>=${GRAPHIFY_PYTHON_MINIMUM}`,
           "--no-python-downloads",
           path.join(staged.directory, "graphify"),
         ],
@@ -177,8 +180,8 @@ export async function prepareGraphRuntimes(
                 recovery: `${stopped} Run qfai init again.`,
               }
             : {
-                failedStep: "Python 3.10+ and uv prerequisite",
-                recovery: "Install Python 3.10 or later and uv, then run qfai init again.",
+                failedStep: `Python ${GRAPHIFY_PYTHON_MINIMUM}+ and uv prerequisite`,
+                recovery: `Install Python ${GRAPHIFY_PYTHON_MINIMUM} or later and uv, then run qfai init again.`,
               }),
         };
       }
@@ -205,7 +208,7 @@ export async function prepareGraphRuntimes(
             "pip",
             "install",
             "--python",
-            ">=3.10",
+            `>=${GRAPHIFY_PYTHON_MINIMUM}`,
             "--target",
             directory,
             `graphifyy[ollama]==${GRAPH_VERSIONS.graphify}`,

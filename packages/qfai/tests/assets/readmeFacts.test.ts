@@ -6,6 +6,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { SHIPPED_WORKFLOW_NAMES } from "../../src/cli/commands/init.js";
+import { GRAPHIFY_PYTHON_MINIMUM } from "../../src/core/graph/prepare.js";
 import { WORKFLOW_HELP } from "../../src/cli/commands/workflow.js";
 import { shapeValueLiterals } from "../integration/shippedWorkflowShape.js";
 
@@ -76,10 +77,17 @@ describe("README facts", () => {
       const readme = await readFile(readmePath, "utf-8");
       const start = readme.indexOf("## Quick start");
       expect(start, readmePath).toBeGreaterThanOrEqual(0);
-      const quickStart = readme.slice(start, readme.indexOf("npx qfai init", start));
+      const init = readme.indexOf("npx qfai init", start);
+      // Without an init command after the heading the slice would run to the
+      // end of the file, and the facts below could sit anywhere.
+      expect(
+        init,
+        `${readmePath} must show npx qfai init after the Quick start heading`,
+      ).toBeGreaterThan(start);
+      const quickStart = readme.slice(start, init);
       for (const fact of [
         `Node.js ${minimum} or later`,
-        "Python 3.10 or later",
+        `Python ${GRAPHIFY_PYTHON_MINIMUM} or later`,
         "`uv`",
         "npm registry",
         "PyPI",
@@ -88,6 +96,17 @@ describe("README facts", () => {
           fact,
         );
       }
+      // Each runtime is named with the installer init uses for it: Graphify
+      // through Python and uv, CodeGraph through npm under the running Node.js.
+      const items = quickStart.split(/\n- /).map((item) => item.replace(/\s+/g, " "));
+      const uvItem = items.find((item) => item.includes("`uv`"));
+      expect(uvItem, `${readmePath} must list Python and uv`).toBeDefined();
+      expect(uvItem, `${readmePath}: uv installs Graphify`).toContain("installs Graphify");
+      expect(uvItem, `${readmePath}: uv does not install CodeGraph`).not.toContain("CodeGraph");
+      const npmItem = items.find((item) => item.includes("installs CodeGraph"));
+      expect(npmItem, `${readmePath} must say how init installs CodeGraph`).toBeDefined();
+      expect(npmItem, `${readmePath}: npm installs CodeGraph`).toContain("npm");
+      expect(npmItem, `${readmePath}: uv does not install CodeGraph`).not.toContain("`uv`");
     }
   });
 
