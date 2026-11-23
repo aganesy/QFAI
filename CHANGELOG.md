@@ -2345,10 +2345,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   comment, or a flow mapping, sent it to the default `.qfai/spec` tree while
   `qfai validate` checked the configured one, and a file it could not read
   was silently treated as absent. It now parses the file with the YAML parser
-  `qfai validate` uses and the same rules for both keys. A file that cannot be
-  read or parsed, a `paths` that is not a mapping, or a key that is not a
-  non-blank string stops the lane with exit 2 naming the problem;
-  `checkDocuments` returns that the check did not run. Closes #4490.
+  `qfai validate` uses and the same rules for both keys. A file that is empty
+  or holds only comments, a file that cannot be read or parsed, a `paths` that
+  is not a mapping, or a key that is not a non-blank string stops the lane with
+  exit 2, naming `qfai.config.yaml` relative to the tree and the problem;
+  `checkDocuments` returns that the check did not run. Closes #4490, #5096.
 
 - **`qfai doctor --autoremediate` exits 1 when an install fails.** A failed
   `npm install` for a skill's runtime dependency was printed, but doctor still
