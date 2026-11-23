@@ -5,7 +5,9 @@
  *
  * `lstat` is wrapped because the window is between two calls inside one walk: the wrapper lets the
  * check see the original file and then replaces it, which no fixture laid out in advance can do.
- * `vi.mock` is hoisted to module scope, so this case lives in its own file.
+ * `open` is wrapped to refuse a named file with `EACCES`, at the open or at the read: a file that
+ * could not be read is not one that moved, and it still fails the mirror.
+ * `vi.mock` is hoisted to module scope, so these cases live in their own file.
  */
 
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -19,6 +21,13 @@ import { codeAnalysisFixture } from "../../helpers/graphAnalysis.js";
 const swap = vi.hoisted(() => ({
   source: "",
   replacement: "",
+  denied: "",
+  deniedAt: "open",
+}));
+
+const { accessDenied } = vi.hoisted(() => ({
+  accessDenied: (target: string): Error =>
+    Object.assign(new Error(`EACCES: permission denied, '${target}'`), { code: "EACCES" }),
 }));
 
 vi.mock("node:fs/promises", async (original) => {
@@ -33,6 +42,15 @@ vi.mock("node:fs/promises", async (original) => {
         await fs.rename(replacement, String(target));
       }
       return stats;
+    },
+    open: async (...args: Parameters<typeof fs.open>) => {
+      const target = String(args[0]);
+      if (target === swap.denied && swap.deniedAt === "open") throw accessDenied(target);
+      const handle = await fs.open(...args);
+      if (target === swap.denied) {
+        handle.read = () => Promise.reject(accessDenied(target));
+      }
+      return handle;
     },
   };
 });
@@ -66,3 +84,25 @@ it("leaves a source replaced between its check and its copy out of the mirror", 
     await rm(elsewhere, { recursive: true, force: true });
   }
 });
+
+it.each(["open", "read"])(
+  "fails the mirror, naming the source, when the source cannot be read at the %s",
+  async (at) => {
+    const fixture = await codeAnalysisFixture();
+    const source = path.join(fixture.root, "checkout.ts");
+    try {
+      swap.denied = source;
+      swap.deniedAt = at;
+      await expect(mirrorGraphCorpus(fixture.root, fixture.analysis)).rejects.toThrow(
+        `Graph corpus source ${source} could not be read: EACCES`,
+      );
+      const mirrored = await readFile(path.join(fixture.analysis, "checkout.ts"), "utf8").catch(
+        () => undefined,
+      );
+      expect(mirrored).toBeUndefined();
+    } finally {
+      swap.denied = "";
+      await fixture.dispose();
+    }
+  },
+);

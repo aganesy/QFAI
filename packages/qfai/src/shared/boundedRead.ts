@@ -94,19 +94,6 @@ async function withCheckedRegularFile<T>(
   } catch {
     return refused;
   }
-  return withInspectedRegularFile(filePath, inspected, refused, use);
-}
-
-/**
- * Steps 1 to 4 against an `lstat` the caller already took, so a decision the caller made on that
- * `lstat` holds for the descriptor `use` reads.
- */
-async function withInspectedRegularFile<T>(
-  filePath: string,
-  inspected: Stats,
-  refused: T,
-  use: (handle: FileHandle, stats: Stats) => Promise<T>,
-): Promise<T> {
   if (inspected.isSymbolicLink() || !inspected.isFile()) {
     return refused;
   }
@@ -149,23 +136,38 @@ export async function readBoundedRegularFile(
 
 /**
  * The bytes of the regular file the caller inspected as `inspected`, or `undefined` when the path no
- * longer names that file, or names no regular file.
+ * longer names that file.
  *
  * For a caller that has already judged the file by its own `lstat`: the bytes come from a descriptor
- * that is the object that `lstat` described, so a file swapped in after the judgement is refused
- * rather than read. The ceiling is the size the descriptor reports, and a file that grows past it
- * while it is read is refused too.
+ * that is the object that `lstat` described. `undefined` means the file was replaced or removed after
+ * that judgement — the path is gone, now names a link or a non-regular file, names another object,
+ * or the file grew past the size the descriptor reported while it was read. Every other failure to
+ * open or read is thrown, so a file that could not be read is not mistaken for one that moved.
  */
 export async function readInspectedRegularFile(
   filePath: string,
   inspected: Stats,
 ): Promise<Buffer | undefined> {
-  return withInspectedRegularFile<Buffer | undefined>(
-    filePath,
-    inspected,
-    undefined,
-    async (handle, stats) => readHandleWithin(handle, stats.size),
-  );
+  if (inspected.isSymbolicLink() || !inspected.isFile()) return undefined;
+  let handle;
+  try {
+    handle = await open(filePath, readOnlyNoFollowFlags());
+  } catch (cause: unknown) {
+    // ENOENT: removed since the check. ELOOP: replaced by a link `O_NOFOLLOW` refused.
+    if (errnoCode(cause) === "ENOENT" || errnoCode(cause) === "ELOOP") return undefined;
+    throw cause;
+  }
+  try {
+    const stats = await handle.stat();
+    if (!stats.isFile() || !sameObject(inspected, stats)) return undefined;
+    return await readHandleWithin(handle, stats.size);
+  } finally {
+    await handle.close().catch(() => undefined);
+  }
+}
+
+function errnoCode(cause: unknown): unknown {
+  return typeof cause === "object" && cause !== null && "code" in cause ? cause.code : undefined;
 }
 
 /** The one `FileHandle` method {@link readHandleWithin} reads through. */

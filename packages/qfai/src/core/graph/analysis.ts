@@ -282,8 +282,14 @@ async function walkGraphCorpus(
         const stats = await lstat(source);
         if (!stats.isFile() || stats.nlink > 1) continue;
         // Read from the file `stats` describes: a source replaced since that check is left out of
-        // this mirror, and the next one checks and copies whatever the path then names.
-        const bytes = await readInspectedRegularFile(source, stats);
+        // this mirror, and the next one checks and copies whatever the path then names. Any other
+        // read failure fails the mirror, so the corpus is never quietly incomplete.
+        const bytes = await readInspectedRegularFile(source, stats).catch((cause: unknown) => {
+          throw new Error(
+            `Graph corpus source ${source} could not be read: ${cause instanceof Error ? cause.message : String(cause)}`,
+            { cause },
+          );
+        });
         if (bytes === undefined) continue;
         files.add(next);
         if (await sameContent(bytes, target)) continue;
