@@ -594,6 +594,25 @@ describe("lint-shipping fixture — detection rules", () => {
     expect(violations.map((v) => v.matched)).toContain(expectedMatch);
   });
 
+  it("flags an unquoted schemaVersion in a src/ comment whose colon sits on the next line, once, at the line it starts on", async () => {
+    // The post-build guard reads each file whole, so it fails this field in
+    // the declaration file; the lint read line by line and passed it.
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src", "foo"), { recursive: true });
+    await writeFile(
+      path.join(root, "src", "foo", "bar.ts"),
+      "/* The config carries schemaVersion\n   : 2 */\nexport function bar(): void {}\n",
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(
+      violations
+        .filter((v) => v.pattern === "internal-schema-version-jsdoc-leak")
+        .map((v) => ({ line: v.line, matched: v.matched })),
+    ).toEqual([{ line: 1, matched: "schemaVersion\n   :" }]);
+  });
+
   it("does NOT flag sample-tier spec-0001..0009 in src/ JSDoc (Category-B / runtime examples)", async () => {
     // The leakage script tolerates spec-0001..0009 as Category-B /
     // sample-tier IDs that ship with `qfai init`; the JSDoc lint must

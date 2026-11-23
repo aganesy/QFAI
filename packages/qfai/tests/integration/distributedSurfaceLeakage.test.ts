@@ -112,6 +112,25 @@ describe("distributed surface leakage smoke", () => {
     ]);
   });
 
+  it("reports an unquoted schemaVersion whose colon sits on the next line, at the line it starts on", async () => {
+    // The post-build guard reads each file whole, so it fails this field; the
+    // smoke scan read line by line and passed it.
+    const root = await newTempDir();
+    await writeFile(
+      path.join(root, "config.js"),
+      "export default {\n  schemaVersion\n  : 2,\n};\n",
+      "utf-8",
+    );
+    expect((await scanDistributedSurface(root)).hits).toEqual([
+      {
+        file: "config.js",
+        line: 2,
+        match: "schemaVersion\n  :",
+        className: "schemaVersion field",
+      },
+    ]);
+  });
+
   it("qfai init output contains no internal IDs or version markers", async () => {
     const tmpDir = await newTempDir();
     await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
