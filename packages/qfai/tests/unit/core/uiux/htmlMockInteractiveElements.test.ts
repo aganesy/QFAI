@@ -37,13 +37,20 @@ describe("HTML mock interactive elements", () => {
     expect(await interactiveFlags(html)).toEqual([true, false]);
   });
 
+  it("marks a positive tabindex interactive and a non-numeric one not", async () => {
+    const html = `<div tabindex="3" ${SIZED}>x</div><div tabindex="abc" ${SIZED}>y</div>`;
+    expect(await interactiveFlags(html)).toEqual([true, false]);
+  });
+
   it("marks no element that is disabled or has no interactive tag or role", async () => {
     const html = [
       `<button disabled ${SIZED}>x</button>`,
       `<a aria-disabled="TRUE" ${SIZED}>y</a>`,
       `<div role="dialog" ${SIZED}>z</div>`,
       `<div ${SIZED}>w</div>`,
+      `<div role="button" aria-disabled="true" ${SIZED}>v</div>`,
+      `<div tabindex="0" disabled ${SIZED}>u</div>`,
     ].join("");
-    expect(await interactiveFlags(html)).toEqual([false, false, false, false]);
+    expect(await interactiveFlags(html)).toEqual([false, false, false, false, false, false]);
   });
 });
