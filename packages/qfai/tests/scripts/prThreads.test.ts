@@ -322,6 +322,16 @@ describe("retrying a deferral that stopped part way", () => {
     expect(writes()[1]).toContain("resolveReviewThread");
   });
 
+  it("finds its own entry when GitHub answers with another form of the given thread id", () => {
+    calls.threadAnswer = answer(false, []);
+    calls.issueAnswer = recorded;
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    expect(run(["defer", "12", "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3VGhyZWFkMQ==", "40"])).toBe(0);
+    expect(writes()).toHaveLength(2);
+    expect(writes()[0]).toContain("addPullRequestReviewThreadReply");
+    expect(writes()[1]).toContain("resolveReviewThread");
+  });
+
   it("after the reply was posted too, only resolves", () => {
     calls.threadAnswer = answer(false, ["Deferred to #40."]);
     calls.issueAnswer = recorded;
@@ -347,7 +357,7 @@ describe("which steps of a deferral are already done", () => {
   });
 
   it("finds nothing done on a fresh thread and an issue without its entry", () => {
-    expect(deferralProgress("T1", "40", thread(false, [{ body: "Cover it." }]), [])).toEqual({
+    expect(deferralProgress("40", thread(false, [{ body: "Cover it." }]), [])).toEqual({
       recorded: false,
       replied: false,
       resolved: false,
@@ -355,29 +365,36 @@ describe("which steps of a deferral are already done", () => {
   });
 
   it("counts an issue entry only when it carries this thread's id", () => {
-    const other = deferralProgress("T1", "40", thread(false, []), [
+    const other = deferralProgress("40", thread(false, []), [
       "<!-- qfai-deferred-thread:T10 -->",
       "<!-- qfai-deferred-thread:T2 -->",
     ]);
     expect(other.recorded).toBe(false);
-    const own = deferralProgress("T1", "40", thread(false, []), [
+    const own = deferralProgress("40", thread(false, []), [
       "Finding.\n\n<!-- qfai-deferred-thread:T1 -->",
     ]);
     expect(own.recorded).toBe(true);
   });
 
-  it("counts a reply only when it names the same follow-up issue", () => {
+  it("counts no issue entry when GitHub's answer names no thread id", () => {
+    const answer = { data: { node: { isResolved: false, latest: { nodes: [] } } } };
     expect(
-      deferralProgress("T1", "40", thread(false, [{ body: "Deferred to #41." }]), []).replied,
+      deferralProgress("40", answer, ["<!-- qfai-deferred-thread:undefined -->"]).recorded,
     ).toBe(false);
+  });
+
+  it("counts a reply only when it names the same follow-up issue", () => {
+    expect(deferralProgress("40", thread(false, [{ body: "Deferred to #41." }]), []).replied).toBe(
+      false,
+    );
     expect(
-      deferralProgress("T1", "40", thread(false, [{ body: " Deferred to #40.\n" }]), []).replied,
+      deferralProgress("40", thread(false, [{ body: " Deferred to #40.\n" }]), []).replied,
     ).toBe(true);
   });
 
   it("reads the thread as resolved only when the answer says so", () => {
-    expect(deferralProgress("T1", "40", thread(true, []), []).resolved).toBe(true);
-    expect(deferralProgress("T1", "40", thread("yes", null), []).resolved).toBe(false);
+    expect(deferralProgress("40", thread(true, []), []).resolved).toBe(true);
+    expect(deferralProgress("40", thread("yes", null), []).resolved).toBe(false);
   });
 });
 

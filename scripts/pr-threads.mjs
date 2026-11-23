@@ -180,18 +180,22 @@ export function deferredEntry(pr, response) {
 }
 
 /**
- * Which steps of deferring thread `threadId` to issue `issue` are already
- * done: the issue holds a comment marked with the thread's id, the thread holds
- * the reply that names the issue, and the thread is resolved.
+ * Which steps of deferring the thread in `response` to issue `issue` are
+ * already done: the issue holds a comment marked with the thread's id, the
+ * thread holds the reply that names the issue, and the thread is resolved.
+ *
+ * The marker is built from the id in GitHub's answer, the same value
+ * `deferredEntry` writes it from, so a caller that named the thread by another
+ * form of its id still finds its own entry.
  *
  * Each step is read on its own, so a retry does exactly the steps still missing.
  */
-export function deferralProgress(threadId, issue, response, issueBodies) {
+export function deferralProgress(issue, response, issueBodies) {
   const thread = response?.data?.node;
   const replies = Array.isArray(thread?.latest?.nodes) ? thread.latest.nodes : [];
-  const marker = deferredMarker(threadId);
+  const marker = typeof thread?.id === "string" ? deferredMarker(thread.id) : undefined;
   return {
-    recorded: issueBodies.some((body) => body.includes(marker)),
+    recorded: marker !== undefined && issueBodies.some((body) => body.includes(marker)),
     replied: replies.some(
       (comment) =>
         typeof comment?.body === "string" && comment.body.trim() === deferredReply(issue),
@@ -408,7 +412,7 @@ function deferCommand(slug, pr, threadId, issue) {
     console.error(`${mismatch} Nothing was recorded, replied to or resolved.`);
     return 2;
   }
-  const done = deferralProgress(threadId, issue, response, issueCommentBodies(slug, issue));
+  const done = deferralProgress(issue, response, issueCommentBodies(slug, issue));
   if (done.recorded && done.replied && done.resolved) {
     console.log(`${threadId} is already deferred to #${issue}; nothing was written.`);
     return 0;
