@@ -79,6 +79,22 @@ specialization_tags:
 - Apply `rule/ui-procurement.md` to UI changes and report a usable standard or component that was passed over.
   A control hand-built where the catalogue the `Component catalogue` row of `<paths.contractsDir>/tech.md#stack` names has one
   is such a finding: name the catalogue item.
+- Read the browser-support target before the next two items: the `## Technical Constraints` row of
+  `<paths.specsDir>/01_policy/constraint.md` that names it, or Baseline Widely available where none does
+  (`rule/ui-procurement.md#platform-features-and-the-browser-support-target`).
+- Check the procurement record against the changed UI code. Each platform feature the code relies on is
+  recorded with the source URL and the Baseline status it was looked up with: in the region's handoff
+  `procurement` row, or on a `@platform` line of the component's doc comment
+  (`skill/qfai-implement/references/ui-affecting.md#platform-features`). A feature newer than the target
+  has its recorded fallback in the code. A missing record, or a feature newer than the target with no
+  fallback, is a finding naming the feature and the region.
+- Report a legacy pattern: changed code that a platform feature within the target now replaces, such as a
+  script-built modal where `dialog` serves, a `max-height` hack for an expanding panel, or duplicated
+  `prefers-color-scheme` blocks where `light-dark()` serves. A replacement newer than Baseline Widely
+  available but within the target is this item's to catch, since no `npx qfai validate` warning reads the
+  target. Look the replacement up as that rule section says. The finding names the legacy code, the
+  replacement and the source URL that shows the replacement's Baseline status, and traces to
+  `defect:code-quality`. A replacement newer than the target is not a finding.
 
 ## Coverage gate
 
@@ -157,6 +173,7 @@ command.
 - `rule/**`, especially `agent-selection.md`, `test-layers.md` and the drift protocol.
 - `qfai.config.yaml` and the affected BF/US/AC/EX story files under `<paths.specsDir>/02_business-flow/**`.
 - `<paths.contractsDir>/tech.md`, plus the active API, DB or UI contracts this change affects.
+- For a UI change, `<paths.specsDir>/01_policy/constraint.md` for the browser-support target.
 - The changed code and tests, their diff, repository review instructions, and actual quality-gate results.
 - For a change to a rule master under `.agents/rules/`, the rules it points to and the files that point to it.
 - The stage report for the reviewed EX: its test, selector and observed results. A missing required observation prevents PASS.

@@ -63,6 +63,24 @@ only with a fallback that keeps the screen working where the feature is missing,
 block or a polyfill loaded only where the feature is absent; one with no such fallback is not used.
 `.qfai/assistant/rule/ui-procurement.md#platform-features-and-the-browser-support-target` holds the rule.
 
+Look a feature up before starting a new screen region, not from memory: in MDN, web.dev or the
+web-features data, taking its Baseline status from that source. Where the handoff's `procurement` row
+for the region lists `platformFeatures`, use those features; the prototype already looked them up.
+Record each other feature the region relies on in the doc comment of the component or page that realises it, one `@platform` line per feature after the catalogue tags: the feature, the source URL, the Baseline
+status that source gave and, for a feature newer than the target, `fallback:` and what serves where
+it is missing.
+
+```tsx
+/**
+ * @source authored
+ * @reason no catalogue item serves an expanding answer
+ * @pattern faq answer
+ * @platform details element; https://developer.mozilla.org/docs/Web/HTML/Element/details; Baseline Widely available
+ */
+```
+
+`npx qfai catalog components` does not read a `@platform` line; the reviewers do.
+
 ## Design catalogue
 
 Root `DESIGN.md` is the brand source a person edits. `npx qfai catalog design` derives two files from

@@ -63,6 +63,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps the screen working where the feature is missing, such as an
   `@supports` block or a polyfill loaded only where the feature is absent.
 
+- **Platform features are looked up per screen region, and reviews catch the
+  legacy patterns they replace.** An agent decided from memory whether a
+  platform feature such as `popover`, `dialog` or `:user-invalid` did the job,
+  and nothing recorded where the choice came from. Before starting a new screen
+  region, the prototyping generator and the implementation now look each
+  feature up in MDN, web.dev or the web-features data, and the region's
+  procurement record names the source URL and the Baseline status: the
+  prototype lists them in `progress.md` and the handoff's `procurement` row
+  (`platformFeatures`), and the implementation on a `@platform` line of the
+  component's doc comment. The prototype reviewer, the implementation reviewer
+  and the product-surface reviewer check that record against the code. The
+  implementation and product-surface reviewers also report code that a
+  platform feature within the browser-support target now replaces, such as a
+  script-built modal where `dialog` serves, naming the legacy code, the
+  replacement and the source that shows its Baseline status.
+
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date
@@ -634,6 +650,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`, as
   the `implement-tdd` step does. Closes #4965.
 
+- **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
+  The duplicate check compared each argument type as written, so
+  `f(int)` and `f(integer)`, or `f(varchar(10))` and `f(varchar(20))`, went
+  unreported although PostgreSQL takes them for one routine. Each argument type
+  now drops its modifiers and array bounds and maps its alias to one spelling
+  (`int`/`int4` to `integer`, `bool` to `boolean`, `varchar` to
+  `character varying`, `timestamptz` and the other built-in aliases);
+  `float(p)` becomes `real` or `double precision` by its precision. Closes
+  #5047.
+
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
   20,000 files, so a large tree could run out of file descriptors and fail
@@ -651,6 +677,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   whose documents go to an approved external OpenAI-compatible service. It now
   names the selected backend, the model and the origin of the service it
   called.
+
+- **`qfai catalog components` stops when it cannot inspect the catalogue.** A
+  catalogue whose metadata could not be read, for example because access was
+  denied, counted as absent, so the command replaced it without checking that it
+  was a file. Only a missing catalogue now counts as absent; any other failure
+  exits 1 with one line naming the catalogue and the cause, and writes or
+  compares nothing. Closes #5114.
 
 - **`qfai validate` compares the decision register when a tracked name under
   the specs directory contains a newline.** One such file anywhere beneath the
@@ -684,6 +717,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review, and that it makes no commit, as `triage-security-intake` already
   said. Closes #5012.
 
+- **`qfai doctor --autoremediate` asks before installing only where the
+  prompt can be seen, and reports a Ctrl+C at it.** The install prompt is
+  written to stderr, yet a terminal on stdin alone made the session count as
+  interactive, so a run with stderr redirected waited on a prompt nobody saw.
+  Both must now be terminals; otherwise nothing is installed and the output
+  says to rerun with `--yes`. Ctrl+C at the prompt ended with "The operation
+  was aborted" and exit 1, and dropped the lines of the `.gitignore` and
+  wrapper repairs that ran before it. Doctor now prints those lines and that
+  the install was cancelled, and exits 130. Closes #5055.
+
 - **The `qfai-triage` skill invoked by name takes a security report in
   privately before any other step.** Its step list put
   `triage-security-intake` seventh, after the duplicate search, the request
@@ -691,6 +734,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   report could reach a public tracker before anyone decided how to disclose
   it. The intake now runs first, as the `fix-vulnerability` plan already
   ran it. Closes #5013.
+
+- **Migration step 12 reads at most 8000 bytes of a file larger than 16 MiB.**
+  It read up to 16 MiB of such a file before naming it as not checked for 1.x
+  paths, although `lstat` had already given its size. It now reads only the
+  first 8000 bytes, enough to tell binary from text, and names a text file as
+  larger than 16 MiB from its size; a NUL byte past those 8000 bytes no longer
+  makes the file count as binary. Closes #5054.
 
 - **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
   with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
@@ -715,6 +765,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   record outside the session directory, and fails with an `AggregateError`,
   while the cached sessions and storage states are removed either way.
   Closes #4929. Closes #4931.
+
+- **`qfai init` keeps reminder-hook settings another writer changed while it
+  ran.** The hook merge read `.claude/settings.json` or `.codex/hooks.json`,
+  planned the new text, and renamed it into place later, so a file created or
+  edited in between was replaced. A file the merge found absent is now created
+  only if nothing is there yet, and an existing one is replaced only while its
+  text is still what the merge read; otherwise the file is left as the other
+  writer made it, a warning names it, and init carries on. Migration step 11,
+  which uses the same merge, stops naming the file instead. Closes #5017.
 
 - **`qfai sdd preflight` keeps a carry-over entry that starts with `<`.** A
   flagless re-run dropped every recorded entry opening with a less-than sign,
@@ -777,6 +836,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `paths.contractsDir` elsewhere sent its reviewers to a missing or stale file,
   which they treat as absent evidence. They now name
   `<paths.contractsDir>/tech.md`.
+
+- **The document-schema checker stops an mdschema run that never exits.** Run
+  from the command line, as the shipped document lane runs it, the checker
+  waited on each mdschema run with no time limit, so a run that never exited
+  held the lane until the CI job timed out. It now stops a run after 120
+  seconds, the limit `qfai validate` already applied, and exits 2 saying that
+  mdschema did not finish, never reading the run as a pass or a schema
+  failure. Closes #5033.
 
 - **`qfai doctor` names a shipped workflow it cannot read in
   `workflows.cost`.** The check skipped every read failure as if the workflow

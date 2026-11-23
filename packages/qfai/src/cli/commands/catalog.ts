@@ -110,8 +110,9 @@ export async function runCatalogComponents(options: CatalogComponentsOptions): P
 /**
  * Writes the component catalogue inside the project. Every directory on its path is checked
  * before and after it is created: a symbolic link (a junction included) or an entry that is not
- * a directory stops the write, as does a catalogue path that is a link or not a file, so nothing
- * is written outside the project and an existing catalogue is left as it was. The text goes to an
+ * a directory stops the write, as does a catalogue path that is a link, not a file or cannot be
+ * inspected, so nothing is written outside the project and an existing catalogue is left as it
+ * was, never overwritten unseen. The text goes to an
  * exclusively created temporary file in the checked directory, which is then renamed onto the
  * catalogue. Returns the failure's message, or null.
  */
@@ -152,7 +153,8 @@ function messageOf(caught: unknown): string {
 
 /**
  * Why the committed catalogue cannot be read inside the project, by the guard the write uses: a
- * linked or non-directory entry on its path, or a catalogue path that is a link or not a file.
+ * linked or non-directory entry on its path, or a catalogue path that is a link, not a file or
+ * cannot be inspected.
  * Null when it can be read, or is absent.
  */
 async function unsafeCatalogPath(root: string): Promise<string | null> {
@@ -166,10 +168,21 @@ async function unsafeCatalogPath(root: string): Promise<string | null> {
   }
 }
 
-/** Throws when an entry is at the catalogue path and it is not a file. */
+/**
+ * Throws when an entry is at the catalogue path and it is not a file, or when its metadata cannot
+ * be read: only a catalogue that is not there counts as absent.
+ */
 async function assertFileOrAbsent(file: string, segments: readonly string[]): Promise<void> {
-  const existing = await lstat(file).catch(() => null);
-  if (existing !== null && !existing.isFile()) {
+  let existing: Stats;
+  try {
+    existing = await lstat(file);
+  } catch (caught) {
+    if (isEnoent(caught)) return;
+    throw new Error(`${segments.join("/")} could not be inspected: ${messageOf(caught)}`, {
+      cause: caught,
+    });
+  }
+  if (!existing.isFile()) {
     throw new Error(`${segments.join("/")} is not a file.`);
   }
 }

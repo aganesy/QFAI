@@ -107,8 +107,8 @@
  *   0  no document in scope carries a violation this run is responsible for
  *   1  at least one document does
  *   2  usage error, missing schema/manifest, a qfai.config.yaml that qfai validate
- *      reports for paths.specsDir or paths.contractsDir, or an mdschema binary
- *      that will not run
+ *      reports for paths.specsDir or paths.contractsDir, an mdschema binary
+ *      that will not run, or an mdschema run stopped after 120 seconds
  *
  * Under `--scope all` and `--scope files` those two say what they always have:
  * every checked document conforms, or one does not. Under `--scope changed`
@@ -843,17 +843,43 @@ function changedFiles(base, root) {
  * @param {string} schemaPath Absolute path to the schema.
  * @param {string[]} files Tree-relative document paths.
  * @param {string} root The tree they are relative to.
- * @returns {{ ok: boolean, output: string, spawnFailed: boolean }}
+ * @param {number} timeoutMs A run still going after this long is killed and
+ *   reported as `stopped`, never read as a result.
+ * @returns {{ ok: boolean, output: string, spawnFailed: boolean, stopped?: boolean }}
  */
-function runMdschema(mdschema, schemaPath, files, root) {
+function runMdschema(mdschema, schemaPath, files, root, timeoutMs) {
   const result = spawnSync(mdschema.command, mdschemaArgs(mdschema, schemaPath, files), {
     cwd: root,
     encoding: "utf-8",
     // `checkDocuments` reads output of any length, so the lane reads far more
     // than the 1 MiB default rather than calling a long report a failed run.
     maxBuffer: MDSCHEMA_MAX_OUTPUT,
+    timeout: timeoutMs,
+    // A synchronous run cannot send a second signal, and `spawnSync` waits for
+    // the process to exit, so one that caught SIGTERM would hold the lane anyway.
+    killSignal: "SIGKILL",
   });
+  if (result.error !== undefined && "code" in result.error && result.error.code === "ETIMEDOUT") {
+    return {
+      ok: false,
+      spawnFailed: false,
+      stopped: true,
+      output: `it ran longer than ${timeoutMs} ms and was stopped`,
+    };
+  }
   return mdschemaResult(result, schemaPath);
+}
+
+/**
+ * Why a run that gave no verdict gave none, in the words the lane prints.
+ *
+ * @param {{ output: string, stopped?: boolean }} result
+ * @returns {string}
+ */
+function notRunReason(result) {
+  return result.stopped
+    ? `mdschema did not finish: ${result.output}`
+    : `could not run mdschema: ${result.output}`;
 }
 
 /**
@@ -1019,20 +1045,22 @@ function fileAtRev(rev, file, root) {
  * Runs the schema over one document's text, held in a scratch directory.
  *
  * `null` when mdschema could not be run at all, which the caller treats as an
- * unanswered question rather than as a pass.
+ * unanswered question rather than as a pass. A run stopped at its time limit
+ * comes back as itself, for the lane to report as a check that did not finish.
  *
  * The scratch directory is outside the checked tree on purpose: this script
  * runs in an adopter's repository, and a lane that writes into the tree it is
  * checking is one that can change its own answer.
  *
- * @returns {{ ok: boolean, output: string } | null}
+ * @returns {{ ok: boolean, output: string, stopped?: boolean } | null}
  */
-function checkText(mdschema, schemaPath, file, text) {
+function checkText(mdschema, schemaPath, file, text, timeoutMs) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-base-"));
   try {
     const target = path.join(dir, path.basename(file));
     writeFileSync(target, text, "utf-8");
-    const result = runMdschema(mdschema, schemaPath, [target], dir);
+    const result = runMdschema(mdschema, schemaPath, [target], dir, timeoutMs);
+    if (result.stopped) return result;
     return result.spawnFailed ? null : { ok: result.ok, output: result.output };
   } catch {
     return null;
@@ -1047,9 +1075,10 @@ function checkText(mdschema, schemaPath, file, text) {
  *
  * Fails closed at every step it cannot answer: a base text that will not run
  * is this branch's obligation, because the alternative is excusing a document
- * on the strength of a question nobody managed to ask.
+ * on the strength of a question nobody managed to ask. A base run stopped at
+ * its time limit comes back as that run, which answers nothing either way.
  *
- * @returns {boolean}
+ * @returns {boolean | { output: string, stopped?: boolean }}
  */
 function ownsViolations(context, file) {
   const before = fileAtRev(context.baseRev, file, context.root);
@@ -1057,32 +1086,43 @@ function ownsViolations(context, file) {
     // Added by this branch, so this is the first run that could report it.
     return true;
   }
-  const verdict = checkText(context.mdschema, context.schemaPath, file, before);
+  const verdict = checkText(context.mdschema, context.schemaPath, file, before, context.timeoutMs);
+  if (verdict?.stopped) return verdict;
   return verdict === null ? true : verdict.ok;
 }
 
 /**
  * Splits an entry's failing documents into the ones this branch owes and the
- * ones it inherited. `null` when mdschema stopped running part-way.
+ * ones it inherited, or says why mdschema gave no verdict on one of them.
  *
  * Per-file runs are what make a per-file verdict possible, and they are paid
  * for only after the batch has already failed.
  *
- * @returns {{ owned: {file: string, output: string}[], inherited: {file: string, output: string}[] } | null}
+ * @returns {{ owned: {file: string, output: string}[], inherited: {file: string, output: string}[] } | { notRun: string }}
  */
 function splitByOwnership(context, files) {
   const owned = [];
   const inherited = [];
   for (const file of files) {
-    const single = runMdschema(context.mdschema, context.schemaPath, [file], context.root);
-    if (single.spawnFailed) {
-      return null;
+    const single = runMdschema(
+      context.mdschema,
+      context.schemaPath,
+      [file],
+      context.root,
+      context.timeoutMs,
+    );
+    if (single.spawnFailed || single.stopped) {
+      return { notRun: notRunReason(single) };
     }
     if (single.ok) {
       continue;
     }
     const row = { file, output: single.output };
-    if (ownsViolations(context, file)) {
+    const owns = ownsViolations(context, file);
+    if (typeof owns === "object") {
+      return { notRun: notRunReason(owns) };
+    }
+    if (owns) {
       owned.push(row);
     } else {
       inherited.push(row);
@@ -2015,18 +2055,20 @@ function parseArgs(argv) {
  * held before the run is restored when it returns or throws, so a later run or
  * `checkDocuments` call in the same process reports what it asked for.
  *
+ * @param {{ timeoutMs: number }} [limits] How long one mdschema run may take
+ *   before it is stopped and the lane exits 2 for a check that did not finish.
  * @returns {number}
  */
-export function main() {
+export function main(limits = MDSCHEMA_LIMITS) {
   const before = showPatterns;
   try {
-    return runLane();
+    return runLane(limits.timeoutMs);
   } finally {
     showPatterns = before;
   }
 }
 
-function runLane() {
+function runLane(timeoutMs) {
   const options = parseArgs(process.argv.slice(2));
   if (typeof options === "number") {
     return options;
@@ -2229,9 +2271,9 @@ function runLane() {
       continue;
     }
 
-    const result = runMdschema(mdschema, schemaPath, gradable, root);
-    if (result.spawnFailed) {
-      console.error(`check-mdschema: could not run mdschema: ${result.output}`);
+    const result = runMdschema(mdschema, schemaPath, gradable, root, timeoutMs);
+    if (result.spawnFailed || result.stopped) {
+      console.error(`check-mdschema: ${notRunReason(result)}`);
       return 2;
     }
     if (result.ok || baseRev === null) {
@@ -2244,9 +2286,9 @@ function runLane() {
       continue;
     }
 
-    const split = splitByOwnership({ mdschema, schemaPath, root, baseRev }, gradable);
-    if (split === null) {
-      console.error("check-mdschema: could not run mdschema over a single document");
+    const split = splitByOwnership({ mdschema, schemaPath, root, baseRev, timeoutMs }, gradable);
+    if ("notRun" in split) {
+      console.error(`check-mdschema: over a single document, ${split.notRun}`);
       return 2;
     }
     inheritedFiles += split.inherited.length;

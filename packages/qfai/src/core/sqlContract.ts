@@ -496,9 +496,68 @@ const MULTI_WORD_TYPE_START =
 const ARRAY_SUFFIX = /^array(?:\[\d*\])?$/;
 
 /**
+ * Each built-in type alias, mapped to the one spelling PostgreSQL resolves it
+ * to. Type modifiers are already gone when this is read.
+ */
+const TYPE_ALIASES = new Map<string, string>([
+  ["int", "integer"],
+  ["int4", "integer"],
+  ["int2", "smallint"],
+  ["int8", "bigint"],
+  ["float4", "real"],
+  ["float", "double precision"],
+  ["float8", "double precision"],
+  ["decimal", "numeric"],
+  ["dec", "numeric"],
+  ["bool", "boolean"],
+  ["varchar", "character varying"],
+  ["char varying", "character varying"],
+  ["national character varying", "character varying"],
+  ["national char varying", "character varying"],
+  ["char", "character"],
+  ["bpchar", "character"],
+  ["national character", "character"],
+  ["national char", "character"],
+  ["varbit", "bit varying"],
+  ["timestamp", "timestamp without time zone"],
+  ["timestamptz", "timestamp with time zone"],
+  ["time", "time without time zone"],
+  ["timetz", "time with time zone"],
+]);
+
+/** An array suffix: SQL-standard `ARRAY`, `ARRAY[n]`, or one or more `[n]`. */
+const ARRAY_TYPE_SUFFIX = /(?: array(?:\[\d*\])?|(?:\[\d*\])+)$/;
+
+/**
+ * The one spelling of an argument type PostgreSQL resolves a routine by.
+ *
+ * PostgreSQL ignores a routine argument's type modifiers (`varchar(10)`,
+ * `numeric(10,2)`, an interval's fields) and its array bounds, and resolves
+ * each alias (`int`, `int4`, `bool`, `timestamptz`) to one type. `float(p)` is
+ * the exception: its precision picks `real` or `double precision`. A
+ * schema-qualified or quoted spelling of a built-in type is kept as written.
+ */
+function canonicalArgumentType(type: string): string {
+  const arraySuffix = ARRAY_TYPE_SUFFIX.exec(type);
+  let base = arraySuffix ? type.slice(0, arraySuffix.index) : type;
+  const floatPrecision = /^float\((\d+)\)$/.exec(base);
+  if (floatPrecision) base = Number(floatPrecision[1]) <= 24 ? "real" : "double precision";
+  // A space stands in for the modifier: the caller removed the spaces around
+  // parentheses, so `timestamp(3) with time zone` arrives as `timestamp(3)with`.
+  base = base
+    .replace(/\([^()]*\)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (/^interval (?:year|month|day|hour|minute|second)\b/.test(base)) base = "interval";
+  const name = TYPE_ALIASES.get(base) ?? base;
+  return arraySuffix ? `${name}[]` : name;
+}
+
+/**
  * The PostgreSQL identity of a routine's argument list: its input argument
- * types, in order. Argument names, DEFAULT expressions and spacing are not
- * part of it; neither are a function's OUT arguments.
+ * types, in order, each in its canonical spelling. Argument names, DEFAULT
+ * expressions, type modifiers and spacing are not part of it; neither are a
+ * function's OUT arguments.
  */
 function identityArgumentTypes(argumentText: string, kind: string): string {
   const types: string[] = [];
@@ -522,7 +581,7 @@ function identityArgumentTypes(argumentText: string, kind: string): string {
     const type = words.join(" ");
     if (type.length === 0) continue;
     if (mode === "out" && kind === "FUNCTION") continue;
-    types.push(type);
+    types.push(canonicalArgumentType(type));
   }
   return types.join(",");
 }

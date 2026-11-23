@@ -10,6 +10,7 @@ import type { FailOn, QfaiConfig } from "../../core/config.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
 import type { Issue } from "../../core/types.js";
 import { isCiEnvironment } from "../../core/phasePolicy.js";
+import { EXIT_CODES } from "../lib/exitCodes.js";
 import { resolveFailOn } from "../lib/failOn.js";
 import { info } from "../../core/logger.js";
 
@@ -150,6 +151,22 @@ async function runCleanPhase(
   return { lines, failed: runLogs.failed.length > 0 };
 }
 
+/**
+ * The side-effect lines of a pass that ends without a diagnosis: on stdout
+ * under `--format text`, and on stderr under `--format json` so stdout
+ * carries no stray text before a JSON consumer reads it.
+ */
+function emitSideEffectLines(lines: readonly string[], format: "text" | "json"): void {
+  if (lines.length === 0) {
+    return;
+  }
+  if (format === "json") {
+    process.stderr.write(`${lines.join("\n")}\n`);
+  } else {
+    info(lines.join("\n"));
+  }
+}
+
 export async function runDoctor(options: DoctorCommandOptions): Promise<number> {
   // Resolve the project root BEFORE running any side-effecting
   // pre-step. Pre-fix `runAutoremediate` and the clean pass
@@ -215,6 +232,13 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       ...(options.skillProfile ? { skill: options.skillProfile } : {}),
     });
     sideEffectLines.push(...summary.lines);
+    if (summary.cancelled) {
+      // Ctrl+C at the install prompt stops the command, but the `.gitignore`
+      // and wrapper repairs above already ran: print their lines with the
+      // cancellation instead of dropping them, and skip the diagnosis.
+      emitSideEffectLines(sideEffectLines, options.format);
+      return EXIT_CODES.interrupted;
+    }
     remediationFailed = summary.failedRunLogPrunes.length > 0 || summary.failedInstalls.length > 0;
     // When the operator did not pass `--profile <skill>`, the install
     // phase of runAutoremediate is structurally skipped (there is no
