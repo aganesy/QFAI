@@ -406,6 +406,23 @@ describe("README facts", () => {
     }
   });
 
+  // pnpm 11 turned strictDepBuilds on by default, so an unreviewed build script
+  // fails the install instead of printing a warning.
+  it("says pnpm 11 stops on mdschema's install script and names both ways forward", async () => {
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      const start = readme.indexOf("### The install script of `@jackchuka/mdschema`");
+      expect(start, readmePath).toBeGreaterThanOrEqual(0);
+      const section = readme.slice(start, readme.indexOf("\n## ", start));
+      const prose = section.replace(/\s+/g, " ");
+      expect(prose, readmePath).toContain("pnpm 11 or later");
+      expect(prose, readmePath).toContain("`strictDepBuilds`");
+      expect(prose, readmePath).toContain("exit with an error");
+      expect(section, readmePath).toContain("pnpm approve-builds");
+      expect(section, readmePath).toContain('allowBuilds:\n  "@jackchuka/mdschema": false');
+    }
+  });
+
   it("tells an upgrade to read the notes of every version it skips", async () => {
     for (const readmePath of READMES) {
       const readme = await readFile(readmePath, "utf-8");
