@@ -353,6 +353,7 @@ describe("check-mdschema driver", () => {
     expect(result.stdout).toContain("1 file(s) conform");
   });
 
+  // QFAI:EX-0001-0011-31
   it("fails open to the whole tree when the git base is unreachable", async () => {
     const root = await newTempDir();
     await writeFlow(root, "business-flow-0001", NON_CONFORMING_FLOW);
@@ -861,6 +862,7 @@ describe("the ratchet in --scope changed", () => {
   const LEGACY = "# flow: a heading the schema does not accept\n\n## Metadata\n\n- something\n";
   const LEGACY_EDITED = `${LEGACY}- one more line\n`;
 
+  // QFAI:EX-0001-0011-29
   it("leaves a pre-existing failure to its own change when a branch edits the document", async () => {
     const root = await twoCommits(
       { "business-flow-0002": LEGACY },
@@ -874,6 +876,7 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stdout).toContain("already failing at the merge base");
   });
 
+  // QFAI:EX-0001-0011-29
   it("reports the inherited failure rather than dropping it", async () => {
     // Held back is not the same as hidden. A document nobody is told about is
     // one nobody migrates, which is the backlog this flag exists to let shrink.
@@ -889,6 +892,7 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stdout).toContain("PASS  story-business-flow (1 file(s), 1 pre-existing)");
   });
 
+  // QFAI:EX-0001-0011-29
   it("fails when a branch breaks a document that conformed at the merge base", async () => {
     const root = await twoCommits(
       { "business-flow-0001": CONFORMING_FLOW },
@@ -901,6 +905,7 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stderr).toContain("story-business-flow");
   });
 
+  // QFAI:EX-0001-0011-29
   it("fails when a branch adds a document that does not conform", async () => {
     // Absent at the base is not "was already failing". This is the first run
     // that could have reported it.
@@ -914,6 +919,7 @@ describe("the ratchet in --scope changed", () => {
     expect(result.status).toBe(1);
   });
 
+  // QFAI:EX-0001-0011-29
   it("still fails for what the branch owes when it also edits a legacy document", async () => {
     const root = await twoCommits(
       { "business-flow-0001": CONFORMING_FLOW, "business-flow-0002": LEGACY },
@@ -943,6 +949,7 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stderr).toContain("is not accepted");
   });
 
+  // QFAI:EX-0001-0011-29
   it("holds every violation against --scope all, which is the migration view", async () => {
     const root = await twoCommits(
       { "business-flow-0002": LEGACY },
@@ -955,6 +962,7 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stdout).not.toContain("pre-existing");
   });
 
+  // QFAI:EX-0001-0011-29
   it("leaves a root heading already wrong at the merge base to its own change", async () => {
     // The root-heading verdict is taken without `mdschema`, so it needs its own
     // answer to the ownership question the ratchet asks of everything else.
@@ -970,6 +978,7 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stdout).toContain("Root heading is");
   });
 
+  // QFAI:EX-0001-0011-29
   it("fails when a branch breaks a root heading that matched at the merge base", async () => {
     const root = await twoCommits(
       { "business-flow-0001": CONFORMING_FLOW },
@@ -982,6 +991,7 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stderr).toContain("Root heading is");
   });
 
+  // QFAI:EX-0001-0011-30
   it("leaves a document out of scope when only its line endings changed", async () => {
     // Re-normalising a tree to LF rewrites every file. Judging scope by which
     // blobs moved puts documents nobody edited into the gate, and every
@@ -999,6 +1009,7 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stdout).not.toContain("pre-existing, not this branch's");
   });
 
+  // QFAI:EX-0001-0011-30
   it("keeps a document in scope when only its indentation changed", async () => {
     // The narrower flag is the point. Indentation carries meaning here: moving
     // a list item two spaces right nests it under its predecessor, which is a
@@ -1014,6 +1025,7 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stdout).toContain("pre-existing, not this branch's");
   });
 
+  // QFAI:EX-0001-0011-31
   it("fails open to the whole tree when the worktree diff fails", async () => {
     // The branch diff compares two commits and reads no index; the worktree
     // diff reads the index, so a corrupt one fails it alone. Read as "nothing
@@ -1037,6 +1049,7 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stderr).toContain("business-flow-0001");
   });
 
+  // QFAI:EX-0001-0011-32
   it("keeps a document in scope when its directory name is not ASCII", async () => {
     // Under the default `core.quotePath`, Git prints such a path quoted with its
     // bytes octal-escaped. That string names no document, so the edit would

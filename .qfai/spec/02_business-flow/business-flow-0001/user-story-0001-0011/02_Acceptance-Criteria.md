@@ -55,4 +55,13 @@ Feature: Story-tree layout described by mdschema
     Then the finding shows the rule's example line, which passes the schema in the rule's template, in place of the pattern
     And a missing heading whose pattern accepts one fixed line is named by that line, and any other heading keeps its pattern
     And every section of a shipped schema gives a description, which a forbidden-text finding states in place of its pattern
+
+  # AC-0001-0011-08
+  Scenario: The changed scope holds a branch to what it changed, measured at the merge base
+    Given a branch whose story-tree documents differ from the merge base with its base branch
+    When the document lane runs under `--scope changed`
+    Then a document the branch added or whose text it changed is checked, a change of indentation included, and a document whose only change is its line endings is not
+    And a checked document that fails is the branch's failure when it was absent or conformed at the merge base, or when its root heading matched there and no longer does, and is otherwise reported as pre-existing without failing the run
+    And a document whose path holds a character outside ASCII is in the scope like any other
+    And a branch or worktree diff that cannot be taken widens the run to every document with a warning naming the diff that failed, rather than checking nothing
 ```
