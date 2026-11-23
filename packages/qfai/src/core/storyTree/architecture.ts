@@ -1,4 +1,4 @@
-import { parseAllMarkdownTables } from "../specPackParsers.js";
+import { parseRenderedMarkdownTables } from "../specPackParsers.js";
 
 /**
  * One row of the `## Architecture` table of `tech.md`: a layer, and the layers below it
@@ -164,7 +164,7 @@ export function architectureProblems(body: string): string[] {
   const fence = [...body.matchAll(MERMAID_FENCE)][0];
   if (fence === undefined) return [];
   const after = body.slice(fence.index + fence[0].length);
-  const table = parseAllMarkdownTables(after)[0];
+  const table = parseRenderedMarkdownTables(after)[0];
   const headers = table?.headers.map((header) => header.trim()) ?? [];
   const layerColumn = headers.indexOf("Layer");
   const dependsColumn = headers.indexOf("Depends on");

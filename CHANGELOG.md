@@ -647,6 +647,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and refused with `plan-invalid` and `step-missing` as for the route's own
   steps.
 
+- **A sample table in a code fence or an HTML comment no longer counts in the
+  decision and question registers, the layer table, the constraint IDs or the
+  component catalogue.** `decisions.md`, `open-questions.md`, the
+  `## Architecture` and `## Stack` tables of `tech.md` and the tables of
+  `constraint.md` were read with every table in the text, so a fenced example
+  of the format or a commented-out draft row declared a decision, broke the
+  one-table rule, stood in for the real layer table, drew a constraint ID
+  finding or named a catalogue the project does not use. These readers now
+  read only tables Markdown renders, as the index and example readers already
+  do. Closes #5328.
+
 - **`qfai validate` reports a self-governance input it cannot observe instead
   of stopping.** Deciding whether `QFAI-HANDOFF-001` and `QFAI-MANIFEST-001`
   could run, the check let an error other than "absent", such as a permission
