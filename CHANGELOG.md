@@ -787,6 +787,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it active, graph and inputs together, only when the graph is current for
   them. Closes #5191.
 
+- **The turn-end check forgets the failure it blocked on when the
+  configuration cannot be read.** A session that was blocked, then had
+  `qfai.config.yaml` become unreadable, could still count that old failure
+  toward letting a later continued turn end. The hook now drops it, as it
+  already did for a label listed twice. Closes #5199.
+
 - **The shared workflow rule names the RED exception by its installed path.**
   It pointed at `references/red-not-observable.md`, which the rule's own
   directory does not hold, so a reader entering from any stage other than
