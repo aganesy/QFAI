@@ -580,6 +580,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to the end of the line when it is never closed; a bare value is still
   blanked to the next whitespace. Closes #5020.
 
+- **Migration step 11 names a staging directory it could not remove.** When
+  step 11 replaced a shipped skill or step but could not remove the hidden
+  `.<id>-replace-*` directory it staged in, the failure was ignored: the
+  directory, holding the project's earlier copy, stayed under
+  `.qfai/assistant/` unreported, where a later commit could take it. Step 11
+  now lists that directory under `## For a person`, asks for it to be deleted
+  before the next commit, and exits 3. Closes #5061.
+
 - **`qfai workflow plan` refuses a plan whose added specification stage runs a
   step that is not installed.** A request naming the story tree can give a
   route a `spec` stage with `sdd-triage`, `sdd-story` or `sdd-contract`, but
