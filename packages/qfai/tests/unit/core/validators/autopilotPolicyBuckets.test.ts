@@ -213,4 +213,42 @@ describe("auto-decide entries are read and judged like hard-required entries", (
       ).toEqual([]);
     }
   });
+
+  it("drops an HTML comment instead of joining it to the entry above", () => {
+    for (const bucket of [
+      "- auto-decide:\n  - output formatting\n    <!-- rationale -->",
+      "- auto-decide:\n  - output formatting <!-- rationale -->",
+      "- auto-decide:\n  - output formatting\n  <!--\n    destructive operations\n  -->\n  - equivalent-option pick",
+    ]) {
+      expect(parseAutopilotPolicy(withAutoDecide(bucket)).widenedTokens).toEqual([]);
+    }
+  });
+
+  it("does not count a commented-out entry, and keeps reading the entries after it", () => {
+    const result = parseAutopilotPolicy(
+      withAutoDecide("- auto-decide:\n  - <!-- destructive operations -->\n  - force-push"),
+    );
+    expect(result.widenedTokens).toEqual(["force-push"]);
+  });
+
+  it("flags a separator that opens no operation", () => {
+    for (const entry of [
+      "output formatting:",
+      "equivalent-option pick (",
+      "equivalent-option pick ()",
+      "equivalent-option pick (when the subject",
+      "output formatting —",
+    ]) {
+      expect(
+        parseAutopilotPolicy(withAutoDecide(`- auto-decide:\n  - ${entry}`)).widenedTokens,
+      ).toEqual([entry]);
+    }
+  });
+
+  it("flags a separator whose only operation is a comment", () => {
+    expect(
+      parseAutopilotPolicy(withAutoDecide("- auto-decide:\n  - output formatting: <!-- to do -->"))
+        .widenedTokens,
+    ).toEqual(["output formatting:"]);
+  });
 });
