@@ -225,8 +225,10 @@ Note: run the commands below from the repository root unless stated otherwise.
    ```
 
    The chain stops at the first check that fails: `<SHA>` is not on `main`, or
-   its manifest does not show `"version": "X.Y.Z"`. Push only when it ran to the
-   end and `git rev-parse` printed `<SHA>` again:
+   its manifest does not show `"version": "X.Y.Z"`. It also stops when the fetch
+   fails, or when `vX.Y.Z` already exists; then read where the existing tag
+   points with `git rev-parse "vX.Y.Z^{commit}"` before anything else. Push only
+   when the chain ran to the end and `git rev-parse` printed `<SHA>` again:
 
    ```sh
    git push origin refs/tags/vX.Y.Z

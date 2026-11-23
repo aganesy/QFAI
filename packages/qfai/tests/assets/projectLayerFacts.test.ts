@@ -114,16 +114,22 @@ function tagCreations(markdown: string): string[] {
     });
 }
 
+/** The `git tag` flags whose next word is their value, not the commit. */
+const VALUE_TAKING_TAG_FLAGS = new Set(["-m", "--message", "-F", "--file", "-u", "--local-user"]);
+
 /**
  * Whether a tag command names its commit: the last word is the `<SHA>`
- * placeholder or a full 40-hex SHA, and no word is `HEAD` or `@`. Without a
- * commit, `git tag` tags whatever the checkout has as HEAD.
+ * placeholder or a full 40-hex SHA and is no flag's value, and no word is
+ * `HEAD` or `@`. Without a commit, `git tag` tags whatever the checkout has as
+ * HEAD.
  */
 function namesItsCommit(command: string): boolean {
   const words = command.split(/\s+/);
   const last = words[words.length - 1] ?? "";
+  const beforeLast = words[words.length - 2] ?? "";
   return (
     /^(?:<SHA>|[0-9a-f]{40})$/.test(last) &&
+    !VALUE_TAKING_TAG_FLAGS.has(beforeLast) &&
     !words.some((word) => /^(?:HEAD|@)(?:[~^].*)?$/.test(word))
   );
 }
@@ -242,6 +248,7 @@ describe("the project layer describes the repository it is in", () => {
       "```sh\ngit tag vX.Y.Z HEAD\n```",
       "Then run `git tag vX.Y.Z` to tag it.",
       "```sh\ngit fetch origin main && git tag vX.Y.Z\n```",
+      "```sh\ngit tag vX.Y.Z -m <SHA>\n```",
     ];
     for (const sample of tagsHead) {
       const creates = tagCreations(sample);
@@ -252,11 +259,9 @@ describe("the project layer describes the repository it is in", () => {
     expect(tagCreations("Delete it with `git tag -d vX.Y.Z`, or list with `git tag -l`.")).toEqual(
       [],
     );
-    expect(
-      tagCreations("```sh\n  git tag vX.Y.Z <SHA> &&\n```\n").filter(
-        (command) => !namesItsCommit(command),
-      ),
-    ).toEqual([]);
+    const chained = tagCreations("```sh\n  git tag vX.Y.Z <SHA> &&\n```\n");
+    expect(chained).toEqual(["git tag vX.Y.Z <SHA>"]);
+    expect(chained.every((command) => namesItsCommit(command))).toBe(true);
     expect(namesItsCommit(`git tag vX.Y.Z ${"a".repeat(40)}`)).toBe(true);
   });
 
@@ -282,7 +287,7 @@ describe("the project layer describes the repository it is in", () => {
     ).toBeGreaterThanOrEqual(0);
     expect(at(/^git merge-base --is-ancestor\b/)).toBeLessThan(tag);
     expect(
-      at(/^git show <SHA>:packages\/qfai\/package\.json \| grep\b/),
+      at(/^git show <SHA>:packages\/qfai\/package\.json \| grep -F '"version": "X\.Y\.Z"'$/),
       "the version check",
     ).toBeGreaterThanOrEqual(0);
     expect(at(/^git show <SHA>:/)).toBeLessThan(tag);
