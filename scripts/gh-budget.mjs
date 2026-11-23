@@ -92,7 +92,18 @@ const READING_NAME = "last-reading.json";
 const READING_MAX_BYTES = 4096;
 
 /** A job log can run to megabytes, so the child's buffer has to hold one. */
-const MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
+export const MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
+
+/**
+ * The bound on a saved log, which is the received body decoded and encoded again.
+ *
+ * `maxBuffer` bounds the bytes received. Decoding turns each byte that is not
+ * valid UTF-8 into U+FFFD, three bytes when encoded again, and leaves every valid
+ * sequence its own length, so three times the received bound is the most the
+ * text can come to. A smaller bound would refuse a log that was received whole,
+ * after the call for it was already spent.
+ */
+export const LOG_MAX_BYTES = 3 * MAX_RESPONSE_BYTES;
 
 /**
  * The `owner/repo` an `origin` URL names, or `undefined`.
@@ -220,9 +231,18 @@ const ENTRY_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
  * compared with the path the components spell, which catches a redirection
  * `lstat` does not report as a link. `base` itself is trusted: it is the checkout.
  *
- * The identity returned is what `writeCacheEntry` compares again just before it
- * renames, so a directory swapped after this check is refused rather than
- * written into.
+ * The identity returned is what `writeCacheEntry` compares again right after it
+ * opens its temporary file, before any byte is written, and again before it
+ * renames. A directory swapped before the open is refused with nothing written:
+ * the bytes go through the descriptor, which the second check ties to the
+ * verified directory.
+ *
+ * Ceiling: the rename and the removal of a refused temporary file still reach the
+ * directory by name. A swap after the last check makes the rename fail or act in
+ * the swapped directory; it moves none of the written bytes there, but it can
+ * leave the temporary file behind in the verified directory. Lifted when Node
+ * offers calls relative to a directory descriptor (`openat`, `renameat`), or
+ * when the cache moves out of a tree that anything in the checkout can write.
  */
 export function cacheDirectory(base, parts, { create }) {
   let current = base;
@@ -265,6 +285,8 @@ export function cacheDirectory(base, parts, { create }) {
  * reader sees the old entry or the new one and never part of either. An entry
  * already there that is not a regular file with one link is left alone and
  * refused, and so is a directory whose identity changed after it was verified.
+ * A write, sync or close that fails is a failed write, and the temporary file is
+ * removed.
  *
  * Returns the entry's `path` on success, and an `error` otherwise.
  */
@@ -293,33 +315,77 @@ export function writeCacheEntry(base, parts, name, text, maxBytes) {
   } catch {
     return { error: `${temporary} could not be created.` };
   }
-  let written = false;
-  try {
-    let offset = 0;
-    while (offset < bytes.length) offset += writeSync(fd, bytes, offset, bytes.length - offset);
-    fsyncSync(fd);
-    const stats = fstatSync(fd);
-    written = stats.isFile() && stats.nlink === 1 && stats.size === bytes.length;
-  } catch {
-    // `written` stays false, and the temporary file is removed below
-  } finally {
-    closeSync(fd);
-  }
-
-  const refusal = written
-    ? notReplaceable(directory, target)
-    : `${temporary} could not be written.`;
+  let refusal = openedInPlace(fd, temporary, directory, base, parts);
+  if (refusal === undefined) refusal = writeAll(fd, temporary, bytes);
+  if (!closed(fd)) refusal ??= `${temporary} could not be closed.`;
+  refusal ??= notReplaceable(directory, target);
   if (refusal === undefined) {
     try {
       renameSync(temporary, target);
       return { path: target, error: undefined };
     } catch {
-      rmSync(temporary, { force: true });
+      removeQuietly(temporary);
       return { error: `${target} could not be replaced.` };
     }
   }
-  rmSync(temporary, { force: true });
+  removeQuietly(temporary);
   return { error: refusal };
+}
+
+/**
+ * Why the file just opened as `temporary` may not be written, or `undefined`.
+ *
+ * The open reached the directory by name, so the directory is verified again and
+ * must be the one verified before, and the name must still lead to the opened
+ * file. That file's identity is compared as bigints, which a 64-bit file index
+ * fits whole.
+ */
+function openedInPlace(fd, temporary, directory, base, parts) {
+  const again = cacheDirectory(base, parts, { create: false });
+  if (again.error !== undefined || again.dev !== directory.dev || again.ino !== directory.ino) {
+    return `${directory.path} changed before the entry was written.`;
+  }
+  try {
+    const named = lstatSync(temporary, { bigint: true });
+    const opened = fstatSync(fd, { bigint: true });
+    if (named.isFile() && named.dev === opened.dev && named.ino === opened.ino) return undefined;
+  } catch {
+    // a name that cannot be read proves nothing, so it is refused below
+  }
+  return `${temporary} is not the file that was opened.`;
+}
+
+/** Writes and syncs `bytes` through `fd`, or says why the file is not whole. */
+function writeAll(fd, temporary, bytes) {
+  try {
+    let offset = 0;
+    while (offset < bytes.length) offset += writeSync(fd, bytes, offset, bytes.length - offset);
+    fsyncSync(fd);
+    const stats = fstatSync(fd);
+    if (stats.isFile() && stats.nlink === 1 && stats.size === bytes.length) return undefined;
+  } catch {
+    // reported below as a failed write
+  }
+  return `${temporary} could not be written.`;
+}
+
+/** Whether `fd` closed. A failed close is reported, never thrown. */
+function closed(fd) {
+  try {
+    closeSync(fd);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Removes a temporary file; a removal that fails leaves the refusal as it was. */
+function removeQuietly(file) {
+  try {
+    rmSync(file, { force: true });
+  } catch {
+    // the refusal already reported says the entry was not written
+  }
 }
 
 /**
@@ -531,7 +597,7 @@ function logCommand(slug, jobId) {
       console.error("GitHub returned an empty log body; nothing was saved.");
       return 2;
     }
-    const written = writeCacheEntry(ROOT, CACHE_PARTS, name, body, MAX_RESPONSE_BYTES);
+    const written = writeCacheEntry(ROOT, CACHE_PARTS, name, body, LOG_MAX_BYTES);
     if (written.error !== undefined) {
       console.error(`The log was not saved: ${written.error}`);
       return 2;

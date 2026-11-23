@@ -149,6 +149,28 @@ export async function prepareDocumentAnalysisLocked(
 ): Promise<DocumentPreparation> {
   if (!(await graphifyConfigurationSafe(root))) return providerConflict();
   if (await inspectDocumentAnalysis(root, run)) return { status: "prepared", source: "current" };
+  return replaceDocumentAnalysis(root, run, approveExternal, environment);
+}
+
+/**
+ * Restores or generates the document analysis for a caller that has just found the active one not
+ * current under the same graph lock, so the inspection, and the refresh copy it may make, is not
+ * repeated.
+ */
+export async function prepareNotCurrentDocumentAnalysisLocked(
+  root: string,
+  run: GraphProcess = runGraphProcess,
+): Promise<DocumentPreparation> {
+  if (!(await graphifyConfigurationSafe(root))) return providerConflict();
+  return replaceDocumentAnalysis(root, run, () => Promise.resolve(false));
+}
+
+async function replaceDocumentAnalysis(
+  root: string,
+  run: GraphProcess,
+  approveExternal: ApproveExternalProcessing,
+  environment?: GraphReuseEnvironment,
+): Promise<DocumentPreparation> {
   const inspect = async (analysis: string, refresh: boolean) =>
     (await inspectDocumentScopeAt(root, analysis, run, refresh ? "in-place" : "none")).current;
   const processing = await readGraphProcessing(root);

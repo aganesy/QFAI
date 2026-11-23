@@ -11,11 +11,14 @@
  * justification has drifted away from it cannot be reviewed, and the next reader
  * has no way to tell a considered floor from one somebody typed.
  */
+import type * as NodeFs from "node:fs";
 import {
   existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
+  renameSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -24,9 +27,50 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
+/**
+ * Seams into the script's file calls, for the races and failures a real file
+ * system does not produce on demand. Every call goes through to `node:fs`; a
+ * hook only acts around it, and none is set outside the case that needs it.
+ */
+const fsHooks = vi.hoisted(() => {
+  const hooks: {
+    beforeOpen: ((file: string) => void) | undefined;
+    afterOpen: ((file: string) => void) | undefined;
+    closeFails: boolean;
+    writes: number;
+  } = { beforeOpen: undefined, afterOpen: undefined, closeFails: false, writes: 0 };
+  return hooks;
+});
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof NodeFs>();
+  return {
+    ...actual,
+    openSync: (...args: Parameters<typeof NodeFs.openSync>) => {
+      fsHooks.beforeOpen?.(String(args[0]));
+      const fd: unknown = Reflect.apply(actual.openSync, actual, args);
+      fsHooks.afterOpen?.(String(args[0]));
+      return fd;
+    },
+    writeSync: (...args: Parameters<typeof NodeFs.writeSync>) => {
+      fsHooks.writes += 1;
+      const count: unknown = Reflect.apply(actual.writeSync, actual, args);
+      return count;
+    },
+    closeSync: (fd: number) => {
+      actual.closeSync(fd);
+      if (fsHooks.closeFails) {
+        throw Object.assign(new Error("EIO: i/o error, close"), { code: "EIO" });
+      }
+    },
+  };
+});
+
+const {
+  LOG_MAX_BYTES,
+  MAX_RESPONSE_BYTES,
   RESERVE,
   branchRows,
   cacheDirectory,
@@ -38,7 +82,7 @@ import {
   run,
   splitResponse,
   statusCode,
-} from "../../../../scripts/gh-budget.mjs";
+} = await import("../../../../scripts/gh-budget.mjs");
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -283,6 +327,10 @@ describe("the cache writes only inside its own directory", () => {
   });
 
   afterEach(async () => {
+    fsHooks.beforeOpen = undefined;
+    fsHooks.afterOpen = undefined;
+    fsHooks.closeFails = false;
+    fsHooks.writes = 0;
     await rm(base, { recursive: true, force: true });
     await rm(outside, { recursive: true, force: true });
   });
@@ -332,6 +380,53 @@ describe("the cache writes only inside its own directory", () => {
     const written = writeCacheEntry(base, PARTS, "job-1.log", "x".repeat(65), 64);
     expect(written.error).toMatch(/over 64/);
     expect(existsSync(path.join(base, "tmp"))).toBe(false);
+  });
+
+  // The open reaches the directory by name after it was verified, so a swap in
+  // that gap would otherwise carry the whole log to the link's target.
+  it("refuses a directory swapped for a link before the open, writing no byte", () => {
+    const directory = path.join(base, ...PARTS);
+    mkdirSync(directory, { recursive: true });
+    fsHooks.beforeOpen = () => {
+      fsHooks.beforeOpen = undefined;
+      renameSync(directory, path.join(base, "tmp", "moved"));
+      symlinkSync(outside, directory, "junction");
+    };
+    const written = writeCacheEntry(base, PARTS, "job-1.log", "log", 64);
+    expect(written.error).toMatch(/changed before the entry was written/);
+    expect(fsHooks.writes).toBe(0);
+    expect(readdirSync(outside)).toEqual([]);
+  });
+
+  it("refuses a temporary name that no longer leads to the opened file, writing no byte", () => {
+    const directory = path.join(base, ...PARTS);
+    const moved = path.join(base, "moved.tmp");
+    fsHooks.afterOpen = (file) => {
+      fsHooks.afterOpen = undefined;
+      renameSync(file, moved);
+      writeFileSync(file, "planted");
+    };
+    const written = writeCacheEntry(base, PARTS, "job-1.log", "log", 64);
+    expect(written.error).toMatch(/not the file that was opened/);
+    expect(fsHooks.writes).toBe(0);
+    expect(statSync(moved).size).toBe(0);
+    expect(readdirSync(directory)).toEqual([]);
+  });
+
+  it("counts a failed close as a failed write and removes the temporary file", () => {
+    fsHooks.closeFails = true;
+    const written = writeCacheEntry(base, PARTS, "job-1.log", "log", 64);
+    expect(written.error).toMatch(/could not be closed/);
+    expect(readdirSync(path.join(base, ...PARTS))).toEqual([]);
+  });
+
+  // A log that fit the buffer it was received in must not be refused once its
+  // invalid bytes have each become a three-byte replacement character.
+  it("bounds a saved log above the most its received bytes can re-encode to", () => {
+    const invalid = Buffer.alloc(16, 0xff);
+    const reencoded = Buffer.byteLength(invalid.toString("utf-8"), "utf-8");
+    expect(reencoded).toBe(3 * invalid.length);
+    expect(LOG_MAX_BYTES).toBeGreaterThanOrEqual(3 * MAX_RESPONSE_BYTES);
   });
 
   it("verifies an existing directory without creating a missing one", () => {
