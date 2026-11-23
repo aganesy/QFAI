@@ -290,7 +290,9 @@ describe("maskNonSpecRegions", () => {
     ].join("\n");
 
     const [table] = parseAllMarkdownTables(maskNonSpecRegions(text));
-    expect(table?.rows.map((row) => row[0])).toContain("CLI-0003");
+    expect(table?.rows).toHaveLength(3);
+    expect(table?.rows[0]).toEqual(["CLI-0001", "a"]);
+    expect(table?.rows[2]).toEqual(["CLI-0003", "c"]);
   });
 
   it("reads no heading or fence in the text after a mid-line comment closes", () => {
@@ -311,6 +313,23 @@ describe("maskNonSpecRegions", () => {
       "| x | <!-- or // |",
       "## Scope",
     ]);
+  });
+
+  it("reads a mid-line `<!--` as text when the only later `-->` is past its paragraph", () => {
+    // Any `-->` further down the document counted as its closer, so a later
+    // guidance comment, or one inside a fenced sample, hid everything between.
+    expect(
+      visible(["| x | <!-- or // |", "", "## Scope", "", "<!-- guidance -->"].join("\n")),
+    ).toEqual(["| x | <!-- or // |", "## Scope"]);
+    expect(
+      visible(["Text <!-- a", "", "```html", "<!-- sample -->", "```", "", "## Scope"].join("\n")),
+    ).toEqual(["Text <!-- a", "## Scope"]);
+  });
+
+  it("opens nothing with a `<!--` after the `-->` that ends a comment block", () => {
+    // CommonMark ends the block on the line holding `-->`, so the marker after
+    // it is raw block text and the next line is free.
+    expect(visible(["<!-- a --> x <!-- b", "## Scope"].join("\n"))).toEqual(["## Scope"]);
   });
 
   it("still hides the rest of the document after a line-opening comment that never closes", () => {

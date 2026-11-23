@@ -298,7 +298,7 @@ describe("QFAI-DELIB-001 reads nothing but the layout", () => {
     await put(RECORD, text);
     const found = await findings();
     expect(found).toHaveLength(1);
-    expect(found[0]?.message).toContain("5 cells");
+    expect(found[0]?.message).toContain("row at line 15 has 5 cells");
   });
 
   // QFAI:EX-0001-0302-17
@@ -317,11 +317,12 @@ describe("QFAI-DELIB-001 reads nothing but the layout", () => {
   });
 
   // QFAI:EX-0001-0302-18
-  it("reads a cell's `<!--` that no `-->` closes as text", async () => {
-    await put(
-      RECORD,
-      record(table(HEADER, "| Pick <!-- or // | a | b | c | | 1 |"), table(HEADER, DECISION_ROW)),
+  it("reads a cell's `<!--` that no `-->` in its paragraph closes as text", async () => {
+    const cell = record(
+      table(HEADER, "| Pick <!-- or // | a | b | c | | 1 |"),
+      table(HEADER, DECISION_ROW),
     );
+    await put(RECORD, `${cell}\n<!-- guidance -->\n`);
     expect(await findings()).toEqual([]);
   });
 

@@ -625,7 +625,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with no `-->` hid every heading and table after it. Only a comment that
   opens a line is now blanked to the end of its closing line; one opened
   inside a line keeps the text after its `-->`, and is a comment only when a
-  later `-->` closes it. Closes #5167.
+  `-->` closes it within its paragraph. Closes #5167.
 
 - **The README's Actions minutes recipe reads every page of runs and jobs.**
   Its `gh api` commands for a pull request's workflow runs and for a run's
