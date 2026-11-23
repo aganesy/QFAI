@@ -624,6 +624,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   assistant-asset messages. Each now asks the shared containment check, where
   only a `..` path segment leaves the base. Closes #5142.
 
+- **A design token reference cycle is named at the same token in any
+  declaration order.** The `Circular reference detected` finding named
+  whichever cycle member the walk reached first, so reordering a token file
+  named a different token, and a set of tokens holding more than one cycle
+  could raise more than one finding. Each set of tokens that reach one
+  another now raises the finding once, at the member whose name sorts first.
+  The validate contract also states where a chain longer than ten raises its
+  finding: at the first token along it whose chain passes ten. Closes #5325.
+
 - **Migration step 11 names a staging directory it could not remove.** When
   step 11 replaced a shipped skill or step but could not remove the hidden
   `.<id>-replace-*` directory it staged in, the failure was ignored: the
