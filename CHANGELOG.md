@@ -579,6 +579,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`QFAI-DB-001` warns when a DB contract calls a destructive function it
+  defines.** A function or procedure body was skipped because creating it runs
+  nothing, so a file that created one holding `TRUNCATE` and then ran
+  `SELECT reset();` applied the body with no warning. Each destructive body is
+  now remembered by name, and a later `SELECT`, `CALL` or `PERFORM` in the same
+  file that calls it, directly or through another routine, raises the warning.
+  Closes #5180.
+
 - **`qfai sdd preflight` reads no previous summary through a link.** A
   `preflight_summary.md` that was a link to a file elsewhere was read before
   being replaced: the run copied that file's carry-over list into its own
@@ -620,6 +628,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and refused with `plan-invalid` and `step-missing` as for the route's own
   steps.
 
+- **`qfai validate` reports a self-governance input it cannot observe instead
+  of stopping.** Deciding whether `QFAI-HANDOFF-001` and `QFAI-MANIFEST-001`
+  could run, the check let an error other than "absent", such as a permission
+  error on a parent directory, end the run. That path is now reported as an
+  incomplete check with the same finding as an input that cannot be read, and
+  the code is listed as not evaluated.
+
 - **`qfai validate --format github` shows control characters in an annotation
   as visible escapes.** An `::error::`, `::warning::` or `::notice::` message
   escaped only `%`, CR and LF, so an ESC colour sequence or a bell from
@@ -643,6 +658,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every profile validator. Only `spec-*/` and `_policies/` directories now
   count, as `qfai init` already did, and a matching file is no longer listed
   in the finding's message.
+
+- **A saved graph analysis whose copy fails no longer stops restoration.**
+  Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
+  `analysis` folder. When a file inside it could not be read, the copy threw:
+  CodeGraph preparation failed and Graphify rebuilt instead of trying later
+  entries. A failed copy now makes only that entry ineligible, its partial copy
+  is removed, and the next saved entry is tried. Closes #5188.
 
 - **A failed file replacement removes only its own temporary file.** QFAI
   replaces a report, a run-log pointer, a `.gitignore` or a migrated document
@@ -712,6 +734,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   combination. A `strategy`, matrix, `include` or `exclude` given as an
   expression, an `exclude` key that is not an axis, and a written-out matrix
   with no leg, which GitHub rejects, are named as not counted. Closes #4780.
+
+- **`qfai catalog design` no longer says both files could not be put back when
+  only its staging file is left.** When a write failed and both files were put
+  back but one of the run's own staging files could not be removed, the line
+  said the files could not be put back and, in the same line, that they were
+  as they were. It now says both files are as they were and names the staging
+  file it could not remove after the cause. Closes #5110.
 
 - **A skill's auto-decide entries skip HTML comments and need an operation
   after their separator.** `QFAI-POLICY-002` joined an indented

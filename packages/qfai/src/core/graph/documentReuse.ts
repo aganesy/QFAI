@@ -18,6 +18,7 @@ import {
 import {
   cacheDirectorySafe,
   completedAnalysisCache,
+  copyCachedAnalysis,
   ensureCacheDirectory,
   graphReuseEnvironment,
   readSnapshotMetadata,
@@ -66,7 +67,11 @@ export async function restoreCompletedDocumentAnalysis(
       staged = graphAnalysisStaging(current, "restoring", "graphify", randomUUID());
       await assertGraphStoragePath(root, staged);
       await mkdir(path.dirname(staged), { recursive: true });
-      await cp(analysis, staged, { recursive: true, dereference: false });
+      if (!(await copyCachedAnalysis(analysis, staged))) {
+        await discard(staged);
+        staged = undefined;
+        continue;
+      }
       await assertIndependentAnalysis(staged);
       if (await inspect(staged, true)) {
         await replaceGraphDirectory(staged, current, root);

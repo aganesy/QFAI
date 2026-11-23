@@ -54,6 +54,7 @@
     "tests/unit/graph/cacheFailures.examples.test.ts",
     "tests/unit/graph/replacementFailure.examples.test.ts",
     "tests/unit/graph/unreadableCacheCandidate.test.ts",
+    "tests/unit/graph/failedCacheCopy.test.ts",
     "tests/unit/graph/inventoryFiles.test.ts",
     "tests/unit/graph/completedCorpus.test.ts",
     "tests/unit/graph/corpusSourceSwap.test.ts",
@@ -244,6 +245,7 @@
     "tests/cli/usageExitCodes.test.ts",
     "tests/cli/staleInstall.test.ts",
     "tests/cli/validateRunIncomplete.test.ts",
+    "tests/cli/validateRunUnreadableMarkdown.test.ts",
     "tests/cli/validationResultLinks.test.ts",
     "tests/cli/validationProfiles.test.ts",
     "tests/cli/validateVerdictAfterResultWrite.test.ts",
@@ -403,6 +405,7 @@
     "tests/integration/staleTerms.test.ts",
     "tests/integration/decisionRowLength.test.ts",
     "tests/integration/validators/stepTree.test.ts",
+    "tests/integration/validators/packageSelfGovernance.test.ts",
     "tests/integration/delegationByContext.test.ts",
     "tests/integration/init/stepDistribution.test.ts",
     "tests/integration/workflowAssets/acceptanceAndVerifyInRun.test.ts",
@@ -719,6 +722,7 @@
     "tests/scripts/syncInitToRoot.test.ts",
     "tests/core/waiversReadErrors.test.ts",
     "tests/unit/outputCapture.test.ts",
-    "tests/core/replaceFileTempCleanup.test.ts"
+    "tests/core/replaceFileTempCleanup.test.ts",
+    "tests/core/runLogValidateLog.test.ts"
   ]
 }

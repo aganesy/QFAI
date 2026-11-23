@@ -100,7 +100,7 @@ export async function restoreCompletedCodeAnalysis(
       const cached = path.join(candidate, "analysis");
       await assertIndependentAnalysis(cached);
       await mkdir(path.dirname(staged), { recursive: true });
-      await cp(cached, staged, { recursive: true, dereference: false });
+      if (!(await copyCachedAnalysis(cached, staged))) continue;
       await assertIndependentAnalysis(staged);
       if (!(await inspectCodeAnalysisAt(root, staged, run))) continue;
       await replaceGraphDirectory(staged, current, root);
@@ -110,6 +110,20 @@ export async function restoreCompletedCodeAnalysis(
     }
   }
   return "cold";
+}
+
+/**
+ * Copies one cache entry's analysis for restoration. A copy that fails, such as
+ * on a file that cannot be read, makes only that entry ineligible; the caller
+ * removes the partial copy and later entries stay eligible.
+ */
+export async function copyCachedAnalysis(cached: string, staged: string): Promise<boolean> {
+  try {
+    await cp(cached, staged, { recursive: true, dereference: false });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function completedAnalysisCache(
