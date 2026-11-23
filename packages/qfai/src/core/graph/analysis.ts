@@ -1,6 +1,6 @@
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, readdir, rm, rmdir, writeFile } from "node:fs/promises";
 import { readInspectedRegularFile } from "../../shared/boundedRead.js";
 import { isDirectoryInsideRoot, loadConfig, resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
@@ -325,20 +325,33 @@ async function walkGraphCorpus(
     }
   }
 
-  async function removeAbsent(relative: string): Promise<void> {
+  /**
+   * Removes every staged entry the walk did not mirror, and returns whether the directory still
+   * holds one it did. A mirror creates no empty directory, so in `write` mode a staged directory
+   * left holding nothing is removed too: one whose source is gone, or whose source path now names
+   * an entry the mirror skips. In `compare` mode an empty directory alone is not a change, as it
+   * holds no input.
+   */
+  async function removeAbsent(relative: string): Promise<boolean> {
+    let kept = false;
     for (const entry of await readdir(path.join(destination, ...relative.split("/")), {
       withFileTypes: true,
     })) {
-      if (changed) return;
+      if (changed) return true;
       const next = relative ? `${relative}/${entry.name}` : entry.name;
-      if (entry.name === ".codegraph" || entry.name === ".git" || entry.name === "graphify-out")
+      if (entry.name === ".codegraph" || entry.name === ".git" || entry.name === "graphify-out") {
+        kept = true;
         continue;
+      }
       const target = path.join(destination, ...next.split("/"));
-      if (entry.isDirectory()) await removeAbsent(next);
-      else if (files.has(next)) continue;
+      if (entry.isDirectory()) {
+        if (await removeAbsent(next)) kept = true;
+        else if (mode === "write") await rmdir(target);
+      } else if (files.has(next)) kept = true;
       else if (mode === "compare") changed = true;
       else await rm(target);
     }
+    return kept;
   }
 }
 
