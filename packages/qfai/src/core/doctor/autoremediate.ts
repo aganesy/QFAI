@@ -14,10 +14,11 @@
  *
  * Before `npm install` runs, the operator confirms the listed packages
  * (the doctor contract requires it): the install scripts run with the operator's
- * privileges. `--yes` skips the prompt. A session whose stdin is not a
- * terminal cannot answer it, so without `--yes` nothing is installed there
- * and the pass says how to proceed. The rest of the pass runs either way,
- * except after Ctrl+C at the prompt, which stops the command.
+ * privileges. `--yes` skips the prompt. A session whose stdin or stderr is
+ * not a terminal cannot answer it, so without `--yes` nothing is installed
+ * there and the pass says how to proceed. The rest of the pass runs either
+ * way, except after Ctrl+C at the prompt, which stops the command: the
+ * summary is marked cancelled and the caller exits 130.
  *
  * The `npm install` call is routed through a pluggable runner so tests
  * can substitute a no-op stub. The default runner is loaded lazily and
@@ -55,7 +56,7 @@ export type AutoremediateOptions = {
   readonly installRunner?: InstallRunner;
   /** Test seam: skill to probe for runtimeDependencies. Defaults to none. */
   readonly skill?: string;
-  /** Test seam: whether the operator can answer a prompt. Defaults to stdin being a terminal. */
+  /** Test seam: whether the operator can answer a prompt. Defaults to stdin and stderr being terminals. */
   readonly interactive?: boolean;
   /** Test seam: replace the confirmation prompt. Defaults to a `[y/N]` prompt on stderr. */
   readonly confirmInstall?: InstallConfirmer;
@@ -63,6 +64,11 @@ export type AutoremediateOptions = {
 
 export type AutoremediateSummary = {
   readonly disabledInCi: boolean;
+  /**
+   * The operator pressed Ctrl+C at the install prompt. Nothing was
+   * installed, the rest of the pass did not run, and the caller stops.
+   */
+  readonly cancelled: boolean;
   readonly lines: string[];
   readonly installed: readonly string[];
   /**
@@ -147,13 +153,36 @@ async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
 /** Where the install prompt reads and writes; tests pass their own streams. */
 export type InstallPromptStreams = Pick<ReadLineOptions, "input" | "output" | "terminal">;
 
+/** Ctrl+C at the install prompt: the operator stopped the command. */
+export class InstallCancelledError extends Error {
+  constructor(options?: ErrorOptions) {
+    super("the install was cancelled at the confirmation prompt", options);
+    this.name = "InstallCancelledError";
+  }
+}
+
+type TerminalFlag = { readonly isTTY?: boolean };
+
+/**
+ * Whether the operator can see and answer the prompt: it reads stdin and is
+ * written to stderr, so both must be terminals. `isTTY` is undefined, not
+ * false, on a stream that is not one.
+ */
+export function promptCanBeAnswered(
+  stdin: TerminalFlag = process.stdin,
+  stderr: TerminalFlag = process.stderr,
+): boolean {
+  return stdin.isTTY === true && stderr.isTTY === true;
+}
+
 /**
  * The `[y/N]` prompt. Ctrl+D is a decline, since no answer is not a yes:
  * the close it causes settles the prompt, because Node 20 leaves a pending
  * question unsettled when the interface closes.
- * Ctrl+C rejects, so the command stops instead of carrying on with the rest
- * of the pass. Readline rejects both keys with the same `AbortError`, so
- * Ctrl+C aborts the question through its own signal to stay distinguishable.
+ * Ctrl+C rejects with {@link InstallCancelledError}, so the command stops
+ * instead of carrying on with the rest of the pass. Readline rejects both
+ * keys with the same `AbortError`, so Ctrl+C aborts the question through its
+ * own signal to stay distinguishable.
  */
 export async function askBeforeInstall(
   packages: readonly string[],
@@ -175,7 +204,7 @@ export async function askBeforeInstall(
     return await Promise.race([answered.then(isAffirmative), closed]);
   } catch (error: unknown) {
     if (interrupted.signal.aborted) {
-      throw error;
+      throw new InstallCancelledError({ cause: error });
     }
     return false;
   } finally {
@@ -189,11 +218,13 @@ function isAffirmative(answer: string): boolean {
 }
 
 type InstallApproval =
-  { readonly approved: true } | { readonly approved: false; readonly line: string };
+  | { readonly approved: true }
+  | { readonly approved: false; readonly cancelled: boolean; readonly line: string };
 
 /**
  * The install may run on `--yes`, or on an affirmative answer from an
- * operator who can be asked. A refusal carries the line to log.
+ * operator who can be asked. A refusal carries the line to log, and says
+ * whether the operator cancelled the command rather than declining.
  */
 async function approveInstall(
   options: AutoremediateOptions,
@@ -203,20 +234,32 @@ async function approveInstall(
     return { approved: true };
   }
   const listed = packages.join(", ");
-  // `isTTY` is undefined, not false, on a stdin that is not a terminal.
-  const interactive = options.interactive ?? process.stdin.isTTY;
+  const interactive = options.interactive ?? promptCanBeAnswered();
   if (!interactive) {
     return {
       approved: false,
+      cancelled: false,
       line: `autoremediate: install skipped — confirmation needed and this session is not interactive; rerun with --yes to install ${listed}`,
     };
   }
   const confirm = options.confirmInstall ?? askBeforeInstall;
-  if (await confirm(packages)) {
-    return { approved: true };
+  try {
+    if (await confirm(packages)) {
+      return { approved: true };
+    }
+  } catch (error: unknown) {
+    if (error instanceof InstallCancelledError) {
+      return {
+        approved: false,
+        cancelled: true,
+        line: `autoremediate: install cancelled; nothing installed (${listed})`,
+      };
+    }
+    throw error;
   }
   return {
     approved: false,
+    cancelled: false,
     line: `autoremediate: install declined; nothing installed (${listed})`,
   };
 }
@@ -249,6 +292,7 @@ export async function runAutoremediate(
     lines.push("autoremediate disabled in CI");
     return {
       disabledInCi: true,
+      cancelled: false,
       lines,
       installed: [],
       failedInstalls: [],
@@ -289,6 +333,18 @@ export async function runAutoremediate(
       );
       if (!approval.approved) {
         lines.push(approval.line);
+        if (approval.cancelled) {
+          // Ctrl+C stops the command: the run-log prune below does not run.
+          return {
+            disabledInCi: false,
+            cancelled: true,
+            lines,
+            installed,
+            failedInstalls,
+            prunedRunLogs: [],
+            failedRunLogPrunes: [],
+          };
+        }
       } else {
         const runner = options.installRunner ?? defaultInstallRunner;
         for (const finding of missing) {
@@ -347,6 +403,7 @@ export async function runAutoremediate(
 
   return {
     disabledInCi: false,
+    cancelled: false,
     lines,
     installed,
     failedInstalls,
