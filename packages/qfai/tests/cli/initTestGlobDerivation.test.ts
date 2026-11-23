@@ -20,6 +20,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { aimCopiedConfigAtRepository } from "../../src/cli/commands/init.js";
+import { copyTemplatePaths } from "../../src/core/fs/templateCopy.js";
 import { runInit } from "../helpers/legacyInit.js";
 import {
   CANDIDATE_TEST_FILE_GLOBS,
@@ -29,7 +31,8 @@ import {
 } from "../../src/core/testGlobDerivation.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TEMPLATE = path.resolve(__dirname, "../../assets/init/root/qfai.config.yaml");
+const ROOT_ASSETS = path.resolve(__dirname, "../../assets/init/root");
+const TEMPLATE = path.join(ROOT_ASSETS, "qfai.config.yaml");
 
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-globs-"));
@@ -141,6 +144,20 @@ describe("withDerivedTestFileGlobs edits the line and nothing else", () => {
   });
 });
 
+/**
+ * The two stages init runs for the config: the create-only root copy, and the
+ * guarded update that reads its result. Run on their own, they need no other
+ * shipped asset; the full-init case below proves init still runs them together.
+ */
+async function copyConfigAndAim(root: string): Promise<void> {
+  const { copied } = await copyTemplatePaths(ROOT_ASSETS, root, ["qfai.config.yaml"], {
+    force: false,
+    dryRun: false,
+    conflictPolicy: "skip",
+  });
+  await aimCopiedConfigAtRepository(root, copied, false);
+}
+
 describe("qfai init writes the derived value", () => {
   it("points a fresh config at the layouts the repository has", async () => {
     await withProject(async (root) => {
@@ -152,7 +169,9 @@ describe("qfai init writes the derived value", () => {
       expect(globsLineOf(config)).toBe(`    testFileGlobs: ["tests/**/*.test.ts"]`);
     });
   });
+});
 
+describe("the config copy and its guarded update", () => {
   it("replaces the config by rename, keeping its mode and leaving no temp file", async () => {
     // The refinement rewrites a file every later `validate` and `doctor` run
     // reads. Writing over it truncates first, so a failure partway through
@@ -169,7 +188,7 @@ describe("qfai init writes the derived value", () => {
     await withProject(async (root) => {
       await plant(root, "src/index.ts");
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await copyConfigAndAim(root);
 
       const config = path.join(root, "qfai.config.yaml");
       expect(globsLineOf(await readFile(config, "utf-8"))).toBe(EMPTY_TEST_FILE_GLOBS_LINE);
@@ -178,7 +197,7 @@ describe("qfai init writes the derived value", () => {
     await withProject(async (root) => {
       await plant(root, "tests/unit/thing.test.ts");
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await copyConfigAndAim(root);
 
       const config = path.join(root, "qfai.config.yaml");
       expect(globsLineOf(await readFile(config, "utf-8"))).toContain(`"tests/**/*.test.ts"`);
@@ -192,7 +211,7 @@ describe("qfai init writes the derived value", () => {
     await withProject(async (root) => {
       await plant(root, "src/index.ts");
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await copyConfigAndAim(root);
 
       const config = await readFile(path.join(root, "qfai.config.yaml"), "utf-8");
       expect(globsLineOf(config)).toBe(EMPTY_TEST_FILE_GLOBS_LINE);
@@ -208,12 +227,14 @@ describe("qfai init writes the derived value", () => {
       const config = path.join(root, "qfai.config.yaml");
       await writeFile(config, "custom config\n", "utf-8");
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await copyConfigAndAim(root);
 
       expect(await readFile(config, "utf-8")).toBe("custom config\n");
     });
   });
+});
 
+describe("qfai init --dry-run", () => {
   it("writes nothing under --dry-run", async () => {
     await withProject(async (root) => {
       await plant(root, "tests/unit/thing.test.ts");
