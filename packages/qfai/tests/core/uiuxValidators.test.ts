@@ -93,6 +93,101 @@ describe("uiux validators", () => {
     expect(resolved.has("primitive.fail.dependent")).toBe(false);
   });
 
+  // QFAI:EX-0001-0039-62
+  it("raises the depth error once, at the first token past ten, along both arms of a diamond in any order", () => {
+    const chain = (name: string, length: number): string[][] =>
+      Array.from({ length }, (_, index) => {
+        const value =
+          index === length - 1
+            ? "red"
+            : `'{primitive.${name}.t${String(index + 1).padStart(2, "0")}}'`;
+        return [`    t${String(index).padStart(2, "0")}:`, `      $value: ${value}`];
+      });
+    const top = [["    a:", "      $value: '{primitive.tall.t00} {primitive.short.t00}'"]];
+    const yamlFor = (groups: [string, string[][]][]): string =>
+      [
+        "primitive:",
+        ...groups.flatMap(([name, lines]) => [`  ${name}:`, ...lines.flat()]),
+        "",
+      ].join("\n");
+    const outcome = (yaml: string) => {
+      const parsed = parseDesignToken(yaml);
+      return {
+        resolved: [...parsed.resolved.keys()].sort(),
+        errors: parsed.errors.map((error) => `${error.path ?? ""}: ${error.message}`).sort(),
+      };
+    };
+    const groups: [string, string[][]][] = [
+      ["top", top],
+      ["tall", chain("tall", 11)],
+      ["short", chain("short", 3)],
+      ["long", chain("long", 13)],
+    ];
+
+    const written = outcome(yamlFor(groups));
+    const reversed = outcome(
+      yamlFor(
+        [...groups]
+          .reverse()
+          .map(([name, lines]): [string, string[][]] => [name, [...lines].reverse()]),
+      ),
+    );
+
+    expect(written).toEqual(reversed);
+    expect(written.errors).toEqual([
+      "primitive.long.t01: Max reference depth exceeded at: primitive.long.t01",
+      "primitive.top.a: Max reference depth exceeded at: primitive.top.a",
+    ]);
+    expect(written.resolved).not.toContain("primitive.top.a");
+    expect(written.resolved).not.toContain("primitive.long.t00");
+    expect(written.resolved).not.toContain("primitive.long.t01");
+    expect(written.resolved).toContain("primitive.long.t02");
+    expect(written.resolved).toContain("primitive.tall.t00");
+    expect(written.resolved).toContain("primitive.short.t00");
+  });
+
+  // QFAI:EX-0001-0039-65
+  it("names a reference cycle at the same token in any declaration order", () => {
+    const groups: [string, string[][]][] = [
+      ["entry", [["    x:", "      $value: '{primitive.loop.b}'"]]],
+      [
+        "loop",
+        [
+          ["    b:", "      $value: '{primitive.loop.c}'"],
+          ["    c:", "      $value: '{primitive.loop.a}'"],
+          ["    a:", "      $value: '{primitive.loop.b} {primitive.base.red}'"],
+        ],
+      ],
+      ["base", [["    red:", "      $value: red"]]],
+    ];
+    const yamlFor = (order: [string, string[][]][]): string =>
+      ["primitive:", ...order.flatMap(([name, lines]) => [`  ${name}:`, ...lines.flat()]), ""].join(
+        "\n",
+      );
+    const outcome = (yaml: string) => {
+      const parsed = parseDesignToken(yaml);
+      return {
+        resolved: [...parsed.resolved.entries()].sort(([a], [b]) => a.localeCompare(b)),
+        errors: parsed.errors.map((error) => `${error.path ?? ""}: ${error.message}`),
+      };
+    };
+
+    const written = outcome(yamlFor(groups));
+    const reversed = outcome(
+      yamlFor(
+        [...groups]
+          .reverse()
+          .map(([name, lines]): [string, string[][]] => [name, [...lines].reverse()]),
+      ),
+    );
+
+    expect(written).toEqual(reversed);
+    expect(written.errors).toEqual([
+      "primitive.loop.a: Circular reference detected: primitive.loop.a",
+    ]);
+    expect(written.resolved).toEqual([["primitive.base.red", "red"]]);
+  });
+
   it("detects local refs, unsafe URLs, and event handlers in HTML mock", async () => {
     const html = [
       '<button style="width: 20px; height: 20px" onclick="doX()">Tap</button>',
