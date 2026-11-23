@@ -189,6 +189,25 @@ describe("qfai-triage invoked by name", () => {
     expect(String(frontMatterOf(skill).description)).toMatch(
       /ending with no tracked change but its deliberation record, open questions and approval row:/,
     );
+    expect(flat(sectionOf(skill, "## Inputs"))).toMatch(
+      /still writes the run's deliberation record when it asks the user a question or takes an agent decision, except in a private security intake: a run where `triage-security-intake` takes a vulnerability report in privately writes no deliberation record that could disclose it\. Its questions, decisions and severity stay in the ignored intake record that step names/,
+    );
+    expect(reviewerGate).toMatch(
+      /A private security intake allows none of these: when `triage-security-intake` ran, any tracked file the stage changed fails the review, its deliberation record included/,
+    );
+    expect(completion).toMatch(
+      /After a private security intake, the stage made no commit, and its report stays private, as `triage-security-intake` says/,
+    );
+    expect(flat(sectionOf(skill, "## Default Autopilot Policy"))).toMatch(
+      /A security report stays private until the fix is ready to disclose; its intake writes no deliberation record and changes no tracked file/,
+    );
+    const intake = await step("triage-security-intake");
+    expect(flat(sectionOf(intake, "## Procedure"))).toMatch(
+      /never a row of the deliberation record, which git tracks/,
+    );
+    expect(flat(sectionOf(intake, "## What it writes"))).toMatch(
+      /No file git tracks\. Keep the intake record in an ignored file/,
+    );
     expect(flat(sectionOf(skill, "## Default Autopilot Policy"))).toMatch(
       /Triage changes no tracked file except the run's deliberation record and `open-questions\.md` rows, which `triage-close` commits locally, and the approval row `qfai-run` records in `decisions\.md` before `triage-handoff`/,
     );
