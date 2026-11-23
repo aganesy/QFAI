@@ -663,6 +663,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pass `--paginate`, and the per-item `--jq` filters still print one line per
   run or job.
 
+- **`QFAI-DB-002` reads a routine's arguments after its name.** The argument
+  list was read from the statement's first `(`, so a quoted routine name
+  holding one, such as `CREATE FUNCTION "f(x"(a int)`, gave the routine no
+  arguments, and its overloads were reported as one routine defined twice. The
+  list is now read from the parenthesis that follows the name. Closes #5149.
+
 - **`qfai validate` records no pass in its run log when the result write
   fails.** The run log was written, with status `pass`, before `validate.json`;
   when the result write then failed, the command exited 1 while `validate.log`,
