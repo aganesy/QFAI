@@ -11,7 +11,8 @@
  *   2. CLI — `npx tsx scripts/lint-shipping.ts` for local debugging.
  */
 
-import { readdir, readFile, stat } from "node:fs/promises";
+import type { Stats } from "node:fs";
+import { lstat, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -351,40 +352,89 @@ const TS_COMMENT_LINE_RE = /^\s*(?:\/\/|\/\*\*?|\*\/|\*)/;
  */
 const YAML_COMMENT_LINE_RE = /^\s*#/;
 
+/** `target` relative to the package root, with `/` separators, as reports show it. */
+function displayPath(pkgRoot: string, target: string): string {
+  return path.relative(pkgRoot, target).split(path.sep).join("/");
+}
+
+function errorCode(error: unknown): string | undefined {
+  return error instanceof Error && "code" in error && typeof error.code === "string"
+    ? error.code
+    : undefined;
+}
+
+/**
+ * A failure that names only the package-relative path and keeps the cause's
+ * `code`. The filesystem's own message carries the absolute path, so it is
+ * not passed on.
+ */
+function inputError(pkgRoot: string, target: string, what: string, cause: unknown): Error {
+  const code = errorCode(cause);
+  const suffix = code === undefined ? "" : ` (${code})`;
+  return Object.assign(new Error(`${what} ${displayPath(pkgRoot, target)}${suffix}`), { code });
+}
+
+/** Run one filesystem call on `target`, failing with `inputError` when it fails. */
+async function inspect<T>(
+  pkgRoot: string,
+  target: string,
+  what: string,
+  run: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    throw inputError(pkgRoot, target, what, error);
+  }
+}
+
+/**
+ * The entry at `target`, read without following a link. A link fails the
+ * lint: following it would read files outside the tree that ships, and
+ * skipping it would pass a tree the lint never saw.
+ */
+async function entryAt(pkgRoot: string, target: string): Promise<Stats> {
+  const entry = await inspect(pkgRoot, target, "cannot inspect", () => lstat(target));
+  if (entry.isSymbolicLink()) {
+    throw Object.assign(
+      new Error(
+        `refuses to follow the link ${displayPath(pkgRoot, target)}; a shipped tree holds real files only`,
+      ),
+      { code: "QFAI_SHIPPING_LINK" },
+    );
+  }
+  return entry;
+}
+
 /**
  * Every file under `root`, or none when `root` does not exist: a package need
- * not carry every target tree. Any other listing or stat failure propagates,
- * so an unreadable tree fails the lint instead of passing as clean.
+ * not carry every target tree. A link, or any other listing, inspection or
+ * read failure, fails the lint instead of passing as clean.
  */
 async function listFiles(root: string, pkgRoot: string): Promise<string[]> {
-  let entries: string[];
   try {
-    entries = await readdir(root);
+    await lstat(root);
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
-    throw error;
+    if (errorCode(error) === "ENOENT") return [];
+    throw inputError(pkgRoot, root, "cannot inspect", error);
   }
   const out: string[] = [];
-  await walkEntries(root, entries, pkgRoot, out);
+  await walkEntry(root, pkgRoot, out);
   return out;
 }
 
-async function walkEntries(
-  dir: string,
-  entries: ReadonlyArray<string>,
-  pkgRoot: string,
-  out: string[],
-): Promise<void> {
-  for (const name of entries) {
-    const full = path.join(dir, name);
-    const relative = path.relative(pkgRoot, full);
-    if (EXCLUDED_PATH_PATTERNS.some((re) => re.test(relative))) continue;
-    const s = await stat(full);
-    if (s.isDirectory()) {
-      await walkEntries(full, await readdir(full), pkgRoot, out);
-    } else if (s.isFile()) {
-      out.push(full);
-    }
+async function walkEntry(full: string, pkgRoot: string, out: string[]): Promise<void> {
+  const entry = await entryAt(pkgRoot, full);
+  if (entry.isFile()) {
+    out.push(full);
+    return;
+  }
+  if (!entry.isDirectory()) return;
+  const names = await inspect(pkgRoot, full, "cannot list", () => readdir(full));
+  for (const name of names) {
+    const child = path.join(full, name);
+    if (EXCLUDED_PATH_PATTERNS.some((re) => re.test(path.relative(pkgRoot, child)))) continue;
+    await walkEntry(child, pkgRoot, out);
   }
 }
 
@@ -424,7 +474,9 @@ async function lintFile(
   rules: ReadonlyArray<PatternRule>,
 ): Promise<LintViolation[]> {
   const violations: LintViolation[] = [];
-  const body = await readFile(absolutePath, "utf-8");
+  const body = await inspect(pkgRoot, absolutePath, "cannot read", () =>
+    readFile(absolutePath, "utf-8"),
+  );
   const isTs = absolutePath.endsWith(".ts");
   const lines = body.split(/\r?\n/);
   const relPath = path.relative(pkgRoot, absolutePath).replace(/\\/g, "/");

@@ -426,17 +426,7 @@ export async function runInit(
     ...(options.force ? rulesForced.skipped : rulesCreated.skipped),
   ];
 
-  // The config template ships `testFileGlobs: []`, which leaves the SC traceability lane and
-  // the stub scan behind `QFAI-TEST-001` pointed at nothing. Aim them at the files this
-  // repository already has.
-  //
-  // Only when THIS run wrote the file. The copy above is create-only, so a `qfai.config.yaml`
-  // it skipped is the adopter's — already tuned, perhaps by `/qfai-configure`, and rewriting a
-  // value they chose is not this command's to do.
-  const configPath = path.join(destRoot, "qfai.config.yaml");
-  if (!options.dryRun && rootResult.copied.includes(configPath)) {
-    await aimTestFileGlobsAtRepository(destRoot, configPath);
-  }
+  await aimCopiedConfigAtRepository(destRoot, rootResult.copied, options.dryRun);
   // The entry-point repair reads which masters this run created, which is
   // available only in the run that created them.
   const newlyWritten = newlyWrittenRuleMasters(rulesCreated.copied, destRoot);
@@ -844,6 +834,28 @@ function configuredWorkflowMode(document: unknown): unknown {
   return typeof workflow === "object" && workflow !== null && "mode" in workflow
     ? workflow.mode
     : workflow;
+}
+
+/**
+ * Aim the config at this repository's tests when the root copy wrote it.
+ *
+ * The config template ships `testFileGlobs: []`, which leaves the SC traceability lane and
+ * the stub scan behind `QFAI-TEST-001` pointed at nothing. Aim them at the files this
+ * repository already has.
+ *
+ * Only when THIS run wrote the file. The root copy is create-only, so a `qfai.config.yaml`
+ * it skipped is the adopter's — already tuned, perhaps by `/qfai-configure`, and rewriting a
+ * value they chose is not this command's to do. `copied` is that copy's result.
+ */
+export async function aimCopiedConfigAtRepository(
+  root: string,
+  copied: readonly string[],
+  dryRun: boolean,
+): Promise<void> {
+  const configPath = path.join(root, "qfai.config.yaml");
+  if (!dryRun && copied.includes(configPath)) {
+    await aimTestFileGlobsAtRepository(root, configPath);
+  }
 }
 
 /**
@@ -1402,7 +1414,13 @@ async function ensureReminderHooks(
   if (plan.kind === "create") {
     // Booked into `copied` and nothing more: the create-only root copy announces
     // every other seeded file the same way, through the run report alone.
-    if (!dryRun) await writeReminderHooks(plan);
+    if (!dryRun) {
+      const refusal = await writeReminderHooks(plan);
+      if (refusal !== undefined) {
+        error(`  WARNING: ${refusal}`);
+        return { copied: [], skipped: [target] };
+      }
+    }
     return { copied: [target], skipped: [] };
   }
   // Every run, so an edited reminder is never mistaken for one this release wrote.
@@ -1418,7 +1436,11 @@ async function ensureReminderHooks(
     info(`  would update: ${relativePath} (${detail})`);
     return { copied: [target], skipped: [] };
   }
-  await writeReminderHooks(plan);
+  const refusal = await writeReminderHooks(plan);
+  if (refusal !== undefined) {
+    error(`  WARNING: ${refusal}`);
+    return { copied: [], skipped: [target] };
+  }
   info(`  updated: ${relativePath} (${detail}; existing settings kept)`);
   return { copied: [target], skipped: [] };
 }

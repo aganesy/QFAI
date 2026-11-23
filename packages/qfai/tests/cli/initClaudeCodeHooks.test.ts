@@ -1,6 +1,6 @@
 /** Init updates shipped readers while preserving the project's own host settings. */
 
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,7 +8,11 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { runInit } from "../helpers/legacyInit.js";
-import { keptHookGroupNote, planReminderHooks } from "../../src/core/init/reminderHooks.js";
+import {
+  keptHookGroupNote,
+  planReminderHooks,
+  writeReminderHooks,
+} from "../../src/core/init/reminderHooks.js";
 import {
   CLAUDE_SETTINGS_RELATIVE_PATH,
   DOCUMENTATION_CLARITY_HOOK_MARKER,
@@ -767,4 +771,59 @@ describe("init upgrades the official prompt groups before CI-monitor filtering",
       });
     },
   );
+});
+
+// QFAI:EX-0001-0196-78
+describe("writing planned reminder hooks after another writer touched the file", () => {
+  const refusal =
+    ".claude/settings.json was left unchanged: it changed after it was read, so the reminder hooks are not wired up. Run the command again to merge them into the new contents.";
+  const otherWriter = `${JSON.stringify({ permissions: { deny: ["Bash(curl:*)"] } }, null, 2)}\n`;
+
+  it("does not replace a settings file created after the plan found none", async () => {
+    await withTempRoot(async (root) => {
+      const plan = await planReminderHooks(assetsRoot, root, CLAUDE_SETTINGS_RELATIVE_PATH);
+      if (plan.kind !== "create") throw new Error(`expected a create plan, got ${plan.kind}`);
+      await mkdir(path.join(root, ".claude"), { recursive: true });
+      await writeFile(path.join(root, SETTINGS), otherWriter, "utf-8");
+
+      await expect(writeReminderHooks(plan)).resolves.toBe(refusal);
+      expect(await readFile(path.join(root, SETTINGS), "utf-8")).toBe(otherWriter);
+    });
+  });
+
+  it("does not replace a settings file edited between the read and the write", async () => {
+    await withTempRoot(async (root) => {
+      await seedSettings(root, { env: { OWN: "1" } });
+      const plan = await planReminderHooks(assetsRoot, root, CLAUDE_SETTINGS_RELATIVE_PATH);
+      if (plan.kind !== "update") throw new Error(`expected an update plan, got ${plan.kind}`);
+      await writeFile(path.join(root, SETTINGS), otherWriter, "utf-8");
+
+      await expect(writeReminderHooks(plan)).resolves.toBe(refusal);
+      expect(await readFile(path.join(root, SETTINGS), "utf-8")).toBe(otherWriter);
+    });
+  });
+
+  it("does not recreate a settings file removed between the read and the write", async () => {
+    await withTempRoot(async (root) => {
+      await seedSettings(root, { env: { OWN: "1" } });
+      const plan = await planReminderHooks(assetsRoot, root, CLAUDE_SETTINGS_RELATIVE_PATH);
+      if (plan.kind !== "update") throw new Error(`expected an update plan, got ${plan.kind}`);
+      await rm(path.join(root, SETTINGS));
+
+      await expect(writeReminderHooks(plan)).resolves.toBe(refusal);
+      await expect(readFile(path.join(root, SETTINGS), "utf-8")).rejects.toThrow("ENOENT");
+    });
+  });
+
+  it("writes the planned text when nothing touched the file", async () => {
+    await withTempRoot(async (root) => {
+      await seedSettings(root, { env: { OWN: "1" } });
+      const plan = await planReminderHooks(assetsRoot, root, CLAUDE_SETTINGS_RELATIVE_PATH);
+      if (plan.kind !== "update") throw new Error(`expected an update plan, got ${plan.kind}`);
+
+      await expect(writeReminderHooks(plan)).resolves.toBeUndefined();
+      expect(await readFile(path.join(root, SETTINGS), "utf-8")).toBe(plan.text);
+      expect(await readSettings(root)).toMatchObject({ env: { OWN: "1" } });
+    });
+  });
 });

@@ -126,11 +126,12 @@ try {
 }
 ```
 
-Review the displayed worktree, destination, backend, model and document scope
-before answering. The AI must not supply this approval or pipe a response.
+Review the displayed worktree, destination, backend, model, credential variable
+and document scope before answering. The request names the credential variable,
+never its value. The AI must not supply this approval or pipe a response.
 An omitted or refusing authorization callback starts no external processing.
-After preparation succeeds, retry the documents CLI. A changed scope requiring
-new external processing needs this review again.
+After preparation succeeds, retry the documents CLI. A changed scope or
+credential variable requiring new external processing needs this review again.
 
 Exclude secret files from both engines and generated storage. Keep credentials
 out of tracked integration settings, logs and reusable analysis.

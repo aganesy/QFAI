@@ -1,4 +1,4 @@
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, open, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -14,17 +14,27 @@ import { findUnsafeHostFileComponent } from "./fsGuards.js";
  * What bringing one host's hook file up to the shipped template takes.
  *
  * `edited` names each group the project changed, which is kept as it is.
- * `target` is absolute; every message names the file by its relative path.
+ * `target` is absolute; every message names the file by `relativePath`.
  */
 export type ReminderHooksPlan =
   /** Nothing is written. `message` says why and what to do, naming the file. */
   | { readonly kind: "refused"; readonly message: string }
   /** The project has no such file: the template is written whole. */
-  | { readonly kind: "create"; readonly target: string; readonly text: string }
-  /** `events` names the hook events whose groups were added or refreshed. */
+  | {
+      readonly kind: "create";
+      readonly target: string;
+      readonly relativePath: string;
+      readonly text: string;
+    }
+  /**
+   * `events` names the hook events whose groups were added or refreshed, and
+   * `read` is the file's text the merge started from.
+   */
   | {
       readonly kind: "update";
       readonly target: string;
+      readonly relativePath: string;
+      readonly read: string;
       readonly text: string;
       readonly events: readonly string[];
       readonly permissionsAdded: boolean;
@@ -146,7 +156,9 @@ export async function planReminderHooks(
 
   const existing = await readSettingsText(target);
   if (existing.kind === "unreadable") return copyByHand(relativePath, existing.reason);
-  if (existing.kind === "absent") return { kind: "create", target, text: template.text };
+  if (existing.kind === "absent") {
+    return { kind: "create", target, relativePath, text: template.text };
+  }
 
   const merged = mergeDocumentationClarityHooks(existing.text, template.text);
   if (merged.outcome === "unreadable") return copyByHand(relativePath, merged.reason);
@@ -154,6 +166,8 @@ export async function planReminderHooks(
   return {
     kind: "update",
     target,
+    relativePath,
+    read: existing.text,
     text: serializeClaudeSettings(merged.settings),
     events: merged.events,
     permissionsAdded: merged.permissionsAdded,
@@ -161,9 +175,60 @@ export async function planReminderHooks(
   };
 }
 
-/** Writes what `planReminderHooks` planned, creating the host directory when it is absent. */
-export async function writeReminderHooks(plan: ReminderHooksWrite): Promise<void> {
+/** The refusal for a settings file another writer created or changed after the plan read it. */
+function changedSincePlannedMessage(relativePath: string): string {
+  return (
+    `${relativePath} was left unchanged: it changed after it was read, so the reminder ` +
+    `hooks are not wired up. Run the command again to merge them into the new contents.`
+  );
+}
+
+/**
+ * Writes what `planReminderHooks` planned, creating the host directory when it
+ * is absent. Returns nothing once written, or the refusal naming the file when
+ * the file is no longer what the plan saw, in which case nothing is written.
+ *
+ * A planned create fails rather than replace a file another writer created
+ * since. A planned update reads the file again just before replacing it and
+ * refuses when its text differs from what the merge started from; an edit that
+ * lands between that read and the rename is still lost, a window this narrows
+ * to one read and one rename but cannot close without a lock the hosts share.
+ */
+export async function writeReminderHooks(plan: ReminderHooksWrite): Promise<string | undefined> {
   await mkdir(path.dirname(plan.target), { recursive: true });
+  if (plan.kind === "create") {
+    return createSettingsFile(plan.target, plan.relativePath, plan.text);
+  }
+  const current = await readSettingsText(plan.target);
+  if (current.kind !== "text" || current.text !== plan.read) {
+    return changedSincePlannedMessage(plan.relativePath);
+  }
   // Renamed into place, so a failed write leaves the settings it replaces whole.
   await replaceFile(plan.target, plan.text);
+  return undefined;
+}
+
+/** Creates the file only if nothing is there; a failed write leaves nothing behind. */
+async function createSettingsFile(
+  target: string,
+  relativePath: string,
+  text: string,
+): Promise<string | undefined> {
+  let created = false;
+  try {
+    const handle = await open(target, "wx");
+    created = true;
+    try {
+      await handle.writeFile(text, "utf-8");
+    } finally {
+      await handle.close();
+    }
+    return undefined;
+  } catch (err: unknown) {
+    if (!created && hasErrnoCode(err) && err.code === "EEXIST") {
+      return changedSincePlannedMessage(relativePath);
+    }
+    if (created) await rm(target, { force: true });
+    throw err;
+  }
 }

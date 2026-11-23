@@ -48,6 +48,13 @@ identity.
    applied for this lineage's screen type or components, which the project had
    no pattern for. Build those parts to the findings, within the `DESIGN.md`
    tokens. A `## Session` row wins where the two disagree.
+8. The browser-support target: the `## Technical Constraints` row of
+   `01_policy/constraint.md` that names it, or Baseline Widely available where
+   none does. Read it before choosing a platform feature. A feature newer than
+   the target goes in only with a fallback that keeps the screen working where
+   the feature is missing, as
+   `.qfai/assistant/rule/ui-procurement.md#platform-features-and-the-browser-support-target`
+   says.
 
 ## HTML envelope (every iteration)
 

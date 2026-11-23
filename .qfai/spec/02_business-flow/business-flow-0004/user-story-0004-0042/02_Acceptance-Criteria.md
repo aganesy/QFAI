@@ -39,7 +39,7 @@ Feature: A migrated project is told which of its own files still name a 1.x path
 
   # AC-0004-0042-06
   Scenario: Step 12 names a file it could not check in full
-    Given a tracked text file too large to hold, and a tracked binary file of the same size
+    Given a tracked text file too large to hold, a tracked binary file of the same size, and a tracked file step 12 cannot read
     When step 12 runs
-    Then `## Files scanned` names the text file as not checked for 1.x paths, and leaves the binary file out
+    Then `## Files scanned` names the text file and the file it cannot read as not checked for 1.x paths, and leaves the binary file out
 ```

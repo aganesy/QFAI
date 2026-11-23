@@ -50,6 +50,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   forge remote or API access it says so in the announcement and continues;
   under a no-question mode it continues and the final report lists the match.
 
+- **A project states which browsers its UI must work in.** Nothing said which
+  browsers a screen had to support, so an agent picked platform features from
+  memory: an old pattern a native feature now replaces, or a new feature some
+  supported browsers lack, with no fallback. The constraint template that
+  `qfai init` writes now starts with a Technical Constraints row,
+  `Browser support target: Baseline Widely available`, which a project changes
+  to its own level, such as `Baseline 2024`. A project that states none is held
+  to Baseline Widely available. `ui-procurement.md`, the prototyping generator
+  prompt and the implementation UI guidance read the target before choosing a
+  platform feature, and use a feature newer than it only with a fallback that
+  keeps the screen working where the feature is missing, such as an
+  `@supports` block or a polyfill loaded only where the feature is absent.
+
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date
@@ -537,6 +550,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai session-review` redacts a quoted `password=` value whole.** The
+  value was blanked only up to its first space, so `password="a b"` printed
+  `[redacted] b"` in the report and in an error line. A value in double or
+  single quotes is now blanked to its closing quote, past escaped quotes, or
+  to the end of the line when it is never closed; a bare value is still
+  blanked to the next whitespace. Closes #5020.
+
 - **`qfai workflow plan` refuses a plan whose added specification stage runs a
   step that is not installed.** A request naming the story tree can give a
   route a `spec` stage with `sdd-triage`, `sdd-story` or `sdd-contract`, but
@@ -584,6 +604,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   expression, an `exclude` key that is not an axis, and a written-out matrix
   with no leg, which GitHub rejects, are named as not counted. Closes #4780.
 
+- **A skill's auto-decide entries skip HTML comments and need an operation
+  after their separator.** `QFAI-POLICY-002` joined an indented
+  `<!-- rationale -->` to the entry above it, so `output formatting` with a
+  comment under it matched no category, and it read a commented-out entry as
+  one. It also passed `output formatting:` and `equivalent-option pick (`,
+  whose separator opens nothing. HTML comments in a policy bucket are now
+  dropped before its entries are read, and an entry that instantiates a
+  category must name an operation after its colon or dash, or inside a closed
+  parenthesis. Closes #5046.
+
 - **The shared workflow rule names the RED exception by its installed path.**
   It pointed at `references/red-not-observable.md`, which the rule's own
   directory does not hold, so a reader entering from any stage other than
@@ -591,11 +621,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`, as
   the `implement-tdd` step does. Closes #4965.
 
+- **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
+  The duplicate check compared each argument type as written, so
+  `f(int)` and `f(integer)`, or `f(varchar(10))` and `f(varchar(20))`, went
+  unreported although PostgreSQL takes them for one routine. Each argument type
+  now drops its modifiers and array bounds and maps its alias to one spelling
+  (`int`/`int4` to `integer`, `bool` to `boolean`, `varchar` to
+  `character varying`, `timestamptz` and the other built-in aliases);
+  `float(p)` becomes `real` or `double precision` by its precision. Closes
+  #5047.
+
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
   20,000 files, so a large tree could run out of file descriptors and fail
   validation with `QFAI-SCAN-002`. The files are now read in batches, in the
   same order and with the same truncation result. Closes #4943.
+
+- **`qfai catalog components --check` no longer reads the catalogue through a
+  link.** When `.qfai/catalog`, or a directory above it, was a symbolic link
+  or junction, the check compared a file outside the project. It now runs the
+  write path's guard before reading and exits 1 naming the linked path, or the
+  catalogue path when it is a link or not a file. Closes #5048.
 
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
@@ -635,6 +681,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review, and that it makes no commit, as `triage-security-intake` already
   said. Closes #5012.
 
+- **The `qfai-triage` skill invoked by name takes a security report in
+  privately before any other step.** Its step list put
+  `triage-security-intake` seventh, after the duplicate search, the request
+  for missing facts and the investigation, so details of a vulnerability
+  report could reach a public tracker before anyone decided how to disclose
+  it. The intake now runs first, as the `fix-vulnerability` plan already
+  ran it. Closes #5013.
+
+- **Migration step 12 reads at most 8000 bytes of a file larger than 16 MiB.**
+  It read up to 16 MiB of such a file before naming it as not checked for 1.x
+  paths, although `lstat` had already given its size. It now reads only the
+  first 8000 bytes, enough to tell binary from text, and names a text file as
+  larger than 16 MiB from its size; a NUL byte past those 8000 bytes no longer
+  makes the file count as binary. Closes #5054.
+
 - **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
   with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
   `Set-Content -Encoding UTF8`, and both commands refused such a file as
@@ -659,11 +720,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   while the cached sessions and storage states are removed either way.
   Closes #4929. Closes #4931.
 
+- **`qfai init` keeps reminder-hook settings another writer changed while it
+  ran.** The hook merge read `.claude/settings.json` or `.codex/hooks.json`,
+  planned the new text, and renamed it into place later, so a file created or
+  edited in between was replaced. A file the merge found absent is now created
+  only if nothing is there yet, and an existing one is replaced only while its
+  text is still what the merge read; otherwise the file is left as the other
+  writer made it, a warning names it, and init carries on. Migration step 11,
+  which uses the same merge, stops naming the file instead. Closes #5017.
+
 - **`qfai sdd preflight` keeps a carry-over entry that starts with `<`.** A
   flagless re-run dropped every recorded entry opening with a less-than sign,
   such as a tag or a comparison, as if it were the template's placeholder.
   Only the template's exact
   placeholder is now read as no carry-over. Closes #4864.
+
+- **Updating `.gitignore` no longer changes another hard-linked name of the
+  file.** `qfai init`, `qfai doctor --autoremediate` and migration step 10
+  wrote the managed block, and init the graph ignore block, through the
+  existing file, so a second name for the same file, a file outside the
+  project included, received the same bytes. The new `.gitignore` is now
+  renamed into place, and every other name keeps what it had. Closes #5016.
 
 - **The stale-install check keeps lockfile precedence when a lockfile cannot
   be read.** A `package-lock.json` that existed but failed to read, for example
@@ -679,6 +756,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a workflow whose every job is `false` is reported as starting no job, and a
   condition that is a number, a list, a mapping or empty is named as not
   counted. Closes #4787.
+
+- **External document processing approval names the credential variable.**
+  The request an approval callback receives for an external destination named
+  the destination, scope, backend, model and worktree but not which
+  environment variable supplies the credential, so the person approving could
+  not see which credential the transmission would use. The request now carries
+  `credentialEnv`, the variable's name and never its value, and processing that
+  selects another variable asks for approval again. Closes #5018.
 
 - **`QFAI-FLOW-006` gives a business flow a remedy its shape allows.** The
   warning told every document to split an oversized diagram into an overview
@@ -712,6 +797,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `paths.contractsDir` elsewhere sent its reviewers to a missing or stale file,
   which they treat as absent evidence. They now name
   `<paths.contractsDir>/tech.md`.
+
+- **The document-schema checker stops an mdschema run that never exits.** Run
+  from the command line, as the shipped document lane runs it, the checker
+  waited on each mdschema run with no time limit, so a run that never exited
+  held the lane until the CI job timed out. It now stops a run after 120
+  seconds, the limit `qfai validate` already applied, and exits 2 saying that
+  mdschema did not finish, never reading the run as a pass or a schema
+  failure. Closes #5033.
 
 - **`qfai doctor` names a shipped workflow it cannot read in
   `workflows.cost`.** The check skipped every read failure as if the workflow

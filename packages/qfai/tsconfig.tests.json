@@ -222,6 +222,7 @@
     "tests/cli/commands/sddPreflight.test.ts",
     "tests/cli/commands/validateTextFormat.test.ts",
     "tests/cli/doctorContractSurface.test.ts",
+    "tests/cli/gitignoreHardLink.test.ts",
     "tests/cli/githubAnnotationCap.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",
     "tests/cli/githubSummaryEscaping.test.ts",

@@ -215,12 +215,20 @@ export function collectHardRequiredEntries(content: string): string[] {
  * is an entry. Read as a header and nothing else, that file collected an empty
  * bucket, and an empty bucket is a narrowing this check permits: the one
  * spelling that hides an entry was the one spelling that reported nothing.
+ *
+ * An HTML comment is dropped before any line is read, keeping the line breaks
+ * it spanned. A comment states no policy, and read as text an indented one was
+ * joined to the entry above it, so `output formatting <!-- rationale -->`
+ * matched no category. A bullet left empty by the drop names nothing.
+ * Ceiling: a `<!--` inside a code span is dropped too, and an unclosed one is
+ * kept as text. Lifting that needs the bucket read by a Markdown parser.
  */
 function collectBucketEntries(content: string, headerWithTail: RegExp): string[] {
   const entries: string[] = [];
   let inBucket = false;
   let bucketIndent = 0;
-  for (const line of content.split(/\r?\n/)) {
+  const visible = content.replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\r\n]/g, ""));
+  for (const line of visible.split(/\r?\n/)) {
     if (!inBucket) {
       const header = headerWithTail.exec(line);
       if (header !== null) {
@@ -252,10 +260,10 @@ function collectBucketEntries(content: string, headerWithTail: RegExp): string[]
     ) {
       break;
     }
-    const nested = /^\s+[-*]\s+(.+)$/.exec(line);
-    const text = nested?.[1]?.trim();
-    if (text !== undefined && text.length > 0) {
-      entries.push(text);
+    const nested = /^\s+[-*](?:\s+(.*))?$/.exec(line);
+    if (nested !== null) {
+      const text = nested[1]?.trim() ?? "";
+      if (text.length > 0) entries.push(text);
       continue;
     }
     // A wrapped bullet continues on an indented line that is not itself a
@@ -503,10 +511,12 @@ function autoDecideForm(text: string): string {
 
 /**
  * What may follow a category in an entry that instantiates it: a colon, a
- * parenthetical, or a spaced dash, each opening the operations the skill names
- * for that category.
+ * closed parenthetical, or a spaced dash, each opening the operations the skill
+ * names for that category. The separator must be followed by an operation: a
+ * bare `output formatting:` or an unclosed `equivalent-option pick (` names
+ * none, and accepting the separator alone let an unfinished entry pass.
  */
-const AUTO_DECIDE_INSTANTIATION_RE = /^(?::|\s*\(|\s+[—–-]\s)/;
+const AUTO_DECIDE_INSTANTIATION_RE = /^(?::\s*\S|\s*\([^)]*\S[^)]*\)|\s+[—–-]\s+\S)/;
 
 /**
  * Whether one auto-decide entry stays inside the prototype's categories.

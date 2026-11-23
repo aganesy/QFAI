@@ -57,6 +57,8 @@ export interface ExternalProcessingRequest {
   readonly scope: readonly string[];
   readonly backend: string;
   readonly model: string;
+  /** The name of the selected credential variable, never its value. */
+  readonly credentialEnv?: string;
   readonly worktree: string;
 }
 
@@ -218,6 +220,11 @@ export async function prepareDocumentAnalysisLocked(
         scope,
         backend,
         model: processing.model,
+        // A changed credential variable no longer matches the recorded analysis, so it is
+        // generated again and this request is asked again with the new name.
+        ...(processing.credentialEnv === undefined
+          ? {}
+          : { credentialEnv: processing.credentialEnv }),
         worktree: root,
       }),
     );
@@ -225,7 +232,7 @@ export async function prepareDocumentAnalysisLocked(
       return {
         status: "not-ready",
         recovery:
-          "External document processing requires explicit human authorization of its destination and scope.",
+          "External document processing requires explicit human authorization of its destination, scope and credential variable.",
       };
     }
   }
