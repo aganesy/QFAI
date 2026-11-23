@@ -117,6 +117,40 @@ export async function repointHolds(
 ): Promise<string[]> {
   const base = path.dirname(linkPath);
   const name = path.basename(linkPath);
+  const holds: string[] = [];
+  for (const hold of await holdsBeside(linkPath)) {
+    const held = path.join(hold, name);
+    if ((await safeLstat(held))?.isSymbolicLink() !== true) continue;
+    const target = await readlink(held);
+    if (targets.some((candidate) => sameLinkTarget(base, target, candidate, platform))) {
+      holds.push(hold);
+    }
+  }
+  return holds;
+}
+
+/**
+ * The holds beside `linkPath` that hold a real file or directory.
+ *
+ * {@link replaceEntryThroughHold} moves the project's own entry into a hold
+ * before a forced relink writes the link. A run stopped between the two, or a
+ * put-back that failed, leaves that entry there. It is the project's content,
+ * so it is named and never removed.
+ */
+async function contentHolds(linkPath: string): Promise<string[]> {
+  const name = path.basename(linkPath);
+  const holds: string[] = [];
+  for (const hold of await holdsBeside(linkPath)) {
+    const held = await safeLstat(path.join(hold, name));
+    if (held !== undefined && !held.isSymbolicLink()) holds.push(hold);
+  }
+  return holds;
+}
+
+/** Every entry beside `linkPath` named as one of its holds, sorted. */
+async function holdsBeside(linkPath: string): Promise<string[]> {
+  const base = path.dirname(linkPath);
+  const name = path.basename(linkPath);
   let entries: string[];
   try {
     entries = await readdir(base);
@@ -124,18 +158,22 @@ export async function repointHolds(
     if (isEnoent(err)) return [];
     throw err;
   }
-  const holds: string[] = [];
-  for (const entry of entries.sort()) {
-    const suffix = SIDECAR_RE.exec(entry);
-    if (suffix === null || entry.slice(0, suffix.index) !== name) continue;
-    const held = path.join(base, entry, name);
-    if ((await safeLstat(held))?.isSymbolicLink() !== true) continue;
-    const target = await readlink(held);
-    if (targets.some((candidate) => sameLinkTarget(base, target, candidate, platform))) {
-      holds.push(path.join(base, entry));
-    }
+  return entries
+    .sort()
+    .filter((entry) => {
+      const suffix = SIDECAR_RE.exec(entry);
+      return suffix !== null && entry.slice(0, suffix.index) === name;
+    })
+    .map((entry) => path.join(base, entry));
+}
+
+/** Names each hold beside `linkPath` that still keeps the project's own entry. */
+async function reportContentHolds(linkPath: string, note: Note): Promise<void> {
+  for (const hold of await contentHolds(linkPath)) {
+    note(
+      `  note: ${hold} holds project content an interrupted forced relink moved aside from ${linkPath}; it is left in place for you to move back or delete`,
+    );
   }
-  return holds;
 }
 
 /**
@@ -496,7 +534,9 @@ async function claimHoldDir(linkPath: string): Promise<string> {
  * Every caller writes through here, so a hold outlives its empty path only
  * where a caller opts out and removes the holds itself. A link that was
  * already right has its holds removed too: a repair that stopped after
- * writing it and before removing the hold leaves exactly that pair.
+ * writing it and before removing the hold leaves exactly that pair. A hold
+ * that keeps a real file or directory is named and left in place
+ * ({@link contentHolds}).
  */
 export async function ensureSymlink(
   linkPath: string,
@@ -505,6 +545,7 @@ export async function ensureSymlink(
   options: WrapperSyncOptions,
 ): Promise<"created" | "skipped"> {
   const result = await writeManagedLink(linkPath, target, type, options);
+  await reportContentHolds(linkPath, options.report ?? info);
   if (options.discardRepointHolds === false) return result;
   if (result === "created" || (await isCurrentLink(linkPath, target, options.platform))) {
     const targets = options.legacyTarget === undefined ? [target] : [target, options.legacyTarget];

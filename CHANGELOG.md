@@ -722,6 +722,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   entries. A failed copy now makes only that entry ineligible, its partial copy
   is removed, and the next saved entry is tried. Closes #5188.
 
+- **`qfai init` names a forced-relink hold that still keeps project content.**
+  `qfai init --force` moves a project's own wrapper file or directory into a
+  `<wrapper>.qfai-repair-*` directory before it writes the link. A run stopped
+  between the two, or a failed put-back, left that content there, and nothing
+  reported it after the one note printed at the time. A later `qfai init` now
+  names each such directory beside a wrapper it writes, and leaves it in place.
+  Closes #5317.
+
 - **A forced relink that cannot write the new link keeps the old one.**
   `qfai init --force` deleted a wrapper link that named the wrong target, or
   named nothing, before it wrote the managed link. When the write was refused,

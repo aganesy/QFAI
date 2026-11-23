@@ -9,7 +9,17 @@
  * targets compare, and the symlink writer, which may be refused.
  */
 
-import { lstat, mkdir, mkdtemp, readdir, readlink, rm, symlink } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  readlink,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -198,6 +208,33 @@ describe("qfai init and the holds of an interrupted repair", () => {
       );
       expect(output).toContain(`removed the hold of an interrupted repair: ${hold}`);
       expect(await holdsBeside(wrapper)).toEqual([]);
+      expect(path.normalize(await readlink(wrapper))).toBe(SINGULAR_TARGET);
+    });
+  });
+
+  it("names a hold that keeps the project's own wrapper, and leaves it in place", async () => {
+    // A forced relink moves a project-owned directory into a hold before it
+    // writes the link. A run that stopped between the two leaves that
+    // directory there, and a later init writes the link into the empty path.
+    await withInitializedProject(async (root) => {
+      const wrapper = wrapperOf(root);
+      await rm(wrapper);
+      const hold = `${wrapper}.qfai-repair-4242`;
+      const owned = path.join(hold, SKILL);
+      await mkdir(owned, { recursive: true });
+      await writeFile(path.join(owned, "SKILL.md"), "project wrapper\n");
+
+      const preview = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: true, yes: true }),
+      );
+      expect(preview).toContain(hold);
+
+      const output = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      );
+      expect(output).toContain(`holds project content an interrupted forced relink moved aside`);
+      expect(output).toContain(hold);
+      expect(await readFile(path.join(owned, "SKILL.md"), "utf8")).toBe("project wrapper\n");
       expect(path.normalize(await readlink(wrapper))).toBe(SINGULAR_TARGET);
     });
   });
