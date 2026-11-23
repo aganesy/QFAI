@@ -656,6 +656,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Only the template's exact
   placeholder is now read as no carry-over. Closes #4864.
 
+- **Updating `.gitignore` no longer changes another hard-linked name of the
+  file.** `qfai init`, `qfai doctor --autoremediate` and migration step 10
+  wrote the managed block, and init the graph ignore block, through the
+  existing file, so a second name for the same file, a file outside the
+  project included, received the same bytes. The new `.gitignore` is now
+  renamed into place, and every other name keeps what it had. Closes #5016.
+
 - **The stale-install check keeps lockfile precedence when a lockfile cannot
   be read.** A `package-lock.json` that existed but failed to read, for example
   for lack of permission, was passed over for a `pnpm-lock.yaml` or `yarn.lock`
