@@ -190,3 +190,4 @@
 | US-0001-0313 | A checkout that did not reinstall after a qfai upgrade is caught                       | `user-story-0001-0313/` |
 | US-0001-0314 | Settle what a Japanese product needs from one locale reference                         | `user-story-0001-0314/` |
 | US-0001-0315 | A refused argument shows the command's own usage, not the whole help                   | `user-story-0001-0315/` |
+| US-0001-0316 | Warn about legacy patterns a Widely available feature replaces                         | `user-story-0001-0316/` |

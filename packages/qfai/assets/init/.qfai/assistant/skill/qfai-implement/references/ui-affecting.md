@@ -6,6 +6,7 @@
 - Component catalogue
 - Platform features
 - Design catalogue
+- Legacy patterns
 - Plain text in UI source
 - Repeated figures and claims
 - Routing
@@ -96,6 +97,21 @@ Once either file exists, `npx qfai validate` warns when the token file or the th
 `DESIGN.md` (`QFAI-DCAT-001`, `QFAI-DCAT-002`), and about each hex colour in a `.html`, `.tsx`, `.jsx`, `.vue` or `.svelte` file `uiux.surfacePaths` selects
 that matches no colour of `DESIGN.md` (`QFAI-DCAT-003`). A stylesheet is not read, so keep colours
 there on the theme's variables yourself. `npx qfai catalog design --check` fails CI on the first two.
+
+## Legacy patterns
+
+`npx qfai validate` warns about a pattern a platform feature now replaces, in the `.css`, `.html`,
+`.tsx`, `.jsx`, `.vue` and `.svelte` files `uiux.surfacePaths` selects. Each replacement is Baseline
+Widely available, so it holds under any browser-support target. A newer replacement is left to review.
+
+| Code              | Pattern                                                                 | Replacement                                      |
+| ----------------- | ----------------------------------------------------------------------- | ------------------------------------------------ |
+| `QFAI-LEGACY-001` | A `<script>` from another origin with no `integrity` attribute          | Subresource Integrity: `integrity` with the hash |
+| `QFAI-LEGACY-002` | Error styling on `:invalid`, which shows before the user has interacted | `:user-invalid`                                  |
+| `QFAI-LEGACY-003` | A `role="dialog"` or `aria-modal` modal built on another element        | `<dialog>` opened with `showModal()`             |
+
+`QFAI-LEGACY-003` is raised only where no component catalogue is installed; with one, the
+hand-written widget warning (`QFAI-COMP-005`) applies instead.
 
 ## Plain text in UI source
 
