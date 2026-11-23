@@ -5,6 +5,9 @@
  * was there before, each further capture stacks another wrapper, and a property set on the
  * original (the workflow-command suppressor's marker) is gone. The rows hold identity after a
  * capture that resolves and after one that rejects.
+ *
+ * Two captures that overlap and finish out of nesting order each get only their own output, and
+ * the original function is back once both are done.
  */
 import { describe, expect, it } from "vitest";
 
@@ -47,4 +50,45 @@ describe("output capture helpers", () => {
     );
     expect(process.stderr.write).toBe(before);
   });
+
+  it.each([
+    { name: "captureStdout", capture: captureStdout, stream: process.stdout },
+    { name: "captureStderr", capture: captureStderr, stream: process.stderr },
+  ])(
+    "$name keeps two overlapping captures apart when the first one finishes first",
+    async ({ capture, stream }) => {
+      const before = stream.write;
+      const firstGate = deferred();
+      const secondGate = deferred();
+      const secondWroteFirstLine = deferred();
+
+      const first = capture(async () => {
+        stream.write("first: before\n");
+        await firstGate.promise;
+        stream.write("first: after\n");
+      });
+      const second = capture(async () => {
+        stream.write("second: before\n");
+        secondWroteFirstLine.resolve();
+        await secondGate.promise;
+        stream.write("second: after\n");
+      });
+
+      await secondWroteFirstLine.promise;
+      firstGate.resolve();
+      expect(await first).toBe("first: before\nfirst: after\n");
+
+      secondGate.resolve();
+      expect(await second).toBe("second: before\nsecond: after\n");
+      expect(stream.write).toBe(before);
+    },
+  );
 });
+
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve: () => void = () => undefined;
+  const promise = new Promise<void>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}

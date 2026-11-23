@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
+import { expectPointer } from "../helpers/reminderAssertions.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -107,21 +108,6 @@ async function fullContext(key: string): Promise<string> {
   return contextOf(
     JSON.stringify({ hookSpecificOutput: Reflect.get(message, "hookSpecificOutput") }),
   );
-}
-
-function expectPointer(context: string, full: string, reference: string): void {
-  expect(context).toContain(reference);
-  expect(context.trim()).not.toBe("");
-  expect(context).not.toMatch(/[\r\n\u2028\u2029]/);
-  expect(context.length).toBeLessThan(full.length);
-  if (reference === "qfai-run") {
-    expect(context).toMatch(/\bnew requests?\b.*\bplan\b/i);
-    expect(context).toMatch(
-      /\b(?:requested|pending|waiting)\b.*\b(?:answers?|results?|repl(?:y|ies))\b/i,
-    );
-    expect(context).toMatch(/\b(?:current|same|waiting)\b.*\bstep\b/i);
-    expect(context).not.toMatch(/\b(?:activeRun|turn_id)\b/);
-  }
 }
 
 describe.each(SETTINGS)("%s sends full context first and less or nothing later", (rel) => {

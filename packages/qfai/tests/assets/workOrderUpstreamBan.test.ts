@@ -17,12 +17,12 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { workOrderBlock } from "../helpers/workOrderTemplate.js";
+
 // tests/assets/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const DELEGATION = "assistant/rule/shared-skill-delegation-baseline.md";
-const WORK_ORDER = "assistant/rule/references/worker-edit-boundary.md";
 const DRIFT = "assistant/rule/drift-protocol.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
@@ -30,23 +30,6 @@ const read = (tree: string, rel: string): Promise<string> =>
 
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
-
-/** The fenced `text` block under `## Work order template`. */
-async function workOrderBlock(tree: string): Promise<string> {
-  const baseline = await read(tree, DELEGATION);
-  const pointer = baseline.split("\n## Work order template\n")[1]?.split("\n## ")[0];
-  expect(pointer).toBeDefined();
-  expect(flat(pointer ?? "")).toContain("When preparing a delegation");
-  expect(pointer).toContain(
-    ".qfai/assistant/rule/references/worker-edit-boundary.md#work-order-template",
-  );
-  const source = await read(tree, WORK_ORDER);
-  const body = source.split("\n## Work order template\n")[1]?.split("\n## ")[0];
-  expect(body).toBeDefined();
-  const block = /```text\n([\s\S]*?)```/.exec(body ?? "");
-  expect(block).not.toBeNull();
-  return block?.[1] ?? "";
-}
 
 describe("the work order template bans upstream patching unconditionally", () => {
   for (const tree of QFAI_TREES) {

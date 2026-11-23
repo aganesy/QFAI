@@ -15,21 +15,14 @@ flowchart TD
   Request[Free-text change request] --> Route[Plan the route and announce it]
   Route -->|Plan with a specification stage| SDD
   Route -->|Change route with no specification stage| Implement
-  Route -->|draft-release-notes| Notes[Draft the release notes and ask for the release approval]
-  Route -->|Plan ending at triage-close| Close[Answer, close or hand over the request]
   Discuss --> SDD[Author flows, stories, criteria and contracts]
-  SDD --> Validate[Validate current story tree]
-  Validate --> Ready{Valid and decisions closed?}
-  Ready -->|No| Repair[Resolve finding in owning artifact]
+  SDD --> Validate{Current story tree valid and decisions closed?}
+  Validate -->|No| Repair[Resolve finding in owning artifact]
   Repair --> Validate
-  Ready -->|Yes| SpecReview[Review the specification change]
-  SpecReview --> UI{Visual prototyping required?}
-  UI -->|Yes| Prototype[Prototype until the user confirms it]
-  UI -->|No| Implement[Make the planned change, with acceptance tests and EX-scoped TDD cycles where the plan holds them]
-  Prototype --> Implement
+  Validate -->|Yes| SpecReview[Review the specification change]
+  SpecReview --> Implement[Make the planned change, with acceptance tests and EX-scoped TDD cycles where the plan holds them]
   Implement --> CodeReview[Review the whole diff]
-  CodeReview --> Verify[Run the repository gates]
-  Verify --> Gate{All gates pass?}
+  CodeReview --> Gate{All repository gates pass?}
   Gate -->|No| Repair
   Gate -->|Yes| Report[Produce validation and delivery report]
 ```
@@ -42,6 +35,10 @@ flowchart TD
   A visual prototyping surface also requires root `DESIGN.md` and a
   user-confirmed prototype. A CLI-only surface requires neither `DESIGN.md`
   nor a visual prototype.
+- When a reviewed specification change needs visual prototyping, the change is
+  prototyped until the user confirms the prototype, and only then implemented.
+  Work that needs no visual prototyping goes from the specification review
+  straight to implementation.
 - A failed validation, review or gate returns to the artifact that owns the
   finding. Completion is reported only after the relevant gate passes.
 - A free-text change request in mode `active` is planned by `qfai-run` with
@@ -59,6 +56,10 @@ flowchart TD
   `qfai-run` records in `decisions.md` before a hand-off. A diagnosis showing
   the work is on the wrong route moves it, at a branch point the route declares,
   to the route that fits.
+- A plan ending at `triage-close` answers, closes or hands over the request
+  and reaches no implementation.
+- The `draft-release-notes` route drafts the release notes and asks the user
+  for the release approval.
 - A request to write the acceptance tests of a flow runs the quality-phase
   route, which writes the bodies of the empty acceptance tests.
 - A scope change discovered after an accepted implementation item follows the

@@ -19,8 +19,12 @@ describe("story coverage in the repository CI", () => {
     expect(workflow).toContain(
       "node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error",
     );
-    expect(validator).toContain('validateStoryTreeObligations(root, config, "atdd", model)');
-    expect(validator).toContain('validateStoryTreeObligations(root, config, "tdd", model)');
+    expect(validator).toContain(
+      'validateStoryTreeObligations(root, config, "atdd", model, readStoryTestsOnce)',
+    );
+    expect(validator).toContain(
+      'validateStoryTreeObligations(root, config, "tdd", model, readStoryTestsOnce)',
+    );
     expect(validator).toMatch(
       /case "full":[\s\S]*?\.\.\.\(await atdd\(\)\)[\s\S]*?\.\.\.\(await tdd\(false, false\)\)/,
     );

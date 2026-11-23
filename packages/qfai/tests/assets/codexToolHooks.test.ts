@@ -30,6 +30,7 @@ import {
 import { CODEX_SHELLS, type CodexShell, runCodexLine } from "../helpers/codexHookShells.js";
 import { EXIT_ZERO, type Spawned, spawnCaptured } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
+import { expectNoEmbeddedReminderText, expectPointer } from "../helpers/reminderAssertions.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -44,23 +45,6 @@ const LINE = /^node -e "([^"]*)" ([a-z-]+)$/;
 
 type Entry = Record<string, unknown>;
 type Group = { readonly matcher: unknown; readonly hooks: readonly Entry[] };
-
-function expectNoEmbeddedReminderText(program: string, messages: unknown): void {
-  if (typeof messages !== "object" || messages === null) throw new Error("no reminder catalog");
-  for (const message of Object.values(messages)) {
-    if (typeof message !== "object" || message === null) throw new Error("invalid reminder");
-    const output: unknown = Reflect.get(message, "hookSpecificOutput");
-    const full: unknown =
-      typeof output === "object" && output !== null
-        ? Reflect.get(output, "additionalContext")
-        : undefined;
-    for (const context of [full, Reflect.get(message, "briefContext")]) {
-      if (typeof context !== "string") continue;
-      expect(program).not.toContain(context);
-      expect(program).not.toContain(JSON.stringify(context).slice(1, -1));
-    }
-  }
-}
 
 function asRecord(value: unknown, what: string): Entry {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -486,21 +470,6 @@ async function firedContext(
   const output = asRecord(envelope.hookSpecificOutput, "hookSpecificOutput");
   if (typeof output.additionalContext !== "string") throw new Error("no additionalContext");
   return output.additionalContext;
-}
-
-function expectPointer(context: string, full: string, reference: string): void {
-  expect(context).toContain(reference);
-  expect(context.trim()).not.toBe("");
-  expect(context).not.toMatch(/[\r\n\u2028\u2029]/);
-  expect(context.length).toBeLessThan(full.length);
-  if (reference === "qfai-run") {
-    expect(context).toMatch(/\bnew requests?\b.*\bplan\b/i);
-    expect(context).toMatch(
-      /\b(?:requested|pending|waiting)\b.*\b(?:answers?|results?|repl(?:y|ies))\b/i,
-    );
-    expect(context).toMatch(/\b(?:current|same|waiting)\b.*\bstep\b/i);
-    expect(context).not.toMatch(/\b(?:activeRun|turn_id)\b/);
-  }
 }
 
 // QFAI:EX-0001-0196-40

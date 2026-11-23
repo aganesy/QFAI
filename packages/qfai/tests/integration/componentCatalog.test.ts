@@ -13,9 +13,9 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runCatalogComponents } from "../../src/cli/commands/catalog.js";
-import { run } from "../../src/cli/main.js";
 import type { Issue, ValidationProfile } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
+import { runCliCaptured as cli } from "../helpers/cliCapture.js";
 
 const roots: string[] = [];
 const packageRequire = createRequire(import.meta.url);
@@ -48,29 +48,6 @@ async function projectWith(files: Readonly<Record<string, string>>): Promise<str
     `module.exports = require(${JSON.stringify(packageRequire.resolve("typescript"))});\n`,
   );
   return root;
-}
-
-/** Runs the CLI and returns its exit code with what it wrote to each stream. */
-async function cli(args: string[]): Promise<{ code: number; out: string; err: string }> {
-  const out: string[] = [];
-  const err: string[] = [];
-  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-    out.push(String(chunk));
-    return true;
-  });
-  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
-    err.push(String(chunk));
-    return true;
-  });
-  const previous = process.exitCode;
-  process.exitCode = undefined;
-  try {
-    await run(args, process.cwd());
-    return { code: Number(process.exitCode ?? 0), out: out.join(""), err: err.join("") };
-  } finally {
-    process.exitCode = previous;
-    vi.restoreAllMocks();
-  }
 }
 
 const readCatalogText = (root: string): Promise<string> =>

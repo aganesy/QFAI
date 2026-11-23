@@ -60,8 +60,8 @@ export async function validateUiAccessibilityLayer(
   const first = screens[0];
   if (first === undefined) return [];
 
-  // A third read of the selected test files in a full scan, after the two the
-  // obligation checks make. Accepted: it runs only once a web screen exists,
+  // A second read of the selected test files in a full scan, after the one the
+  // obligation checks share. Accepted: it runs only once a web screen exists,
   // and sharing one scan would thread it through every profile runner.
   let scan: Awaited<ReturnType<typeof readStoryTests>>;
   try {

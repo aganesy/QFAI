@@ -22,6 +22,7 @@ import {
   mergeDocumentationClarityHooks,
   serializeClaudeSettings,
 } from "../../../src/core/claudeCodeHooks.js";
+import { expectNoEmbeddedReminderText } from "../../helpers/reminderAssertions.js";
 
 /** A template shaped like the shipped one, small enough to assert against. */
 const TEMPLATE = JSON.stringify({
@@ -55,23 +56,6 @@ const TEMPLATE = JSON.stringify({
     ],
   },
 });
-
-function expectNoEmbeddedReminderText(program: string, messages: unknown): void {
-  if (typeof messages !== "object" || messages === null) throw new Error("no reminder catalog");
-  for (const message of Object.values(messages)) {
-    if (typeof message !== "object" || message === null) throw new Error("invalid reminder");
-    const output: unknown = Reflect.get(message, "hookSpecificOutput");
-    const full: unknown =
-      typeof output === "object" && output !== null
-        ? Reflect.get(output, "additionalContext")
-        : undefined;
-    for (const context of [full, Reflect.get(message, "briefContext")]) {
-      if (typeof context !== "string") continue;
-      expect(program).not.toContain(context);
-      expect(program).not.toContain(JSON.stringify(context).slice(1, -1));
-    }
-  }
-}
 
 function mergedSettings(existing: string): Record<string, unknown> {
   const result = mergeDocumentationClarityHooks(existing, TEMPLATE);
