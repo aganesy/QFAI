@@ -36,7 +36,8 @@
  *     ```
  *
  * The marker is deliberately per-block and never per-file: a file-level opt-out
- * would silently cover the next diagram somebody adds beneath it.
+ * would silently cover the next diagram somebody adds beneath it. For the same
+ * reason it covers a fence only inside the same block quotes and list items.
  *
  * Usage:
  *   node scripts/check-mermaid.mjs            # scan the repository
@@ -224,7 +225,7 @@ function continueContainers(line, containers) {
  *
  * A list item's content starts after the marker and one to four spaces; five or
  * more begin indented code, so the content starts one column after the marker,
- * as it does for a marker alone on its line (CommonMark 5.2).
+ * as it does for a marker followed by nothing but spaces (CommonMark 5.2).
  *
  * @param {string} content
  * @param {({ kind: "quote" } | { kind: "item", indent: number })[]} containers Appended to.
@@ -244,10 +245,11 @@ function openContainers(content, containers) {
       return rest;
     }
     const [whole, lead, marker, spacing] = item;
-    const gap = spacing.length === 0 || spacing.length > 4 ? 1 : spacing.length;
+    const blankStart = whole.length === rest.length;
+    const gap = blankStart || spacing.length > 4 ? 1 : spacing.length;
     const indent = lead.length + marker.length + gap;
     containers.push({ kind: "item", indent });
-    rest = whole.length === rest.length ? "" : rest.slice(indent);
+    rest = blankStart ? "" : rest.slice(indent);
   }
 }
 
@@ -292,7 +294,14 @@ export function extractMermaidBlocks(text) {
   let open = null;
   // The line above, read inside its own containers, decides whether the next
   // fence is a template: `> <!-- mermaid-lint:ignore -->` covers `> ```mermaid`.
-  let previous = "";
+  // It covers a fence only in those same containers, so a marker inside a block
+  // quote or list item says nothing about a fence after that container closes.
+  /** @type {{ text: string, containers: ({ kind: "quote" } | { kind: "item", indent: number })[] }} */
+  let previous = { text: "", containers: [] };
+  const coversFence = () =>
+    previous.text.trim() === IGNORE_MARKER &&
+    previous.containers.length === containers.length &&
+    previous.containers.every((container, index) => container === containers[index]);
 
   const finish = () => {
     if (open !== null && MERMAID_LANGS.has(open.lang)) {
@@ -321,7 +330,7 @@ export function extractMermaidBlocks(text) {
         // The opener's own indent is removed from each body line, up to its width.
         open.body.push(content.slice(Math.min(open.indent, indentOf(content))));
       }
-      previous = content;
+      previous = { text: content, containers: containers.slice(0, matched) };
       continue;
     }
 
@@ -337,10 +346,10 @@ export function extractMermaidBlocks(text) {
         depth: containers.length,
         line: i + 1,
         body: [],
-        ignored: previous.trim() === IGNORE_MARKER,
+        ignored: coversFence(),
       };
     }
-    previous = rest;
+    previous = { text: rest, containers: [...containers] };
   }
 
   // An unterminated fence runs to end of document, which is what CommonMark
