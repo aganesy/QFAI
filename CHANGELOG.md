@@ -586,6 +586,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   linked summary now counts as no previous summary and is replaced.
   Closes #5060.
 
+- **`qfai init` on Windows names no rerun command PowerShell would split.**
+  The recovery line of a failed graph download double-quotes a temporary
+  directory that holds a space, and PowerShell also ends such a string at a
+  curly double quote (U+201C, U+201D, U+201E). A directory holding one of
+  those, or a Unicode line or paragraph separator, now has no rerun command,
+  so the generic recovery line is shown instead. Closes #5201.
+
 - **`qfai session-review` redacts a quoted `password=` value whole.** The
   value was blanked only up to its first space, so `password="a b"` printed
   `[redacted] b"` in the report and in an error line. A value in double or
