@@ -6,7 +6,6 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import * as graphProcess from "../../src/core/graph/process.js";
 import { createLegacyGraphProcess } from "../helpers/legacyInit.js";
 
-import { runInit } from "../helpers/legacyInit.js";
 import { run } from "../../src/cli/main.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../src/core/version.js";
 import { captureStdout } from "../helpers/stdout.js";
@@ -21,6 +20,17 @@ beforeAll(() => {
 afterAll(() => {
   acquisitionPort.mockRestore();
 });
+
+// Root discovery and report dispatch read only the config and the story tree,
+// so these rows seed those instead of running a full installation.
+async function seedMinimalProject(root: string): Promise<void> {
+  const flow = path.join(root, ".qfai", "spec", "02_business-flow", "business-flow-0001");
+  const story = path.join(flow, "user-story-0001-0001");
+  await mkdir(story, { recursive: true });
+  await writeFile(path.join(root, "qfai.config.yaml"), "{}\n", "utf-8");
+  await writeFile(path.join(flow, "business-flow.md"), "# BF-0001: Checkout\n", "utf-8");
+  await writeFile(path.join(story, "01_User-story.md"), "# US-0001-0001: Checkout\n", "utf-8");
+}
 
 describe("cli root discovery", () => {
   it("dispatches story-tree scaffold options and refuses the retired spec option", async () => {
@@ -61,7 +71,7 @@ describe("cli root discovery", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-root-"));
     const cwd = path.join(root, "packages", "app");
     try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedMinimalProject(root);
       await mkdir(cwd, { recursive: true });
 
       const previousExitCode = process.exitCode;
@@ -82,7 +92,7 @@ describe("cli root discovery", () => {
   it("sets exitCode from report so --fail-on gates the run", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-report-"));
     try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedMinimalProject(root);
 
       const previousExitCode = process.exitCode;
       process.exitCode = undefined;
