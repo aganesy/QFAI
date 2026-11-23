@@ -3,7 +3,12 @@ import { cp, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { graphDeliberationDir } from "./analysis.js";
-import { GRAPH_VERSIONS, graphAnalysisRoot, graphRuntimePaths } from "./layout.js";
+import {
+  GRAPH_VERSIONS,
+  graphAnalysisRoot,
+  graphAnalysisStaging,
+  graphRuntimePaths,
+} from "./layout.js";
 import {
   GRAPH_PYTHON_FLAGS,
   graphifyEnvironment,
@@ -58,7 +63,7 @@ export async function restoreCompletedDocumentAnalysis(
       const analysis = path.join(candidate, "analysis");
       if (!(await safeDocumentCopy(root, analysis, run))) continue;
       const current = graphAnalysisRoot(root, "graphify");
-      staged = path.join(path.dirname(current), `.restoring-graphify-${randomUUID()}`);
+      staged = graphAnalysisStaging(current, "restoring", "graphify", randomUUID());
       await assertGraphStoragePath(root, staged);
       await mkdir(path.dirname(staged), { recursive: true });
       await cp(analysis, staged, { recursive: true, dereference: false });

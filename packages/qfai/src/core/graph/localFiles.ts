@@ -1,6 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import path from "node:path";
-import { graphEnvironmentKey } from "./layout.js";
+import { graphStatePath } from "./layout.js";
 import { assertGraphStoragePath } from "./storage.js";
 
 export const GRAPH_STATE_BYTES = 32768;
@@ -16,7 +15,7 @@ export class GraphLocalStateError extends Error {
 }
 
 export async function graphStateDirectory(root: string): Promise<string> {
-  const directory = path.join(root, ".qfai", "tools", "state", graphEnvironmentKey());
+  const directory = graphStatePath(root);
   await assertGraphStoragePath(root, directory);
   await mkdir(directory, { recursive: true });
   await assertGraphStoragePath(root, directory);

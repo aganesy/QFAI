@@ -3,8 +3,9 @@ import { access, lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import {
-  graphEnvironmentKey,
+  graphCodegraphInstallDirectory,
   graphExecutionEnvironment,
+  graphPrivateHome,
   type GraphExecutionEnvironment,
 } from "./layout.js";
 import { assertGraphStoragePath } from "./storage.js";
@@ -78,7 +79,7 @@ function privateEngineEnvironment(
     const canonical = allowed[name.toLowerCase()];
     if (canonical) environment[canonical] = value;
   }
-  const home = path.join(root, ".qfai", "tools", "home", graphEnvironmentKey(execution), engine);
+  const home = graphPrivateHome(root, engine, execution);
   return {
     ...environment,
     HOME: home,
@@ -115,7 +116,7 @@ export function codegraphEnvironment(
   const home = privateEnvironment.HOME ?? "";
   return {
     ...privateEnvironment,
-    CODEGRAPH_INSTALL_DIR: path.join(home, ".codegraph"),
+    CODEGRAPH_INSTALL_DIR: graphCodegraphInstallDirectory(home),
     CODEGRAPH_NO_DOWNLOAD: "1",
     CODEGRAPH_NO_UPDATE_CHECK: "1",
     CODEGRAPH_TELEMETRY: "0",

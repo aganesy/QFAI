@@ -99,7 +99,10 @@ it("preserves removed managed ignores and tracked output with concrete conflict 
 it("names each graph output path a narrower managed rule leaves visible to Git", async () => {
   const key = graphEnvironmentKey();
   for (const [rules, visible] of [
-    ["/.qfai/tools/analysis/\n", `.qfai/tools/runtimes/${key}/graphify/pyvenv.cfg`],
+    [
+      "/.qfai/tools/analysis/\n",
+      `.qfai/tools/runtimes/${key}/codegraph/node_modules/@colbymchenry/codegraph/npm-shim.js`,
+    ],
     ["/.qfai/tools/*\n!/.qfai/tools/state/\n", `.qfai/tools/state/${key}/analysis.lock`],
     ["/.qfai/tools/*/\n", ".qfai/tools/graph-cli.mjs"],
   ] as const) {
@@ -111,6 +114,45 @@ it("names each graph output path a narrower managed rule leaves visible to Git",
       expect(result.conflicts, rules).toHaveLength(1);
       expect(result.conflicts[0], rules).toContain(visible);
       expect(result.files).toEqual([]);
+      expect(await readFile(path.join(root, ".gitignore"), "utf8")).toBe(content);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+});
+
+// QFAI:EX-0001-0236-17
+// Mutation: packages/qfai/src/core/graph/ignore.ts `for (const step of GRAPH_STAGING_STEPS)` -> `for (const step of [])` fails "names every staging directory and the CodeGraph install directory a managed rule leaves visible"
+it("names every staging directory and the CodeGraph install directory a managed rule leaves visible", async () => {
+  const key = graphEnvironmentKey();
+  // Each rule ignores everything under the tools directory except one directory a writer uses.
+  const only = (parent: string, depth: string, name: string) =>
+    `/.qfai/tools/*\n!/.qfai/tools/${parent}/\n/.qfai/tools/${parent}/${depth}\n!/.qfai/tools/${parent}/${name}\n`;
+  const analysis = (name: string) =>
+    [only("analysis", "*/*", `*/${name}-*`), `.qfai/tools/analysis/${key}/${name}-`] as const;
+  for (const [rules, visible] of [
+    analysis(".preparing-codegraph"),
+    analysis(".preparing-graphify"),
+    analysis(".preparing-graphify-code"),
+    analysis(".refreshing-codegraph"),
+    analysis(".refreshing-graphify"),
+    analysis(".restoring-codegraph"),
+    analysis(".restoring-graphify"),
+    analysis(".previous"),
+    [only("runtimes", "*", ".p-*"), ".qfai/tools/runtimes/.p-"],
+    [only("runtimes", "*", ".previous-*"), ".qfai/tools/runtimes/.previous-"],
+    [
+      only("home", "*/*/*", "*/codegraph/.codegraph/"),
+      `.qfai/tools/home/${key}/codegraph/.codegraph/`,
+    ],
+  ] as const) {
+    const root = await repository();
+    try {
+      const content = `${GRAPH_IGNORE_MARKER}\n${rules}`;
+      await writeFile(path.join(root, ".gitignore"), content);
+      const result = await ensureGraphGitignore(root, runGraphProcess);
+      expect(result.conflicts, rules).toHaveLength(1);
+      expect(result.conflicts[0], rules).toContain(visible);
       expect(await readFile(path.join(root, ".gitignore"), "utf8")).toBe(content);
     } finally {
       await rm(root, { recursive: true, force: true });

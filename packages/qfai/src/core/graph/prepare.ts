@@ -16,7 +16,12 @@ import {
 } from "./process.js";
 import { isEnoent } from "../fs/errno.js";
 import { GraphConfigUnreadableError, inspectCurrentCodeAnalysis } from "./analysis.js";
-import { GRAPH_VERSIONS, graphRuntimeFiles, graphRuntimePaths } from "./layout.js";
+import {
+  GRAPH_VERSIONS,
+  graphRuntimeFiles,
+  graphRuntimePaths,
+  graphRuntimeStaging,
+} from "./layout.js";
 import { assertGraphStoragePath, replaceGraphDirectory } from "./storage.js";
 import { formatReportPath } from "../init/reportPath.js";
 export { GRAPH_VERSIONS, graphRuntimePaths } from "./layout.js";
@@ -77,10 +82,8 @@ export async function prepareGraphRuntimes(
       documents: "documents-not-ready",
     };
   }
-  // A short sibling of the installed directory, so staging adds almost no depth to the deepest
-  // runtime file. Windows limits a path to 260 characters unless long paths are enabled.
   const staged = graphRuntimeFiles(
-    path.join(path.dirname(current.directory), `.p-${randomBytes(4).toString("hex")}`),
+    graphRuntimeStaging(current.directory, randomBytes(4).toString("hex")),
   );
   await assertGraphStoragePath(root, staged.directory);
   const notReady: GraphPreparation = {

@@ -17,6 +17,7 @@ import { isEnoent } from "../fs/errno.js";
 import {
   GRAPH_VERSIONS,
   graphAnalysisRoot,
+  graphAnalysisStaging,
   graphRuntimePaths,
   graphEnvironmentKey,
 } from "./layout.js";
@@ -93,7 +94,7 @@ export async function restoreCompletedCodeAnalysis(
     if (!(await safeCodegraphInputs(root, path.join(candidate, "analysis"), run, deliberationDir)))
       continue;
     const current = graphAnalysisRoot(root, "codegraph");
-    const staged = path.join(path.dirname(current), `.restoring-codegraph-${randomUUID()}`);
+    const staged = graphAnalysisStaging(current, "restoring", "codegraph", randomUUID());
     await assertGraphStoragePath(root, staged);
     try {
       const cached = path.join(candidate, "analysis");

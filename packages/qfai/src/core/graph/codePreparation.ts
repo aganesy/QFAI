@@ -14,7 +14,7 @@ import {
   restoreCompletedCodeAnalysis,
   type GraphReuseEnvironment,
 } from "./reuse.js";
-import { graphAnalysisRoot, graphRuntimePaths } from "./layout.js";
+import { graphAnalysisRoot, graphAnalysisStaging, graphRuntimePaths } from "./layout.js";
 import {
   GraphConfigUnreadableError,
   inspectCodeAnalysisAt,
@@ -40,7 +40,7 @@ export async function prepareCodeAnalysis(
   environment?: GraphReuseEnvironment,
 ): Promise<CodePreparation> {
   const current = graphAnalysisRoot(root, "codegraph");
-  const staged = path.join(path.dirname(current), `.preparing-codegraph-${randomUUID()}`);
+  const staged = graphAnalysisStaging(current, "preparing", "codegraph", randomUUID());
   let created = false;
   try {
     if (await inspectCurrentCodeAnalysis(root, run))
