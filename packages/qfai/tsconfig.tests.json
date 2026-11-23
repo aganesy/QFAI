@@ -248,6 +248,7 @@
     "tests/cli/validationProfiles.test.ts",
     "tests/cli/validateVerdictAfterResultWrite.test.ts",
     "tests/core/assistantAnchorReferences.test.ts",
+    "tests/core/dotDotNameContainment.test.ts",
     "tests/core/sessionReview.test.ts",
     "tests/integration/sessionReviewCli.test.ts",
     "tests/integration/init/turnEndHook.test.ts",

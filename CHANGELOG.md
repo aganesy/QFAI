@@ -593,6 +593,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to the end of the line when it is never closed; a bare value is still
   blanked to the next whitespace. Closes #5020.
 
+- **A directory whose name begins with two dots counts as inside its base
+  everywhere.** Several more checks tested whether a path relative to its base
+  began with `..`, so a directory such as `..fixtures` or `..archive` read as
+  outside the tree that holds it: ATDD test-layer resolution and its scan
+  globs, the `qfai init` guard against writing into the package's own
+  assets, the `qfai doctor` output path alignment check, the assistant
+  anchor-reference validator, and the repository-relative paths in
+  assistant-asset messages. Each now asks the shared containment check, where
+  only a `..` path segment leaves the base. Closes #5142.
+
 - **Migration step 11 names a staging directory it could not remove.** When
   step 11 replaced a shipped skill or step but could not remove the hidden
   `.<id>-replace-*` directory it staged in, the failure was ignored: the

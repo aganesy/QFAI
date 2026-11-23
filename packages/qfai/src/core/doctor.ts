@@ -38,6 +38,7 @@ import type { Issue } from "./types.js";
 import { validateDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { BIDIRECTIONAL_CONTROLS, LINE_SEPARATORS } from "./validators/assistantAssets.js";
 import { validateIntegrationSurface } from "./validators/integrationSurface.js";
+import { isInside } from "./validators/utils.js";
 import { applyWaivers } from "./waivers.js";
 import { resolveToolVersion } from "./version.js";
 import {
@@ -358,8 +359,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   });
 
   const outDirAbs = resolvePath(root, config, "outDir");
-  const rel = path.relative(outDirAbs, validateJsonAbs);
-  const inside = rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+  const inside =
+    path.relative(outDirAbs, validateJsonAbs) !== "" && isInside(outDirAbs, validateJsonAbs);
   addCheck(checks, {
     id: "output.pathAlignment",
     severity: inside ? "ok" : "warning",

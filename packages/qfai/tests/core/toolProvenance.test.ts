@@ -156,7 +156,11 @@ describe("classifyToolLocation", () => {
 
   it("stays quiet for a copy under a project directory whose name begins with two dots", () => {
     // `..tools` is an ordinary name inside the project, not a parent traversal.
-    expect(classifyToolLocation(at("proj"), at("proj", "..tools", "qfai"))).toBe(false);
+    // The `node_modules` segment matters: without it the copy reads as local
+    // whichever way the containment test answers, so the row could not fail.
+    expect(classifyToolLocation(at("proj"), at("proj", "..tools", "node_modules", "qfai"))).toBe(
+      false,
+    );
   });
 
   it("reports a dependency hoisted above the project", () => {

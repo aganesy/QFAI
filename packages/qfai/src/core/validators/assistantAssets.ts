@@ -15,7 +15,7 @@ import { escapeRegExp } from "../regex.js";
 import { maskNonSpecRegions, splitMarkdownRow } from "../specPackParsers.js";
 import { isPristineStorySeed } from "../storyTree/pristineSeed.js";
 import type { Issue } from "../types.js";
-import { issue } from "./utils.js";
+import { isInside, issue } from "./utils.js";
 
 /** `TODO`, `FIXME`, `XXX`, `TBD`, `<placeholder>`, or whitespace only. */
 const TODO_PLACEHOLDER_RE = /^(?:\s*(?:TODO|FIXME|XXX|TBD|<placeholder>)\s*|\s*)$/i;
@@ -416,7 +416,7 @@ export async function validateStoryPolicyPlaceholders(
  */
 function toRepoRelative(root: string, filePath: string): string {
   const relative = path.relative(root, filePath);
-  if (relative.length === 0 || relative.startsWith("..") || path.isAbsolute(relative)) {
+  if (relative.length === 0 || !isInside(root, filePath)) {
     return filePath;
   }
   return relative.split(path.sep).join("/");
