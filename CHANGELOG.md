@@ -635,6 +635,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review, and that it makes no commit, as `triage-security-intake` already
   said. Closes #5012.
 
+- **The `qfai-triage` skill invoked by name takes a security report in
+  privately before any other step.** Its step list put
+  `triage-security-intake` seventh, after the duplicate search, the request
+  for missing facts and the investigation, so details of a vulnerability
+  report could reach a public tracker before anyone decided how to disclose
+  it. The intake now runs first, as the `fix-vulnerability` plan already
+  ran it. Closes #5013.
+
 - **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
   with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
   `Set-Content -Encoding UTF8`, and both commands refused such a file as
