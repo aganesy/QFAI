@@ -600,6 +600,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   linked summary now counts as no previous summary and is replaced.
   Closes #5060.
 
+- **Two runs of `qfai catalog components` no longer replace each other's
+  catalogue.** Two runs at the same time each scanned the source and renamed
+  their file onto the catalogue, so a run that scanned an earlier revision
+  could finish last and silently replace the newer catalogue. A run now scans
+  and writes only while it holds `.qfai/tools/state/component-catalog.lock`,
+  beside the lock `qfai catalog design` takes. A run that finds the lock held
+  writes nothing and exits 1, saying whether to retry once the other run
+  finishes or to remove a lock no running process holds. Closes #5382.
+
 - **`qfai init` on Windows names no rerun command PowerShell would split.**
   The recovery line of a failed graph download double-quotes a temporary
   directory that holds a space, and PowerShell also ends such a string at a
