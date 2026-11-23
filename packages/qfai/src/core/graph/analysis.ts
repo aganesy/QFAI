@@ -1,6 +1,7 @@
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { copyFile, lstat, mkdir, readFile, readdir, rm } from "node:fs/promises";
+import { lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { readInspectedRegularFile } from "../../shared/boundedRead.js";
 import { isDirectoryInsideRoot, loadConfig, resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import { GraphLocalStateError } from "./localFiles.js";
@@ -280,15 +281,19 @@ async function walkGraphCorpus(
         const source = path.join(root, ...next.split("/"));
         const stats = await lstat(source);
         if (!stats.isFile() || stats.nlink > 1) continue;
+        // Read from the file `stats` describes: a source replaced since that check is left out of
+        // this mirror, and the next one checks and copies whatever the path then names.
+        const bytes = await readInspectedRegularFile(source, stats);
+        if (bytes === undefined) continue;
         files.add(next);
-        if (await sameFile(source, target)) continue;
+        if (await sameContent(bytes, target)) continue;
         if (mode === "compare") {
           changed = true;
           continue;
         }
         await replaceOtherEntryType(target, false);
         await mkdir(path.dirname(target), { recursive: true });
-        await copyFile(source, target);
+        await writeFile(target, bytes);
       }
     }
   }
@@ -321,10 +326,9 @@ async function entryKind(target: string): Promise<"directory" | "file" | "other"
   }
 }
 
-async function sameFile(source: string, target: string): Promise<boolean> {
+async function sameContent(source: Buffer, target: string): Promise<boolean> {
   if ((await entryKind(target)) !== "file") return false;
-  const [left, right] = await Promise.all([readFile(source), readFile(target)]);
-  return left.equals(right);
+  return source.equals(await readFile(target));
 }
 
 /**
