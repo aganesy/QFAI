@@ -644,6 +644,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   count, as `qfai init` already did, and a matching file is no longer listed
   in the finding's message.
 
+- **A saved graph analysis whose copy fails no longer stops restoration.**
+  Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
+  `analysis` folder. When a file inside it could not be read, the copy threw:
+  CodeGraph preparation failed and Graphify rebuilt instead of trying later
+  entries. A failed copy now makes only that entry ineligible, its partial copy
+  is removed, and the next saved entry is tried. Closes #5188.
+
 - **A failed file replacement removes only its own temporary file.** QFAI
   replaces a report, a run-log pointer, a `.gitignore` or a migrated document
   by writing a temporary file beside it and renaming that into place. When
