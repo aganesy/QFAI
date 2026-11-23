@@ -686,6 +686,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   larger than 16 MiB from its size; a NUL byte past those 8000 bytes no longer
   makes the file count as binary. Closes #5054.
 
+- **The `qfai: <version> (<install dir>)` line no longer prints a line break raw.**
+  It was written before the format branch with the install directory as found,
+  so under `--format github` a directory holding a line break started a line the
+  runner read as a workflow command. The directory now prints as log data, a line
+  break as a visible `\n`, in every format. Closes #5058.
+
 - **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
   with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
   `Set-Content -Encoding UTF8`, and both commands refused such a file as
