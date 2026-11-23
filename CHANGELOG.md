@@ -537,6 +537,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai session-review` redacts a quoted `password=` value whole.** The
+  value was blanked only up to its first space, so `password="a b"` printed
+  `[redacted] b"` in the report and in an error line. A value in double or
+  single quotes is now blanked to its closing quote, past escaped quotes, or
+  to the end of the line when it is never closed; a bare value is still
+  blanked to the next whitespace. Closes #5020.
+
 - **`qfai workflow plan` refuses a plan whose added specification stage runs a
   step that is not installed.** A request naming the story tree can give a
   route a `spec` stage with `sdd-triage`, `sdd-story` or `sdd-contract`, but
