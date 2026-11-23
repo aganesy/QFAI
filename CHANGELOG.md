@@ -594,6 +594,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   linked summary now counts as no previous summary and is replaced.
   Closes #5060.
 
+- **`qfai init` on Windows names no rerun command PowerShell would split.**
+  The recovery line of a failed graph download double-quotes a temporary
+  directory that holds a space, and PowerShell also ends such a string at a
+  curly double quote (U+201C, U+201D, U+201E). A directory holding one of
+  those, or a Unicode line or paragraph separator, now has no rerun command,
+  so the generic recovery line is shown instead. Closes #5201.
+
 - **`qfai session-review` redacts a quoted `password=` value whole.** The
   value was blanked only up to its first space, so `password="a b"` printed
   `[redacted] b"` in the report and in an error line. A value in double or
@@ -751,6 +758,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   category must name an operation after its colon or dash, or inside a closed
   parenthesis. Closes #5046.
 
+- **A refused graph processing endpoint names its canonical form, and the
+  origin guard holds the endpoint's scheme.** An endpoint in
+  `.qfai/graph-processing.json` spelled another way than its canonical URL,
+  such as `http://LOCALHOST:11434/v1`, `https://api.example.com:443/v1` or a
+  Unicode host name, left document analysis not ready with only a generic
+  setup hint. The preparation and query recoveries now name the canonical
+  form to write, as long as nothing else in the definition is wrong. The
+  Graphify origin guard checked only the host and port, so a request in plain
+  `http` to an `https` endpoint's host and port passed it; its HTTP clients
+  now refuse a request in any scheme other than the endpoint's. Closes #5197.
+
 - **The SQL contract lexer reads backtick and bracket identifiers.** It
   skipped only `'` and `"` quoting, so in ``CREATE TABLE t (`a)` int);`` the
   `)` inside the MySQL name raised `QFAI-CONTRACT-021`, and so did one inside a
@@ -768,6 +786,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   refreshes and verifies a separate copy when project files changed and makes
   it active, graph and inputs together, only when the graph is current for
   them. Closes #5191.
+
+- **The turn-end check forgets the failure it blocked on when the
+  configuration cannot be read.** A session that was blocked, then had
+  `qfai.config.yaml` become unreadable, could still count that old failure
+  toward letting a later continued turn end. The hook now drops it, as it
+  already did for a label listed twice. Closes #5199.
 
 - **The shared workflow rule names the RED exception by its installed path.**
   It pointed at `references/red-not-observable.md`, which the rule's own

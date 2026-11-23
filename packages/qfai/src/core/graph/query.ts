@@ -4,7 +4,11 @@ import {
   inspectCodeCoverage,
   inspectCurrentCodeAnalysis,
 } from "./analysis.js";
-import { inspectDocumentScope, readGraphProcessing } from "./documents.js";
+import {
+  canonicalEndpointRecovery,
+  inspectDocumentScope,
+  readGraphProcessing,
+} from "./documents.js";
 import { graphAnalysisRoot, graphRuntimePaths } from "./layout.js";
 import {
   GRAPH_PYTHON_FLAGS,
@@ -178,7 +182,8 @@ async function exploreGraphScope(
     status: "not-ready",
     recovery:
       request.domain === "documents" && (await readGraphProcessing(root)) === undefined
-        ? "Select document processing in .qfai/graph-processing.json before preparing document analysis."
+        ? ((await canonicalEndpointRecovery(root)) ??
+          "Select document processing in .qfai/graph-processing.json before preparing document analysis.")
         : "Prepare the requested graph analysis before querying it.",
   };
 }

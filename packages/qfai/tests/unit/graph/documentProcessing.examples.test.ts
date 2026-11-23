@@ -559,6 +559,56 @@ it("refuses plain http for an external processing destination before asking for 
   }
 });
 
+// QFAI:EX-0001-0234-23
+// Mutation: packages/qfai/src/core/graph/documents.ts `recovery: (await canonicalEndpointRecovery(root)) ?? DOCUMENT_PROCESSING_SETUP,` -> `recovery: DOCUMENT_PROCESSING_SETUP,` fails "names the canonical form of a refused endpoint spelling"
+// Mutation: packages/qfai/src/core/graph/query.ts `((await canonicalEndpointRecovery(root)) ??` -> `((undefined) ??` fails "names the canonical form of a refused endpoint spelling"
+it("names the canonical form of a refused endpoint spelling", async () => {
+  const fixture = await documentAnalysisFixture();
+  const priorKey = process.env.QFAI_TEST_EXTERNAL_KEY;
+  try {
+    process.env.QFAI_TEST_EXTERNAL_KEY = "fixture-external-key";
+    const definition = path.join(fixture.root, ".qfai", "graph-processing.json");
+    const run = graphifyExtractionFixture(fixture);
+    for (const [endpoint, canonical] of [
+      ["http://LOCALHOST:11434/v1", "http://localhost:11434/v1"],
+      ["https://selected.example.invalid:443/v1", "https://selected.example.invalid/v1"],
+      ["https://éxample.invalid/v1", "https://xn--xample-9ua.invalid/v1"],
+    ] as const) {
+      await writeFile(
+        definition,
+        JSON.stringify({
+          backend: "openai",
+          model: "selected-model",
+          endpoint,
+          scope: ["rationale.md"],
+          credentialEnv: "QFAI_TEST_EXTERNAL_KEY",
+        }),
+      );
+      fixture.calls.length = 0;
+      const approvals: ExternalProcessingRequest[] = [];
+      const refused = await prepareDocumentAnalysis(fixture.root, run, (request) => {
+        approvals.push(request);
+        return Promise.resolve(true);
+      });
+      expect(refused.status).toBe("not-ready");
+      expect(refused.recovery).toContain(`canonical form, ${canonical},`);
+      expect(approvals).toEqual([]);
+      expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(false);
+      const query = await exploreGraph(
+        fixture.root,
+        { domain: "documents", question: "rationale" },
+        run,
+      );
+      expect(query.status).toBe("not-ready");
+      expect(query.recovery).toContain(`canonical form, ${canonical},`);
+    }
+  } finally {
+    if (priorKey === undefined) delete process.env.QFAI_TEST_EXTERNAL_KEY;
+    else process.env.QFAI_TEST_EXTERNAL_KEY = priorKey;
+    await fixture.dispose();
+  }
+});
+
 // QFAI:EX-0001-0234-24
 // Mutation: packages/qfai/src/core/graph/documents.ts `const local = ["127.0.0.1", "localhost", "[::1]"].includes(selected.hostname);` -> `const local = false;` fails "keeps plain http for an explicitly selected loopback endpoint without authorization"
 it("keeps plain http for an explicitly selected loopback endpoint without authorization", async () => {
