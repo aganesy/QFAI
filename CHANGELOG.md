@@ -824,6 +824,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   of `orders`. Only the PostgreSQL modifiers `TEMP`, `TEMPORARY`, `GLOBAL`,
   `LOCAL` and `UNLOGGED` may now sit there.
 
+- **A package.json QFAI cannot read is reported as unreadable.** While
+  locating its init templates (for `qfai init`, `qfai doctor` and the graph
+  commands), a nearest `package.json` that failed to read or parse
+  (a permission error, a truncated file, a directory of that name) was reported
+  as "not the qfai package". The message now names the file and the read or
+  parse error. Closes #5155.
+
 - **`qfai catalog components` stops when it cannot inspect the catalogue.** A
   catalogue whose metadata could not be read, for example because access was
   denied, counted as absent, so the command replaced it without checking that it
