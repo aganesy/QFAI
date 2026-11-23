@@ -2,6 +2,11 @@ import { randomUUID } from "node:crypto";
 import { cp, lstat, mkdir, readdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { isEnoent } from "../fs/errno.js";
+import {
+  graphAnalysisStaging,
+  graphRetainedDirectory,
+  type GraphAnalysisEngine,
+} from "./layout.js";
 
 export async function assertGraphStoragePath(root: string, directory: string): Promise<void> {
   const relative = path.relative(root, directory);
@@ -50,7 +55,7 @@ export async function replaceGraphDirectory(
   await assertGraphStoragePath(root, current);
   const parent = path.dirname(current);
   await mkdir(parent, { recursive: true });
-  const previous = path.join(parent, `.previous-${randomUUID()}`);
+  const previous = graphRetainedDirectory(current, randomUUID());
   let retained = false;
   try {
     await rename(current, previous);
@@ -75,11 +80,11 @@ export async function replaceGraphDirectory(
 export async function checkRefreshCopy<T>(
   root: string,
   analysis: string,
-  engine: string,
+  engine: GraphAnalysisEngine,
   check: (staged: string) => Promise<T>,
   current: (result: T) => boolean,
 ): Promise<T> {
-  const staged = path.join(path.dirname(analysis), `.refreshing-${engine}-${randomUUID()}`);
+  const staged = graphAnalysisStaging(analysis, "refreshing", engine, randomUUID());
   await assertGraphStoragePath(root, staged);
   try {
     await cp(analysis, staged, { recursive: true, dereference: false });

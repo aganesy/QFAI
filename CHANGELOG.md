@@ -641,6 +641,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now lists that directory under `## For a person`, asks for it to be deleted
   before the next commit, and exits 3. Closes #5061.
 
+- **The code-graph corpus mirror leaves no empty staged directory behind.** When
+  a source directory disappeared, or its path came to name a file the mirror
+  skips (a hard-linked or non-regular file), the staged copy under
+  `.qfai/tools/analysis/` lost its files but kept the directory tree, empty. The
+  mirror now removes a staged directory left holding nothing. Closes #5104.
+
 - **`qfai workflow plan` refuses a plan whose added specification stage runs a
   step that is not installed.** A request naming the story tree can give a
   route a `spec` stage with `sdd-triage`, `sdd-story` or `sdd-contract`, but
@@ -738,6 +744,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   holding one, such as `CREATE FUNCTION "f(x"(a int)`, gave the routine no
   arguments, and its overloads were reported as one routine defined twice. The
   list is now read from the parenthesis that follows the name. Closes #5149.
+
+- **The graph ignore check covers every name graph setup writes under.** The
+  paths `qfai init` checks against an existing managed graph block missed the
+  CodeGraph install directory in its private home and most hidden directories
+  an analysis is prepared, refreshed, restored or replaced in, so a rule that
+  ignored only the checked paths left those visible to Git while the check
+  passed. The paths are now built from the same layout the writers use, with
+  one for each of those directories. Closes #5194.
 
 - **`qfai validate` records no pass in its run log when the result write
   fails.** The run log was written, with status `pass`, before `validate.json`;
