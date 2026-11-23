@@ -671,6 +671,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   condition that is a number, a list, a mapping or empty is named as not
   counted. Closes #4787.
 
+- **External document processing approval names the credential variable.**
+  The request an approval callback receives for an external destination named
+  the destination, scope, backend, model and worktree but not which
+  environment variable supplies the credential, so the person approving could
+  not see which credential the transmission would use. The request now carries
+  `credentialEnv`, the variable's name and never its value, and processing that
+  selects another variable asks for approval again. Closes #5018.
+
 - **`QFAI-FLOW-006` gives a business flow a remedy its shape allows.** The
   warning told every document to split an oversized diagram into an overview
   and detail diagrams, but a `business-flow.md` holds exactly one Flow diagram,
