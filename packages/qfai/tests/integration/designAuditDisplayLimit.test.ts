@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { emitText } from "../../src/cli/commands/validate.js";
-import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
+import { defaultConfig, loadConfig, type QfaiConfig } from "../../src/core/config.js";
 import type { Issue, ValidationResult } from "../../src/core/types.js";
 import {
   designAuditFindingsShownPerCode,
@@ -98,5 +98,57 @@ describe("design audit display limit", () => {
 
   it("prints five audit findings of a code when the key is unset", () => {
     expect(designAuditFindingsShownPerCode(defaultConfig)).toBe(5);
+  });
+});
+
+async function loadWithLimit(value: string): Promise<{ config: QfaiConfig; issues: Issue[] }> {
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    `uiux:\n  audit:\n    maxDuplicateFindingsPerRule: ${value}\n`,
+    "utf8",
+  );
+  return loadConfig(root);
+}
+
+async function auditTextLines(config: QfaiConfig): Promise<string[]> {
+  const audit = await validateDesignAudit(root, config);
+  const output = await captureStdout(() => {
+    emitText(resultOf(audit), "error", designAuditFindingsShownPerCode(config));
+    return Promise.resolve();
+  });
+  return output.split("\n").filter((line) => line.startsWith("[error] QFAI-AUD-001 "));
+}
+
+// QFAI:AC-0001-0039-01
+// QFAI:EX-0001-0039-63
+describe("design audit display limit setting", () => {
+  it.each(["0", "-1", "2.5", '"3"'])(
+    "reports maxDuplicateFindingsPerRule %s and prints five audit findings",
+    async (value) => {
+      const { config, issues } = await loadWithLimit(value);
+
+      expect(issues.map((found) => [found.code, found.severity, found.message])).toEqual([
+        [
+          "QFAI-CFG-002",
+          "error",
+          "uiux.audit.maxDuplicateFindingsPerRule must be an integer of 1 or more.",
+        ],
+      ]);
+      expect(designAuditFindingsShownPerCode(config)).toBe(5);
+      const lines = await auditTextLines(config);
+      expect(lines).toHaveLength(6);
+      expect(lines[5]).toBe("[error] QFAI-AUD-001 and 2 more");
+    },
+  );
+
+  it("accepts maxDuplicateFindingsPerRule 1 and prints one audit finding with its message", async () => {
+    const { config, issues } = await loadWithLimit("1");
+
+    expect(issues).toEqual([]);
+    const lines = await auditTextLines(config);
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).not.toBe("[error] QFAI-AUD-001 and 6 more");
+    expect(lines[0]?.length).toBeGreaterThan("[error] QFAI-AUD-001 ".length);
+    expect(lines[1]).toBe("[error] QFAI-AUD-001 and 6 more");
   });
 });

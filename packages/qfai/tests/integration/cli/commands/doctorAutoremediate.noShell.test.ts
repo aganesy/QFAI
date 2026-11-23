@@ -72,6 +72,34 @@ describe("the default install runner starts npm without a shell", () => {
     expect(await npmEntryOnPath(path.join(root, "without-npm"))).toBeUndefined();
   });
 
+  // Windows lets a PATH entry be quoted, as when it holds the delimiter.
+  it("reads a double-quoted search path entry without its quotes", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-autoremediate-quoted-"));
+    tempDirs.push(root);
+    const entry = path.join(root, "node_modules", "npm", "bin", "npm-cli.js");
+    await mkdir(path.dirname(entry), { recursive: true });
+    await writeFile(entry, "", "utf-8");
+    expect(await npmEntryOnPath(`"${root}"`)).toBe(entry);
+  });
+
+  // A relative entry resolves against the project, whose own node_modules/npm would run as npm.
+  it("skips a relative search path entry", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-autoremediate-relative-"));
+    tempDirs.push(root);
+    const entry = path.join(root, "node_modules", "npm", "bin", "npm-cli.js");
+    await mkdir(path.dirname(entry), { recursive: true });
+    await writeFile(entry, "", "utf-8");
+    const previous = process.cwd();
+    process.chdir(root);
+    try {
+      expect(await npmEntryOnPath(".")).toBeUndefined();
+      expect(await npmEntryOnPath(`"."`)).toBeUndefined();
+      expect(await npmEntryOnPath(root)).toBe(entry);
+    } finally {
+      process.chdir(previous);
+    }
+  });
+
   it("spawns with shell: false on every platform", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-autoremediate-noshell-"));
     tempDirs.push(root);

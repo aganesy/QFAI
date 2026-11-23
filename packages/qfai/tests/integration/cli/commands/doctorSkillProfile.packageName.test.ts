@@ -15,6 +15,7 @@ import { runAutoremediate } from "../../../../src/core/doctor/autoremediate.js";
 import {
   isRegistryPackageName,
   probeSkillManifest,
+  quoteManifestEntries,
 } from "../../../../src/core/doctor/skillManifestProbe.js";
 import { isRecord } from "../../../../src/core/workflow/parse.js";
 
@@ -57,6 +58,10 @@ const REFUSED = [
   "playwright@1.2.3",
   "@scope/",
   "a".repeat(215),
+  // npm reads an unscoped name ending like a tarball as a local file to install.
+  "evil.tgz",
+  "evil.tar.gz",
+  "evil.tar",
 ];
 
 // QFAI:AC-0003-0010-03
@@ -66,12 +71,26 @@ describe("runtimeDependencies entries must be registry package names", () => {
     expect(isRegistryPackageName(name)).toBe(false);
   });
 
-  it.each(["playwright", "@playwright/test", "lodash.merge", "a".repeat(214)])(
-    "accepts %j",
-    (name) => {
-      expect(isRegistryPackageName(name)).toBe(true);
-    },
-  );
+  // npm applies its tarball test to unscoped names only, and to the suffix only.
+  it.each([
+    "playwright",
+    "@playwright/test",
+    "lodash.merge",
+    "a".repeat(214),
+    "@scope/pkg.tgz",
+    "tgz",
+    "pkg-tgz",
+    "pkg.tarball",
+  ])("accepts %j", (name) => {
+    expect(isRegistryPackageName(name)).toBe(true);
+  });
+
+  // JSON leaves these raw, and each can reorder or break the doctor message line.
+  it("quotes refused entries with format and separator characters escaped", () => {
+    expect(quoteManifestEntries(["a\u202Eb", "c\u2028d", "e\u2029f", "g\u0085h", 1, null])).toBe(
+      String.raw`"a\u202eb", "c\u2028d", "e\u2029f", "g\u0085h", 1, null`,
+    );
+  });
 
   it("probes no entry of a manifest that lists one refused name", async () => {
     const root = await newTempDir("probe");
