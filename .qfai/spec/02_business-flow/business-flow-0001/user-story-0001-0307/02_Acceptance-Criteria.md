@@ -67,4 +67,11 @@ Feature: Catalogue the components a project already has
     Given a `qfai.config.yaml` that does not parse or holds a value `qfai validate` reports as an error, and a committed catalogue
     When `qfai catalog components` runs, with or without `--check`
     Then it exits 1 naming `qfai.config.yaml` and each error, and scans, compares and writes nothing, leaving the catalogue as it was
+
+  # AC-0001-0307-10
+  Scenario: One run at a time scans and writes the catalogue
+    Given a run of `qfai catalog components` that is still writing the catalogue
+    When a second run starts after the source has changed
+    Then the second run scans and writes nothing and exits 1 with one line saying another run holds `.qfai/tools/state/component-catalog.lock`, so the catalogue is the first run's
+    And a lock whose owner is not running is left as it was and named for removal by hand, and a lock that no longer holds the run's record at the end is left in place and named in its one line
 ```

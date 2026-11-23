@@ -197,9 +197,10 @@ async function isFollowable(linkPath: string): Promise<boolean> {
 /**
  * Replaces a symlink through a hold, restoring it if that fails.
  *
- * Two links take this path: one that names the right target but cannot be
- * followed, and one still naming the plural directory. `held` is the target
- * the moved link must name for the replacement to go ahead.
+ * Every link `init` rewrites takes this path: one that names the right target
+ * but cannot be followed, one still naming the plural directory, one spelt
+ * differently from the gate's form, and a wrong or broken one. `held` is the
+ * target the moved link must name for the replacement to go ahead.
  *
  * The link is moved aside rather than deleted, for the reason
  * {@link recreateFlattenedLink} gives: `EPERM` on Windows without Developer
@@ -626,10 +627,20 @@ async function writeManagedLink(
           (err) => symlinkFailure(err, options.platform),
         );
       }
-      // Broken or --force → remove and recreate
-      if (!options.dryRun) {
-        await rm(linkPath, { recursive: true, force: true });
-      }
+      // A wrong or broken link, or any link under --force, is replaced through a
+      // hold too: deleting it first left the path empty when the write was
+      // refused, and an absent wrapper is the state the link gate treats as
+      // benign.
+      if (options.dryRun) return "created";
+      return await replaceLinkThroughHold(
+        linkPath,
+        target,
+        type,
+        note,
+        currentTarget,
+        createSymlink,
+        (err) => symlinkFailure(err, options.platform),
+      );
     } else if (
       (await isFlattenedLink(linkPath, target, linkStat)) ||
       (options.legacyTarget !== undefined &&

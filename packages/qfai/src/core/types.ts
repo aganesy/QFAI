@@ -193,7 +193,7 @@ export type ValidationResult = {
    * it was asked for, since the file name alone cannot tell a result of
    * another scope that was copied or renamed into place.
    */
-  flowIds?: string[];
+  flowIds?: readonly string[];
   issues: Issue[];
   counts: ValidationCounts;
   waivers?: ValidationWaivers;

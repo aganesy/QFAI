@@ -374,7 +374,7 @@ export function parseLegacyRecords(
       },
     });
   }
-  records.push(...tableRecords(markdown, lines, kind, file));
+  for (const record of tableRecords(markdown, lines, kind, file)) records.push(record);
   const byId = new Map<string, LegacyRecord>();
   for (const record of records.sort((a, b) => a.source.startLine - b.source.startLine)) {
     const previous = byId.get(record.id);

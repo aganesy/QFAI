@@ -320,7 +320,8 @@ export async function planContracts(context: MigrationContext): Promise<Contract
     }
     if (oldText !== null)
       operations.push(...renameOperations(context, relative, entry, text, current));
-    forAPerson.push(...leftoverIds(text, contractRepoPath(context, entry.path), declared));
+    for (const item of leftoverIds(text, contractRepoPath(context, entry.path), declared))
+      forAPerson.push(item);
     contracts.push(indexed(entry.path, entry.id, text, entry.old, relative));
   }
   for (const relative of await contractFiles(context)) {

@@ -140,6 +140,26 @@ describe("legacy migration records", () => {
     expect(records[0]?.cells.Rule).toBe("Tax is added.");
   });
 
+  it("reads every row of a table with more rows than one call takes as arguments", () => {
+    // 500,000 arguments overflow the call stack, so spreading the rows into one push would throw.
+    const rows = 500_000;
+    const id = (index: number) =>
+      `BR-${String(Math.floor(index / 10_000)).padStart(4, "0")}-${String(index % 10_000).padStart(4, "0")}`;
+    const table = Array.from(
+      { length: rows },
+      (_, index) => `| ${id(index)} | Rule ${String(index)} |\n`,
+    );
+    const records = parseLegacyRecords(
+      `# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n${table.join("")}`,
+      "BR",
+      "04_Business-Rules.md",
+    );
+    expect(records).toHaveLength(rows);
+    expect(records[0]?.id).toBe("BR-0000-0000");
+    expect(records.at(-1)?.id).toBe(id(rows - 1));
+    expect(records.at(-1)?.source.startLine).toBe(rows + 4);
+  });
+
   it("ends a section's Rule value at a plain Contracts, Notes or NFRs field", () => {
     const rule = parseLegacyRecords(
       "# Rules\n\n## BR-0011-0005: Totals\n\n- Rule: An order total MUST\n  include tax.\nContracts: API-0001\nNotes: Rounded per line.\nNFRs: Under 50 ms.\n",
