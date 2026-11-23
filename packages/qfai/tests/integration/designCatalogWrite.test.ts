@@ -290,6 +290,28 @@ describe("the design catalogue is written only inside the project, by the run th
     ]);
   });
 
+  // QFAI:EX-0001-0312-25
+  it("says both files are as they were, then names the staging file it could not remove", async () => {
+    const root = await project();
+    expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
+    const tokens = await readFile(catalogFile(root, "design.tokens.json"));
+    const theme = await readFile(catalogFile(root, "theme.css"));
+    await changePrimary(root);
+    fault.rename = placesTheme;
+    fault.rm = (file) => file.endsWith(".tmp") && path.basename(file).startsWith(".theme.css.");
+    const failed = await cli(["catalog", "design", "--root", root]);
+    expect(failed.code).toBe(1);
+    expect(failed.err).toMatch(
+      /^qfai catalog design: could not write the design catalogue, so both files are as they were: EBUSY: resource busy or locked, rename \.qfai\/catalog\/\.theme\.css\.[0-9a-f-]+\.tmp could not be removed: EPERM: operation not permitted, rm\n$/,
+    );
+    expect(await readFile(catalogFile(root, "design.tokens.json"))).toEqual(tokens);
+    expect(await readFile(catalogFile(root, "theme.css"))).toEqual(theme);
+    const left = await readdir(path.join(root, ...CATALOG));
+    const staging = left.filter((name) => name.endsWith(".tmp"));
+    expect(staging).toHaveLength(1);
+    expect(left.sort()).toEqual(["design.tokens.json", "theme.css", ...staging].sort());
+  });
+
   // QFAI:EX-0001-0312-19
   it("names the moved-aside file that could not be renamed back and keeps it", async () => {
     const root = await project();

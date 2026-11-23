@@ -644,6 +644,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   count, as `qfai init` already did, and a matching file is no longer listed
   in the finding's message.
 
+- **A saved graph analysis whose copy fails no longer stops restoration.**
+  Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
+  `analysis` folder. When a file inside it could not be read, the copy threw:
+  CodeGraph preparation failed and Graphify rebuilt instead of trying later
+  entries. A failed copy now makes only that entry ineligible, its partial copy
+  is removed, and the next saved entry is tried. Closes #5188.
+
 - **A failed file replacement removes only its own temporary file.** QFAI
   replaces a report, a run-log pointer, a `.gitignore` or a migrated document
   by writing a temporary file beside it and renaming that into place. When
@@ -704,6 +711,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   combination. A `strategy`, matrix, `include` or `exclude` given as an
   expression, an `exclude` key that is not an axis, and a written-out matrix
   with no leg, which GitHub rejects, are named as not counted. Closes #4780.
+
+- **`qfai catalog design` no longer says both files could not be put back when
+  only its staging file is left.** When a write failed and both files were put
+  back but one of the run's own staging files could not be removed, the line
+  said the files could not be put back and, in the same line, that they were
+  as they were. It now says both files are as they were and names the staging
+  file it could not remove after the cause. Closes #5110.
 
 - **A skill's auto-decide entries skip HTML comments and need an operation
   after their separator.** `QFAI-POLICY-002` joined an indented
