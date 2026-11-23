@@ -16,6 +16,12 @@
  * `readlink` are left real, because in the live failure they both succeed and
  * that is exactly what made the entry look healthy.
  *
+ * Two cases run a full `qfai init`: the real linked worktree, and the repair
+ * that clears the finding the printed remedy sends the operator to. The
+ * failure, race, dry-run and cleanup cases call `ensureSymlink` on one managed
+ * link and its target in a small temporary directory, because each of them is
+ * about that one link and a full install per case cost minutes on Windows.
+ *
  * This file is separate from `initRepairsFlattenedLinks.test.ts` for the reason
  * that file's sibling gives: `vi.mock` is hoisted to module scope, so a mock
  * added there would apply to every case in it.
@@ -67,6 +73,8 @@ function symlinkCallsFor(linkPath: string): unknown[][] {
 }
 
 const { runInit } = await import("../helpers/legacyInit.js");
+const { ensureSymlink } = await import("../../src/core/init/managedLink.js");
+const actualFs = await vi.importActual<FsPromises>("node:fs/promises");
 
 const LINK = path.join(".claude", "skills", "qfai-implement");
 const execFile = promisify(execFileCallback);
@@ -86,15 +94,70 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
   }
 }
 
-/** The first agent wrapper `qfai init` wrote — a `type: "file"` link. */
-async function firstAgentWrapper(root: string): Promise<string> {
-  const dir = path.join(root, ".claude", "agents");
-  const names = (await readdir(dir)).filter((name) => name.endsWith(".md")).sort();
-  const first = names[0];
-  if (first === undefined) {
-    throw new Error(`no agent wrapper under ${dir} to exercise the narrowing against`);
-  }
-  return path.join(dir, first);
+type ManagedLink = { linkPath: string; target: string };
+
+/**
+ * One managed link and the canonical entry it names, written the way `init`
+ * writes them: a relative target from the link's directory, with the real
+ * `symlink` so the spies count only what the code under test does.
+ */
+async function withManagedLink(
+  link: string,
+  canonical: string,
+  type: "dir" | "file",
+  task: (managed: ManagedLink) => Promise<void>,
+): Promise<void> {
+  await withProject(async (root) => {
+    const canonicalPath = path.join(root, canonical);
+    if (type === "dir") {
+      await mkdir(canonicalPath, { recursive: true });
+      await writeFile(path.join(canonicalPath, "SKILL.md"), "# qfai-implement\n");
+    } else {
+      await mkdir(path.dirname(canonicalPath), { recursive: true });
+      await writeFile(canonicalPath, "# reviewer\n");
+    }
+    const linkPath = path.join(root, link);
+    await mkdir(path.dirname(linkPath), { recursive: true });
+    const target = path.relative(path.dirname(linkPath), canonicalPath);
+    await actualFs.symlink(target, linkPath, type);
+    await task({ linkPath, target });
+  });
+}
+
+/** A skill wrapper — the `type: "dir"` link the repair is scoped to. */
+async function withSkillLink(task: (managed: ManagedLink) => Promise<void>): Promise<void> {
+  await withManagedLink(
+    LINK,
+    path.join(".qfai", "assistant", "skill", "qfai-implement"),
+    "dir",
+    task,
+  );
+}
+
+/** An agent wrapper — a `type: "file"` link at a `.md` document. */
+async function withAgentLink(task: (managed: ManagedLink) => Promise<void>): Promise<void> {
+  await withManagedLink(
+    path.join(".claude", "agents", "qfai-reviewer.md"),
+    path.join(".qfai", "assistant", "agent", "qfai-reviewer.md"),
+    "file",
+    task,
+  );
+}
+
+/** The options `init` passes without `--force`, with its notes collected. */
+function repairOptions(notes: string[] = []): {
+  force: boolean;
+  dryRun: boolean;
+  report: (message: string) => void;
+} {
+  return { force: false, dryRun: false, report: (message) => notes.push(message) };
+}
+
+/** The repair holds left beside `linkPath`. */
+async function holdsBeside(linkPath: string): Promise<string[]> {
+  return (await readdir(path.dirname(linkPath))).filter((name) =>
+    name.startsWith(`${path.basename(linkPath)}.qfai-repair-`),
+  );
 }
 
 /** `stat` raises EPERM for `target` alone; everything else is real. */
@@ -218,24 +281,24 @@ describe("qfai init repairs a link the OS will not follow", () => {
       expect(path.normalize(await readlink(linkPath))).toBe(path.normalize(targetBefore));
     });
   });
+});
 
+describe("ensureSymlink repairs one link the OS will not follow", () => {
   it("leaves an agent wrapper alone even when stat refuses it", async () => {
     // The narrowing. An agent wrapper is a `type: "file"` link at a `.md`
     // document, and git writes those with the kind they need already — so an
     // `EPERM` there is an ACL or filesystem failure, and recreating an
     // identical link cannot clear it. Repairing would churn the entry and
     // report the same finding on the next run.
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const agentLink = await firstAgentWrapper(root);
-      const before = await lstat(agentLink);
-      rejectStatOn(agentLink);
-      symlinkSpy.mockClear();
+    await withAgentLink(async ({ linkPath, target }) => {
+      const before = await lstat(linkPath);
+      rejectStatOn(linkPath);
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const result = await ensureSymlink(linkPath, target, "file", repairOptions());
 
-      expect(symlinkCallsFor(agentLink)).toHaveLength(0);
-      expect((await lstat(agentLink)).ino).toBe(before.ino);
+      expect(result).toBe("skipped");
+      expect(symlinkCallsFor(linkPath)).toHaveLength(0);
+      expect((await lstat(linkPath)).ino).toBe(before.ino);
     });
   });
 
@@ -244,32 +307,26 @@ describe("qfai init repairs a link the OS will not follow", () => {
     // repaired: the wrapper ends up ABSENT, and an absent wrapper is the one
     // state `QFAI-LINK-001` deliberately treats as benign — so the damage
     // becomes invisible to the gate whose remedy sent the operator here.
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const linkPath = path.join(root, LINK);
-      const targetBefore = await readlink(linkPath);
+    await withSkillLink(async ({ linkPath, target }) => {
       rejectStatOn(linkPath);
       symlinkSpy.mockImplementation(
-        (actual: FsPromises, target: string, created: string, type?: string) =>
+        (actual: FsPromises, linkTarget: string, created: string, type?: string) =>
           path.resolve(created) === path.resolve(linkPath)
             ? Promise.reject(errno("EPERM"))
-            : actual.symlink(target, created, type),
+            : actual.symlink(linkTarget, created, type),
       );
 
-      await expect(
-        runInit({ dir: root, force: false, dryRun: false, yes: true }),
-      ).rejects.toMatchObject({ code: "EPERM" });
+      await expect(ensureSymlink(linkPath, target, "dir", repairOptions())).rejects.toMatchObject({
+        code: "EPERM",
+      });
 
       // A `symlink` refused for a standing reason — Developer Mode off — is
       // refused for the restore too. The held link then goes back by
       // `rename`, which needs no such right, while the pathname is free: the
       // original entry is at its own path and no hold is left.
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
-      expect(path.normalize(await readlink(linkPath))).toBe(path.normalize(targetBefore));
-      const holds = (await readdir(path.dirname(linkPath))).filter((name) =>
-        name.startsWith(`${path.basename(linkPath)}.qfai-repair-`),
-      );
-      expect(holds).toEqual([]);
+      expect(path.normalize(await readlink(linkPath))).toBe(path.normalize(target));
+      expect(await holdsBeside(linkPath)).toEqual([]);
     });
   });
 
@@ -278,32 +335,27 @@ describe("qfai init repairs a link the OS will not follow", () => {
     // failed `symlink` (an antivirus hold, a brief lock) must not cost the
     // wrapper. The second call — the restore — succeeds, so the pathname is
     // repopulated and no hold is left behind.
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const linkPath = path.join(root, LINK);
-      const targetBefore = await readlink(linkPath);
+    await withSkillLink(async ({ linkPath, target }) => {
       rejectStatOn(linkPath);
       let attempts = 0;
       symlinkSpy.mockImplementation(
-        (actual: FsPromises, target: string, created: string, type?: string) => {
+        (actual: FsPromises, linkTarget: string, created: string, type?: string) => {
           if (path.resolve(created) === path.resolve(linkPath)) {
             attempts += 1;
             if (attempts === 1) return Promise.reject(errno("EPERM"));
           }
-          return actual.symlink(target, created, type);
+          return actual.symlink(linkTarget, created, type);
         },
       );
 
-      await expect(
-        runInit({ dir: root, force: false, dryRun: false, yes: true }),
-      ).rejects.toMatchObject({ code: "EPERM" });
+      await expect(ensureSymlink(linkPath, target, "dir", repairOptions())).rejects.toMatchObject({
+        code: "EPERM",
+      });
 
+      expect(attempts).toBe(2);
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
-      expect(path.normalize(await readlink(linkPath))).toBe(path.normalize(targetBefore));
-      const holds = (await readdir(path.dirname(linkPath))).filter((name) =>
-        name.startsWith(`${path.basename(linkPath)}.qfai-repair-`),
-      );
-      expect(holds).toEqual([]);
+      expect(path.normalize(await readlink(linkPath))).toBe(path.normalize(target));
+      expect(await holdsBeside(linkPath)).toEqual([]);
     });
   });
 
@@ -313,9 +365,7 @@ describe("qfai init repairs a link the OS will not follow", () => {
     // Without the check, a regular file another process wrote in between was
     // moved aside and then deleted by the cleanup — a user's file lost on an
     // init with no `--force`.
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const linkPath = path.join(root, LINK);
+    await withSkillLink(async ({ linkPath, target }) => {
       const CONTENT = "written by another process\n";
 
       // The probe refuses, and — as its side effect — the entry becomes a
@@ -330,16 +380,14 @@ describe("qfai init repairs a link the OS will not follow", () => {
         throw errno("EPERM");
       });
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const result = await ensureSymlink(linkPath, target, "dir", repairOptions());
 
       // The file is back where it was, with its bytes, and nothing is held.
+      expect(result).toBe("skipped");
       const after = await lstat(linkPath);
       expect(after.isFile()).toBe(true);
       expect(await readFile(linkPath, "utf-8")).toBe(CONTENT);
-      const holds = (await readdir(path.dirname(linkPath))).filter((name) =>
-        name.startsWith(`${path.basename(linkPath)}.qfai-repair-`),
-      );
-      expect(holds).toEqual([]);
+      expect(await holdsBeside(linkPath)).toEqual([]);
     });
   });
 
@@ -349,9 +397,7 @@ describe("qfai init repairs a link the OS will not follow", () => {
     // process claims the pathname in the instant after the entry leaves it, and
     // its file must survive: the original stays held and the conflict is
     // reported rather than resolved by destroying somebody's file.
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const linkPath = path.join(root, LINK);
+    await withSkillLink(async ({ linkPath, target }) => {
       const MINE = "written by another process\n";
       const THEIRS = "created by a third process\n";
 
@@ -371,16 +417,19 @@ describe("qfai init repairs a link the OS will not follow", () => {
         }
       });
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const notes: string[] = [];
+      const result = await ensureSymlink(linkPath, target, "dir", repairOptions(notes));
 
       // Theirs is untouched, and mine is still on disk in the hold.
+      expect(result).toBe("skipped");
       expect(await readFile(linkPath, "utf-8")).toBe(THEIRS);
-      const holds = (await readdir(path.dirname(linkPath))).filter((name) =>
-        name.startsWith(`${path.basename(linkPath)}.qfai-repair-`),
-      );
+      const holds = await holdsBeside(linkPath);
       expect(holds).toHaveLength(1);
       const held = path.join(path.dirname(linkPath), String(holds[0]), path.basename(linkPath));
       expect(await readFile(held, "utf-8")).toBe(MINE);
+      // And the operator is told where it is.
+      expect(notes.join("\n")).toContain("another process created an entry there first");
+      expect(notes.join("\n")).toContain(held);
     });
   });
 
@@ -389,22 +438,23 @@ describe("qfai init repairs a link the OS will not follow", () => {
     // an antivirus hold or a transient I/O error there is not the repair
     // failing — and reporting it as one told the operator a repair had failed
     // that had in fact succeeded.
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const linkPath = path.join(root, LINK);
-      const targetBefore = await readlink(linkPath);
+    await withSkillLink(async ({ linkPath, target }) => {
       rejectStatOn(linkPath);
-      rmSpy.mockImplementation((actual: FsPromises, target: string, options?: object) =>
-        String(target).includes(".qfai-repair-")
+      rmSpy.mockImplementation((actual: FsPromises, removed: string, options?: object) =>
+        String(removed).includes(".qfai-repair-")
           ? Promise.reject(errno("EPERM"))
-          : actual.rm(target, options),
+          : actual.rm(removed, options),
       );
+      const notes: string[] = [];
 
       // Resolves rather than rejects: the wrapper is repaired.
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const result = await ensureSymlink(linkPath, target, "dir", repairOptions(notes));
 
+      expect(result).toBe("created");
+      expect(symlinkCallsFor(linkPath)).toHaveLength(1);
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
-      expect(path.normalize(await readlink(linkPath))).toBe(path.normalize(targetBefore));
+      expect(path.normalize(await readlink(linkPath))).toBe(path.normalize(target));
+      expect(notes.some((note) => note.includes("the repair succeeded"))).toBe(true);
     });
   });
 
@@ -412,13 +462,13 @@ describe("qfai init repairs a link the OS will not follow", () => {
     // The negative control, and the reason the check is `stat`-based rather
     // than unconditional: a second `init` over a healthy tree must still skip,
     // or every run would churn every wrapper.
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const linkPath = path.join(root, LINK);
+    await withSkillLink(async ({ linkPath, target }) => {
       const before = await lstat(linkPath);
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const result = await ensureSymlink(linkPath, target, "dir", repairOptions());
 
+      expect(result).toBe("skipped");
+      expect(symlinkCallsFor(linkPath)).toHaveLength(0);
       const after = await lstat(linkPath);
       expect(after.isSymbolicLink()).toBe(true);
       // Recreating would move the inode; skipping keeps it.
@@ -429,14 +479,17 @@ describe("qfai init repairs a link the OS will not follow", () => {
   });
 
   it("reports a dry run as a repair it would make, and makes none", async () => {
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const linkPath = path.join(root, LINK);
+    await withSkillLink(async ({ linkPath, target }) => {
       const before = await lstat(linkPath);
       rejectStatOn(linkPath);
 
-      await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      const result = await ensureSymlink(linkPath, target, "dir", {
+        ...repairOptions(),
+        dryRun: true,
+      });
 
+      expect(result).toBe("created");
+      expect(symlinkCallsFor(linkPath)).toHaveLength(0);
       // A dry run that had recreated the link would have moved the inode.
       expect((await lstat(linkPath)).ino).toBe(before.ino);
     });

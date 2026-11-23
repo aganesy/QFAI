@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a reader of a specification diagram, I want validation to warn when a Mermaid diagram has more nodes or edges than the project's budget, so that the author splits it into an overview and detail diagrams before it becomes unreadable.
+As a reader of a specification diagram, I want validation to warn when a Mermaid diagram has more nodes or edges than the project's budget, so that the author simplifies or splits it before it becomes unreadable.
 
 ## Non-goals
 

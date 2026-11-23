@@ -1,7 +1,8 @@
 /**
  * `QFAI-FLOW-006` (warning): a Mermaid diagram with more nodes or edges than
- * the diagram budget, so its author splits it into an overview and detail
- * diagrams.
+ * the diagram budget, so its author brings it within the budget. A
+ * `business-flow.md` holds exactly one Flow diagram, so its remedy moves branches
+ * into the alternate-path list; any other document splits the diagram.
  *
  * Reads the Markdown files under `paths.specsDir`, in `sdd`, `verify` and `full`.
  */
@@ -16,6 +17,16 @@ import type { Issue } from "../types.js";
 import { diagramSize } from "./mermaidDiagramSize.js";
 import { extractFencedCodeBlocks } from "./mermaidUtils.js";
 import { issue } from "./utils.js";
+
+const SPLIT_REMEDY =
+  "Split the diagram into an overview diagram and detail diagrams, each within the budget.";
+const BUSINESS_FLOW_REMEDY =
+  "Keep the main path in the one Flow diagram, within the budget, and move branches and detail into the Alternate and exception paths list.";
+
+/** The remedy the document's shape allows: a business flow may not add a diagram. */
+function remedyFor(file: string): string {
+  return path.basename(file) === "business-flow.md" ? BUSINESS_FLOW_REMEDY : SPLIT_REMEDY;
+}
 
 export async function validateDiagramBudget(root: string, config: QfaiConfig): Promise<Issue[]> {
   const budget = { ...DEFAULT_DIAGRAM_BUDGET, ...config.validation.diagramBudget };
@@ -36,7 +47,7 @@ export async function validateDiagramBudget(root: string, config: QfaiConfig): P
           "diagramBudget",
           undefined,
           "canonical",
-          "Split the diagram into an overview diagram and detail diagrams, each within the budget.",
+          remedyFor(file),
         ),
       );
     }
