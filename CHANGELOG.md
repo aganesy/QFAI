@@ -722,6 +722,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   entries. A failed copy now makes only that entry ineligible, its partial copy
   is removed, and the next saved entry is tried. Closes #5188.
 
+- **A forced relink that cannot write the new link keeps the old one.**
+  `qfai init --force` deleted a wrapper link that named the wrong target, or
+  named nothing, before it wrote the managed link. When the write was refused,
+  as it is on Windows without Developer Mode, the path was left empty, and the
+  link check treats a missing wrapper as harmless. The old link is now moved
+  aside first and put back when the new link cannot be written. Closes #5313.
+
 - **A failed file replacement removes only its own temporary file.** QFAI
   replaces a report, a run-log pointer, a `.gitignore` or a migrated document
   by writing a temporary file beside it and renaming that into place. When

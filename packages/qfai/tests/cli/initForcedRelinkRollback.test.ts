@@ -166,6 +166,62 @@ describe("qfai init --force over a project-owned wrapper", () => {
   });
 });
 
+/**
+ * A writer that refuses only the link at `refused` with `EPERM`, as Windows
+ * without Developer Mode does, and writes every other one.
+ */
+function refusingWithEpermAt(refused: string): typeof symlink {
+  return (target, linkPath, type) =>
+    path.resolve(String(linkPath)) === path.resolve(refused)
+      ? Promise.reject(eperm())
+      : symlink(target, linkPath, type);
+}
+
+describe("qfai init --force over a wrong or broken link", () => {
+  const cases = [
+    { label: "a link to the wrong target", target: path.join("..", "..", "README.md") },
+    { label: "a broken link", target: path.join("..", "..", "no-such-skill") },
+  ];
+
+  for (const { label, target } of cases) {
+    it(`keeps ${label} when the new link cannot be written`, async () => {
+      await withInitializedProject(async (root) => {
+        const wrapper = path.join(root, ".claude", "skills", SKILL);
+        await rm(wrapper, { recursive: true, force: true });
+        await symlink(target, wrapper, "dir");
+
+        await expect(
+          captureStdout(() =>
+            runInit(
+              { dir: root, force: true, dryRun: false, yes: true },
+              { createSymlink: refusingWithEpermAt(wrapper) },
+            ),
+          ),
+        ).rejects.toThrow();
+
+        expect((await lstat(wrapper)).isSymbolicLink()).toBe(true);
+        expect(path.normalize(await readlink(wrapper))).toBe(target);
+        expect(await holdsBeside(wrapper)).toEqual([]);
+      });
+    });
+  }
+
+  it("replaces a wrong link and leaves no hold when the link is written", async () => {
+    await withInitializedProject(async (root) => {
+      const wrapper = path.join(root, ".claude", "skills", SKILL);
+      await rm(wrapper, { recursive: true, force: true });
+      await symlink(path.join("..", "..", "README.md"), wrapper, "dir");
+
+      await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+      expect(path.normalize(await readlink(wrapper))).toBe(
+        path.join("..", "..", ".qfai", "assistant", "skill", SKILL),
+      );
+      expect(await holdsBeside(wrapper)).toEqual([]);
+    });
+  });
+});
+
 describe("a wrapper that cannot be moved aside", () => {
   it("is not reported as missing Developer Mode under --force on Windows", async () => {
     await withInitializedProject(async (root) => {
