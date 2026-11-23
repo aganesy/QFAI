@@ -730,7 +730,9 @@ Markdown formatting checks.
 - **Mermaid syntax** is checked with Mermaid's own grammar under a headless DOM
   — the parse the renderer performs before it draws, with no browser and no
   rendering. A template block carrying `<placeholder>` tokens opts out with
-  `<!-- mermaid-lint:ignore -->` on the line directly above its opening fence.
+  `<!-- mermaid-lint:ignore -->` on the line directly above its opening fence,
+  or `{/* mermaid-lint:ignore */}` in an `.mdx` file. A diagram inside a
+  comment is not checked.
 
 Both lanes report the count they checked. With no matching documents, they
 report zero rather than presenting an empty scan as coverage.

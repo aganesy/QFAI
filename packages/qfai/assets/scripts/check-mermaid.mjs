@@ -35,9 +35,16 @@
  *       A[<step>] --> B[<step>]
  *     ```
  *
+ * MDX has no HTML comments, so an `.mdx` file writes the marker as an MDX
+ * comment instead: `{/* mermaid-lint:ignore *\/}`.
+ *
  * The marker is deliberately per-block and never per-file: a file-level opt-out
  * would silently cover the next diagram somebody adds beneath it. For the same
  * reason it covers a fence only inside the same block quotes and list items.
+ *
+ * A fence inside a comment is not a diagram: nothing renders it. A multi-line
+ * HTML comment in Markdown, and a multi-line `{/* *\/}` comment or an ESM
+ * `import`/`export` block in MDX, is read past without looking for fences.
  *
  * Usage:
  *   node scripts/check-mermaid.mjs            # scan the repository
@@ -100,6 +107,9 @@ function isMarkdownFile(name) {
 
 /** The opt-out marker, recognised on the line directly above an opening fence. */
 const IGNORE_MARKER = "<!-- mermaid-lint:ignore -->";
+
+/** The same marker in an `.mdx` file, where an HTML comment does not compile. */
+const MDX_IGNORE_MARKER = "{/* mermaid-lint:ignore */}";
 
 /**
  * A fence opener: up to three leading spaces, then a run of at least three
@@ -254,6 +264,37 @@ function openContainers(content, containers) {
 }
 
 /**
+ * Reads a line, already inside its containers, as the start of a block that runs
+ * past this line and in which no fence opens.
+ *
+ * In Markdown that is an HTML comment (CommonMark 4.6, start condition 2), which
+ * ends on the line holding `-->`. In MDX it is a `{/* *\/}` comment, which ends
+ * on the line holding `*\/`, or, at the top level, an ESM block, which starts
+ * with `import` or `export` and ends at a blank line.
+ *
+ * Shortcut: an ESM block is taken to end at its first blank line, so a template
+ * literal holding a blank line and then a fence ends it early, and a paragraph
+ * line that begins with `import` or `export` is read as ESM. Lift it if an MDX
+ * document relies on either.
+ *
+ * @param {string} content
+ * @param {boolean} mdx
+ * @param {boolean} topLevel Whether the line sits in no block quote or list item.
+ * @returns {((later: string) => boolean) | null} Whether a later line ends the block; null when none starts or it ends here.
+ */
+function hiddenBlockStart(content, mdx, topLevel) {
+  if (mdx && topLevel && /^(?:import|export)\s/.test(content)) {
+    return (later) => later.trim() === "";
+  }
+  const [open, close] = mdx ? [/^ {0,3}\{\s*\/\*/, "*/"] : [/^ {0,3}<!--/, "-->"];
+  const start = open.exec(content);
+  if (start === null || content.includes(close, start[0].length)) {
+    return null;
+  }
+  return (later) => later.includes(close);
+}
+
+/**
  * The info strings whose body is a Mermaid diagram.
  *
  * `mmd` is the file extension Mermaid uses for standalone diagrams and appears
@@ -281,17 +322,24 @@ const MERMAID_LANGS = new Set(["mermaid", "mmd"]);
  * so a fence inside a container is found, its body loses the container's
  * prefix, and it ends where its container ends (CommonMark 4.5, 5.1, 5.2).
  *
+ * A comment, and in MDX an ESM block, is read past the same way, so a fence in
+ * one is never seen; it too ends where its container ends.
+ *
  * @param {string} text Markdown source.
+ * @param {{ mdx?: boolean }} [options] `mdx` reads the source as MDX: its comments, ESM blocks and marker.
  * @returns {{ line: number, body: string, ignored: boolean }[]} Blocks in document order.
  */
-export function extractMermaidBlocks(text) {
+export function extractMermaidBlocks(text, { mdx = false } = {}) {
   const lines = text.split(/\r?\n/);
   const blocks = [];
+  const ignoreMarker = mdx ? MDX_IGNORE_MARKER : IGNORE_MARKER;
 
   /** @type {({ kind: "quote" } | { kind: "item", indent: number })[]} */
   let containers = [];
   /** @type {{ marker: string, indent: number, depth: number, lang: string, line: number, body: string[], ignored: boolean } | null} */
   let open = null;
+  /** @type {{ depth: number, ends: (later: string) => boolean } | null} */
+  let hidden = null;
   // The line above, read inside its own containers, decides whether the next
   // fence is a template: `> <!-- mermaid-lint:ignore -->` covers `> ```mermaid`.
   // It covers a fence only in those same containers, so a marker inside a block
@@ -299,7 +347,7 @@ export function extractMermaidBlocks(text) {
   /** @type {{ text: string, containers: ({ kind: "quote" } | { kind: "item", indent: number })[] }} */
   let previous = { text: "", containers: [] };
   const coversFence = () =>
-    previous.text.trim() === IGNORE_MARKER &&
+    previous.text.trim() === ignoreMarker &&
     previous.containers.length === containers.length &&
     previous.containers.every((container, index) => container === containers[index]);
 
@@ -334,9 +382,19 @@ export function extractMermaidBlocks(text) {
       continue;
     }
 
-    // The fence's container ended on this line, so the fence ended with it,
-    // and the line itself is read afresh below.
+    if (hidden !== null && matched >= hidden.depth) {
+      if (hidden.ends(content)) {
+        hidden = null;
+      }
+      // A comment's lines are not a marker, even one that holds the marker's text.
+      previous = { text: "", containers: [] };
+      continue;
+    }
+
+    // The fence's or comment's container ended on this line, so it ended with
+    // it, and the line itself is read afresh below.
     finish();
+    hidden = null;
     containers = containers.slice(0, matched);
     const rest = openContainers(content, containers);
     const opener = fenceOpener(rest);
@@ -348,6 +406,11 @@ export function extractMermaidBlocks(text) {
         body: [],
         ignored: coversFence(),
       };
+    } else {
+      const ends = hiddenBlockStart(rest, mdx, containers.length === 0);
+      if (ends !== null) {
+        hidden = { depth: containers.length, ends };
+      }
     }
     previous = { text: rest, containers: [...containers] };
   }
@@ -560,7 +623,8 @@ export async function main() {
       );
       return 2;
     }
-    for (const block of extractMermaidBlocks(text)) {
+    const mdx = file.toLowerCase().endsWith(".mdx");
+    for (const block of extractMermaidBlocks(text, { mdx })) {
       if (block.ignored) {
         continue;
       }

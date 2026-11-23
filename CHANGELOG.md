@@ -593,6 +593,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file that calls it, directly or through another routine, raises the warning.
   Closes #5180.
 
+- **The Mermaid check skips diagrams inside comments, and `.mdx` files get an
+  ignore marker they can compile.** `check-mermaid.mjs` collected a fence
+  even inside a comment, so a commented-out broken diagram failed the shipped
+  document lane. It now reads past a multi-line HTML comment in a `.md` or
+  `.markdown` file, and past a multi-line `{/* */}` comment or an ESM
+  `import`/`export` block in an `.mdx` file. MDX rejects HTML comments, so
+  `<!-- mermaid-lint:ignore -->` could not be written there; an `.mdx` file
+  now uses `{/* mermaid-lint:ignore */}` on the line above the fence instead.
+  Closes #5341.
+
 - **`qfai sdd preflight` reads no previous summary through a link.** A
   `preflight_summary.md` that was a link to a file elsewhere was read before
   being replaced: the run copied that file's carry-over list into its own

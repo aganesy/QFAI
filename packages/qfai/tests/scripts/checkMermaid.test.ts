@@ -8,6 +8,8 @@
  *   - a fence inside a block quote or list item      -> a diagram, ending with its container
  *   - a backtick run with a backtick after it        -> inline code, never a fence
  *   - `<!-- mermaid-lint:ignore -->` above a fence   -> that block is skipped, in the same containers only
+ *   - `{/* mermaid-lint:ignore *\/}` in an `.mdx` file -> the same, in MDX's comment syntax
+ *   - a fence inside a comment or an MDX ESM block   -> not a diagram
  *   - unknown flag / unreadable path or directory    -> exit 2
  *   - a directory holding its own `.git`             -> not scanned (another checkout)
  *
@@ -787,6 +789,153 @@ describe("check-mermaid fence scanning inside containers", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("quoted.md:3");
+  });
+});
+
+/**
+ * A fence inside a comment renders as nothing, so it is not a diagram. Markdown
+ * comments are HTML comments (CommonMark 4.6, start condition 2). MDX has none:
+ * it writes `{/* *\/}` comments, and its ESM blocks are code.
+ */
+describe("check-mermaid fence scanning inside comments", () => {
+  it("reads past a fence inside a multi-line HTML comment in Markdown", () => {
+    const source = [
+      "<!--",
+      "```mermaid",
+      "flowchart TD",
+      "  A --- B",
+      "```",
+      "-->",
+      "",
+      "```mermaid",
+      "pie",
+      "```",
+      "",
+    ].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].line).toBe(8);
+    expect(blocks[0].body).toBe("pie");
+  });
+
+  it("ends an HTML comment on the line holding its closer, even after other text", () => {
+    const source = [
+      "<!-- draft",
+      "```mermaid",
+      "pie",
+      "``` -->",
+      "```mermaid",
+      "pie",
+      "```",
+      "",
+    ].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].line).toBe(5);
+  });
+
+  it("ends an unclosed HTML comment where its block quote ends", () => {
+    const source = ["> <!--", "> ```mermaid", "> pie", "", "```mermaid", "pie", "```", ""].join(
+      "\n",
+    );
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].line).toBe(5);
+  });
+
+  it("still finds a fence after an HTML comment that opens mid-paragraph", () => {
+    // 4.6: an HTML block starts only at the start of a line, so `<!--` later in
+    // a paragraph is inline HTML and the fence line below interrupts it.
+    const source = ["Prose <!-- aside", "```mermaid", "pie", "```", "-->", ""].join("\n");
+
+    expect(extractMermaidBlocks(source)).toHaveLength(1);
+  });
+
+  it("reads past a fence inside a multi-line MDX comment", () => {
+    const source = [
+      "{/*",
+      "```mermaid",
+      "pie",
+      "```",
+      "*/}",
+      "",
+      "```mermaid",
+      "pie",
+      "```",
+      "",
+    ].join("\n");
+
+    const blocks = extractMermaidBlocks(source, { mdx: true });
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].line).toBe(7);
+  });
+
+  it("reads past a fence inside an MDX ESM block, up to its blank line", () => {
+    const source = [
+      "export const example = `",
+      "```mermaid",
+      "pie",
+      "```",
+      "`;",
+      "",
+      "```mermaid",
+      "pie",
+      "```",
+      "",
+    ].join("\n");
+
+    const blocks = extractMermaidBlocks(source, { mdx: true });
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].line).toBe(7);
+  });
+
+  it("reads a line beginning with export as prose in Markdown", () => {
+    const source = ["export the diagram", "```mermaid", "pie", "```", ""].join("\n");
+
+    expect(extractMermaidBlocks(source)).toHaveLength(1);
+  });
+
+  it("marks a block below the MDX ignore marker in MDX only", () => {
+    const source = ["{/* mermaid-lint:ignore */}", "```mermaid", "pie", "```", ""].join("\n");
+
+    expect(extractMermaidBlocks(source, { mdx: true })[0].ignored).toBe(true);
+    expect(extractMermaidBlocks(source)[0].ignored).toBe(false);
+  });
+
+  it("does not take the HTML ignore marker in MDX, where it does not compile", () => {
+    const source = ["<!-- mermaid-lint:ignore -->", "```mermaid", "pie", "```", ""].join("\n");
+
+    expect(extractMermaidBlocks(source, { mdx: true })[0].ignored).toBe(false);
+  });
+
+  it("fails only the broken diagram outside a comment or the MDX marker, in each format", async () => {
+    const dir = await newTempDir();
+    // BROKEN_DIAGRAM holds `-->`, which would close an HTML comment early.
+    const broken = ["```mermaid", "flowchart TD", "  A[Start] --- B{{{oops", "```"].join("\n");
+    await writeFile(path.join(dir, "commented.md"), `<!--\n${broken}\n-->\n`, "utf-8");
+    await writeFile(path.join(dir, "commented.markdown"), `<!--\n${broken}\n-->\n`, "utf-8");
+    await writeFile(path.join(dir, "commented.mdx"), `{/*\n${broken}\n*/}\n`, "utf-8");
+    await writeFile(path.join(dir, "esm.mdx"), `export const doc = \`\n${broken}\n\`;\n`, "utf-8");
+    await writeFile(
+      path.join(dir, "marked.mdx"),
+      `{/* mermaid-lint:ignore */}\n${broken}\n`,
+      "utf-8",
+    );
+    await writeFile(path.join(dir, "bare.mdx"), `${broken}\n`, "utf-8");
+
+    const result = runLane([dir]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("bare.mdx:1");
+    expect(result.stderr).toContain("1 of 1 diagram(s) failed to parse");
   });
 });
 
