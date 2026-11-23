@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { parseAllMarkdownTables } from "../specPackParsers.js";
+import { maskNonSpecRegions, parseRenderedMarkdownTables } from "../specPackParsers.js";
 import { isStoryTreeId } from "./ids.js";
 
 export type RecordTableKind = "decisions" | "open-questions";
@@ -142,8 +142,10 @@ export function parseDecisionRegister(
       report(file, "Unexpected content in the closed decision document");
     }
     const table = parseRecordTable(text, "decisions");
+    // A row in a comment declares nothing, so only a row Markdown renders has an origin.
+    const rendered = maskNonSpecRegions(text).split("\n");
     const stored = physical.flatMap((raw, index) =>
-      /^\|\s*DEC-/.test(raw) ? [{ raw, actualRow: index + 1 }] : [],
+      /^\|\s*DEC-/.test(rendered[index] ?? "") ? [{ raw, actualRow: index + 1 }] : [],
     );
     for (const error of table.errors) {
       const numbered = /^decisions row (\d+) has/.exec(error)?.[1];
@@ -178,7 +180,7 @@ export function parseDecisionRegister(
   };
 }
 export function parseRecordTable(text: string, kind: RecordTableKind): ParsedRecordTable {
-  const tables = parseAllMarkdownTables(text);
+  const tables = parseRenderedMarkdownTables(text);
   const errors: string[] = [];
   if (tables.length !== 1) {
     errors.push(`${kind} requires exactly one table`);

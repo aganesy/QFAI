@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { extractH2Sections } from "../parse/markdown.js";
-import { parseAllMarkdownTables } from "../specPackParsers.js";
+import { parseRenderedMarkdownTables } from "../specPackParsers.js";
 import { architectureProblems, MERMAID_FENCE } from "../storyTree/architecture.js";
 import {
   isStoryTreeId,
@@ -522,7 +522,7 @@ export async function validateCatalogueRegistry(
  */
 function namedCatalogue(content: string): string | null {
   const section = extractH2Sections(content).get("Stack");
-  const table = section === undefined ? undefined : parseAllMarkdownTables(section.body)[0];
+  const table = section === undefined ? undefined : parseRenderedMarkdownTables(section.body)[0];
   if (table === undefined) return null;
   const column = (name: string): number =>
     table.headers.findIndex((header) => header.trim().toLowerCase() === name);
@@ -585,7 +585,7 @@ export async function validateConstraintIds(specsDir: string): Promise<Issue[]> 
   const issues: Issue[] = [];
   for (const [heading, section] of extractH2Sections(content)) {
     const prefix = CONSTRAINT_PREFIXES.get(heading);
-    const table = parseAllMarkdownTables(section.body)[0];
+    const table = parseRenderedMarkdownTables(section.body)[0];
     const column = table?.headers.findIndex((header) => header.trim() === "ID") ?? -1;
     if (prefix === undefined || table === undefined || column < 0) continue;
     table.rows.forEach((row, index) => {
