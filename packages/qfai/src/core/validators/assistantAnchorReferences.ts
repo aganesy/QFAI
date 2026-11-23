@@ -463,8 +463,7 @@ async function buildTreeIndex(files: TreeFiles, boundary: string): Promise<TreeI
 
 /** Whether `candidate` sits strictly under `dir`. */
 function isUnder(dir: string, candidate: string): boolean {
-  const relative = path.relative(dir, candidate);
-  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+  return path.relative(dir, candidate) !== "" && isInside(dir, candidate);
 }
 
 /** The `skills/<id>/` directory owning `file`, when it sits under one. */

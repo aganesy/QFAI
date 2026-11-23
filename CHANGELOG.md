@@ -601,6 +601,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to the end of the line when it is never closed; a bare value is still
   blanked to the next whitespace. Closes #5020.
 
+- **A directory whose name begins with two dots counts as inside its base
+  everywhere.** Several more checks tested whether a path relative to its base
+  began with `..`, so a directory such as `..fixtures` or `..archive` read as
+  outside the tree that holds it: ATDD test-layer resolution and its scan
+  globs, the `qfai init` guard against writing into the package's own
+  assets, the `qfai doctor` output path alignment check, the assistant
+  anchor-reference validator, and the repository-relative paths in
+  assistant-asset messages. Each now asks the shared containment check, where
+  only a `..` path segment leaves the base. Closes #5142.
+
 - **Migration step 11 names a staging directory it could not remove.** When
   step 11 replaced a shipped skill or step but could not remove the hidden
   `.<id>-replace-*` directory it staged in, the failure was ignored: the
@@ -784,6 +794,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   exits 1 with one line that says both files were written and names the file
   it kept. Closes #5093.
 
+- **`qfai init` downloads CodeGraph on Windows when npm is not beside Node.**
+  Graph provisioning then started a bare `npm` without a shell, which cannot
+  start Windows' `npm.cmd` launcher, so the download failed. It now finds npm
+  the way `qfai doctor --autoremediate` does, through one shared lookup: npm's
+  JavaScript entry beside Node, else under an absolute `PATH` directory, run
+  with Node. When neither holds one, init reports a failed `npm prerequisite`
+  step that names the missing `npm-cli.js` instead of a failed download.
+
 - **`qfai doctor` refuses a skill dependency that npm would install from a
   local tarball.** An unscoped `runtimeDependencies` entry ending in `.tgz`,
   `.tar.gz` or `.tar` passed the package-name check, and
@@ -813,6 +831,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such as `CREATE PUBLICATION feed FOR TABLE orders` made its contract the owner
   of `orders`. Only the PostgreSQL modifiers `TEMP`, `TEMPORARY`, `GLOBAL`,
   `LOCAL` and `UNLOGGED` may now sit there.
+
+- **A package.json QFAI cannot read is reported as unreadable.** While
+  locating its init templates (for `qfai init`, `qfai doctor` and the graph
+  commands), a nearest `package.json` that failed to read or parse
+  (a permission error, a truncated file, a directory of that name) was reported
+  as "not the qfai package". The message now names the file and the read or
+  parse error. Closes #5155.
 
 - **`qfai catalog components` stops when it cannot inspect the catalogue.** A
   catalogue whose metadata could not be read, for example because access was

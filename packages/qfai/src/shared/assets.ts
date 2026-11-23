@@ -15,15 +15,25 @@ const INIT_ASSETS_SENTINELS = [
   path.join("root", "qfai.config.yaml"),
 ];
 
+/**
+ * The `name` a manifest declares. A manifest that cannot be read or parsed is
+ * reported with its own cause, so an unreadable file is not mistaken for
+ * another package's manifest.
+ */
 function readPackageName(manifestPath: string): unknown {
+  let manifest: unknown;
   try {
-    const manifest: unknown = JSON.parse(readFileSync(manifestPath, "utf8"));
-    return typeof manifest === "object" && manifest !== null
-      ? Reflect.get(manifest, "name")
-      : undefined;
-  } catch {
-    return undefined;
+    manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  } catch (cause: unknown) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    throw new Error(
+      `Template assets for init were not found: ${manifestPath} could not be read: ${reason}. Repair or reinstall ${PACKAGE_NAME}.`,
+      { cause },
+    );
   }
+  return typeof manifest === "object" && manifest !== null
+    ? Reflect.get(manifest, "name")
+    : undefined;
 }
 
 /**
@@ -31,8 +41,8 @@ function readPackageName(manifestPath: string): unknown {
  * at or above `baseDir` that holds a `package.json`.
  *
  * The nearest manifest is the package boundary. This module is loaded from
- * `src/shared/`, `dist/shared/`, `dist/cli/` and the bundled `dist/index.mjs`,
- * and none of those directories has a manifest of its own, so each reaches the
+ * `src/shared/`, `dist/shared/`, the bundled `dist/index.mjs` and the other
+ * bundled entries under `dist/cli/`, `dist/graph/` and `dist/hook/`, and none of those directories has a manifest of its own, so each reaches the
  * package root. A manifest naming another package means this code was copied
  * or bundled out of QFAI, and nothing found from there is QFAI's.
  */
