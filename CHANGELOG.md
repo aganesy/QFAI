@@ -709,6 +709,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now prints as the text output prints it, `\t` or `\u` and four hexadecimal
   digits. Closes #5082.
 
+- **The README says what `yarn exec qfai` runs.** `qfai init` allows
+  `Bash(yarn exec qfai:*)`, but the README described only `npx qfai` and
+  `yarn qfai`. It now says `yarn exec qfai` runs the first `qfai` on `PATH`,
+  with the checkout's installed dependency binaries in front, so a checkout
+  with no install runs a global `qfai` without asking. Closes #5235.
+
 - **Migration step 8 leaves a string after a private field's `#` alone, and
   reports each token it leaves in a literal.** Step 8 and the story-tree
   annotation scan read `#` as a line comment in every test file, so in
