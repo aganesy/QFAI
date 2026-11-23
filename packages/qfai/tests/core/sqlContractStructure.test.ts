@@ -143,6 +143,41 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     const { errors } = parseSqlContract(`SELECT ')', ")" FROM t; -- )\n/* ) */ SELECT $$ ) $$;\n`);
     expect(errors).toEqual([]);
   });
+
+  it("ignores a parenthesis or `;` inside a MySQL backtick identifier", () => {
+    const { statements, errors } = parseSqlContract(
+      "CREATE TABLE t (`a)` int);\nCREATE TABLE u (`b(` int, `c;``d` int);\n",
+    );
+    expect(errors).toEqual([]);
+    expect(statements.map((statement) => statement.line)).toEqual([1, 2]);
+  });
+
+  it("ignores a parenthesis or `;` inside a SQL Server bracket identifier", () => {
+    const { statements, errors } = parseSqlContract(
+      "CREATE TABLE t ([a)] int);\nCREATE TABLE u ([b(] int, [c;d] int);\n",
+    );
+    expect(errors).toEqual([]);
+    expect(statements.map((statement) => statement.line)).toEqual([1, 2]);
+  });
+
+  it("reports a backtick or bracket identifier that never closes", () => {
+    expect(parseSqlContract("SELECT 1;\nSELECT `a FROM t;\n").errors).toEqual([
+      { kind: "unterminated-string", line: 2, detail: "quoted identifier is never closed" },
+    ]);
+    expect(parseSqlContract("SELECT 1;\nSELECT [a FROM t;\n").errors).toEqual([
+      { kind: "unbalanced-brackets", line: 2, detail: '1 unclosed "[" at end of file' },
+    ]);
+  });
+
+  it("still reads PostgreSQL array brackets, nested and holding strings", () => {
+    // `]]` closes two nested subscripts in PostgreSQL, so it is not read as
+    // SQL Server's escaped `]`, and a `]` inside a string closes nothing.
+    const { statements, errors } = parseSqlContract(
+      "CREATE TABLE t (m int[][] DEFAULT ARRAY[[1,2],[3,4]], s text[] DEFAULT ARRAY['a]', 'b(']);\nSELECT 2;\n",
+    );
+    expect(errors).toEqual([]);
+    expect(statements).toHaveLength(2);
+  });
 });
 
 describe("the identifier character class is written with escapes", () => {
@@ -592,6 +627,64 @@ describe("the existing DB checks are unchanged", () => {
     expect(issues.filter((i) => i.code === "QFAI-DB-001").map((i) => i.message)).toEqual([
       expect.stringContaining("TRUNCATE"),
     ]);
+  });
+
+  // Creating a function runs nothing, but calling it later in the same file
+  // runs its body when the file is applied.
+  it.each([
+    [
+      "a SELECT of a function",
+      "CREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\nSELECT reset();\n",
+      "TRUNCATE",
+    ],
+    [
+      "a CALL of a procedure",
+      "CREATE PROCEDURE wipe() LANGUAGE sql AS $$ DROP TABLE orders; $$;\nCALL wipe();\n",
+      "DROP TABLE",
+    ],
+    [
+      "a PERFORM in a DO block",
+      "CREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\nDO $$ BEGIN PERFORM reset(); END $$;\n",
+      "TRUNCATE",
+    ],
+    [
+      "a schema-qualified call in another case",
+      "CREATE FUNCTION app.reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\nSELECT App.Reset();\n",
+      "TRUNCATE",
+    ],
+    [
+      "a call of a function whose body calls a destructive one",
+      "CREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\n" +
+        "CREATE FUNCTION reset_all() RETURNS void AS $$ SELECT reset(); $$ LANGUAGE sql;\nSELECT reset_all();\n",
+      "TRUNCATE",
+    ],
+  ])("warns on a destructive function body run by %s", async (_how, sql, label) => {
+    const issues = await runOn(`${HEADER}${sql}`);
+    expect(issues.filter((i) => i.code === "QFAI-DB-001").map((i) => i.message)).toEqual([
+      expect.stringContaining(`Dangerous SQL operation found: ${label}.`),
+    ]);
+  });
+
+  it.each([
+    [
+      "a call before the definition",
+      "SELECT reset();\nCREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\n",
+    ],
+    [
+      "a call of a harmless function",
+      "CREATE FUNCTION touch() RETURNS void AS $$ UPDATE orders SET note = ''; $$ LANGUAGE sql;\nSELECT touch();\n",
+    ],
+    [
+      "a call of a function with a longer name",
+      "CREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\nSELECT reset_all();\n",
+    ],
+    [
+      "a name in a string",
+      "CREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\nSELECT 'reset()';\n",
+    ],
+  ])("does not warn on %s", async (_where, sql) => {
+    const issues = await runOn(`${HEADER}${sql}`);
+    expect(issues.filter((i) => i.code === "QFAI-DB-001")).toEqual([]);
   });
 
   it("reports each dangerous operation once per file", async () => {

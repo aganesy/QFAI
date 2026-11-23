@@ -80,7 +80,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/core/promptRefs.test.ts",
   "tests/core/recommendationArtifact.test.ts",
   "tests/core/repositoryHygiene.test.ts",
-  "tests/core/runLogValidateLog.test.ts",
   "tests/integration/sddPreflight.test.ts",
   "tests/core/specPackParsers.test.ts",
   "tests/core/surfaceShortCircuitScope.test.ts",

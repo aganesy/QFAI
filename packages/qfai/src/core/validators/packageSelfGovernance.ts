@@ -25,11 +25,11 @@
 import path from "node:path";
 
 import type { Issue } from "../types.js";
-import { detectHandoffSchemaDrift } from "./handoffSchemaDrift.js";
+import { detectHandoffSchemaDrift, unreadableHandoffInput } from "./handoffSchemaDrift.js";
 import { HANDOFF_SCHEMA_REL, HANDOFF_WRITER_PAIRS } from "./handoffSchemaPairs.js";
-import { detectSkillManifestDrift } from "./skillManifestDrift.js";
+import { detectSkillManifestDrift, unreadableManifestSide } from "./skillManifestDrift.js";
 import { SKILL_MANIFEST_PAIRS } from "./skillManifestPairs.js";
-import { exists } from "./utils.js";
+import { observePath } from "./utils.js";
 
 /**
  * Root-relative qfai package source tree both detectors resolve their
@@ -39,6 +39,20 @@ import { exists } from "./utils.js";
  * either of them — see {@link unevaluatedPackageSelfGovernanceFamilies}.
  */
 export const PACKAGE_SOURCE_ROOT_REL = "packages/qfai/src";
+
+/**
+ * Whether a detector's inputs let it reach a verdict. `incomplete` is the
+ * case where they might, but a path could not be observed (a permission error
+ * on a parent directory, say): the check is undone, which is neither "absent"
+ * nor "in sync", so it carries the findings that say so instead of throwing.
+ */
+type Precondition =
+  | { readonly kind: "met" }
+  | { readonly kind: "unmet" }
+  | { readonly kind: "incomplete"; readonly issues: readonly Issue[] };
+
+const MET: Precondition = { kind: "met" };
+const UNMET: Precondition = { kind: "unmet" };
 
 /**
  * One drift detector, with the precondition that decides whether it can
@@ -60,54 +74,76 @@ type SelfGovernanceGate = {
    * — by the detector module, not here.
    */
   readonly family: string;
-  /** True when every file this detector reads to reach a verdict exists. */
-  readonly evaluable: (root: string) => Promise<boolean>;
+  /** Whether every file this detector reads to reach a verdict exists. */
+  readonly precondition: (root: string) => Promise<Precondition>;
   readonly run: (root: string) => Promise<readonly Issue[]>;
 };
 
 /**
  * Pair IV reaches a verdict only with the schema **and** at least one
  * registered writer: the schema alone leaves every pair skipped at
- * `detectHandoffSchemaDrift`'s per-writer `exists` check.
+ * `detectHandoffSchemaDrift`'s per-writer absence check. A schema, or with
+ * no writer present a writer, that cannot be observed makes it incomplete.
  */
-async function handoffSchemaDriftEvaluable(root: string): Promise<boolean> {
-  if (!(await exists(path.join(root, HANDOFF_SCHEMA_REL)))) {
-    return false;
+async function handoffSchemaDriftPrecondition(root: string): Promise<Precondition> {
+  const schema = await observePath(path.join(root, HANDOFF_SCHEMA_REL));
+  if (schema.kind === "absent") return UNMET;
+  if (schema.kind === "unobservable") {
+    return incomplete([
+      unreadableHandoffInput(HANDOFF_SCHEMA_REL, schema.reason, "every registered writer"),
+    ]);
   }
+  const unobserved: Issue[] = [];
   for (const pair of HANDOFF_WRITER_PAIRS) {
-    if (await exists(path.join(root, pair.writerRel))) {
-      return true;
+    const writer = await observePath(path.join(root, pair.writerRel));
+    if (writer.kind === "present") return MET;
+    if (writer.kind === "unobservable") {
+      unobserved.push(
+        unreadableHandoffInput(pair.writerRel, writer.reason, `clause=${pair.clause}`),
+      );
     }
   }
-  return false;
+  return unobserved.length > 0 ? incomplete(unobserved) : UNMET;
 }
 
 /**
  * Pair III compares two sides, so one whole pair must be present. With
  * either side missing `detectSkillManifestDrift` skips that pair by
- * design — conservative, and therefore silent.
+ * design — conservative, and therefore silent. With no whole pair present,
+ * a pair whose sides are each present or unobservable makes it incomplete.
  */
-async function skillManifestDriftEvaluable(root: string): Promise<boolean> {
+async function skillManifestDriftPrecondition(root: string): Promise<Precondition> {
+  const unobserved: Issue[] = [];
   for (const pair of SKILL_MANIFEST_PAIRS) {
-    if (
-      (await exists(path.join(root, pair.probeImplRel))) &&
-      (await exists(path.join(root, pair.schemaRel)))
-    ) {
-      return true;
+    const sides = [
+      { rel: pair.probeImplRel, seen: await observePath(path.join(root, pair.probeImplRel)) },
+      { rel: pair.schemaRel, seen: await observePath(path.join(root, pair.schemaRel)) },
+    ];
+    if (sides.every((side) => side.seen.kind === "present")) return MET;
+    // A pair with a side known to be absent is out of scope, as in the detector.
+    if (sides.some((side) => side.seen.kind === "absent")) continue;
+    for (const side of sides) {
+      if (side.seen.kind === "unobservable") {
+        unobserved.push(unreadableManifestSide(side.rel, side.seen.reason, pair.clause));
+      }
     }
   }
-  return false;
+  return unobserved.length > 0 ? incomplete(unobserved) : UNMET;
+}
+
+function incomplete(issues: readonly Issue[]): Precondition {
+  return { kind: "incomplete", issues };
 }
 
 const SELF_GOVERNANCE_GATES: readonly SelfGovernanceGate[] = [
   {
     family: "QFAI-HANDOFF-001",
-    evaluable: handoffSchemaDriftEvaluable,
+    precondition: handoffSchemaDriftPrecondition,
     run: detectHandoffSchemaDrift,
   },
   {
     family: "QFAI-MANIFEST-001",
-    evaluable: skillManifestDriftEvaluable,
+    precondition: skillManifestDriftPrecondition,
     run: detectSkillManifestDrift,
   },
 ];
@@ -121,13 +157,14 @@ const SELF_GOVERNANCE_GATES: readonly SelfGovernanceGate[] = [
 export const PACKAGE_SELF_GOVERNANCE_FAMILIES = SELF_GOVERNANCE_GATES.map((gate) => gate.family);
 
 /**
- * The codes in this group whose inputs are absent, so a run cannot have
- * evaluated them. Empty when every detector could reach a verdict.
+ * The codes in this group whose inputs are absent or could not be observed,
+ * so a run cannot have evaluated them. Empty when every detector could reach
+ * a verdict.
  */
 export async function unevaluatedPackageSelfGovernanceFamilies(root: string): Promise<string[]> {
   const unevaluated: string[] = [];
   for (const gate of SELF_GOVERNANCE_GATES) {
-    if (!(await gate.evaluable(root))) {
+    if ((await gate.precondition(root)).kind !== "met") {
       unevaluated.push(gate.family);
     }
   }
@@ -137,13 +174,18 @@ export async function unevaluatedPackageSelfGovernanceFamilies(root: string): Pr
 /**
  * Run the self-governance drift detectors, each only where its own
  * inputs exist. Outside qfai's own repo the group is a no-op by
- * contract, and the coverage notice reports it as unevaluated.
+ * contract, and the coverage notice reports it as unevaluated. A
+ * precondition that could not observe a path reports the check as
+ * incomplete instead of stopping the run.
  */
 export async function runPackageSelfGovernanceValidators(root: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   for (const gate of SELF_GOVERNANCE_GATES) {
-    if (await gate.evaluable(root)) {
+    const precondition = await gate.precondition(root);
+    if (precondition.kind === "met") {
       issues.push(...(await gate.run(root)));
+    } else if (precondition.kind === "incomplete") {
+      issues.push(...precondition.issues);
     }
   }
   return issues;

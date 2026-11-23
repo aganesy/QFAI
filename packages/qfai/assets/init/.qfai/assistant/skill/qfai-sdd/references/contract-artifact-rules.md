@@ -172,11 +172,11 @@ that cannot run would pass `npx qfai validate --profile sdd --fail-on error`, si
 "this contract does not parse" check guarding UI and API files does not reach `.sql`.
 The structural lane:
 
-| Finding             | Fires when                                                                      | Severity |
-| ------------------- | ------------------------------------------------------------------------------- | -------- |
-| `QFAI-CONTRACT-021` | an unterminated string, comment or dollar-quoted body, or unbalanced `(` or `)` | error    |
-| `QFAI-DB-002`       | one file creates the same object twice — only the last definition is in force   | error    |
-| `QFAI-DB-001`       | a dangerous statement (`DROP TABLE`, `TRUNCATE`, …)                             | warning  |
+| Finding             | Fires when                                                                           | Severity |
+| ------------------- | ------------------------------------------------------------------------------------ | -------- |
+| `QFAI-CONTRACT-021` | an unterminated string, comment or dollar-quoted body, or unbalanced `(`, `)` or `[` | error    |
+| `QFAI-DB-002`       | one file creates the same object twice — only the last definition is in force        | error    |
+| `QFAI-DB-001`       | a dangerous statement (`DROP TABLE`, `TRUNCATE`, …)                                  | warning  |
 
 `QFAI-DB-002` covers tables, views, indexes, functions, procedures, types and
 domains. **Triggers are excluded**: a trigger name is unique per table, not per
@@ -188,7 +188,10 @@ comment, a `$$ … $$` body or parentheses does not end a statement.
 `QFAI-DB-001` reads each statement on its own and only its code: a keyword in a
 comment, a literal, a quoted name or a quoted (`$ … $` or `'…'`) function body
 does not warn. A `DO` block's body runs when the file is applied, so its
-statements are read too, with the string each `EXECUTE` in it runs.
+statements are read too, with the string each `EXECUTE` in it runs. A function
+or procedure body runs when it is called, so a later `SELECT`, `CALL` or
+`PERFORM` in the same file that calls it by the bare name it was created under
+warns on what the body destroys.
 
 **Not checked**: nothing here type-checks a query, resolves a column, or
 verifies the schema against the API contract. A green run means the file could

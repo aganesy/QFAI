@@ -24,13 +24,21 @@ export type { SkillManifestPair } from "./skillManifestPairs.js";
 const FINDING_CODE = "QFAI-MANIFEST-001";
 const RULE = "reviewerGate.skillManifestDrift";
 
+/**
+ * The finding for a side of an in-scope pair that cannot be read. Exported for
+ * the gate group, whose precondition reports a path it cannot observe with the
+ * same finding.
+ */
+export function unreadableManifestSide(rel: string, reason: string, clause: string): Issue {
+  const message =
+    `${FINDING_CODE}: ${rel} could not be read (${reason}), so the skill manifest ` +
+    `SSOT-sync check for clause=${clause} is incomplete. Make it a readable file.`;
+  return issue(FINDING_CODE, message, "error", rel, RULE);
+}
+
 /** The finding for a side of an in-scope pair that is there and cannot be read. */
 function unreadableSide(rel: string, read: PresentFileRead, clause: string): Issue[] {
-  if (read.kind !== "unreadable") return [];
-  const message =
-    `${FINDING_CODE}: ${rel} could not be read (${read.reason}), so the skill manifest ` +
-    `SSOT-sync check for clause=${clause} is incomplete. Make it a readable file.`;
-  return [issue(FINDING_CODE, message, "error", rel, RULE)];
+  return read.kind === "unreadable" ? [unreadableManifestSide(rel, read.reason, clause)] : [];
 }
 
 export async function detectSkillManifestDrift(root: string): Promise<readonly Issue[]> {
