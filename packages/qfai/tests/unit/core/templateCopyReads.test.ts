@@ -4,9 +4,13 @@
  *
  * `readFile` and the bounded reader are wrapped to record their calls, because the number of reads
  * and their bound leave no other trace. `vi.mock` is hoisted to module scope, so these cases live in their own file.
+ *
+ * The bounded reader can also be made to refuse every read, as it does a file with no read
+ * permission: `chmod 000` does not stop a root user or a Windows process reading the file.
  */
 
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { lstat, mkdir, mkdtemp, readFile, rm as rmFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -20,9 +24,10 @@ type FsPromises = typeof fsPromises;
 
 type BoundedRead = typeof boundedRead;
 
-const { reads, boundedReads } = vi.hoisted(() => ({
+const { reads, boundedReads, reader } = vi.hoisted(() => ({
   reads: new Map<string, number>(),
   boundedReads: new Array<{ path: string; maxBytes: number }>(),
+  reader: { refuses: false },
 }));
 
 vi.mock("../../../src/shared/boundedRead.js", async (importOriginal) => {
@@ -31,6 +36,7 @@ vi.mock("../../../src/shared/boundedRead.js", async (importOriginal) => {
     ...actual,
     readBoundedRegularFile: (filePath: string, maxBytes: number) => {
       boundedReads.push({ path: path.resolve(filePath), maxBytes });
+      if (reader.refuses) return Promise.resolve(undefined);
       return actual.readBoundedRegularFile(filePath, maxBytes);
     },
   };
@@ -57,6 +63,7 @@ let root: string | undefined;
 beforeEach(() => {
   reads.clear();
   boundedReads.length = 0;
+  reader.refuses = false;
 });
 
 afterEach(async () => {
@@ -105,5 +112,67 @@ describe("comparing an installed template", () => {
     expect(result.kept).toEqual([path.join(dest, "doc.md")]);
     expect(reads.get(destFile) ?? 0).toBe(0);
     expect(boundedReads).toEqual([{ path: destFile, maxBytes: 4 }]);
+  });
+});
+
+describe("an installed file the bounded reader refuses", () => {
+  it("is kept by a plain run, which does not stop", async () => {
+    const { source, dest, destFile } = await trees("a\n", "a\n");
+    reader.refuses = true;
+
+    const result = await copyTemplateTree(source, dest, plain);
+
+    expect(result.skipped).toEqual([path.join(dest, "doc.md")]);
+    expect(result.kept).toEqual([path.join(dest, "doc.md")]);
+    expect(result.copied).toEqual([]);
+    expect(await readFile(destFile, "utf-8")).toBe("a\n");
+  });
+
+  it("is written over by a forced copy, though it holds the template's bytes", async () => {
+    const { source, dest, destFile } = await trees("a\n", "a\n");
+    reader.refuses = true;
+
+    const result = await copyTemplateTree(source, dest, { force: true, dryRun: false });
+
+    expect(result.copied).toEqual([path.join(dest, "doc.md")]);
+    expect(result.skipped).toEqual([]);
+    expect(await readFile(destFile, "utf-8")).toBe("a\n");
+  });
+});
+
+describe("a FIFO where a template file goes", () => {
+  /** Replaces the installed `doc.md` with a FIFO, or skips the case where this process sees none. */
+  async function plantFifo(destFile: string, skip: () => void): Promise<void> {
+    if (process.platform === "win32") skip();
+    await rmFile(destFile);
+    // Git Bash ships `mkfifo`, but its FIFO lives in the MSYS layer and `lstat` here sees nothing,
+    // so the fixture is checked rather than the tool's exit status.
+    spawnSync("mkfifo", [destFile]);
+    const planted = await lstat(destFile).then(
+      (entry) => entry.isFIFO(),
+      () => false,
+    );
+    if (!planted) skip();
+  }
+
+  it("is refused by a forced copy, which neither opens nor removes it", async (ctx) => {
+    const { source, dest, destFile } = await trees("a\n", "a\n");
+    await plantFifo(destFile, () => ctx.skip());
+
+    const result = await copyTemplateTree(source, dest, { force: true, dryRun: false });
+
+    expect(result.refused).toEqual([path.join(dest, "doc.md")]);
+    expect(result.copied).toEqual([]);
+    expect((await lstat(destFile)).isFIFO()).toBe(true);
+  });
+
+  it("is refused by a forced dry run too", async (ctx) => {
+    const { source, dest, destFile } = await trees("a\n", "a\n");
+    await plantFifo(destFile, () => ctx.skip());
+
+    const result = await copyTemplateTree(source, dest, { force: true, dryRun: true });
+
+    expect(result.refused).toEqual([path.join(dest, "doc.md")]);
+    expect(result.copied).toEqual([]);
   });
 });

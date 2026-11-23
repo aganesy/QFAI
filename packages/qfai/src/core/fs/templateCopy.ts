@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import { constants as fsConstants } from "node:fs";
 import { copyFile, lstat, mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import path from "node:path";
@@ -25,12 +26,18 @@ export type CopyOptions = {
 export type CopyResult = {
   copied: string[];
   skipped: string[];
-  /** Destinations not written because an entry above them is a link or not a directory. */
+  /**
+   * Destinations not written because an entry above them is a link or not a directory, or, under
+   * `force`, because the destination itself is a FIFO, a socket or a device: writing to one opens
+   * it, and opening a FIFO for writing waits for a reader that may never come.
+   */
   refused: string[];
   /**
    * The skipped destinations, among those a copy without `force` found already there or saw
-   * another writer create during the copy, whose content is not the template's. A later release's template can differ from the one the
-   * project holds, and these are the files only `force` brings up to date.
+   * another writer create during the copy, whose content is not known to be the template's: it
+   * differs, or the destination could not be read to compare (a file with no read permission, a
+   * FIFO, a device). A later release's template can differ from the one the project holds, and
+   * these are the files only `force` brings up to date.
    */
   kept: string[];
 };
@@ -138,6 +145,13 @@ async function copyFiles(
       await skipExisting(file, dest);
       continue;
     }
+    // `copyFile` opens the destination to write it, and a FIFO blocks that open until a reader
+    // arrives. A FIFO, a socket or a device is the project's own entry, not a stale template file,
+    // so a forced copy refuses it rather than removing it.
+    if (options.force && isSpecialEntry(await lstatOrUndefined(dest))) {
+      refused.push(dest);
+      continue;
+    }
     // A forced copy over a file that already holds the template's bytes changes
     // nothing, so it is reported as skipped rather than written.
     if (options.force && (await compareInstalled(file, dest)) === "same-bytes") {
@@ -189,10 +203,13 @@ async function copyFiles(
  * How `dest` compares with `source`, each read once. `"same-text"` means equal once line endings
  * are read as `\n`: a checkout that converts them is not an edit.
  *
- * A link, a shared inode or a file that is not regular is `"different"`: a forced copy replaces it
- * as an entry, so it counts as a change. So is a destination the bounded reader refuses. Writing
- * `\r\n` for every `\n` at most doubles the text, so a destination over twice the template's size
- * cannot hold it and is not read past that bound.
+ * A link, a shared inode or an entry that is not a regular file is `"different"`: a forced copy
+ * replaces a link or a shared inode as an entry and refuses a FIFO, a socket or a device, so none
+ * of them is skipped as identical. So is a destination the bounded reader refuses, such as one with
+ * no read permission: a plain run keeps it and lists it as kept, and a forced copy writes over it,
+ * because a file that could not be read is not known to hold the template. Writing `\r\n` for
+ * every `\n` at most doubles the text, so a destination over twice the template's size cannot hold
+ * it and is not read past that bound.
  */
 async function compareInstalled(
   source: string,
@@ -206,6 +223,11 @@ async function compareInstalled(
   if (wanted.equals(present)) return "same-bytes";
   const normalize = (bytes: Buffer): string => bytes.toString("utf-8").replace(/\r\n?/g, "\n");
   return normalize(wanted) === normalize(present) ? "same-text" : "different";
+}
+
+/** Whether `entry` is something other than a regular file, a link or a directory. */
+function isSpecialEntry(entry: Stats | undefined): boolean {
+  return entry !== undefined && !entry.isFile() && !entry.isSymbolicLink() && !entry.isDirectory();
 }
 
 /** `lstat`, or `undefined` when nothing is at `target`. Other faults propagate. */

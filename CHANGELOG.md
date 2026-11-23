@@ -771,6 +771,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   caught up. It is now reported for manual recovery straight away, as an
   incomplete lock older than ten seconds is. Closes #5190.
 
+- **`qfai init --force` no longer hangs on a FIFO where a template file goes.**
+  A forced copy opened the FIFO to write the template into it, and that open
+  waits for a reader that may never come. A FIFO, a socket or a device at a
+  template file's path is now refused and left as it is, on a dry run too.
+  Closes #5257.
+
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
   no `id` was reported under an ID made up from its file name, which
@@ -2034,7 +2040,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   compares it with the template.** A plain run read a kept file in full twice,
   as bytes and then as text, however large it was. It now reads each file once
   and stops at twice the template's size, since a file larger than that cannot
-  hold the template with converted line endings. Closes #4638.
+  hold the template with converted line endings. An installed file it cannot
+  read, such as one with no read permission, no longer stops the run: a plain
+  run keeps it and counts it among the files that differ from this release's
+  copy, since it is not known to match, and `--force` writes over it.
+  Closes #4638.
 
 - **Story ID commands no longer answer from a partial or shared set of pull
   request heads.** `scripts/story-ids.mjs` read each head's commit from the
