@@ -57,7 +57,7 @@ export const step08: MigrationStep = {
       if (original === null)
         throw new MigrationInputError(`Cannot read selected test file ${file}`);
       const isE2e = resolveTestKind(file, roots) === "e2e";
-      const inComment = commentSpanTest(original);
+      const inComment = commentSpanTest(original, file);
       let lineStart = 0;
       const changedLines = original.split("\n").map((line, index) => {
         const location = `${repositoryRelative(context.root, file)}:${index + 1}`;
@@ -92,7 +92,10 @@ export const step08: MigrationStep = {
         for (const match of line.matchAll(ANNOTATION)) {
           const [whole, packNumber, oldId, contractId] = match;
           // The same token in a string literal is test data: rewriting it changes what the test checks.
-          if (!inComment(offset + match.index, whole.length)) continue;
+          if (!inComment(offset + match.index, whole.length)) {
+            annotationsKept.push(`${location}: ${whole} (in a literal, left as test data)`);
+            continue;
+          }
           const replacement = contractId
             ? contract(whole, contractId)
             : legacy(whole, packNumber ?? "", oldId ?? "");

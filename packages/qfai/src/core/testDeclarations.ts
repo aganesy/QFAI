@@ -10,17 +10,36 @@
  * blanked, so a declaration quoted in a string or a comment is never one.
  */
 
+import path from "node:path";
+
 import type { JsMaskOptions } from "./validators/jsSourceMask.js";
 
+/** The extensions whose `#` opens a private field, never a comment. */
+const JS_TS_EXTENSIONS: ReadonlySet<string> = new Set([
+  "js",
+  "jsx",
+  "mjs",
+  "cjs",
+  "ts",
+  "tsx",
+  "mts",
+  "cts",
+]);
+
 /**
- * The lexer settings that blank the comments and literals of any carrier before
- * a declaration pattern reads it.
+ * The lexer settings that blank the comments and literals of `file` before a
+ * declaration pattern or an annotation scan reads it.
  *
  * This scan walks whatever a project puts under its test roots, so `#` opens a
  * comment (Python, Ruby, Gherkin) and triple quotes blank a Python docstring
- * whole; `#[` and a shebang are excluded by the lexer itself.
+ * whole; `#[` and a shebang are excluded by the lexer itself. In JavaScript and
+ * TypeScript `#` opens a private field, so there it is code: read as a comment,
+ * `this.#id = "QFAI:..."` would turn the string after it into a comment.
  */
-export const DECLARATION_MASK: JsMaskOptions = { hashComments: true, tripleQuoted: true };
+export function declarationMask(file: string): JsMaskOptions {
+  const extension = path.extname(file).slice(1).toLowerCase();
+  return { hashComments: !JS_TS_EXTENSIONS.has(extension), tripleQuoted: true };
+}
 
 /**
  * Chain segments that still leave a call declaring a test or a suite.
