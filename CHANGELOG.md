@@ -591,6 +591,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`, as
   the `implement-tdd` step does. Closes #4965.
 
+- **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
+  The duplicate check compared each argument type as written, so
+  `f(int)` and `f(integer)`, or `f(varchar(10))` and `f(varchar(20))`, went
+  unreported although PostgreSQL takes them for one routine. Each argument type
+  now drops its modifiers and array bounds and maps its alias to one spelling
+  (`int`/`int4` to `integer`, `bool` to `boolean`, `varchar` to
+  `character varying`, `timestamptz` and the other built-in aliases);
+  `float(p)` becomes `real` or `double precision` by its precision. Closes
+  #5047.
+
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
   20,000 files, so a large tree could run out of file descriptors and fail
