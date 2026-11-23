@@ -900,6 +900,48 @@ describe("what the report may carry", () => {
     }
   });
 
+  it("blanks a password value whole, quoted or bare", () => {
+    const value = "hunter2";
+    const samples = [
+      `password="${value} two words"`,
+      `password='${value} two words'`,
+      `password = "${value}"`,
+      `PASSWORD='${value}'`,
+      `password="${value} \\" quoted"`,
+      `password='${value} \\' quoted'`,
+      `password=""`,
+      `password=${value},${value};${value}`,
+    ];
+    for (const sample of samples) {
+      expect(redact(`before ${sample} after`, context), sample).toBe("before [redacted] after");
+    }
+    expect(redact(`password="${value} never closed`, context)).toBe("[redacted]");
+    expect(redact(`password='${value} never closed\nnext line`, context)).toBe(
+      "[redacted]\nnext line",
+    );
+  });
+
+  it("leaves no part of a quoted password in either report format", () => {
+    const events: SessionEvents = {
+      records: 1,
+      malformed: 0,
+      hookContexts: [],
+      calls: [{ id: "x", name: `password="${"hunter2"} spaced"` }],
+      results: [{ id: "x", isError: true, text: "", exitCode: null }],
+      userTurns: [],
+    };
+    const sessions = [
+      { agent: "claude" as const, sessionId: `password='${"hunter2"} id'`, signals: summarise(events, FACTS) },
+    ];
+    const clean = (text: string): string => redact(text, context);
+    for (const rendered of [renderJson(sessions, clean), renderMarkdown(sessions, clean)]) {
+      expect(rendered).not.toContain("hunter2");
+      expect(rendered).not.toContain("spaced");
+      expect(rendered).not.toMatch(/\bid'/);
+      expect(rendered).toContain("[redacted]");
+    }
+  });
+
   it("emits no message text, and redacts a token a tool name carries", () => {
     const token = `gh${"p"}_${"Z".repeat(36)}`;
     const events: SessionEvents = {
