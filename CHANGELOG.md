@@ -710,6 +710,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   carries, and says `qfai report` writes `report.md`. Closes #4906, #4909,
   #4911, #4913, #4915, #4917 and #4919.
 
+- **`uiux.audit.maxDuplicateFindingsPerRule` must be an integer of 1 or
+  more.** At `0`, `qfai validate --format text` printed only
+  `[error] QFAI-AUD-001 and <n> more` for an audit group, with no message.
+  `0`, a negative or fractional number, or a non-number now raises the error
+  `QFAI-CFG-002` naming the key, and the text output prints five findings per
+  audit code as when the key is unset. Closes #5099.
+
 - **The `qfai-triage` skill keeps a private security intake out of the
   deliberation record.** The skill told every step that changes no tracked
   file to still write the run's deliberation record, and its review gate and
