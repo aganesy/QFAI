@@ -698,6 +698,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   whose quoted part never closes, and a `U&"…"` name, record no object rather
   than a wrong prefix such as `u`. Closes #5150.
 
+- **A package.json QFAI cannot read is reported as unreadable.** While
+  locating its init templates (for `qfai init`, `qfai doctor` and the graph
+  commands), a nearest `package.json` that failed to read or parse
+  (a permission error, a truncated file, a directory of that name) was reported
+  as "not the qfai package". The message now names the file and the read or
+  parse error. Closes #5155.
+
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
   20,000 files, so a large tree could run out of file descriptors and fail
