@@ -23,6 +23,8 @@ import {
   collisions,
   fetchedHeads,
   listAllPulls,
+  listOpenPulls,
+  MAX_LISTING_PAGES,
   otherHeads,
   parseScope,
   pullsFrom,
@@ -158,22 +160,161 @@ describe("reading git and the hosted side", () => {
   }
   const pull = (number: number) => ({ number, head: { ref: `b${String(number)}` } });
 
-  it("reads every page of open pull requests, not only the first", () => {
+  /** A page caller that answers each call in turn from `answers`, whatever page it asks for. */
+  function sequence(answers: unknown[][]) {
+    const calls: number[] = [];
+    const callPage = (page: number, handleBody: (body: string) => number) => {
+      calls.push(page);
+      const answer = answers[calls.length - 1];
+      if (answer === undefined) throw new Error(`call ${String(calls.length)} was not expected`);
+      return handleBody(JSON.stringify(answer));
+    };
+    return { calls, callPage };
+  }
+
+  /** `listAllPulls` with stderr captured. */
+  function listQuietly(callPage: Parameters<typeof listAllPulls>[0]) {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      return { listed: listAllPulls(callPage, 2), stderr: error.mock.calls.flat().join("\n") };
+    } finally {
+      error.mockRestore();
+    }
+  }
+
+  it("reads every page of open pull requests, not only the first, and reads them again", () => {
     const { calls, callPage } = pager([
       { pulls: [pull(1), pull(2)] },
       { pulls: [pull(2), pull(3)] },
       { pulls: [pull(4)] },
     ]);
     const listed = listAllPulls(callPage, 2);
-    expect(calls).toEqual([1, 2, 3]);
+    expect(calls).toEqual([1, 2, 3, 1, 2, 3]);
     expect(listed.code).toBe(0);
     expect(listed.pulls?.map(({ number }) => number)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("reads a one-page listing once", () => {
+    const { calls, callPage } = pager([{ pulls: [pull(1)] }]);
+    expect(listAllPulls(callPage, 2).pulls?.map(({ number }) => number)).toEqual([1]);
+    expect(calls).toEqual([1]);
   });
 
   it("counts a page full even when an entry in it is unreadable", () => {
     const { calls, callPage } = pager([{ pulls: [pull(1), { head: {} }] }, { pulls: [] }]);
     expect(listAllPulls(callPage, 2).pulls?.map(({ number }) => number)).toEqual([1]);
+    expect(calls).toEqual([1, 2, 1, 2]);
+  });
+
+  // #1 closes after page 1 is read, so #3 moves back onto page 1 and page 2
+  // starts at #4: the first pass never sees #3.
+  it("finds a pull request a closing one moved back across a page boundary", () => {
+    const { calls, callPage } = sequence([
+      [pull(1), pull(2)],
+      [pull(4), pull(5)],
+      [],
+      [pull(2), pull(3)],
+      [pull(4), pull(5)],
+      [],
+      [pull(2), pull(3)],
+      [pull(4), pull(5)],
+      [],
+    ]);
+    const listed = listAllPulls(callPage, 2);
+    expect(listed.code).toBe(0);
+    expect(listed.pulls?.map(({ number }) => number).sort((a, b) => a - b)).toEqual([
+      1, 2, 3, 4, 5,
+    ]);
+    expect(calls).toEqual([1, 2, 3, 1, 2, 3, 1, 2, 3]);
+  });
+
+  it("keeps a pull request opened between passes without reading again", () => {
+    const { calls, callPage } = sequence([
+      [pull(1), pull(2)],
+      [pull(3)],
+      [pull(1), pull(2)],
+      [pull(3), pull(4)],
+      [],
+    ]);
+    const listed = listAllPulls(callPage, 2);
+    expect(listed.pulls?.map(({ number }) => number)).toEqual([1, 2, 3, 4]);
+    expect(calls).toEqual([1, 2, 1, 2, 3]);
+  });
+
+  it("answers no listing while pull requests keep moving between pages", () => {
+    // Every pass turns up an older pull request the passes before it skipped.
+    const { callPage } = sequence(
+      [21, 22, 23].flatMap((older) => [[pull(20), pull(older)], [pull(30), pull(31)], []]),
+    );
+    const { listed, stderr } = listQuietly(callPage);
+    expect(listed).toEqual({ code: 2, pulls: undefined });
+    expect(stderr).toContain("kept moving between pages");
+  });
+
+  it("stops a pass whose full page adds no pull request", () => {
+    const { calls, callPage } = pager([
+      { pulls: [pull(1), pull(2)] },
+      { pulls: [pull(1), pull(2)] },
+    ]);
+    const { listed, stderr } = listQuietly(callPage);
+    expect(listed).toEqual({ code: 2, pulls: undefined });
     expect(calls).toEqual([1, 2]);
+    expect(stderr).toContain("not advancing");
+  });
+
+  it("stops a listing that does not end within the page limit", () => {
+    const calls: number[] = [];
+    const callPage = (page: number, handleBody: (body: string) => number) => {
+      calls.push(page);
+      return handleBody(JSON.stringify([pull(page * 2 - 1), pull(page * 2)]));
+    };
+    const { listed, stderr } = listQuietly(callPage);
+    expect(listed).toEqual({ code: 2, pulls: undefined });
+    expect(calls).toHaveLength(MAX_LISTING_PAGES);
+    expect(stderr).toContain(`within ${String(MAX_LISTING_PAGES)} pages`);
+  });
+
+  it("keeps the first pass as a snapshot when the reserve stops the re-read", () => {
+    const calls: number[] = [];
+    // The first pass reads both pages; the reserve then refuses every call.
+    const callPage = (page: number, handleBody: (body: string) => number) => {
+      if (calls.length >= 2) return 1;
+      calls.push(page);
+      return handleBody(JSON.stringify(page === 1 ? [pull(1), pull(2)] : [pull(3)]));
+    };
+    const { listed, stderr } = listQuietly(callPage);
+    expect(listed.code).toBe(1);
+    expect(listed.pulls?.map(({ number }) => number)).toEqual([1, 2, 3]);
+    expect(stderr).toContain("snapshot");
+    expect(stderr).not.toContain("past page");
+  });
+
+  it("asks GitHub for open pull requests oldest first, one numbered page at a time", () => {
+    const repository = mkdtempSync(path.join(os.tmpdir(), "story-ids-listing-"));
+    try {
+      execFileSync("git", ["init", "--quiet"], { cwd: repository });
+      execFileSync("git", ["remote", "add", "origin", "https://github.com/owner/repo.git"], {
+        cwd: repository,
+      });
+      const paths: string[] = [];
+      const call = (apiPath: string, handleBody: (body: string) => number) => {
+        paths.push(apiPath);
+        return handleBody(JSON.stringify([pull(1)]));
+      };
+      expect(listOpenPulls(repository, call).pulls).toEqual([{ number: 1, branch: "b1" }]);
+      expect(paths).toHaveLength(1);
+      const url = new URL(paths[0] ?? "", "https://api.github.com/");
+      expect(url.pathname).toBe("/repos/owner/repo/pulls");
+      expect(Object.fromEntries(url.searchParams)).toEqual({
+        state: "open",
+        sort: "created",
+        direction: "asc",
+        per_page: "100",
+        page: "1",
+      });
+    } finally {
+      rmSync(repository, { recursive: true, force: true });
+    }
   });
 
   it("answers no listing when a later page could not be read", () => {
@@ -189,10 +330,15 @@ describe("reading git and the hosted side", () => {
   });
 
   it("keeps a complete listing whose last page crossed the reserve, as exit 1", () => {
-    const { callPage } = pager([{ pulls: [pull(1), pull(2)] }, { pulls: [pull(3)], code: 1 }]);
-    const listed = listAllPulls(callPage, 2);
+    const { calls, callPage } = pager([
+      { pulls: [pull(1), pull(2)] },
+      { pulls: [pull(3)], code: 1 },
+    ]);
+    const { listed, stderr } = listQuietly(callPage);
     expect(listed.code).toBe(1);
     expect(listed.pulls?.map(({ number }) => number)).toEqual([1, 2, 3]);
+    expect(calls).toEqual([1, 2]);
+    expect(stderr).toContain("snapshot");
   });
 
   const namespace = "refs/story-ids/1-abc";
