@@ -643,6 +643,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it. The intake now runs first, as the `fix-vulnerability` plan already
   ran it. Closes #5013.
 
+- **Migration step 12 reads at most 8000 bytes of a file larger than 16 MiB.**
+  It read up to 16 MiB of such a file before naming it as not checked for 1.x
+  paths, although `lstat` had already given its size. It now reads only the
+  first 8000 bytes, enough to tell binary from text, and names a text file as
+  larger than 16 MiB from its size; a NUL byte past those 8000 bytes no longer
+  makes the file count as binary. Closes #5054.
+
 - **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
   with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
   `Set-Content -Encoding UTF8`, and both commands refused such a file as
