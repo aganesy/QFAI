@@ -219,6 +219,25 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
       "f(timestamp(3) with time zone)",
     ],
     ["the name of an SQL-standard array type", "f(a int ARRAY)", "f(int ARRAY)"],
+    // PostgreSQL resolves a routine by its argument types after mapping each
+    // alias to one type and dropping every type modifier.
+    ["the alias int for integer", "f(a int)", "f(a integer)"],
+    ["the alias int4 for integer", "f(a int4)", "f(a integer)"],
+    ["the alias int8 for bigint", "f(a int8)", "f(a bigint)"],
+    ["the alias bool for boolean", "f(a bool)", "f(a boolean)"],
+    ["the alias varchar for character varying", "f(a varchar)", "f(a character varying)"],
+    ["the alias decimal for numeric", "f(a decimal(10,2))", "f(a numeric)"],
+    ["the alias float8 for double precision", "f(a float8)", "f(a double precision)"],
+    ["the alias float for double precision", "f(a float)", "f(a float8)"],
+    ["a float precision that names real", "f(a float(10))", "f(a real)"],
+    ["the alias timestamptz", "f(a timestamptz)", "f(a timestamp with time zone)"],
+    ["an omitted without time zone", "f(a timestamp)", "f(a timestamp without time zone)"],
+    ["a length modifier", "f(a varchar(10))", "f(a varchar(20))"],
+    ["a precision and scale modifier", "f(a numeric(10,2))", "f(a numeric)"],
+    ["a precision on a zoned type", "f(a timestamp(3) with time zone)", "f(a timestamptz)"],
+    ["the fields of an interval", "f(a interval day to second)", "f(a interval)"],
+    ["an array bound", "f(a int[3])", "f(a integer[])"],
+    ["the SQL-standard array spelling", "f(a int ARRAY)", "f(a int[])"],
   ])("reports two functions that differ only by %s", (_label, left, right) => {
     const { statements } = parseSqlContract(
       `CREATE OR REPLACE FUNCTION ${left} RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
@@ -250,6 +269,13 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     ],
     ["the element type of an SQL-standard array", "f(int ARRAY)", "f(text ARRAY)"],
     ["the element type of a sized SQL-standard array", "f(int ARRAY[3])", "f(text ARRAY[3])"],
+    ["integer width", "f(a int)", "f(a bigint)"],
+    ["fixed versus varying characters", "f(a char(10))", "f(a varchar(10))"],
+    ["floating-point width", "f(a real)", "f(a double precision)"],
+    // `float(p)` names real up to 24 bits of precision, so its modifier picks
+    // the type rather than modifying it.
+    ["the precision of a float", "f(a float(24))", "f(a float(25))"],
+    ["an array of a type versus the type", "f(a int[])", "f(a int)"],
   ])("does not report two functions whose input types differ by %s", (_label, left, right) => {
     const { statements } = parseSqlContract(
       `CREATE FUNCTION ${left} RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
