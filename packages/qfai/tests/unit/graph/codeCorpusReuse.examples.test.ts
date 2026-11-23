@@ -29,7 +29,7 @@ function copiedInto(analysis: string): string[] {
     .map((parts) => parts.slice(1).join("/"));
 }
 
-// Mutation: packages/qfai/src/core/graph/analysis.ts `if (await sameContent(bytes, target)) continue;` -> `if (false) continue;` fails "copies no code corpus file again when a repeated query finds it unchanged"
+// Mutation: packages/qfai/src/core/graph/analysis.ts `if (copied === bytes.length && bytes.equals(await readFile(target))) continue;` -> `if (false) continue;` fails "copies no code corpus file again when a repeated query finds it unchanged"
 it("copies no code corpus file again when a repeated query finds it unchanged", async () => {
   const fixture = await codeAnalysisFixture();
   // The fixture seeds the analysis storage through the same spy.
@@ -46,7 +46,7 @@ it("copies no code corpus file again when a repeated query finds it unchanged", 
   }
 });
 
-// Mutation: packages/qfai/src/core/graph/analysis.ts `if (await sameContent(bytes, target)) continue;` -> `if (true) continue;` fails "copies an uncommitted edit into the code corpus on the next query"
+// Mutation: packages/qfai/src/core/graph/analysis.ts `if (copied === bytes.length && bytes.equals(await readFile(target))) continue;` -> `if (true) continue;` fails "copies an uncommitted edit into the code corpus on the next query"
 it("copies an uncommitted edit into the code corpus on the next query", async () => {
   const fixture = await codeAnalysisFixture();
   try {

@@ -1,5 +1,5 @@
 import { prepareCodeAnalysis } from "./codePreparation.js";
-import { prepareDocumentAnalysisLocked } from "./documents.js";
+import { prepareNotCurrentDocumentAnalysisLocked } from "./documents.js";
 import { withGraphLock } from "./locks.js";
 import { exploreGraph, type GraphAnswer, type GraphQuestion } from "./query.js";
 import { runGraphProcess, type GraphProcess } from "./process.js";
@@ -15,7 +15,7 @@ export async function queryPreparedGraph(
     const preparation =
       request.domain === "code"
         ? await prepareCodeAnalysis(root, run)
-        : await prepareDocumentAnalysisLocked(root, run);
+        : await prepareNotCurrentDocumentAnalysisLocked(root, run);
     if (preparation.status !== "prepared")
       return {
         ...initial,

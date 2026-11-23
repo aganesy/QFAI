@@ -97,6 +97,21 @@ export function graphAnalysisStaging(
   return path.join(path.dirname(current), `.${step}-${engine}-${id}`);
 }
 
+const STAGING_ID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+
+/**
+ * Whether `name` is a sibling `graphAnalysisStaging` names for `step` and `engine` with a random
+ * UUID. The UUID is matched whole, so one engine's prefix never matches another engine's copy:
+ * `.refreshing-graphify-` is also the start of `.refreshing-graphify-code-<id>`.
+ */
+export function isGraphAnalysisStaging(
+  name: string,
+  step: GraphStagingStep,
+  engine: GraphAnalysisEngine,
+): boolean {
+  return new RegExp(`^\\.${step}-${engine}-${STAGING_ID}$`).test(name);
+}
+
 /**
  * The hidden sibling of the installed runtime directory a runtime is staged in. It is short, so
  * staging adds almost no depth to the deepest runtime file: Windows limits a path to 260
