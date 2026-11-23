@@ -5,7 +5,7 @@
  * named path on every platform; every other call reaches the real module.
  */
 import type * as FsPromises from "node:fs/promises";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -13,8 +13,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runLintShipping, runLintShippingCli } from "../../scripts/lint-shipping.js";
 
-/** Basenames whose listing, stat or read fails with EACCES. */
-const FAILING = { readdir: "unlistable", stat: "unstatable.ts", readFile: "unreadable.ts" };
+/** Basenames whose listing, inspection or read fails with EACCES. */
+const FAILING = { readdir: "unlistable", lstat: "uninspectable.ts", readFile: "unreadable.ts" };
 
 function denied(operation: string, target: string): NodeJS.ErrnoException {
   return Object.assign(new Error(`EACCES: permission denied, ${operation} '${target}'`), {
@@ -32,10 +32,10 @@ vi.mock("node:fs/promises", async (importOriginal) => {
       failsFor(args[0], FAILING.readdir)
         ? Promise.reject(denied("scandir", String(args[0])))
         : real.readdir(...args),
-    stat: (...args: Parameters<typeof real.stat>) =>
-      failsFor(args[0], FAILING.stat)
-        ? Promise.reject(denied("stat", String(args[0])))
-        : real.stat(...args),
+    lstat: (...args: Parameters<typeof real.lstat>) =>
+      failsFor(args[0], FAILING.lstat)
+        ? Promise.reject(denied("lstat", String(args[0])))
+        : real.lstat(...args),
     readFile: (...args: Parameters<typeof real.readFile>) =>
       failsFor(args[0], FAILING.readFile)
         ? Promise.reject(denied("open", String(args[0])))
@@ -107,7 +107,7 @@ describe("lint-shipping exclusions read the path inside the package", () => {
 describe("lint-shipping fails on files it could not inspect", () => {
   it.each([
     ["a directory it cannot list", path.join("src", FAILING.readdir, "inner.ts")],
-    ["an entry it cannot stat", path.join("src", FAILING.stat)],
+    ["an entry it cannot inspect", path.join("src", FAILING.lstat)],
     ["a file it cannot read", path.join("src", FAILING.readFile)],
   ])("rejects on %s instead of reporting a clean scan", async (_case, relative) => {
     const root = await newTempDir();
@@ -117,11 +117,61 @@ describe("lint-shipping fails on files it could not inspect", () => {
     await expect(runLintShipping(root)).rejects.toMatchObject({ code: "EACCES" });
   });
 
+  it("names only the package-relative path, never the absolute one", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(path.join(root, "src", FAILING.readFile), "export const x = 1;\n");
+
+    const failure = await runLintShipping(root).then(
+      () => new Error("the lint passed"),
+      (error: unknown) => error,
+    );
+
+    expect(failure).toMatchObject({
+      code: "EACCES",
+      message: `cannot read src/${FAILING.readFile} (EACCES)`,
+    });
+  });
+
   it("counts a package without some target trees as scanning only what exists", async () => {
     const root = await newTempDir();
     await packageWithOneViolation(root);
 
     expect((await runLintShipping(root)).scannedFileCount).toBe(1);
+  });
+});
+
+describe("lint-shipping never follows a link", () => {
+  /**
+   * A package whose `linkRel` is a directory link to a tree outside it that
+   * holds a violation. A junction on Windows needs no privilege; POSIX ignores
+   * the type.
+   */
+  async function packageWithLink(linkRel: string): Promise<string> {
+    const base = await newTempDir();
+    const root = path.join(base, "pkg");
+    const outside = path.join(base, "outside");
+    await mkdir(outside, { recursive: true });
+    await writeFile(path.join(outside, "leak.ts"), "// BF-0013\n");
+    await mkdir(path.dirname(path.join(root, linkRel)), { recursive: true });
+    await symlink(outside, path.join(root, linkRel), "junction");
+    return root;
+  }
+
+  it.each([
+    ["a link inside a target tree", path.join("src", "linked")],
+    ["a target tree that is itself a link", "src"],
+  ])("rejects %s, naming the link and reading nothing behind it", async (_case, linkRel) => {
+    const root = await packageWithLink(linkRel);
+    const shown = linkRel.split(path.sep).join("/");
+
+    const { exitCode, out, err } = await captured(() => runLintShippingCli(root));
+
+    expect(exitCode).toBe(2);
+    expect(err).toContain(`refuses to follow the link ${shown}`);
+    expect(err).not.toContain("BF-0013");
+    expect(err).not.toContain("outside");
+    expect(out).toBe("");
   });
 });
 
