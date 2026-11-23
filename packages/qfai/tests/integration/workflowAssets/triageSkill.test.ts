@@ -43,10 +43,18 @@ describe("qfai-triage as a stage skill", () => {
   // QFAI:EX-0001-0211-45
   // QFAI:EX-0001-0211-46
   // QFAI:EX-0001-0220-49
-  it("lists the eleven triage steps, closing last, and opens its description with its trigger", async () => {
+  it("lists the eleven triage steps, private security intake first and closing last, and opens its description with its trigger", async () => {
     const steps = await skillSteps("qfai-triage");
     expect([...steps].sort()).toEqual([...TRIAGE_STEPS].sort());
+    expect(steps[0]).toBe("triage-security-intake");
     expect(steps.at(-1)).toBe("triage-close");
+    const table = sectionOf(await readShipped(SKILL), "## Steps");
+    const rowsInOrder = steps.map((name) => table.indexOf(`| \`${name}\``));
+    expect(rowsInOrder.every((at) => at >= 0)).toBe(true);
+    expect([...rowsInOrder].sort((a, b) => a - b)).toEqual(rowsInOrder);
+    expect(flat(table)).toMatch(
+      /`triage-security-intake` runs first, so a vulnerability report is taken in privately before any other step can write about it in a public place/,
+    );
 
     const front = frontMatterOf(await readShipped(SKILL));
     const description = String(front.description);

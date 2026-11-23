@@ -226,9 +226,11 @@ it("requires human approval of the exact external destination and document scope
         scope: selected.scope,
         backend: "openai",
         model: "selected-model",
+        credentialEnv: "QFAI_TEST_SELECTED_KEY",
         worktree: fixture.root,
       },
     ]);
+    expect(JSON.stringify(approvals)).not.toContain("fixture-selected-key");
     const extracts = fixture.calls.filter((call) => call.args.includes("extract"));
     expect(extracts).toHaveLength(1);
     expect(extracts[0]?.env?.OPENAI_BASE_URL).toBe(selected.endpoint);
@@ -239,6 +241,58 @@ it("requires human approval of the exact external destination and document scope
   } finally {
     if (previousKey === undefined) delete process.env.QFAI_TEST_SELECTED_KEY;
     else process.env.QFAI_TEST_SELECTED_KEY = previousKey;
+    await fixture.dispose();
+  }
+});
+
+// QFAI:EX-0001-0234-09
+// Mutation: packages/qfai/src/core/graph/documents.ts `credentialEnv: processing.credentialEnv` -> `credentialEnv: undefined` fails "asks again when the approved external processing selects another credential variable"
+it("asks again when the approved external processing selects another credential variable", async () => {
+  const fixture = await documentAnalysisFixture();
+  const names = ["QFAI_TEST_APPROVED_KEY", "QFAI_TEST_REPLACEMENT_KEY"] as const;
+  const prior = names.map((name) => process.env[name]);
+  try {
+    process.env.QFAI_TEST_APPROVED_KEY = "fixture-approved-key";
+    process.env.QFAI_TEST_REPLACEMENT_KEY = "fixture-replacement-key";
+    const definition = path.join(fixture.root, ".qfai", "graph-processing.json");
+    const selected = {
+      backend: "openai",
+      model: "selected-model",
+      endpoint: "https://selected.example.invalid/v1",
+      scope: ["rationale.md"],
+    };
+    const run = graphifyExtractionFixture(fixture);
+    const approvals: ExternalProcessingRequest[] = [];
+    const approve = (request: ExternalProcessingRequest) => {
+      approvals.push(request);
+      return Promise.resolve(true);
+    };
+    await writeFile(
+      definition,
+      JSON.stringify({ ...selected, credentialEnv: "QFAI_TEST_APPROVED_KEY" }),
+    );
+    expect((await prepareDocumentAnalysis(fixture.root, run, approve)).status).toBe("prepared");
+    await writeFile(
+      definition,
+      JSON.stringify({ ...selected, credentialEnv: "QFAI_TEST_REPLACEMENT_KEY" }),
+    );
+    fixture.calls.length = 0;
+    const refused = await prepareDocumentAnalysis(fixture.root, run);
+    expect(refused.status).toBe("not-ready");
+    expect(refused.recovery).toContain("credential variable");
+    expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(false);
+    expect((await prepareDocumentAnalysis(fixture.root, run, approve)).status).toBe("prepared");
+    expect(approvals.map((request) => request.credentialEnv)).toEqual(names);
+    const extracts = fixture.calls.filter((call) => call.args.includes("extract"));
+    expect(extracts).toHaveLength(1);
+    expect(extracts[0]?.env?.OPENAI_API_KEY).toBe("fixture-replacement-key");
+    expect(JSON.stringify(approvals)).not.toMatch(/fixture-(approved|replacement)-key/);
+  } finally {
+    names.forEach((name, index) => {
+      const value = prior[index];
+      if (value === undefined) Reflect.deleteProperty(process.env, name);
+      else process.env[name] = value;
+    });
     await fixture.dispose();
   }
 });

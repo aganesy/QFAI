@@ -17,7 +17,9 @@ const SECRET_PATTERNS: readonly RegExp[] = [
   /(?<![A-Za-z0-9])xox[bp]-[A-Za-z0-9-]{8,}/g,
   /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g,
   /\bBearer\s+[A-Za-z0-9._~+/=-]+/gi,
-  /\bpassword\s*=\s*\S+/gi,
+  // A quoted value runs to its closing quote, past escaped quotes, or to the end of the line when it
+  // is never closed; a bare value runs to the next whitespace.
+  /\bpassword\s*=\s*(?:"(?:\\.|[^"\\\r\n])*"?|'(?:\\.|[^'\\\r\n])*'?|\S+)/gi,
   /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,
 ];
 

@@ -277,6 +277,21 @@ describe("qfai session-review redacts the paths it prints", () => {
     expect(await readdir(path.join(setup.root, "reports"))).toEqual([name]);
   });
 
+  it("redacts a whole quoted password in an error message", async () => {
+    const setup = await project();
+    await sessions(setup);
+    for (const quote of ['"', "'"]) {
+      const result = await cli(
+        ["session-review", "--root", setup.root, "--session", `password=${quote}a b${quote}`],
+        setup.root,
+      );
+      expect(result.code).toBe(2);
+      expect(result.err).toBe(
+        "qfai session-review: no transcript of session [redacted] belongs to this project.\n",
+      );
+    }
+  });
+
   // A path component longer than a POSIX file system allows makes the read fail with the path in
   // its message; Windows reports such a path as missing instead.
   it.skipIf(process.platform === "win32")(

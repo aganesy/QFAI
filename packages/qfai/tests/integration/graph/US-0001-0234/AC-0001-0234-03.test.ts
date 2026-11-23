@@ -89,6 +89,7 @@ describe("AC-0001-0234-03", () => {
           scope: external.scope,
           backend: external.backend,
           model: external.model,
+          credentialEnv: external.credentialEnv,
           worktree: fixture.root,
         },
       ]);

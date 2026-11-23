@@ -537,6 +537,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai session-review` redacts a quoted `password=` value whole.** The
+  value was blanked only up to its first space, so `password="a b"` printed
+  `[redacted] b"` in the report and in an error line. A value in double or
+  single quotes is now blanked to its closing quote, past escaped quotes, or
+  to the end of the line when it is never closed; a bare value is still
+  blanked to the next whitespace. Closes #5020.
+
 - **`qfai workflow plan` refuses a plan whose added specification stage runs a
   step that is not installed.** A request naming the story tree can give a
   route a `spec` stage with `sdd-triage`, `sdd-story` or `sdd-contract`, but
@@ -635,13 +642,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review, and that it makes no commit, as `triage-security-intake` already
   said. Closes #5012.
 
-- **The document-schema checker stops an mdschema run that never exits.** Run
-  from the command line, as the shipped document lane runs it, the checker
-  waited on each mdschema run with no time limit, so a run that never exited
-  held the lane until the CI job timed out. It now stops a run after 120
-  seconds, the limit `qfai validate` already applied, and exits 2 saying that
-  mdschema did not finish, never reading the run as a pass or a schema
-  failure. Closes #5033.
+- **The `qfai-triage` skill invoked by name takes a security report in
+  privately before any other step.** Its step list put
+  `triage-security-intake` seventh, after the duplicate search, the request
+  for missing facts and the investigation, so details of a vulnerability
+  report could reach a public tracker before anyone decided how to disclose
+  it. The intake now runs first, as the `fix-vulnerability` plan already
+  ran it. Closes #5013.
 
 - **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
   with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
@@ -673,6 +680,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Only the template's exact
   placeholder is now read as no carry-over. Closes #4864.
 
+- **Updating `.gitignore` no longer changes another hard-linked name of the
+  file.** `qfai init`, `qfai doctor --autoremediate` and migration step 10
+  wrote the managed block, and init the graph ignore block, through the
+  existing file, so a second name for the same file, a file outside the
+  project included, received the same bytes. The new `.gitignore` is now
+  renamed into place, and every other name keeps what it had. Closes #5016.
+
 - **The stale-install check keeps lockfile precedence when a lockfile cannot
   be read.** A `package-lock.json` that existed but failed to read, for example
   for lack of permission, was passed over for a `pnpm-lock.yaml` or `yarn.lock`
@@ -687,6 +701,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a workflow whose every job is `false` is reported as starting no job, and a
   condition that is a number, a list, a mapping or empty is named as not
   counted. Closes #4787.
+
+- **External document processing approval names the credential variable.**
+  The request an approval callback receives for an external destination named
+  the destination, scope, backend, model and worktree but not which
+  environment variable supplies the credential, so the person approving could
+  not see which credential the transmission would use. The request now carries
+  `credentialEnv`, the variable's name and never its value, and processing that
+  selects another variable asks for approval again. Closes #5018.
 
 - **`QFAI-FLOW-006` gives a business flow a remedy its shape allows.** The
   warning told every document to split an oversized diagram into an overview
@@ -713,6 +735,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `paths.contractsDir` elsewhere sent its reviewers to a missing or stale file,
   which they treat as absent evidence. They now name
   `<paths.contractsDir>/tech.md`.
+
+- **The document-schema checker stops an mdschema run that never exits.** Run
+  from the command line, as the shipped document lane runs it, the checker
+  waited on each mdschema run with no time limit, so a run that never exited
+  held the lane until the CI job timed out. It now stops a run after 120
+  seconds, the limit `qfai validate` already applied, and exits 2 saying that
+  mdschema did not finish, never reading the run as a pass or a schema
+  failure. Closes #5033.
 
 - **`qfai doctor` names a shipped workflow it cannot read in
   `workflows.cost`.** The check skipped every read failure as if the workflow
