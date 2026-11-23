@@ -867,6 +867,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Graphify is installed with them; init installs CodeGraph with the npm of
   the Node.js that runs `qfai`. Closes #5059.
 
+- **`qfai doctor` no longer reads a `pnpm-workspace.yaml` above a project that
+  is in no Git repository.** A stray one in a shared parent widened the
+  output-directory collision scan to unrelated projects. Outside a Git
+  repository the scan now covers the project directory alone, and
+  `qfai doctor --clean` keeps the run logs of an `outDir` that lies outside the
+  scanned tree, since no scan can prove it unshared. Closes #5117.
+
 - **`qfai validate` reports a `.qfai/waivers.yml` it cannot read.** An
   existence probe that swallowed every error ran first, so a `.qfai` directory
   that could not be traversed read as having no waiver file and the
