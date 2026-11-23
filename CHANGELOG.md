@@ -646,6 +646,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pass `--paginate`, and the per-item `--jq` filters still print one line per
   run or job.
 
+- **`QFAI-DB-002` reads a routine's arguments after its name.** The argument
+  list was read from the statement's first `(`, so a quoted routine name
+  holding one, such as `CREATE FUNCTION "f(x"(a int)`, gave the routine no
+  arguments, and its overloads were reported as one routine defined twice. The
+  list is now read from the parenthesis that follows the name. Closes #5149.
+
 - **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
   shipped workflow edited to run a job on two operating systems and three
   Node versions was reported as three runner allocations instead of six,
