@@ -719,6 +719,7 @@
     "tests/scripts/syncInitToRoot.test.ts",
     "tests/core/waiversReadErrors.test.ts",
     "tests/unit/outputCapture.test.ts",
-    "tests/core/replaceFileTempCleanup.test.ts"
+    "tests/core/replaceFileTempCleanup.test.ts",
+    "tests/core/runLogValidateLog.test.ts"
   ]
 }
