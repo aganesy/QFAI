@@ -1,8 +1,9 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { isEnoent } from "../fs/errno.js";
 import { findUnsafeHostFileComponent } from "../init/fsGuards.js";
 import { isPathIgnored } from "../gitignore.js";
+import { replaceFile } from "../runLog.js";
 import { graphEnvironmentKey } from "./layout.js";
 import type { GraphProcess } from "./process.js";
 
@@ -60,7 +61,8 @@ export async function ensureGraphGitignore(
   }
   const newline = content.includes("\r\n") ? "\r\n" : "\n";
   const separator = content.length > 0 && !content.endsWith("\n") ? newline : "";
-  await writeFile(
+  // Renamed into place, so another hard-linked name of the file keeps the bytes it had.
+  await replaceFile(
     file,
     `${content}${separator}${GRAPH_IGNORE_MARKER}${newline}/.qfai/tools/${newline}`,
   );

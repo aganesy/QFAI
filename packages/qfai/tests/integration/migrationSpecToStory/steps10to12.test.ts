@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import {
   appendFile,
   cp,
+  link,
   lstat,
   mkdir,
   mkdtemp,
@@ -11,6 +12,7 @@ import {
   readlink,
   rename,
   rm,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -399,6 +401,19 @@ describe("migration step 10: the managed .gitignore block", () => {
     const again = await stepIn(root, 10);
     expect(again.code).toBe(0);
     expect(section(again.output, "Operations")).toEqual([]);
+  });
+
+  it("leaves another hard-linked name of the .gitignore as it was", async () => {
+    const root = await clone(migrated10);
+    await writeLegacyIgnore(root);
+    const other = path.join(await scratch("qfai-migrate-hardlink-"), "shared.gitignore");
+    await link(path.join(root, ".gitignore"), other);
+    const before = await readFile(other, "utf8");
+    const result = await stepIn(root, 10);
+    expect(result.code, result.output).toBe(0);
+    expect(await readFile(path.join(root, ".gitignore"), "utf8")).not.toContain("!.qfai/evidence/");
+    expect(await readFile(other, "utf8")).toBe(before);
+    expect((await stat(other)).nlink).toBe(1);
   });
 });
 

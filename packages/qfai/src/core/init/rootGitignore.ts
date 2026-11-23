@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
@@ -12,6 +12,7 @@ import {
   negationsOutrankLaterIgnores,
 } from "../gitignore.js";
 import { info } from "../logger.js";
+import { replaceFile } from "../runLog.js";
 import { safeLstat } from "./fsGuards.js";
 
 /**
@@ -140,13 +141,17 @@ export async function ensureRootGitignoreEntries(
   return { copied: [gitignorePath], skipped: [] };
 }
 
-/** Writes `.gitignore` in place, refusing a path that is not a regular file. */
+/**
+ * Puts `content` at `.gitignore`, refusing a path that is not a regular file. The new bytes are
+ * renamed into place rather than written through the old file, so a `.gitignore` with another
+ * hard-linked name gets a file of its own and every other name keeps the bytes it had.
+ */
 export async function replaceRootGitignore(target: string, content: string): Promise<void> {
   const current = await safeLstat(target);
   if (current !== undefined && !current.isFile()) {
     throw new Error("Cannot update .gitignore: its path is not a regular file.");
   }
-  await writeFile(target, content, "utf-8");
+  await replaceFile(target, content);
 }
 
 /**
