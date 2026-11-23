@@ -3,9 +3,9 @@ import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import {
+  codeAnalysisLimitRecovery,
   codegraphEnvironment,
   GRAPH_PROCESS_LIMITS,
-  graphLimitCause,
   type GraphProcess,
   type GraphProcessResult,
 } from "./process.js";
@@ -80,11 +80,10 @@ export async function prepareCodeAnalysis(
 }
 
 function failed(result?: GraphProcessResult): CodePreparation {
-  const cause = result && graphLimitCause("CodeGraph analysis", result);
   return {
     status: "failed",
-    recovery: cause
-      ? `${cause} Retry the graph query.`
-      : "Repair the local CodeGraph runtime and prepare independent analysis.",
+    recovery:
+      (result && codeAnalysisLimitRecovery("CodeGraph analysis", result)) ??
+      "Repair the local CodeGraph runtime and prepare independent analysis.",
   };
 }

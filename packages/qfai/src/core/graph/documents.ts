@@ -14,6 +14,7 @@ import { withGraphLock } from "./locks.js";
 import {
   GRAPH_PROCESS_LIMITS,
   GRAPH_PYTHON_FLAGS,
+  codeAnalysisLimitRecovery,
   graphifyConfigurationSafe,
   graphifyCorpusEnvironment,
   graphLimitCause,
@@ -105,12 +106,11 @@ export async function prepareGraphifyCodeAnalysis(
       result.exitCode !== 0 ||
       !(await currentGraphifyCorpus(root, staged, graphRuntimePaths(root).python, run, "ast"))
     ) {
-      const cause = graphLimitCause("Graphify code analysis", result);
       return {
         status: "failed",
-        recovery: cause
-          ? `${cause} Retry the graph query.`
-          : "Repair local Graphify code analysis.",
+        recovery:
+          codeAnalysisLimitRecovery("Graphify code analysis", result) ??
+          "Repair local Graphify code analysis.",
       };
     }
     await writeFile(

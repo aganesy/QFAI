@@ -226,6 +226,21 @@ export function graphLimitCause(step: string, result: GraphProcessResult): strin
   return result.limit && result.failure ? `Cause: the ${step} ${result.failure}.` : undefined;
 }
 
+/**
+ * The recovery for a code analysis QFAI stopped at its limit. The time limit is fixed and the
+ * analysis has nothing to resume, so after a time limit a retry would stop the same way.
+ */
+export function codeAnalysisLimitRecovery(
+  step: string,
+  result: GraphProcessResult,
+): string | undefined {
+  const cause = graphLimitCause(step, result);
+  if (!cause) return undefined;
+  return result.limit === "time"
+    ? `${cause} The analysis needs longer than QFAI allows, so a retry stops the same way.`
+    : `${cause} Retry the graph query.`;
+}
+
 /** Windows has npm's JavaScript entry neither beside Node nor under a directory on `PATH`. */
 export class NpmEntryNotFoundError extends Error {
   constructor() {
