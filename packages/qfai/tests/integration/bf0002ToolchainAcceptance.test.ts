@@ -353,7 +353,8 @@ describe("the optional named diagnostic acceptance", () => {
     expect(program).toContain('committedFile("packages/qfai/vitest.workspace.ts", 64 * 1024,');
     expect(program).toContain('committedFile(file, 16 * 1024 * 1024, "the test file")');
     expect(program).toContain('git("ls-tree", "HEAD", "--", relative)');
-    expect(program).toContain("committed.equals(readFileSync(target))");
+    expect(program).toContain("const opened = fstatSync(handle);");
+    expect(program).toContain("committed.equals(local)");
     expect(sorted(runnerProjects())).toHaveLength(7);
     for (const entry of declaredIncludeGlobs()) {
       expect(entry.glob).toMatch(/^tests\/[a-z0-9]+\/\*\*\/\*\.test\.ts$/u);
