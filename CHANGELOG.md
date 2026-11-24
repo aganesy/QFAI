@@ -636,6 +636,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now uses `{/* mermaid-lint:ignore */}` on the line above the fence instead.
   Closes #5341.
 
+- **A plain `qfai report` of an unfinished run also says it is not a clean
+  result.** The notice that the report is not a clean result was documented
+  only for `qfai report --run-validate`. It is printed whenever the report
+  renders an incomplete-run result, including one a plain `qfai report` reads
+  from an earlier `qfai validate`, and this is now the documented behaviour.
+  Closes #5361.
+
 - **The `tech.md` placeholder check counts only the template's own slots and
   quotes what it flags.** `QFAI-ASSETS-003` treated any `<...>` in the
   contract-layer `tech.md` as an unfilled slot, so a generic path such as
