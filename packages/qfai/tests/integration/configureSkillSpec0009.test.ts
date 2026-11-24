@@ -359,7 +359,7 @@ describe("Minimum Runnable Path Is Documented", () => {
     expect(section(content, "Step 0 - Load Context")).toContain(
       "`<paths.contractsDir>/tech.md#standard-commands-copy-paste`",
     );
-    expect(section(content, "Completion Contract")).toContain(
+    expect(section(content, "Completion Checklist")).toContain(
       "A path recorded but never executed is UNRUN.",
     );
     expect(section(content, "Hard Constraints")).toContain(
@@ -368,5 +368,31 @@ describe("Minimum Runnable Path Is Documented", () => {
 
     const tech = await readFile(path.join(SPEC_TEMPLATES, "03_contract", "tech.md"), "utf-8");
     expect(tech).toContain("- Skeleton: `<example: node dist/cli.js --help>`");
+  });
+});
+
+describe("One completion checklist", () => {
+  it("ends with one checklist that keeps the completion contract and the approval separation", async () => {
+    const content = await readFile(SKILL_PATH, "utf-8");
+    // The contract, the separation and the checklist were three overlapping
+    // end-of-work lists; only the checklist remains.
+    expect(content).not.toMatch(/^## Completion Contract/m);
+    expect(content).not.toMatch(/^## Completion Separation/m);
+    expect(content.match(/^## .*[Cc]hecklist/gm)).toEqual(["## Completion Checklist"]);
+    const checklist = section(content, "Completion Checklist");
+    for (const requirement of [
+      "shared-skill-operating-baseline.md#completion-contract-shared",
+      "one terminating command from the documented runnable path plus `npx qfai doctor --fail-on error`",
+      "Require `traceability.testGlobs` to report `[ok]`",
+      "`npx qfai validate --fail-on error` ran",
+      "`run-log:`",
+      "`QFAI-SCAN-002`",
+      "`QFAI-STORY-006` through `QFAI-STORY-009`",
+      "shared-skill-operating-baseline.md#gate-failure-autorepair-protocol",
+      "after the reviewer confirmed the evidence sampling",
+      "the session agent never approves its own change",
+    ]) {
+      expect(checklist).toContain(requirement);
+    }
   });
 });

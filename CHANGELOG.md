@@ -397,6 +397,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   architecture, product-surface and requirements reviewers refuse such a cut;
   how a part is built remains subject to the article.
 
+- **The `qfai-configure` skill ends with one completion checklist.** Its
+  completion contract and its completion separation section are now items of
+  the `Completion Checklist`, which keeps every distinct requirement: the smoke
+  check and `npx qfai doctor --fail-on error`, the `[ok]` test glob check, the
+  validate run and the result it wrote, the errors this skill resolves or
+  reports, the gate failure protocol, and approval by a reviewer who confirmed
+  the evidence sampling and did not modify the config.
+
 - **A run that adds screens researches what the project has no pattern for.**
   Before its session, `prototyping-grill` now checks each screen the run adds:
   its type against the business UI patterns, and each element and `structure`
