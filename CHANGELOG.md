@@ -758,12 +758,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   shows both: `pnpm approve-builds`, or `"@jackchuka/mdschema": false` under
   `allowBuilds` in `pnpm-workspace.yaml`. Closes #5227.
 
-- **`QFAI-CONTRACT-040` no longer counts `CREATE GLOBAL UNLOGGED TABLE` as a
-  table.** Its table count read `GLOBAL` or `LOCAL` before `UNLOGGED`, which
-  PostgreSQL rejects, so a contract with one real table could be taken for
-  several and an ENUM-and-CHECK finding fell from error to warning. The count
-  now uses the same `CREATE TABLE` modifier pattern as `QFAI-CONTRACT-036`, so
-  the two rules count the same tables. Closes #5637.
+- **Init's path guards stop on a path they cannot inspect.** The checks that
+  keep `qfai init`, the run log, the graph files and the migration from writing
+  through a link read every `lstat` failure as "nothing there", so an `EACCES`
+  or an `EIO` on a directory let the write go ahead unseen. Only a missing entry
+  counts as absent now; any other failure stops the command with the path and
+  the cause. Closes #5616.
 
 - **The `validate.json` guide lists `flowIds`.** The guide calls itself the
   source for the file's keys but left out `flowIds`, which a `--flow` run
@@ -790,6 +790,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   by character code. The validate contract also states where a chain longer
   than ten raises its finding: at the token nearest the chain's end whose
   chain below passes ten, with no finding above it. Closes #5325.
+
+- **`QFAI-CONTRACT-040` no longer counts `CREATE GLOBAL UNLOGGED TABLE` as a
+  table.** Its table count read `GLOBAL` or `LOCAL` before `UNLOGGED`, which
+  PostgreSQL rejects, so a contract with one real table could be taken for
+  several and an ENUM-and-CHECK finding fell from error to warning. The count
+  now uses the same `CREATE TABLE` modifier pattern as `QFAI-CONTRACT-036`, so
+  the two rules count the same tables. Closes #5637.
 
 - **`QFAI-DELIB-001` requires both decision tables under each stage of a
   deliberation record.** The check passed when the `Interview` and `Agent
