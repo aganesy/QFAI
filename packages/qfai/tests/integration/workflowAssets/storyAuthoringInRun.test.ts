@@ -202,7 +202,18 @@ describe("qfai-sdd writes the story tree", () => {
       expect(text).toContain(
         "When merging the base into the branch, check each such ID the branch adds against the merged base. The base's item keeps its ID; the branch renumbers its own item and every reference to it, then runs the gates again.",
       );
-      expect(text).toContain("`git merge origin/<base>`");
+      // The register merge takes the base from the pull request and fetches it first,
+      // so a stale remote-tracking ref cannot hide a base that has moved.
+      expect(text).toContain(
+        "Read the base repository and base branch from the metadata of the branch's own pull request, never an assumed `origin/main`.",
+      );
+      expect(text).toContain(
+        "Fetch that branch from the remote for that repository (`git fetch <remote> <base>`) and record the commit it fetched (`git rev-parse FETCH_HEAD`); a local remote-tracking ref alone may be stale.",
+      );
+      expect(text).toContain("Merge that recorded commit (`git merge <commit>`).");
+      expect(text).toContain(
+        "Just before the push, fetch the base again: when it no longer points to the recorded commit, record the new commit and merge it in the same way first; only then push the merge.",
+      );
     }
     expect(step).toContain(
       "A decisions.md or open-questions.md row takes its timestamp ID instead, and reads neither the base nor any pull request.",

@@ -734,6 +734,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The corpus walk compares file sizes before it reads any contents, so a file
   of another size is no longer read in full to find it changed. Closes #5204.
 
+- **`/qfai-sdd` fetches the base before it merges a register conflict.** The
+  `sdd-triage` step resolved a conflict in `decisions.md`, its pages or
+  `open-questions.md` with `git merge origin/<base>` and never said to fetch,
+  so a stale remote-tracking ref could hide a base that had moved. The step and
+  its reference now read the base repository and branch from the pull
+  request's metadata, fetch that branch, record the fetched commit, merge that
+  commit, and fetch again just before the push, merging a newer commit first,
+  as `triage-operate` does. Closes #5454.
+
 - **`qfai session-review` counts no write-redirection target as a read, and
   counts a `qfai` command after a leading assignment.** `cat x > <path>`
   counted `<path>` as a file read although the shell writes it; the target of
