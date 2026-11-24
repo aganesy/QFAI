@@ -641,6 +641,7 @@
     "tests/fixtures/migration-spec-to-story/old-layout/tests/e2e/order.test.ts",
     "tests/fixtures/migration-spec-to-story/old-layout/tests/integration/order.test.ts",
     "tests/integration/bf0001Acceptance.test.ts",
+    "tests/cli/validateFinishIncomplete.test.ts",
     "tests/integration/validateLinkRemedy.test.ts",
     "tests/integration/validateUnreachableSpecsDir.test.ts",
     "tests/integration/bf0001AnnotationLayers.test.ts",
