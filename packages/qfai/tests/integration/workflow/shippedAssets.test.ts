@@ -143,9 +143,17 @@ it("Read the two shipped schemas and the plans", async () => {
   });
 });
 
+// The timeout, measured on `windows-parity`: the guard run took 3.9 s to 19.3 s across eight runs
+// on 2026-11-24, 67.7 s on a loaded rerun of run 44739792736, and 188.8 s on that run's first
+// attempt, which failed the declared 120 s. `spawnSync` holds the event loop, so the runner cannot
+// stop the guard early; the timeout only decides whether a run that finished counts as a failure.
+// 300 s covers the slowest run seen with room left.
+const POST_BUILD_GUARD_TIMEOUT = 300_000;
+
 // Skipped, not passed, where no bash can be found.
 it.skipIf(bash === undefined)(
   "Run the post-build guard over a package that publishes the plans and the schemas",
+  { timeout: POST_BUILD_GUARD_TIMEOUT },
   async () => {
     if (bash === undefined) return;
     const guard = await postBuildGuard(bash);
