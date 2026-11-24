@@ -487,6 +487,41 @@ describe("README facts", () => {
     }
   });
 
+  it("lists every shipped skill in the skill set", async () => {
+    const skillRoot = path.join(
+      repoRoot,
+      "packages",
+      "qfai",
+      "assets",
+      "init",
+      ".qfai",
+      "assistant",
+      "skill",
+    );
+    const shipped: string[] = [];
+    for (const entry of await readdir(skillRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const skill = await readFile(path.join(skillRoot, entry.name, "SKILL.md"), "utf-8").catch(
+        () => "",
+      );
+      if (skill !== "") shipped.push(entry.name);
+    }
+    // A skill that is only started by a stage, or only by name, is still one a
+    // reader looks for in the README.
+    expect(shipped, "the shipped skill directory holds no skill").toEqual(
+      expect.arrayContaining(["qfai-run", "qfai-grilling", "web-research"]),
+    );
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      const start = readme.indexOf("### Minimal custom skill set");
+      expect(start, `${readmePath} has no skill set section`).toBeGreaterThanOrEqual(0);
+      const section = readme.slice(start, readme.indexOf("\n#", start + 1));
+      for (const name of shipped) {
+        expect(section, `${readmePath} must list ${name}`).toContain(`- **${name}**:`);
+      }
+    }
+  });
+
   it("documents qfai db-drift, its configuration and the engine the project installs", async () => {
     const manifest: unknown = JSON.parse(
       await readFile(path.join(repoRoot, "packages", "qfai", "package.json"), "utf-8"),
