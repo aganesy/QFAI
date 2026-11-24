@@ -476,7 +476,6 @@ describe("doctor", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
     try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, "http://127.0.0.1:9");
 
       const outPath = path.join(root, ".qfai", "report", "doctor-cli.json");
@@ -664,7 +663,6 @@ describe("doctor", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
     try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
       // Remove the brand SSOT to trigger DCON-030; this is the canonical
       // pre-prototyping blocker now that legacy yaml enforcement (DCON-018)
@@ -680,14 +678,14 @@ describe("doctor", () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────
-  // TC-3.7.x — root DESIGN.md preflight checks
+  // TC-3.7.x — root DESIGN.md preflight checks, on a root holding only the
+  // prototyping fixture
   // ───────────────────────────────────────────────────────────────────────
 
   it("TC-3.7.1: designMdRoot ok when root DESIGN.md parses", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
     try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
       expect(findCheck(parsed.checks, "prototyping.designMdRoot")?.severity).toBe("ok");
@@ -701,7 +699,6 @@ describe("doctor", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
     try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
       await rm(path.join(root, "DESIGN.md"), { force: true });
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
@@ -716,7 +713,6 @@ describe("doctor", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
     try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
       await writeFile(path.join(root, "DESIGN.md"), "not a front matter\n", "utf-8");
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
@@ -728,8 +724,9 @@ describe("doctor", () => {
   });
 
   // The roster check needs only the prototyping fixture, so it runs on an
-  // otherwise empty root. The initialized-project scenario stays with
-  // "adds prototyping profile checks when preflight prerequisites exist".
+  // otherwise empty root, as do the DESIGN.md and --target-url tests above.
+  // The initialized-project scenario stays with "adds prototyping profile
+  // checks when preflight prerequisites exist".
   it("TC-3.7.9: existing prototyping checks still fire (additive)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
