@@ -699,6 +699,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   writes nothing and exits 1, saying whether to retry once the other run
   finishes or to remove a lock no running process holds. Closes #5382.
 
+- **`qfai-configure` follows a configured contracts directory.** Its success
+  criteria, context loading, `tech.md` filling steps, final report and
+  completion checklist named `03_contract/tech.md` or
+  `.qfai/spec/03_contract/`, so a project with its own `paths.contractsDir` was
+  pointed at the wrong file. Each now reads `<paths.contractsDir>/tech.md`. Its
+  Context Refresh no longer restates the Definition of Done; it asks which of
+  its items are met, checked in that section. Closes #5530.
+
 - **`qfai doctor` names a workflow-precondition file it cannot read instead
   of treating it as absent.** The checks behind `workflows.packageManager`,
   `workflows.nodeVersionFile` and `workflows.nodePin` read `package.json`, the

@@ -48,7 +48,7 @@ both outlive an exhausted budget.
 When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/rule/*`
-- P2: Read `.qfai/assistant/rule/agent-selection.md`, the cards under `.qfai/assistant/agent/`, and project context under `.qfai/spec/01_policy/` and `.qfai/spec/03_contract/`.
+- P2: Read `.qfai/assistant/rule/agent-selection.md`, the cards under `.qfai/assistant/agent/`, and project context under `.qfai/spec/01_policy/` and `<paths.contractsDir>/`.
 - P3: `.qfai/spec/decisions.md` (Decision Records; if no decision exists, state "not applicable").
 - P4: the business flows, stories, contracts, tests, and evidence relevant to the configuration.
 
@@ -126,7 +126,7 @@ Note: /qfai-sdd includes a preflight step that bootstraps missing config/policy 
   - A scan failure is `QFAI-SCAN-002`; the run is not done until the configured selection scans completely. `QFAI-STORY-006` through `QFAI-STORY-009` report uncovered BF, AC, and EX obligations for the testing stages.
 - `validation.traceability.testFileExcludeGlobs` is added only when needed.
 - A validation checklist with evidence (sample matched files) is produced.
-- Project-owned policy and contract files are filled or refreshed from evidence, or marked `TBD` when evidence is missing. Keep quality-gate commands solely in `03_contract/tech.md` under Standard commands.
+- Project-owned policy and contract files are filled or refreshed from evidence, or marked `TBD` when evidence is missing. Keep quality-gate commands solely in `<paths.contractsDir>/tech.md` under Standard commands.
 - Completion is approved by a reviewer who did not modify the config.
 
 ## Mandatory checks
@@ -144,7 +144,7 @@ Note: /qfai-sdd includes a preflight step that bootstraps missing config/policy 
 The final report includes:
 
 - chosen tools per layer (E2E/API/Integration/Component/Unit)
-- the Standard commands section in `03_contract/tech.md` and the commands actually executed
+- the Standard commands section in `<paths.contractsDir>/tech.md` and the commands actually executed
 - the proposed include and exclude globs, with 5 to 15 sample matched files, or every matched file when fewer than five match
 - the minimum runnable path
 - the files changed
@@ -184,7 +184,8 @@ wrote; the delegation baseline says how it is briefed.
 
 Every 5 major actions, pause and restate:
 
-- DoD and prohibited "done" criteria
+- Which items of Success Criteria (Definition of Done) and Not-done criteria
+  above are met and which are open, checked there rather than copied
 - Evidence samples collected vs missing
 - Config changes and policy updates completed
 
@@ -200,7 +201,7 @@ Every 5 major actions, pause and restate:
 1. Read relevant **project policy** (if present):
    - `.qfai/spec/01_policy/objective.md`
    - `.qfai/spec/01_policy/initiative.md`
-   - `.qfai/spec/03_contract/tech.md`
+   - `<paths.contractsDir>/tech.md`
    - `.qfai/assistant/rule/agent-selection.md`, and
    - the acting role's card under `.qfai/assistant/agent/`.
 
@@ -254,8 +255,8 @@ Fill policy templates with repo evidence.
 - Keep existing content when already accurate.
 - When evidence is missing, write `TBD` and record what is missing.
 - Do not invent facts.
-- Fill `03_contract/tech.md` in its template's shape: a Stack row for the runtime, the platform and each tool detected, with one row per test layer whose Choice names the tool, the files it was observed in, and why it fits; each runtime dependency with its reason, and the quality-gate commands under Standard commands, one labelled item each. It holds no rule and no constraint; a constraint goes to `01_policy/constraint.md`.
-- Fill `## Architecture` of `03_contract/tech.md` from the codebase: one row per layer the module layout shows, what it is responsible for, and the layers its imports reach, or `-`. Name layers, never paths. Implementation places new code by this table and reviewers judge a change against it, so write the import directions the code has.
+- Fill `<paths.contractsDir>/tech.md` in its template's shape: a Stack row for the runtime, the platform and each tool detected, with one row per test layer whose Choice names the tool, the files it was observed in, and why it fits; each runtime dependency with its reason, and the quality-gate commands under Standard commands, one labelled item each. It holds no rule and no constraint; a constraint goes to `01_policy/constraint.md`.
+- Fill `## Architecture` of `<paths.contractsDir>/tech.md` from the codebase: one row per layer the module layout shows, what it is responsible for, and the layers its imports reach, or `-`. Name layers, never paths. Implementation places new code by this table and reviewers judge a change against it, so write the import directions the code has.
   - A layer is a group of modules whose imports point one way: an upper layer uses the layers below it, and a lower layer never imports an upper one.
   - Draw the layers first, as one `mermaid` `flowchart TD` with a node per layer and an `Upper --> Lower` edge per import direction. Then write the table rows from the uppermost layer down, so each Depends on names only rows below it. `npx qfai validate` reports a diagram and a table that disagree.
 
@@ -314,7 +315,7 @@ this skill's form of
 - [ ] Repository analysis completed (frameworks, test layout, naming rules).
 - [ ] BF, AC, and EX test layers inspected.
 - [ ] Project-owned policy and contract files updated with evidence or `TBD`.
-- [ ] Standard commands recorded only in `03_contract/tech.md`.
+- [ ] Standard commands recorded only in `<paths.contractsDir>/tech.md`.
 - [ ] Include and exclude globs proposed with rationale, and their matches sampled before `qfai.config.yaml` was written (minimal diff).
 - [ ] Hard Constraints followed, and all mandatory checks executed and recorded.
 - [ ] The smoke check passed: one terminating command from the documented runnable path plus `npx qfai doctor --fail-on error`. A path recorded but never executed is UNRUN.
