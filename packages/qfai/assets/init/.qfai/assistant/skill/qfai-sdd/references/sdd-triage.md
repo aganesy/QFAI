@@ -166,8 +166,8 @@ When merging the base into the branch, check each such ID the branch adds agains
 The shipped `.gitattributes` merges `decisions.md`, its pages and
 `open-questions.md` with `merge=union`. A forge may still show a conflict in
 them. Resolve it by merging the base locally: the union merge keeps both sides'
-rows. Read the base repository and base branch from the pull request's own
-metadata, never an assumed `origin/main`. Fetch that branch from the remote for
+rows. Read the base repository and base branch from the metadata of the
+branch's own pull request, never an assumed `origin/main`. Fetch that branch from the remote for
 that repository (`git fetch <remote> <base>`) and record the commit it fetched
 (`git rev-parse FETCH_HEAD`); a local remote-tracking ref alone may be stale.
 Merge that recorded commit (`git merge <commit>`). Just before the push, fetch

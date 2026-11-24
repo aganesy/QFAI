@@ -205,7 +205,7 @@ describe("qfai-sdd writes the story tree", () => {
       // The register merge takes the base from the pull request and fetches it first,
       // so a stale remote-tracking ref cannot hide a base that has moved.
       expect(text).toContain(
-        "Read the base repository and base branch from the pull request's own metadata, never an assumed `origin/main`.",
+        "Read the base repository and base branch from the metadata of the branch's own pull request, never an assumed `origin/main`.",
       );
       expect(text).toContain(
         "Fetch that branch from the remote for that repository (`git fetch <remote> <base>`) and record the commit it fetched (`git rev-parse FETCH_HEAD`); a local remote-tracking ref alone may be stale.",

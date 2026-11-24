@@ -230,8 +230,8 @@ Parallel branches pick the same next ID unless each reads the others first:
    its own item and every reference to it, then runs the gates again.
 3. A conflict confined to `decisions.md`, its pages or `open-questions.md` is
    resolved by merging the base locally: the union merge keeps both sides'
-   rows. Read the base repository and base branch from the pull request's own
-   metadata, never an assumed `origin/main`. Fetch that branch from the remote
+   rows. Read the base repository and base branch from the metadata of the
+   branch's own pull request, never an assumed `origin/main`. Fetch that branch from the remote
    for that repository (`git fetch <remote> <base>`) and record the commit it
    fetched (`git rev-parse FETCH_HEAD`); a local remote-tracking ref alone may
    be stale. Merge that recorded commit (`git merge <commit>`). Just before the
