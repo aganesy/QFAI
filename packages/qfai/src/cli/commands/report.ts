@@ -160,7 +160,9 @@ function buildMissingInputGuidance(
 
 /**
  * Write the report and return an exit code by the same criteria as `validate`.
- * 0 = gate passed, 1 = gate failed, 2 = usage error or missing input validate.json.
+ * 0 = gate passed, 1 = gate failed, 2 = a refusal before any report is written
+ * (no story tree, a bad --base-url or --flow, a missing input validate.json, or
+ * an input of another scope or profile).
  */
 export async function runReport(options: ReportOptions): Promise<number> {
   const root = path.resolve(options.root);
