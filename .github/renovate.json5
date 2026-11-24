@@ -208,10 +208,10 @@
   dependencyDashboardTitle: "Dependency dashboard",
 
   vulnerabilityAlerts: {
-    // A known-exploitable advisory does not wait for Monday, and does not wait three days for the
-    // fix to settle either. Automerge is INHERITED from the top level rather than restated: this
-    // block lists what differs from the ordinary path, and a security fix merging on a green CI
-    // run is the ordinary path, reached sooner.
+    // A known-exploitable advisory does not wait three days for the fix to settle. Automerge is
+    // INHERITED from the top level rather than restated: this block lists what differs from the
+    // ordinary path, and a security fix merging on a green CI run is the ordinary path, reached
+    // sooner.
     //
     // `enabled` is STATED here, and it is the one key in this block that is not about timing.
     // This whole block is applied as a forced override, so it is the only thing that reaches a
