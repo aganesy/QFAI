@@ -36,6 +36,7 @@
     "tests/integration/surfaceReviewChecklist.test.ts",
     "tests/integration/refusedArgumentUsage.test.ts",
     "tests/integration/initStagingCleanup.test.ts",
+    "tests/integration/sddPreflightAfterMkdir.test.ts",
     "tests/core/sqlContractStructure.test.ts",
     "tests/core/contractRoot.test.ts",
     "tests/assets/uiProcurementCompatibility.test.ts",

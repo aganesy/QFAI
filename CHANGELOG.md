@@ -679,6 +679,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   from an earlier `qfai validate`, and this is now the documented behaviour.
   Closes #5361.
 
+- **`qfai sdd preflight` no longer says "Nothing was written" after creating
+  directories.** When its output-directory check failed after it had created
+  `<outDir>/preflight/`, the error still said nothing was written. A check that
+  fails at that point now says "No summary was written." Closes #5626.
+
 - **The `tech.md` placeholder check counts only the template's own slots and
   quotes what it flags.** `QFAI-ASSETS-003` treated any `<...>` in the
   contract-layer `tech.md` as an unfilled slot, so a generic path such as

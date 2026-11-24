@@ -349,7 +349,9 @@ async function publishPreflightSummary(run: PreflightRun, body: string): Promise
  * or a junction would carry every write to wherever it points: `mkdir` and
  * `writeFile` both follow it. So each component is `lstat`-ed before and after
  * creating the directory, and the directory's real path is checked against the
- * start's. No summary is written when a check fails.
+ * start's. No summary is written when a check fails. A check that fails
+ * after `mkdir` says only that: `mkdir` may already have created directories
+ * on the way, so "Nothing was written" would not be true.
  *
  * Ceiling: this is a check, then writes. Another process that swaps a checked
  * directory for a link after the check is not caught: `mkdir`, the run
@@ -370,24 +372,33 @@ async function ensureDirectoryWithin(
   const walkFrom = insideRoot ? root : path.dirname(reportRoot);
   const probe = path.join(directory, PREFLIGHT_SUMMARY_FILE);
 
-  await refuseBlockedComponent(root, walkFrom, probe);
+  await refuseBlockedComponent(root, walkFrom, probe, NOTHING_WRITTEN);
   await mkdir(directory, { recursive: true });
-  await refuseBlockedComponent(root, walkFrom, probe);
+  await refuseBlockedComponent(root, walkFrom, probe, NO_SUMMARY_WRITTEN);
 
   if (!isInside(await realpath(containment), await realpath(directory))) {
     throw new Error(
       `${toDisplayPath(root, directory)} resolves outside ${toDisplayPath(root, containment)}, ` +
         "so the preflight summary would be written outside the output directory. " +
-        "Nothing was written. Replace the linked directory with a real one, or set paths.outDir to one.",
+        `${NO_SUMMARY_WRITTEN} Replace the linked directory with a real one, or set paths.outDir to one.`,
     );
   }
 }
 
-/** Stop, naming the component and why, when a component on `probe`'s path is unsafe. */
+/** What a refusal before `mkdir` says was written. */
+const NOTHING_WRITTEN = "Nothing was written.";
+/** What a refusal after it says: `mkdir` may have created directories, but no summary. */
+const NO_SUMMARY_WRITTEN = "No summary was written.";
+
+/**
+ * Stop, naming the component and why, when a component on `probe`'s path is
+ * unsafe. `written` says what the run has written so far.
+ */
 async function refuseBlockedComponent(
   root: string,
   walkFrom: string,
   probe: string,
+  written: string,
 ): Promise<void> {
   const entry = await blockedAncestor(walkFrom, probe);
   if (entry === undefined) return;
@@ -395,13 +406,13 @@ async function refuseBlockedComponent(
   if ((await lstat(entry)).isSymbolicLink()) {
     throw new Error(
       `${shown} is a symbolic link or junction, so the preflight summary would be written ` +
-        "outside the output directory. Nothing was written. " +
+        `outside the output directory. ${written} ` +
         "Replace it with a real directory, or set paths.outDir to one.",
     );
   }
   throw new Error(
     `${shown} is not a directory, so the preflight output directory cannot be created. ` +
-      "Nothing was written. Move it aside, or set paths.outDir to a directory.",
+      `${written} Move it aside, or set paths.outDir to a directory.`,
   );
 }
 
