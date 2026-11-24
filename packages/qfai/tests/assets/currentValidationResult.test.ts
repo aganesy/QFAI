@@ -67,7 +67,10 @@ describe("readers of a validation result read the one the current command wrote"
 
   it("gate failure autorepair inspects the failing run's own result", async () => {
     const protocol = await read("rule/references/gate-failure-autorepair.md");
-    const inspect = protocol.split("\n").find((line) => line.startsWith("- inspect exit code"));
+    // The bullet runs from its marker to the next bullet.
+    const inspect = protocol
+      .split(/\n(?=- )/)
+      .find((item) => item.startsWith("- inspect exit code"));
     expect(inspect).toBeDefined();
     expect(inspect).toContain("output.validateJsonPath");
     expect(inspect).toContain("`profile`");
