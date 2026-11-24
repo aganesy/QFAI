@@ -277,7 +277,9 @@ describe("qfai doctor reports the jobs the shipped workflows start per pull requ
       const check = await costCheck(root);
 
       expect(check?.severity).toBe("info");
-      expect(check?.message).toContain(`${name} could not be counted`);
+      expect(check?.message).toContain(
+        `${name} could not be counted: the file, its triggers, one of its job conditions or a job's matrix is not one this check reads.`,
+      );
       expect(check?.message).not.toContain(`${name} starts`);
     }
   });
