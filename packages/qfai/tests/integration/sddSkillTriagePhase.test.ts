@@ -70,8 +70,12 @@ describe("qfai-sdd triage surface", () => {
   // QFAI:EX-0001-0147-47
   it("resolves a register-only conflict by merging the base, with no row edited", async () => {
     const conflicts = flat(sectionOf(await triage(), "### Register conflicts"));
-    expect(conflicts).toContain("`git merge origin/<base>`");
-    expect(conflicts).toContain("the union merge keeps both sides' rows. Push the merge.");
+    expect(conflicts).toContain("the union merge keeps both sides' rows.");
+    expect(conflicts).toContain(
+      "record the commit it fetched (`git rev-parse FETCH_HEAD`); a local remote-tracking ref alone may be stale.",
+    );
+    expect(conflicts).toContain("Merge that recorded commit (`git merge <commit>`).");
+    expect(conflicts).toContain("only then push the merge.");
     expect(conflicts).toContain(
       "Renumber no row, and edit or move none, except to delete again a question row the union merge kept although one side deleted it",
     );

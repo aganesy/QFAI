@@ -229,8 +229,15 @@ Parallel branches pick the same next ID unless each reads the others first:
    against the merged base. The base's item keeps its ID; the branch renumbers
    its own item and every reference to it, then runs the gates again.
 3. A conflict confined to `decisions.md`, its pages or `open-questions.md` is
-   resolved by `git merge origin/<base>` run locally: the union merge keeps
-   both sides' rows. Push the merge. Renumber, edit or move no register row.
+   resolved by merging the base locally: the union merge keeps both sides'
+   rows. Read the base repository and base branch from the pull request's own
+   metadata, never an assumed `origin/main`. Fetch that branch from the remote
+   for that repository (`git fetch <remote> <base>`) and record the commit it
+   fetched (`git rev-parse FETCH_HEAD`); a local remote-tracking ref alone may
+   be stale. Merge that recorded commit (`git merge <commit>`). Just before the
+   push, fetch the base again: when it no longer points to the recorded
+   commit, record the new commit and merge it in the same way first; only then
+   push the merge. Renumber, edit or move no register row.
 
 ## Pre-draft grilling
 
