@@ -36,17 +36,28 @@ import { removeTempTree } from "../helpers/tempTree.js";
 
 type FsPromises = typeof fsPromises;
 
-const { renameSpy } = vi.hoisted(() => ({ renameSpy: vi.fn() }));
+const { renameSpy, lstatFault } = vi.hoisted(() => ({
+  renameSpy: vi.fn(),
+  lstatFault: { refuses: (_target: string): boolean => false },
+}));
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
-  return { ...actual, rename: (...args: unknown[]) => renameSpy(actual, ...args) };
+  return {
+    ...actual,
+    rename: (...args: unknown[]) => renameSpy(actual, ...args),
+    lstat: (...args: Parameters<FsPromises["lstat"]>): ReturnType<FsPromises["lstat"]> =>
+      lstatFault.refuses(String(args[0]))
+        ? Promise.reject(Object.assign(new Error("simulated EACCES"), { code: "EACCES" }))
+        : actual.lstat(...args),
+  };
 });
 
 beforeEach(() => {
   renameSpy.mockImplementation((actual: FsPromises, from: string, to: string) =>
     actual.rename(from, to),
   );
+  lstatFault.refuses = () => false;
 });
 
 const SKILL = "qfai-implement";
@@ -148,6 +159,40 @@ describe("qfai init --force over a project-owned wrapper", () => {
       expect((await lstat(wrapper)).isFile()).toBe(true);
       expect(await readFile(wrapper, "utf-8")).toBe("project agent\n");
       expect(await holdsBeside(wrapper)).toEqual([]);
+    });
+  });
+
+  it("keeps the held wrapper and the link error when the hold cannot be inspected", async () => {
+    // The put-back inspects the held entry first. An `EACCES` there is not "nothing held"
+    // any more: it stops the put-back, and the restore reports it instead of throwing over
+    // the link error that started the rollback.
+    await withInitializedProject(async (root) => {
+      const wrapper = await firstAgentWrapper(root);
+      await rm(wrapper);
+      await writeFile(wrapper, "project agent\n", "utf-8");
+      let refused = false;
+      const writer = refusingAt(wrapper);
+      lstatFault.refuses = (target) => refused && target.startsWith(`${wrapper}.qfai-repair-`);
+
+      await expect(
+        captureStdout(() =>
+          runInit(
+            { dir: root, force: true, dryRun: false, yes: true },
+            {
+              createSymlink: (target, linkPath, type) => {
+                if (path.resolve(String(linkPath)) === path.resolve(wrapper)) refused = true;
+                return writer(target, linkPath, type);
+              },
+            },
+          ),
+        ),
+      ).rejects.toThrow("simulated EIO");
+      lstatFault.refuses = () => false;
+
+      const holds = await holdsBeside(wrapper);
+      expect(holds).toHaveLength(1);
+      const held = path.join(path.dirname(wrapper), holds[0] ?? "", path.basename(wrapper));
+      expect(await readFile(held, "utf-8")).toBe("project agent\n");
     });
   });
 

@@ -758,6 +758,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   shows both: `pnpm approve-builds`, or `"@jackchuka/mdschema": false` under
   `allowBuilds` in `pnpm-workspace.yaml`. Closes #5227.
 
+- **Init's path guards stop on a path they cannot inspect.** The checks that
+  keep `qfai init`, the run log, the graph files and the migration from writing
+  through a link read every `lstat` failure as "nothing there", so an `EACCES`
+  or an `EIO` on a directory let the write go ahead unseen. Only a missing entry
+  counts as absent now; any other failure stops the command with the path and
+  the cause. Closes #5616.
+
 - **The `validate.json` guide lists `flowIds`.** The guide calls itself the
   source for the file's keys but left out `flowIds`, which a `--flow` run
   writes and `qfai report` checks before it reads the file. Its top-level table

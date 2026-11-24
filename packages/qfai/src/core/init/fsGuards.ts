@@ -10,17 +10,22 @@ import { hasErrnoCode, isEnoent, isEperm } from "../fs/errno.js";
 /**
  * The first component of `target` at or below `destRoot` that is a symbolic
  * link, or `null` when every one of them is an ordinary directory or file.
+ *
+ * A component that is missing, or is not a directory, ends the walk: nothing
+ * below it can exist. One that cannot be inspected throws (see
+ * {@link safeLstat}).
  */
 export async function firstLinkedComponent(
   target: string,
   destRoot: string,
 ): Promise<string | null> {
-  const relative = path.relative(destRoot, target);
-  let walked = destRoot;
-  for (const segment of relative.split(path.sep)) {
-    walked = path.join(walked, segment);
-    const entry = await lstat(walked).catch(() => null);
-    if (entry?.isSymbolicLink() === true) return walked;
+  const segments = path.relative(destRoot, target).split(path.sep);
+  for (let depth = 1; depth <= segments.length; depth += 1) {
+    const walked = path.join(destRoot, ...segments.slice(0, depth));
+    const entry = await lstatOrAbsent(walked, segments.slice(0, depth).join("/"));
+    if (entry === undefined) return null;
+    if (entry.isSymbolicLink()) return walked;
+    if (!entry.isDirectory()) return null;
   }
   return null;
 }
@@ -156,11 +161,33 @@ export function isEpermOnWindows(err: unknown, platform = process.platform): boo
   return platform === "win32" && isEperm(err);
 }
 
+/**
+ * The `lstat` of `target`, or `undefined` when nothing is there.
+ *
+ * Only a missing entry is absent: `ENOENT`, or `ENOTDIR`, which says a
+ * component above it is not a directory, so the entry cannot exist either. Any
+ * other failure, an `EACCES` from a directory that denies the lookup or a
+ * transient `EIO`, throws with the path and the cause. Reading it as "nothing
+ * there" let a guard pass a path it never saw.
+ */
 export async function safeLstat(target: string): Promise<Stats | undefined> {
+  return await lstatOrAbsent(target, target);
+}
+
+/**
+ * {@link safeLstat}, naming the path as `shown` in the error. The guards pass
+ * the path relative to the project: an absolute one carries the destination
+ * directory's own name, which on an untrusted repository can hold a newline or
+ * an ANSI escape.
+ */
+async function lstatOrAbsent(target: string, shown: string): Promise<Stats | undefined> {
   try {
     return await lstat(target);
-  } catch {
-    return undefined;
+  } catch (err: unknown) {
+    if (isEnoent(err) || (hasErrnoCode(err) && err.code === "ENOTDIR")) {
+      return undefined;
+    }
+    throw new Error(`${shown} could not be inspected: ${describeError(err)}`, { cause: err });
   }
 }
 
@@ -193,7 +220,8 @@ export type UnsafeComponent = { readonly relativePath: string; readonly symlink:
  * step whole rather than writing part of it somewhere unexpected.
  *
  * A component that does not exist yet ends the walk: `mkdir` creates real
- * directories, and nothing below an absent parent can exist either.
+ * directories, and nothing below an absent parent can exist either. A
+ * component that cannot be inspected throws (see {@link safeLstat}).
  *
  * The answer names the component by its path relative to `destRoot`. An
  * absolute path carries the destination directory's own name, which on an
@@ -206,7 +234,10 @@ export async function findUnsafeWrapperComponent(
   const segments = relativeDir.split("/");
   for (let depth = 1; depth <= segments.length; depth += 1) {
     const relativePath = segments.slice(0, depth).join("/");
-    const stats = await safeLstat(path.join(destRoot, ...segments.slice(0, depth)));
+    const stats = await lstatOrAbsent(
+      path.join(destRoot, ...segments.slice(0, depth)),
+      relativePath,
+    );
     if (stats === undefined) {
       return undefined;
     }
@@ -235,7 +266,7 @@ export async function findUnreachableHostDirComponent(
   for (let depth = 1; depth <= segments.length; depth += 1) {
     const relativePath = segments.slice(0, depth).join("/");
     const absolute = path.join(destRoot, ...segments.slice(0, depth));
-    const stats = await safeLstat(absolute);
+    const stats = await lstatOrAbsent(absolute, relativePath);
     if (stats === undefined) {
       return undefined;
     }
@@ -267,7 +298,7 @@ export async function findUnsafeHostFileComponent(
   if (unsafeParent !== undefined) {
     return unsafeParent;
   }
-  const leaf = await safeLstat(path.join(destRoot, ...segments));
+  const leaf = await lstatOrAbsent(path.join(destRoot, ...segments), segments.join("/"));
   return leaf?.isSymbolicLink() === true
     ? { relativePath: segments.join("/"), symlink: true }
     : undefined;
