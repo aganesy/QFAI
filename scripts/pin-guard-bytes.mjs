@@ -116,16 +116,34 @@ function digestOf(root, rel) {
  * the declaration would stop the run as unparseable JSON after the list was
  * already written.
  */
+/**
+ * `rel` and every repository module it imports by a relative specifier, followed
+ * transitively, as repo-relative POSIX paths. A specifier naming no file is left
+ * out: a conflicted import line can name a module only one side has.
+ */
+function withLocalImports(root, rel, seen = new Set()) {
+  if (seen.has(rel) || !existsSync(path.join(root, rel))) return seen;
+  seen.add(rel);
+  const source = readFileSync(path.join(root, rel), "utf-8");
+  for (const [, specifier] of source.matchAll(/\bfrom\s+["'](\.{1,2}\/[^"']+)["']/g)) {
+    withLocalImports(root, path.posix.join(path.posix.dirname(rel), specifier), seen);
+  }
+  return seen;
+}
+
 async function pathsWithConflictMarkers(root, rels) {
   let scanner;
   try {
     scanner = await import("./check-conflict-markers.mjs");
   } catch (cause) {
-    // The scanner cannot vouch for itself when it does not load. Git's marker
-    // lines are what a merge leaves in a file that no longer parses, so they
-    // name the conflict; any other load failure is not this program's to explain.
-    const own = readFileSync(path.join(root, CONFLICT_SCANNER_REL), "utf-8");
-    if (/^(?:<{7}|={7}|>{7}|\|{7})(?: |$)/m.test(own)) return [CONFLICT_SCANNER_REL];
+    // The scanner cannot vouch for itself when it does not load, and neither
+    // can a module it imports. Git's marker lines are what a merge leaves in a
+    // file that no longer parses, so they name the conflict; any other load
+    // failure is not this program's to explain.
+    const marked = [...withLocalImports(root, CONFLICT_SCANNER_REL)].filter((rel) =>
+      /^(?:<{7}|={7}|>{7}|\|{7})(?: |$)/m.test(readFileSync(path.join(root, rel), "utf-8")),
+    );
+    if (marked.length > 0) return marked;
     throw cause;
   }
   // A binary file's bytes can hold a marker-shaped line that means nothing, so

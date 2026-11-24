@@ -208,6 +208,22 @@ describe("the git fixture helper's diagnostics", () => {
 });
 
 describe("scripts/check-doc-clarity.mjs", () => {
+  it("exits 2 and says nothing was scanned when git cannot list the tree", async () => {
+    // A repository git cannot open: listing it fails, which must not read as a clean run.
+    const dir = await newRepo({ "src/thing.ts": "export const a = 1;\n" });
+    const result = guardResultOf(
+      spawnSync("node", [SCRIPT, "--scope", "all"], {
+        cwd: dir,
+        encoding: "utf-8",
+        env: { ...process.env, GIT_DIR: path.join(dir, "no-such-git-dir") },
+      }),
+    );
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("`git ls-files` produced no list; nothing was scanned.");
+    expect(result.stdout).toBe("");
+  });
+
   it("reports an issue number in a source comment", async () => {
     const dir = await newRepo({
       "src/thing.ts": `// ${CITATION}, see #1234\nexport const a = 1;\n`,
