@@ -11,7 +11,7 @@
  *      it should, and ignores what it should via pragma / source-comment
  *      exclusions).
  */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -62,6 +62,28 @@ describe("lint-shipping invariant — actual package", () => {
       );
     }
     expect(violations).toEqual([]);
+  });
+
+  it("runs every lint-shipping test file from the lint:shipping script", async () => {
+    // The lint path runs this script, not the whole suite, so a test of the
+    // shipping lint that the script does not name never guards a pull request.
+    const manifest: unknown = JSON.parse(
+      await readFile(path.join(PKG_ROOT, "package.json"), "utf-8"),
+    );
+    const scripts =
+      typeof manifest === "object" && manifest !== null && "scripts" in manifest
+        ? manifest.scripts
+        : undefined;
+    const script =
+      typeof scripts === "object" && scripts !== null && "lint:shipping" in scripts
+        ? scripts["lint:shipping"]
+        : undefined;
+    const operands = (typeof script === "string" ? script : "").split(/\s+/);
+    const files = (await readdir(path.join(PKG_ROOT, "tests", "scripts")))
+      .filter((name) => /^lintShipping\w*\.test\.ts$/.test(name))
+      .map((name) => `tests/scripts/${name}`);
+    expect(files.length).toBeGreaterThan(1);
+    for (const file of files) expect(operands, file).toContain(file);
   });
 });
 

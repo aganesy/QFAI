@@ -15,6 +15,7 @@ import {
   aggregateArgument,
   aggregateChecks,
 } from "../helpers/aggregateChecks.js";
+import { WINDOWS_JOB, job, runOf, stepsOf } from "../integration/windowsParity/ownCi.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const helper = path.join(root, "scripts/run-lint-checks.sh");
@@ -340,6 +341,20 @@ const aggregateLanes = (profile: Profile): string[] =>
     .filter((args) => args.startsWith("ci:lint:") || args.startsWith("ci:gate:"));
 
 /**
+ * The calls the stubs recorded in `file`. A missing file means no check ran, so
+ * no stub wrote one; any other read failure is rethrown, so a run reports its
+ * cause instead of a count mismatch.
+ */
+function readCalls(file: string): string[] {
+  try {
+    return readFileSync(file, "utf-8").trim().split("\n");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+/**
  * Runs the real aggregate helper under `bash` with `argv`, with `pnpm` and
  * `node` stubbed to record each call and fail the one named `failing`.
  */
@@ -361,12 +376,7 @@ function runAggregate(
       env: { ...process.env, FAILING: failing },
     });
     expect(result.error).toBeUndefined();
-    let calls: string[] = [];
-    try {
-      calls = readFileSync(path.join(temp, "calls.txt"), "utf-8").trim().split("\n");
-    } catch {
-      // No check ran, so no stub wrote one.
-    }
+    const calls = readCalls(path.join(temp, "calls.txt"));
     return { status: result.status, calls, output: `${result.stdout}\n${result.stderr}` };
   } finally {
     rmSync(temp, { recursive: true, force: true });
@@ -542,6 +552,31 @@ describe("the aggregate helper", () => {
       expect(run.calls).toEqual([]);
     },
   );
+
+  it("runs an aggregate entry through pnpm on the Windows parity job", () => {
+    // The rows above pass the helper body to `bash -c`, which never reaches the
+    // platform shell pnpm uses for a manifest entry. Only the Windows job does.
+    const runs = stepsOf(job(WINDOWS_JOB)).flatMap((step) =>
+      runOf(step)
+        .split("\n")
+        .map((line) => line.trim()),
+    );
+    expect(runs).toContain("pnpm run ci:gate:scans");
+    expect(rootScripts()["ci:gate:scans"]).toBe(`bash ./${AGGREGATE_HELPER_REL} gate:scans`);
+  });
+
+  it("reads a missing call record as no calls and rethrows any other read failure", () => {
+    const temp = mkdtempSync(path.join(os.tmpdir(), "qfai-lint-calls-"));
+    try {
+      const file = path.join(temp, "calls.txt");
+      expect(readCalls(file)).toEqual([]);
+      // A directory in the record's place cannot be read as a file.
+      mkdirSync(file);
+      expect(() => readCalls(file)).toThrow(/EISDIR/);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("a machine without pnpm", () => {

@@ -745,6 +745,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The corpus walk compares file sizes before it reads any contents, so a file
   of another size is no longer read in full to find it changed. Closes #5204.
 
+- **`/qfai-sdd` fetches the base before it merges a register conflict.** The
+  `sdd-triage` step resolved a conflict in `decisions.md`, its pages or
+  `open-questions.md` with `git merge origin/<base>` and never said to fetch,
+  so a stale remote-tracking ref could hide a base that had moved. The step and
+  its reference now read the base repository and branch from the pull
+  request's metadata, fetch that branch, record the fetched commit, merge that
+  commit, and fetch again just before the push, merging a newer commit first,
+  as `triage-operate` does. Closes #5454.
+
 - **`qfai session-review` counts no write-redirection target as a read, and
   counts a `qfai` command after a leading assignment.** `cat x > <path>`
   counted `<path>` as a file read although the shell writes it; the target of
@@ -759,6 +768,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   error until the script is approved or declined. The README now says so and
   shows both: `pnpm approve-builds`, or `"@jackchuka/mdschema": false` under
   `allowBuilds` in `pnpm-workspace.yaml`. Closes #5227.
+
+- **Init's path guards stop on a path they cannot inspect.** The checks that
+  keep `qfai init`, the run log, the graph files and the migration from writing
+  through a link read every `lstat` failure as "nothing there", so an `EACCES`
+  or an `EIO` on a directory let the write go ahead unseen. Only a missing entry
+  counts as absent now; any other failure stops the command with the path and
+  the cause. Closes #5616.
 
 - **The `validate.json` guide lists `flowIds`.** The guide calls itself the
   source for the file's keys but left out `flowIds`, which a `--flow` run

@@ -32,7 +32,7 @@ update.
    - **Commit statuses:** read and write — Renovate writes its own branch status checks
    - **Issues:** read and write — only if the dependency dashboard is wanted (it is on by default)
    - **Dependabot alerts:** read-only — for the `vulnerabilityAlerts` block, which opens security
-     fixes immediately instead of waiting for Monday
+     fixes without the three-day release age ordinary updates wait out
 
    Using a **classic** token instead? The equivalent is exactly two scopes: `repo` and `workflow`.
    The same warning applies to `workflow`, for the same reason.

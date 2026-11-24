@@ -391,7 +391,10 @@ async function restoreHeldLink(args: {
   cause?: unknown;
 }): Promise<void> {
   const { hold, sidecar, linkPath, type, note, createSymlink } = args;
-  const failure = await putBackHeldEntry(sidecar, linkPath, type, createSymlink);
+  // An entry that cannot be inspected throws from `safeLstat`; that is a failed put-back too.
+  const failure = await putBackHeldEntry(sidecar, linkPath, type, createSymlink).catch(
+    (err: unknown) => err,
+  );
   if (failure === null) {
     await discardHold(hold, linkPath, note);
     return;
