@@ -1112,6 +1112,33 @@ describe("the gaps a host's record shapes and a shell line's syntax leave", () =
     ]);
   });
 
+  it("reads the target of < as a read and the target of >, >> or &> as no read", () => {
+    expect(pathsInCommand("cat src/x.ts > .agents/rules/a.md", FACTS)).toEqual([]);
+    expect(pathsInCommand("cat src/x.ts >> .agents/rules/a.md", FACTS)).toEqual([]);
+    expect(pathsInCommand("cat src/x.ts &> .agents/rules/a.md", FACTS)).toEqual([]);
+    expect(pathsInCommand("cat src/x.ts 2>.agents/rules/a.md", FACTS)).toEqual([]);
+    expect(pathsInCommand("cat .agents/rules/a.md > .agents/rules/b.md", FACTS)).toEqual([
+      ".agents/rules/a.md",
+    ]);
+    expect(pathsInCommand("wc -l < .agents/rules/a.md", FACTS)).toEqual([".agents/rules/a.md"]);
+    expect(pathsInCommand(`bash -c "cat src/x.ts > .agents/rules/a.md"`, FACTS)).toEqual([]);
+  });
+
+  it("counts a qfai command and its status after leading NAME=value assignments", () => {
+    expect(qfaiCommandsIn("CI=1 npx qfai validate")).toEqual(["qfai validate"]);
+    expect(qfaiCommandsIn("CI=1 FOO='a b' qfai workflow plan")).toEqual(["qfai workflow plan"]);
+    expect(qfaiCommandsIn("cd app && CI=1 npx qfai report")).toEqual(["qfai report"]);
+    expect(qfaiCommandsIn("echo CI=1 npx qfai validate")).toEqual([]);
+    const events: SessionEvents = {
+      ...emptyEvents(),
+      calls: [{ id: "x", name: "Bash", command: "CI=1 npx qfai validate" }],
+      results: [{ id: "x", isError: true, text: "Exit code 1", exitCode: 1 }],
+    };
+    expect(summarise(events, FACTS).qfaiCommands).toEqual([
+      { command: "qfai validate", runs: 1, exits: [{ name: "1", count: 1 }] },
+    ]);
+  });
+
   it("counts a Codex read_file call on a rule file as a read, with its result bytes", () => {
     const events = codexEvents([
       codexCall("read_file", "r1", { file_path: "/work/app/.agents/rules/grilling.md" }),
