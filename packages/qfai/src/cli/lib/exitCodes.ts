@@ -37,8 +37,9 @@ export const EXIT_CODES = {
    * warning / error, or on db-drift, which has no warning tier, anything but
    * never / error) also stops here, before any main processing.
    *
-   * Input and lock-drift errors use the same value. In report, a missing
-   * input file does too.
+   * Input and lock-drift errors use the same value. In report, so does every
+   * refusal before a report is written: a missing input file, a bad --flow, an
+   * input of another scope or profile, a bad --base-url, and no story tree.
    */
   inputError: 2,
   /** Init could not read or write a required file or directory. */
@@ -88,9 +89,14 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     lines: [
       `${EXIT_CODES.ok} = success, or findings below the --fail-on threshold,`,
       `${EXIT_CODES.findings} = the findings reach the --fail-on threshold (the report is still written),`,
-      "      the input validate.json is corrupt or off-schema, or a runtime error",
-      "      (a read or write I/O failure),",
-      `${EXIT_CODES.inputError} = the input validate.json is missing (--in, or the config default)`,
+      "      the input validate.json is corrupt or off-schema, a runtime error",
+      "      (a read or write I/O failure), or under --run-validate an installed qfai that is not",
+      "      the version the lockfile pins, even under --fail-on never,",
+      `${EXIT_CODES.inputError} = the input validate.json is missing (--in, or the config default),`,
+      "      a --flow value is not a BF-NNNN ID or names an undeclared flow, the input records",
+      "      other flows than the requested ones, a flow-scoped input records another profile",
+      "      than --profile, --base-url is not an absolute http or https URL, or the project",
+      "      has no story tree (still the 1.x spec-pack layout, say)",
     ],
   },
   {

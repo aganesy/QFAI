@@ -162,7 +162,7 @@ async function fixture(): Promise<{ dir: string; log: string }> {
     // plain array, so the two agree and neither imports anything but the knobs and each other.
     [
       `import { rootKnobs } from "${knobs}";`,
-      `import projects from "./vitest.workspace";`,
+      `import projects from "./vitest.workspace.ts";`,
       ``,
       `export default {`,
       `  test: { ...rootKnobs, projects },`,
