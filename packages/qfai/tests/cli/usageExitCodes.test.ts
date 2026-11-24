@@ -138,7 +138,8 @@ describe("qfai --help exit-code section", () => {
     // not only for a missing input file.
     expect(exitTwo).toMatch(/the input validate\.json is missing/);
     expect(exitTwo).toMatch(/a --flow value[\s\S]*?not a BF-NNNN ID[\s\S]*?undeclared flow/);
-    expect(exitTwo).toMatch(/records other flows[\s\S]*?another profile/);
+    // The row wraps, so a phrase may continue on the next, indented line.
+    expect(exitTwo).toMatch(/records\s+other flows[\s\S]*?another\s+profile/);
     expect(exitTwo).toMatch(/--base-url/);
     expect(exitTwo).toMatch(/1\.x spec-pack layout/);
     // main.ts stops `report --run-validate` with 1 on a stale install, before
