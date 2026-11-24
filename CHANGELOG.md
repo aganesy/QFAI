@@ -660,6 +660,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The corpus walk compares file sizes before it reads any contents, so a file
   of another size is no longer read in full to find it changed. Closes #5204.
 
+- **`qfai session-review` counts no write-redirection target as a read, and
+  counts a `qfai` command after a leading assignment.** `cat x > <path>`
+  counted `<path>` as a file read although the shell writes it; the target of
+  `>`, `>>` or `&>` is no longer a read, and the target of `<` still is.
+  `CI=1 npx qfai validate` was not counted as a `qfai` command, so neither its
+  run nor its exit status was recorded; the `NAME=value` words that lead a
+  command are now skipped first. Closes #5487.
+
 - **The README says pnpm 11 stops on mdschema's install script.** It said pnpm
   only reports the `@jackchuka/mdschema` install script as unapproved. pnpm 11
   turned `strictDepBuilds` on by default, so `pnpm add qfai` exits with an
