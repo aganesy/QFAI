@@ -24,7 +24,6 @@ import { isIncompleteRunResult } from "../lib/warnings.js";
 import { error, info, warn } from "../../core/logger.js";
 import { parseJsonText } from "../../shared/jsonText.js";
 import {
-  finishValidationResult,
   scopedReportPath,
   validateProjectOrIncomplete,
   validationResultPaths,
@@ -304,7 +303,7 @@ async function runValidateForReport(
   const ciProfileIssue = buildCiProfileIssue(options.profile);
   // A run the validators could not finish still writes its verdict, so the
   // clean result of an earlier run is not left in place to be read as this one.
-  const validated = await validateProjectOrIncomplete(
+  const normalized = await validateProjectOrIncomplete(
     root,
     configResult,
     {
@@ -313,7 +312,6 @@ async function runValidateForReport(
     },
     "report",
   );
-  const normalized = await finishValidationResult(root, validated, options.profile);
   const resultPaths = validationResultPaths(
     configResult.config.output.validateJsonPath,
     flowIds,

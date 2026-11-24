@@ -609,6 +609,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file that calls it, directly or through another routine, raises the warning.
   Closes #5180.
 
+- **A fault after the validators finish is now an unfinished run, not a
+  crash.** When `qfai validate` or `qfai report --run-validate` failed to read
+  the filesystem while finishing its result, for the coverage notice, the error
+  escaped the command: it wrote no `validate.json` and printed no `counts:` or
+  `run-log:`. That fault is now reported as the `QFAI-SCAN-002` incomplete-run
+  error a validator fault gives, written to `validate.json`, and the command
+  fails under every `--fail-on` except `never`. Closes #5360.
+
 - **The test-layer rule and the gate failure protocol read the validation
   result the current run wrote.** Both told the reader to inspect the fixed
   `.qfai/report/validate.json`, which is only the default path and holds
