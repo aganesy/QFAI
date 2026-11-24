@@ -53,7 +53,7 @@ describe("architectural rules have one story-tree home", () => {
         "A layer boundary is a row of tech.md `## Architecture`",
       );
       expect(await read("skill/qfai-configure/SKILL.md")).toContain(
-        "Fill `## Architecture` of `03_contract/tech.md` from the codebase",
+        "Fill `## Architecture` of `<paths.contractsDir>/tech.md` from the codebase",
       );
       expect(await read("step/implement-tdd/STEP.md")).toContain(
         "import only from the layers that layer's row lists",

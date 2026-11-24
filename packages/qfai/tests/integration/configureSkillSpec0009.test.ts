@@ -171,7 +171,9 @@ describe("Project context is populated from evidence", () => {
   it("SKILL.md uses the story-tree policy and contract files", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(content).toContain(".qfai/spec/01_policy/objective.md");
-    expect(content).toContain(".qfai/spec/03_contract/tech.md");
+    expect(content).toContain("`<paths.contractsDir>/tech.md`");
+    // A configured contracts directory is followed: no contract path is fixed to the default layout.
+    expect(content).not.toContain("03_contract/");
     expect(content).not.toContain(".qfai/assistant/catalog/");
     expect(content).toMatch(/Fill.*verifiable.*evidence/i);
   });
@@ -190,7 +192,7 @@ describe("Project context is populated from evidence", () => {
       "It holds no rule and no constraint; a constraint goes to `01_policy/constraint.md`.",
     );
     expect(flat(content)).toContain(
-      "Keep quality-gate commands solely in `03_contract/tech.md` under Standard commands.",
+      "Keep quality-gate commands solely in `<paths.contractsDir>/tech.md` under Standard commands.",
     );
   });
 
@@ -199,10 +201,10 @@ describe("Project context is populated from evidence", () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(defaultConfig.paths.contractsDir).toBe(".qfai/spec/03_contract");
     expect(section(content, "Success Criteria")).toContain(
-      "Keep quality-gate commands solely in `03_contract/tech.md` under Standard commands.",
+      "Keep quality-gate commands solely in `<paths.contractsDir>/tech.md` under Standard commands.",
     );
     expect(flat(content)).toContain(
-      "- [ ] Standard commands recorded only in `03_contract/tech.md`.",
+      "- [ ] Standard commands recorded only in `<paths.contractsDir>/tech.md`.",
     );
     expect(section(content, "Step 3")).toContain(
       "When evidence is missing, write `TBD` and record what is missing.",
@@ -250,8 +252,18 @@ describe("Story-tree test discovery", () => {
     expect(content).toContain("BF needs E2E coverage");
     expect(content).toContain("AC needs integration or API coverage");
     expect(content).toContain("EX needs a selected non-E2E test");
-    expect(content).toContain("03_contract/tech.md");
+    expect(content).toContain("<paths.contractsDir>/tech.md");
     expect(content).not.toContain(".qfai/specs/");
+  });
+});
+
+describe("Context Refresh", () => {
+  it("points to the Definition of Done instead of restating it", async () => {
+    const refresh = section(await readFile(SKILL_PATH, "utf-8"), "Context Refresh");
+    expect(refresh).toContain(
+      "Which Success Criteria (Definition of Done) and Not-done criteria items above are met and which are open; read them there, do not copy them",
+    );
+    expect(refresh).not.toContain('prohibited "done" criteria');
   });
 });
 
