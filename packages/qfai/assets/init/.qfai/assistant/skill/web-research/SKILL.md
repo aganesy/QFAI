@@ -286,20 +286,9 @@ Increase only when the target environment can sustain higher concurrency.
 
 ## 11. Progressive Disclosure
 
-SKILL.md files follow a **progressive disclosure** loading strategy:
-
-- **Metadata-only on load**: When the skill roster is scanned, only the YAML
-  front-matter (metadata) is parsed. The full body is not read into context.
-- **Full body on task start**: The complete skill body is loaded only when the
-  user invokes the skill command or a matching task is dispatched.
-
-### 11.1 Invalid SKILL.md Handling
-
-If the YAML front-matter is **invalid** or produces a **parse error** (malformed
-YAML), the loader reports the parse error with its details (the YAML error
-message and its location) to the session log and activates
-**default behavior** as a fallback. The skill is still listed in the roster
-but operates with built-in defaults until the YAML is corrected.
+Read `references/skill-loading.md` when a question turns on how this skill
+reached the context, or when its front matter fails to parse: it says what the
+roster scan reads, when the body loads, and the fallback for a parse error.
 
 ## 12. Secret Exclusion and Log Hygiene
 
@@ -315,17 +304,9 @@ rules apply:
 
 ## 13. Golden Task Evaluation
 
-**Golden task** sets are curated query-answer pairs, each with its expected
-sources and citations, used for regression evaluation. Each golden task is
-scored against 4 metrics:
-
-- **Citation precision** — accuracy of generated citations.
-- **Coverage** — completeness of query facet coverage.
-- **Freshness** — recency of cited sources.
-- **Security hygiene** — sanitization pass rate.
-
-Each score is compared with its target in Section 5, and the scores and the
-comparison are reported with the evaluation run.
+Read `references/golden-task-evaluation.md` before you run or report a golden
+task evaluation: it says what a golden task holds and how it is scored against
+the targets in Section 5.
 
 ## Evidence
 

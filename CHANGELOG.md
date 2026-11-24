@@ -374,6 +374,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   merge commit, each check run of the head commit with its conclusion when it
   merged. Part of #4399.
 
+- **`web-research` loads its skill-loading and golden-task detail only when it
+  needs them.** How the skill is loaded (what the roster scan reads, when the
+  body loads, and the fallback for a front matter that does not parse) moved
+  from the skill body into `web-research/references/skill-loading.md`, and how
+  a golden task evaluation is scored moved into
+  `web-research/references/golden-task-evaluation.md`. The skill reads each
+  reference when its condition holds, and its start load now sits about 1,200
+  characters under its 62,000-character budget instead of about 340.
+
 - **Settled work that adds screens gets the design and prototype stages.**
   The extraction has a new qualifier, `new-screens`, for a settled change that
   adds new UI contracts or new routes users see: an approved record with a

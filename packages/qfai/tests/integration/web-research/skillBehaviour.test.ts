@@ -123,9 +123,16 @@ async function serverEntries(
 }
 
 let skill = "";
+let skillLoading = "";
+let goldenTaskEvaluation = "";
 
 beforeAll(async () => {
-  skill = await readFile(skillPath, "utf-8");
+  const referenceDir = path.join(path.dirname(skillPath), "references");
+  [skill, skillLoading, goldenTaskEvaluation] = await Promise.all([
+    readFile(skillPath, "utf-8"),
+    readFile(path.join(referenceDir, "skill-loading.md"), "utf-8"),
+    readFile(path.join(referenceDir, "golden-task-evaluation.md"), "utf-8"),
+  ]);
 });
 
 describe("web-research skill behaviour", () => {
@@ -362,7 +369,11 @@ describe("web-research skill behaviour", () => {
     expect(meta.description).toEqual(expect.stringMatching(/\S/));
     expect(meta["allowed-tools"]).toEqual(expect.arrayContaining(["WebSearch", "WebFetch"]));
 
-    const items = bullets(sectionLines(skill, "11. Progressive Disclosure"));
+    // The skill sends the agent to the reference; the reference holds the detail.
+    expect(flatten(sectionLines(skill, "11. Progressive Disclosure"))).toContain(
+      "Read `references/skill-loading.md` when a question turns on how this skill reached the context, or when its front matter fails to parse",
+    );
+    const items = bullets(sectionLines(skillLoading, "Progressive Disclosure"));
     const roster = items.find((item) => item.startsWith("**Metadata-only on load**"));
     expect(roster).toContain("only the YAML front-matter (metadata) is parsed");
     expect(roster).toContain("The full body is not read into context");
@@ -375,7 +386,7 @@ describe("web-research skill behaviour", () => {
 
   // QFAI:AC-0001-0178-02
   it("a parse error in the front matter is reported with its details and the default behaviour applies", () => {
-    const text = flatten(sectionLines(skill, "11.1 Invalid SKILL.md Handling"));
+    const text = flatten(sectionLines(skillLoading, "Invalid SKILL.md Handling"));
     expect(text).toContain("**invalid** or produces a **parse error** (malformed YAML)");
     expect(text).toContain(
       "reports the parse error with its details (the YAML error message and its location) to the session log",
@@ -544,7 +555,10 @@ describe("web-research skill behaviour", () => {
       ["Security hygiene", "100%"],
     ]);
 
-    const section = sectionLines(skill, "13. Golden Task Evaluation");
+    expect(flatten(sectionLines(skill, "13. Golden Task Evaluation"))).toContain(
+      "Read `references/golden-task-evaluation.md` before you run or report a golden task evaluation",
+    );
+    const section = sectionLines(goldenTaskEvaluation, "Golden Task Evaluation");
     const text = flatten(section);
     expect(text).toContain(
       "curated query-answer pairs, each with its expected sources and citations",
@@ -557,7 +571,7 @@ describe("web-research skill behaviour", () => {
       "Security hygiene",
     ]);
     expect(text).toContain(
-      "Each score is compared with its target in Section 5, and the scores and the comparison are reported with the evaluation run.",
+      "Each score is compared with its target in Section 5 of the skill's `SKILL.md`, and the scores and the comparison are reported with the evaluation run.",
     );
   });
 });

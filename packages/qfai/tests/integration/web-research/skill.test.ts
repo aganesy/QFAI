@@ -20,10 +20,15 @@ async function readSkill(): Promise<string> {
   return readFile(skillPath, "utf-8");
 }
 
+/** The reference the skill reads for how it is loaded; it is not part of the start load. */
+async function readSkillLoading(): Promise<string> {
+  return readFile(path.join(path.dirname(skillPath), "references", "skill-loading.md"), "utf-8");
+}
+
 describe("web-research SKILL.md template structure", () => {
   // QFAI:EX-0001-0178-01 (TDD-0021)
   it("progressive disclosure - metadata-only on load, full body on task start", async () => {
-    const content = await readSkill();
+    const content = await readSkillLoading();
 
     // SKILL.md must describe progressive disclosure
     expect(content).toMatch(/progressive\s+disclosure/i);
@@ -34,7 +39,7 @@ describe("web-research SKILL.md template structure", () => {
 
   // QFAI:EX-0001-0178-02 (TDD-0022)
   it("invalid SKILL.md YAML parse error reported, default behavior activated", async () => {
-    const content = await readSkill();
+    const content = await readSkillLoading();
 
     // SKILL.md must mention invalid / parse error / malformed
     expect(content).toMatch(/invalid|parse\s+error|malformed/i);
