@@ -29,7 +29,8 @@ const FENCE_CLOSE_LINE = /^ {0,3}(`{3,}|~{3,})[ \t]*$/;
  * commented-out sample carries the state the same way — a second, private copy
  * of this loop is how one reader ends up parsing what another one hides.
  *
- * `closesLater` says whether a `-->` appears on a later line. Without one, a
+ * `closesLater` says whether a `-->` appears on a later line of the same
+ * paragraph, the only closer an inline comment can reach. Without one, a
  * `<!--` that does not close on its own line is literal text, as CommonMark
  * reads an inline comment that never ends: a table cell holding `<!-- or //`
  * would otherwise hide every row and heading below it.
@@ -232,10 +233,37 @@ const SINGLE_TAG_HTML_START = new RegExp(
  */
 const NON_PARAGRAPH_LINE = /^ {0,3}(?:#{1,6}(?:[ \t]|$)|=+[ \t]*$|-+[ \t]*$|(?:[-*_][ \t]*){3,}$)/;
 
+/** A block quote marker, which interrupts a paragraph. */
+const BLOCK_QUOTE_LINE = /^ {0,3}>/;
+
+/**
+ * A line that ends the paragraph above it by opening a block of its own: a
+ * blank line, a heading, a setext underline or thematic break, a fence marker,
+ * an HTML block of types 1 to 6 (a line-opening `<!--` included), a block quote
+ * or a list item. Type 7 is left out because it cannot interrupt a paragraph.
+ *
+ * SIMPLIFIED: every list item marker ends the paragraph, although CommonMark
+ * lets an ordered item interrupt one only when it starts at 1.
+ * Lift when: a document wraps a paragraph onto a line starting `2.` and needs
+ * an inline comment to run across it, which none in this tree does.
+ */
+function endsParagraph(line: string): boolean {
+  return (
+    line.trim().length === 0 ||
+    NON_PARAGRAPH_LINE.test(line) ||
+    FENCE_LINE.test(line) ||
+    COMMENT_BLOCK_START.test(line) ||
+    END_TERMINATED_HTML_BLOCKS.some(({ start }) => start.test(line)) ||
+    BLANK_TERMINATED_HTML_START.test(line) ||
+    BLOCK_QUOTE_LINE.test(line) ||
+    LIST_ITEM_LINE.test(line)
+  );
+}
+
 /**
  * For each line, whether a later line of the same paragraph holds `-->`. A
- * blank line, a heading, a setext underline or thematic break, and a fence
- * marker each end a paragraph, so an inline comment cannot reach past one.
+ * line that {@link endsParagraph} starts a new block, so an inline comment
+ * cannot reach past one, nor close on a `-->` that line holds.
  */
 function paragraphClosers(lines: readonly string[]): boolean[] {
   const ahead: boolean[] = new Array<boolean>(lines.length).fill(false);
@@ -243,7 +271,7 @@ function paragraphClosers(lines: readonly string[]): boolean[] {
   for (let index = lines.length - 1; index >= 0; index -= 1) {
     ahead[index] = closer;
     const line = lines[index] ?? "";
-    if (line.trim().length === 0 || NON_PARAGRAPH_LINE.test(line) || FENCE_LINE.test(line)) {
+    if (endsParagraph(line)) {
       closer = false;
     } else if (line.includes("-->")) {
       closer = true;
@@ -275,7 +303,8 @@ function paragraphClosers(lines: readonly string[]): boolean[] {
  * line is raw block text and opens nothing. **One opened inside a line is
  * inline:** only the comment is removed and the text after its `-->` stays. It
  * cannot outlive its paragraph, so a `<!--` whose `-->` does not follow before
- * the next blank line, heading, thematic break or fence is literal text.
+ * the next line that starts a block — a blank line, a heading, a thematic
+ * break, a fence, an HTML block, a block quote or a list item — is literal text.
  *
  * SIMPLIFIED: an inline comment runs across table rows, although GFM parses
  * each row on its own and shows a comment split over two rows as text; the
@@ -388,7 +417,7 @@ export function maskNonSpecRegions(text: string): string {
 
     // A comment that opens a line is a CommonMark HTML block, which runs to the
     // end of the document when nothing closes it; only a comment opened inside
-    // a line needs a later `-->` to be one.
+    // a line needs a `-->` later in its own paragraph to be one.
     const blockStart = !inComment && COMMENT_BLOCK_START.test(line);
     const masked = maskLineComments(line, inComment, blockStart || closerAhead[index] === true);
     const inInlineComment = inComment && !inBlockComment;

@@ -292,7 +292,35 @@ describe("maskNonSpecRegions", () => {
     const [table] = parseAllMarkdownTables(maskNonSpecRegions(text));
     expect(table?.rows).toHaveLength(3);
     expect(table?.rows[0]).toEqual(["CLI-0001", "a"]);
+    // The row the comment closes in keeps only the text after its `-->`, the
+    // simplification `maskNonSpecRegions` documents; GFM would show both rows'
+    // cells. Lifting it changes this row, so the test says so.
+    expect(table?.rows[1]).toEqual([""]);
     expect(table?.rows[2]).toEqual(["CLI-0003", "c"]);
+  });
+
+  it("ends the paragraph of a mid-line `<!--` at a line that starts another block", () => {
+    // Only a blank line, a heading, a thematic break or a fence ended the
+    // paragraph, so the `-->` of the comment block on the next line closed the
+    // inline one and the text after `x ` was lost.
+    expect(visible(["x <!-- a", "<!-- note -->", "## Scope"].join("\n"))).toEqual([
+      "x <!-- a",
+      "## Scope",
+    ]);
+    expect(visible(["x <!-- a", "<div>-->", "", "## Scope"].join("\n"))).toEqual([
+      "x <!-- a",
+      "## Scope",
+    ]);
+    expect(visible(["x <!-- a", "> b --> c", "## Scope"].join("\n"))).toEqual([
+      "x <!-- a",
+      "> b --> c",
+      "## Scope",
+    ]);
+    expect(visible(["x <!-- a", "- b --> c", "## Scope"].join("\n"))).toEqual([
+      "x <!-- a",
+      "- b --> c",
+      "## Scope",
+    ]);
   });
 
   it("reads no heading or fence in the text after a mid-line comment closes", () => {
