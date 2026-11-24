@@ -56,13 +56,14 @@ function fieldOf(cause: unknown, key: "status" | "stdout" | "stderr"): unknown {
     : undefined;
 }
 
-/** Runs the guard over `root`, whether it passes or fails. */
-function check(root: string): { status: number; output: string } {
+/** Runs the guard over `root`, with `env` over the inherited environment, whether it passes or fails. */
+function check(root: string, env: Record<string, string> = {}): { status: number; output: string } {
   try {
     return {
       status: 0,
       output: execFileSync(process.execPath, [SCRIPT], {
         cwd: root,
+        env: { ...process.env, ...env },
         encoding: "utf-8",
         stdio: ["ignore", "pipe", "pipe"],
       }),
@@ -153,6 +154,13 @@ describe("nothing under the scratch directory is tracked", () => {
       .filter((line) => /^\.qfai\/[^/]+\/\*$/.test(line))
       .map((line) => line.slice(0, -"/*".length));
     expect([...GENERATED_DIRS].sort()).toEqual(ignoredWhole.sort());
+  });
+
+  it("exits 2 when git cannot list the tree, rather than reporting a clean run", async () => {
+    const root = await repoWith({ "tmp/note.md": "# scratch\n" }, { tracked: true });
+    const { status, output } = check(root, { GIT_DIR: path.join(root, "no-such-git-dir") });
+    expect(status).toBe(2);
+    expect(output).toContain("Could not list tracked files under tmp/");
   });
 
   it("holds this repository", () => {

@@ -25,8 +25,9 @@
  * file list could not be read.
  */
 /* global console, process */
-import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
+
+import { trackedFiles } from "./lib/tracked-files.mjs";
 
 /** The directory the temporary-files rule reserves, as a message names it. */
 export const SCRATCH_PREFIX = "tmp/";
@@ -51,38 +52,19 @@ const SCRATCH_PATHSPEC = "tmp";
 export const GENERATED_DIRS = [".qfai/report", ".qfai/evidence", ".qfai/review"];
 
 /**
- * Tracked paths under the given pathspecs, or `null` when git cannot answer.
+ * Tracked paths under `tmp/`, or `null` when git cannot answer.
  *
  * `null` is a distinct outcome rather than an empty list, for the reason the
- * conflict-marker guard gives: a caller outside a repository would otherwise
- * get a clean run over nothing at all, which claims a result it never
- * established.
+ * shared listing gives: a caller outside a repository would otherwise get a
+ * clean run over nothing at all, which claims a result it never established.
  */
-export function trackedFilesUnder(pathspecs, cwd = process.cwd()) {
-  let output;
-  try {
-    output = execFileSync("git", ["ls-files", "-z", "--", ...pathspecs], {
-      cwd,
-      encoding: "buffer",
-      maxBuffer: 16 * 1024 * 1024,
-    });
-  } catch {
-    return null;
-  }
-  return output
-    .toString("utf-8")
-    .split("\0")
-    .filter((entry) => entry !== "");
-}
-
-/** Tracked paths under `tmp/`, or `null` when git cannot answer. */
 export function trackedScratchFiles(cwd = process.cwd()) {
-  return trackedFilesUnder([SCRATCH_PATHSPEC], cwd);
+  return trackedFiles(cwd, [SCRATCH_PATHSPEC]);
 }
 
 /** Tracked paths under the generated-output directories, or `null`. */
 export function trackedGeneratedFiles(cwd = process.cwd()) {
-  return trackedFilesUnder(GENERATED_DIRS, cwd);
+  return trackedFiles(cwd, GENERATED_DIRS);
 }
 
 export function run(cwd = process.cwd()) {

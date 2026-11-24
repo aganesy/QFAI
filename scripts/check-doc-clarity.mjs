@@ -37,6 +37,7 @@ import path from "node:path";
 import process from "node:process";
 
 import { headerPath } from "./lib/git-quoted-path.mjs";
+import { trackedFiles } from "./lib/tracked-files.mjs";
 
 const ROOT = process.cwd();
 
@@ -144,11 +145,6 @@ const PATTERNS = [
 
 function git(args) {
   return execFileSync("git", args, { cwd: ROOT, encoding: "utf-8", maxBuffer: 128 * 1024 * 1024 });
-}
-
-function trackedFiles() {
-  const out = git(["ls-files", "-z"]);
-  return out.split("\0").filter(Boolean);
 }
 
 function inScope(rel) {
@@ -308,8 +304,15 @@ if (scope === "changed") {
   }
 }
 
+// A tree git cannot list is a git error, not a clean run over nothing.
+const tracked = trackedFiles(ROOT);
+if (tracked === null) {
+  console.error("check-doc-clarity: `git ls-files` produced no list; nothing was scanned.");
+  process.exit(2);
+}
+
 const findings = [];
-for (const rel of trackedFiles()) {
+for (const rel of tracked) {
   if (!inScope(rel)) continue;
   if (changed !== null && !changed.has(rel)) continue;
   const linesInScope = changed?.get(rel) ?? null;

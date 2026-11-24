@@ -222,6 +222,19 @@ describe("the re-pin program, on a pinned file carrying conflict markers", () =>
     expect(result.output).toContain("scripts/check-conflict-markers.mjs");
   });
 
+  it("names a conflict in a module the scanner imports", async () => {
+    // The scanner does not load when a module it imports carries a conflict
+    // block, so the fallback reads that module too and names it.
+    await plantConflict("scripts/lib/tracked-files.mjs");
+
+    const result = await run(process.execPath, [path.join(staged, PIN), "--root", staged]);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain("nothing was pinned");
+    expect(result.output).toContain("scripts/lib/tracked-files.mjs");
+    expect(result.output).not.toContain("scripts/check-conflict-markers.mjs");
+  });
+
   it("pins as before when nothing is conflicted", async () => {
     const result = await runPin();
 
