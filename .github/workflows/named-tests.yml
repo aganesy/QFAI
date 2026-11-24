@@ -48,12 +48,14 @@ jobs:
           persist-credentials: false
       # SHIPPED-CI: not-applicable
       # Because: no shipped workflow selects tests by reading this repository's Vitest workspace configuration.
+      # SHIPPED-CI: not-applicable
+      # Because: the shipped set has no named-test diagnostic, so it reads no checkout file it would need to bound by its open handle.
       - name: Validate named test request
         run: |
           set -euo pipefail
           cat > "${RUNNER_TEMP}/named-preflight.mjs" <<'PREFLIGHT'
           import { execFileSync } from "node:child_process";
-          import { lstatSync, readFileSync, realpathSync } from "node:fs";
+          import { closeSync, fstatSync, lstatSync, openSync, readSync, realpathSync } from "node:fs";
           import path from "node:path";
           import process from "node:process";
 
@@ -89,10 +91,27 @@ jobs:
                 target = path.join(target, part);
                 if (lstatSync(target).isSymbolicLink()) throw new Error(`${label} path may not contain a symbolic link`);
               }
-              const local = lstatSync(target);
-              if (!local.isFile() || realpathSync(target) !== path.resolve(root, relative)) throw new Error(`${label} must resolve to a regular file inside the checkout`);
+              if (!lstatSync(target).isFile() || realpathSync(target) !== path.resolve(root, relative)) throw new Error(`${label} must resolve to a regular file inside the checkout`);
               const committed = execFileSync("git", ["cat-file", "blob", tracked[1]], { maxBuffer: limit });
-              if (local.size !== committed.length || !committed.equals(readFileSync(target))) throw new Error(`${label} differs from its pull request head`);
+              // Size and read go through one handle, and the read stops one byte past the committed
+              // length, so a file that grows or is swapped after the checks above is never read whole.
+              const handle = openSync(target, "r");
+              let local;
+              try {
+                const opened = fstatSync(handle);
+                if (!opened.isFile() || opened.size !== committed.length) throw new Error(`${label} differs from its pull request head`);
+                const buffer = Buffer.alloc(committed.length + 1);
+                let filled = 0;
+                while (filled < buffer.length) {
+                  const count = readSync(handle, buffer, filled, buffer.length - filled, filled);
+                  if (count === 0) break;
+                  filled += count;
+                }
+                local = buffer.subarray(0, filled);
+              } finally {
+                closeSync(handle);
+              }
+              if (!committed.equals(local)) throw new Error(`${label} differs from its pull request head`);
               return committed;
             };
             const workspace = committedFile("packages/qfai/vitest.workspace.ts", 64 * 1024, "the workspace configuration").toString("utf-8");
