@@ -600,7 +600,10 @@ describe("qfai-run", () => {
     );
     expect(extract).toMatch(/read any other request as `references\/extraction\.md`/i);
     expect(extract).toMatch(
-      /write every other required list field as `\[\]`, since `plan` refuses an omitted one, with `confidence: high`/i,
+      /write every other required list field of `entryFlags`, `qualifiers`, `signals`, `risks` and `artifacts` as `\[\]`, since `plan` refuses an omitted one, with `confidence: high`/i,
+    );
+    expect(extract).toContain(
+      "Leave out `alternatives` and `flows`: `plan` refuses either one empty, and any `alternatives` at `confidence: high`.",
     );
     const full = (fields: Partial<WorkflowExtraction>) =>
       ({
@@ -613,6 +616,13 @@ describe("qfai-run", () => {
     ];
     // The same check `plan` runs before routing: a missing field would be refused here.
     expect(shapes.map((each) => extractionFaults(each))).toEqual([[], []]);
+    // Written as `[]`, the two fields the skill says to leave out are refused.
+    expect(
+      shapes.map((each) => extractionFaults({ ...each, alternatives: [], flows: [] }).sort()),
+    ).toEqual([
+      ["alternatives", "flows"],
+      ["alternatives", "flows"],
+    ]);
     const routed = shapes.map((each) => routingOutcome(each));
     expect(routed.map((each) => ("taken" in each ? each.taken.route : undefined))).toEqual([
       "answer-in-session",

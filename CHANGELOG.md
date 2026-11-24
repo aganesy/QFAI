@@ -735,6 +735,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   warning naming the file and the cause, and the other files are still
   checked. Closes #5444.
 
+- **`qfai-run` names the list fields to write as `[]` and the two to leave
+  out.** Its first step said to write every other required list field as
+  `[]`. Followed for a docs request, that wrote `alternatives: []` and
+  `flows: []`, and `plan` refused both. The step now names `entryFlags`,
+  `qualifiers`, `signals`, `risks` and `artifacts` as the fields written as
+  `[]`, and says to leave out `alternatives` and `flows`, which `plan` refuses
+  empty, and `alternatives` at all at `confidence: high`. Closes #5413.
+
 - **`qfai init` on Windows names no rerun command PowerShell would split.**
   The recovery line of a failed graph download double-quotes a temporary
   directory that holds a space, and PowerShell also ends such a string at a
