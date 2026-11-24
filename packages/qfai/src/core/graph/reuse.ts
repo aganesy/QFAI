@@ -1,6 +1,3 @@
-import os from "node:os";
-import path from "node:path";
-
 import { randomUUID } from "node:crypto";
 import {
   cp,
@@ -13,14 +10,10 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { getInitAssetsDir } from "../../shared/assets.js";
 import { isEnoent } from "../fs/errno.js";
-import {
-  GRAPH_VERSIONS,
-  graphAnalysisRoot,
-  graphAnalysisStaging,
-  graphRuntimePaths,
-  graphEnvironmentKey,
-} from "./layout.js";
 import {
   excludedGraphInput,
   graphDeliberationDir,
@@ -28,12 +21,18 @@ import {
   nativeCodeAnalysisCurrent,
 } from "./analysis.js";
 import {
+  GRAPH_VERSIONS,
+  graphAnalysisRoot,
+  graphAnalysisStaging,
+  graphRuntimePaths,
+  graphEnvironmentKey,
+} from "./layout.js";
+import { codegraphEnvironment, type GraphProcess } from "./process.js";
+import {
   assertGraphStoragePath,
   assertIndependentAnalysis,
   replaceGraphDirectory,
 } from "./storage.js";
-import { codegraphEnvironment, type GraphProcess } from "./process.js";
-import { getInitAssetsDir } from "../../shared/assets.js";
 
 function verifiedNativeRelease(output: string): boolean {
   const release = /^v(\d+\.\d+\.\d+)$/.exec(output.trim());

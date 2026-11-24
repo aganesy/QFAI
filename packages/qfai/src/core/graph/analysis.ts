@@ -1,11 +1,11 @@
+import { lstat, mkdir, readFile, readdir, rm, rmdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { lstat, mkdir, readFile, readdir, rm, rmdir, writeFile } from "node:fs/promises";
 import { readInspectedRegularFile } from "../../shared/boundedRead.js";
 import { isDirectoryInsideRoot, loadConfig, resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
-import { GraphLocalStateError } from "./localFiles.js";
 import { GRAPH_VERSIONS, graphRuntimePaths, graphAnalysisRoot } from "./layout.js";
+import { GraphLocalStateError } from "./localFiles.js";
 import type { GraphProcess } from "./process.js";
 import { codegraphEnvironment } from "./process.js";
 import { assertGraphStoragePath, assertIndependentAnalysis, checkRefreshCopy } from "./storage.js";
