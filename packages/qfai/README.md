@@ -155,7 +155,9 @@ the command text, not the package the command runs: Claude Code does not check w
 resolves to. `npx qfai` runs the checkout's `node_modules/.bin/qfai` when there is one; without
 it, npx runs a copy outside the checkout or downloads one from the npm registry, and the entry
 allows that run without asking. `yarn qfai` runs a `qfai` script of `package.json` before a binary
-of that name. The hook below warns when the checkout has no install of its own.
+of that name. `yarn exec qfai` runs the first `qfai` on `PATH`, with the binaries of the checkout's
+installed dependencies put in front of it, so in a checkout with no install it runs a global
+`qfai` without asking. The hook below warns when the checkout has no install of its own.
 
 A third hook checks that this checkout has its own `node_modules/.bin/qfai`, or `.pnp.cjs` beside a
 `package.json` that lists `qfai`, looking up to the git root only. A fresh clone or a new worktree has no install, and `npx qfai` would then run the copy of a

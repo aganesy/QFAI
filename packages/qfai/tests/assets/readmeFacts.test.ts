@@ -402,6 +402,11 @@ describe("README facts", () => {
       expect(paragraph, readmePath).toContain("match the command text");
       expect(paragraph, readmePath).toContain("`node_modules/.bin/qfai`");
       expect(paragraph, readmePath).toContain("npm registry");
+      expect(paragraph, readmePath).toContain(
+        "`yarn qfai` runs a `qfai` script of `package.json` before a binary of that name",
+      );
+      expect(paragraph, readmePath).toContain("`yarn exec qfai` runs the first `qfai` on `PATH`");
+      expect(paragraph, readmePath).toContain("a global `qfai` without asking");
       expect(paragraph, readmePath).not.toContain("trust the launcher the project installs");
     }
   });
