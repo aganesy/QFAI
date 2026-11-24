@@ -197,6 +197,34 @@ describe("QFAI-DELIB-001 reports each layout defect", () => {
     ]);
   });
 
+  // QFAI:EX-0001-0302-19
+  it("names the stage that lacks a table when another stage holds both", async () => {
+    const text = [
+      "# Deliberation record",
+      "## Subject",
+      "Login.",
+      "## discussion-interview",
+      "### Interview",
+      table(HEADER, INTERVIEW_ROW),
+      "### Agent decisions",
+      table(HEADER, DECISION_ROW),
+      "## sdd",
+      "### Interview",
+      table(HEADER, INTERVIEW_ROW),
+      "",
+    ].join("\n\n");
+    await put(RECORD, text);
+    const found = await findings();
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({
+      code: "QFAI-DELIB-001",
+      severity: "error",
+      file: ".qfai/deliberation/20261112043225-login.md",
+    });
+    expect(found[0]?.message).toContain("the stage `sdd` has no `Agent decisions` section");
+    expect(found[0]?.message).not.toContain("discussion-interview");
+  });
+
   // QFAI:EX-0001-0302-09
   it("names the file, Agent decisions and a row of five cells", async () => {
     await put(

@@ -1281,7 +1281,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
   "QFAI-DELIB-001":
-    "Each deliberation record directly under `paths.deliberationDir` holds an `Interview` and an `Agent decisions` section, and each table in them has the columns Background, Option 1, Option 2, Option 3, Option 4 (other) and Chosen option number, in that order, with six cells per row.",
+    "Each deliberation record directly under `paths.deliberationDir` holds an `Interview` and an `Agent decisions` section under each stage subheading that holds either, and each table in them has the columns Background, Option 1, Option 2, Option 3, Option 4 (other) and Chosen option number, in that order, with six cells per row.",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
@@ -1591,7 +1591,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DELIB-001":
-    "Add the missing section, as its heading and an empty six-column table when the run has no row for it, or rewrite the named table header or row in the six-column shape the deliberation record template shows. A committed record may be edited to repair its table layout only, never its content: restore a column or a missing cell, and leave every option and answer as it was written.",
+    "Add the missing section under the named stage, or under the record when no stage is named, as its heading and an empty six-column table when the run has no row for it, or rewrite the named table header or row in the six-column shape the deliberation record template shows. A committed record may be edited to repair its table layout only, never its content: restore a column or a missing cell, and leave every option and answer as it was written.",
   "QFAI-DOCSCHEMA-002":
     "Install the qfai package with its dependencies, so @jackchuka/mdschema is present, then rerun validate.",
   // The finding already names the offending key and the release the window

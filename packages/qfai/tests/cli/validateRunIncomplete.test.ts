@@ -156,6 +156,23 @@ describe("describeIncompleteRun", () => {
     expect(described?.message).toContain("init");
   });
 
+  // QFAI:EX-0001-0039-67
+  it("gives the worktree advice to EPERM alone", () => {
+    // A permission fault on a configured directory is not the Windows worktree
+    // case, and `qfai init` does not repair it.
+    const denied = describeIncompleteRun(libuvError("EACCES", "access", "/p/.qfai/spec"), "report");
+    expect(denied?.message).toContain("make it readable by this user");
+    expect(denied?.message).not.toContain("worktree");
+    expect(denied?.message).not.toContain("qfai init");
+
+    const worktree = describeIncompleteRun(
+      libuvError("EPERM", "stat", "C:\\repo\\.claude\\skills\\qfai-sdd"),
+      "init",
+    );
+    expect(worktree?.message).toContain("make it readable by this user");
+    expect(worktree?.message).toContain("re-run `qfai init` inside the worktree");
+  });
+
   it("leaves a deliberate refusal alone", () => {
     // The command said something specific about this project's state. Prefixing
     // it with a filesystem story would be a regression, not a fix.

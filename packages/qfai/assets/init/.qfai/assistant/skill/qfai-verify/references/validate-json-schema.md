@@ -39,6 +39,7 @@ This file is the SSOT for its keys.
 | `generatedAt`          | `string?`                  | ISO-8601. Absent from a file written before the field existed |
 | `profile`              | `string?`                  | the `--profile` the run used; `full` for the default          |
 | `profileValidatorsRan` | `boolean?`                 | whether the profile's own validators ran; see below           |
+| `flowIds`              | `string[]?`                | the flows a `--flow` run checked, sorted; see below           |
 | `issues`               | `Issue[]`                  | **the findings array. It is `issues`, not `findings`**        |
 | `counts`               | `{ info, warning, error }` | all three always present, all numbers                         |
 | `waivers`              | object?                    | the waivers applied and what they suppressed; see below       |
@@ -62,6 +63,12 @@ decision. It is derived from `issues` and cannot disagree with it.
   `--fail-on` except `never`; under `never` it still exits 0, so read its
   result as incomplete whatever the exit code. Read absence as "not known",
   not as `true`.
+
+`flowIds` is written only by a `--flow` run: the business flows it checked,
+sorted, each named once, such as `["BF-0003"]`. A repository-wide run leaves it
+out. `npx qfai report` compares it with the flows it was asked for, none for a
+repository-wide report, and refuses a file that records another scope: a file
+copied or renamed into place cannot be told apart by its name.
 
 BF, AC, and EX test obligations appear in `issues` as `QFAI-STORY-006` through
 `QFAI-STORY-009` findings. There is no separate traceability summary field.
