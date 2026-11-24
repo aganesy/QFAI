@@ -67,6 +67,17 @@ describe.each(ASSISTANT_ROOTS)("validate.json guide under %s", (assistantRoot) =
     expect(text).toContain("wall-clock milliseconds");
   });
 
+  // A `--flow` run writes `flowIds` and `qfai report` refuses a file whose
+  // recorded flows are not the ones it was asked for, so a consumer needs the
+  // key and its absent state on a repository-wide run.
+  it("lists flowIds and says a repository-wide run leaves it out", async () => {
+    const text = await readFile(path.join(assistantRoot, GUIDE), "utf8");
+
+    expect(topLevelKeys(text)).toContain("flowIds");
+    expect(text).toMatch(/^`flowIds` is written only by a `--flow` run/m);
+    expect(text).toMatch(/A repository-wide run leaves it\s+out\./);
+  });
+
   // A waiver on an `error` finding is refused with `QFAI-WAIVER-002`, so the
   // example lists the codes a waiver can name.
   it("lists waivable findings in the waiver example", async () => {

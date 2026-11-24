@@ -114,15 +114,57 @@ function matrixEntries(list: unknown): Combination[] | undefined {
   return entries;
 }
 
-function sameValue(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+/** A match that is `undefined` when it cannot be read from the text. */
+type Match = boolean | undefined;
+
+/** True when every match is, false when one is not, and `undefined` when that cannot be read. */
+function allOf(matches: readonly Match[]): Match {
+  if (matches.includes(false)) return false;
+  return matches.includes(undefined) ? undefined : true;
+}
+
+/** True when one match is, false when none is, and `undefined` when that cannot be read. */
+function anyOf(matches: readonly Match[]): Match {
+  if (matches.includes(true)) return true;
+  return matches.includes(undefined) ? undefined : false;
+}
+
+/**
+ * Whether two matrix values are the same: a mapping whatever its key order, a list item by item.
+ * A number or boolean and a string spelled the same may be merged by the runner, so their match
+ * is `undefined` rather than guessed.
+ */
+function sameValue(left: unknown, right: unknown): Match {
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+    return allOf(left.map((value, index) => sameValue(value, right[index])));
+  }
+  if (isRecord(left) || isRecord(right)) {
+    if (!isRecord(left) || !isRecord(right)) return false;
+    const keys = Object.keys(left);
+    if (keys.length !== Object.keys(right).length || keys.some((key) => !(key in right))) {
+      return false;
+    }
+    return allOf(keys.map((key) => sameValue(left[key], right[key])));
+  }
+  if (left === right) return true;
+  return String(left) === String(right) ? undefined : false;
+}
+
+/** Whether a matrix value holds a `${{ }}` expression anywhere, whose value the text does not give. */
+function holdsExpression(value: unknown): boolean {
+  if (typeof value === "string") return value.includes("${{");
+  if (Array.isArray(value)) return value.some(holdsExpression);
+  return isRecord(value) && Object.values(value).some(holdsExpression);
 }
 
 /**
  * The legs of a matrix whose axes are all written out, the way GitHub expands it: every
  * combination of the axes, less each one an `exclude` entry matches, plus one leg for each
  * `include` entry that would change an original axis value of every remaining combination, or
- * `undefined` when an `exclude` key is not an axis or the matrix has no leg.
+ * `undefined` when an `exclude` key is not an axis, a match cannot be read or the matrix has no leg.
  */
 function expandMatrix(
   axes: Readonly<Record<string, readonly unknown[]>>,
@@ -139,19 +181,28 @@ function expandMatrix(
       (axes[name] ?? []).map((value) => ({ ...combination, [name]: value })),
     );
   }
-  const kept = combinations.filter(
-    (combination) =>
-      !exclude.some((entry) =>
-        Object.entries(entry).every(([key, value]) => sameValue(combination[key], value)),
+  const excluded = combinations.map((combination) =>
+    anyOf(
+      exclude.map((entry) =>
+        allOf(Object.entries(entry).map(([key, value]) => sameValue(combination[key], value))),
       ),
+    ),
   );
-  const extendsOne = (entry: Combination): boolean =>
-    kept.some((combination) =>
-      Object.entries(entry).every(
-        ([key, value]) => !names.includes(key) || sameValue(combination[key], value),
+  if (excluded.includes(undefined)) return undefined;
+  const kept = combinations.filter((_, index) => excluded[index] === false);
+  const extended = include.map((entry) =>
+    anyOf(
+      kept.map((combination) =>
+        allOf(
+          Object.entries(entry)
+            .filter(([key]) => names.includes(key))
+            .map(([key, value]) => sameValue(combination[key], value)),
+        ),
       ),
-    );
-  const legs = kept.length + include.filter((entry) => !extendsOne(entry)).length;
+    ),
+  );
+  if (extended.includes(undefined)) return undefined;
+  const legs = kept.length + extended.filter((match) => match === false).length;
   // GitHub rejects a written-out matrix with no leg rather than skipping the job.
   return legs === 0 ? undefined : legs;
 }
@@ -160,7 +211,8 @@ function expandMatrix(
  * How many runners the job allocates, or `undefined` for a matrix shape this does not recognise.
  * The test lane's layer axis is read as one leg per declared layer; it is the only axis an
  * expression may give, and only with no `include` or `exclude`, whose match against legs whose
- * values are not known cannot be read.
+ * values are not known cannot be read. For the same reason no value inside a literal axis, an
+ * `include` or an `exclude` may be an expression.
  */
 function instancesOf(
   job: Record<string, unknown>,
@@ -188,6 +240,7 @@ function instancesOf(
       return undefined;
     }
   }
+  if ([...Object.values(axes), include, exclude].some(holdsExpression)) return undefined;
   if (layerAxes === 0) return expandMatrix(axes, exclude, include);
   if (include.length > 0 || exclude.length > 0) return undefined;
   return Object.values(axes).reduce(

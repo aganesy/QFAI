@@ -112,6 +112,21 @@ describe("the suite does not emit GitHub workflow commands", () => {
     ).toContain("callback ran");
   });
 
+  it("calls the callback of a wholly dropped chunk after write() returns, as Node does", () => {
+    const out = stdoutOf(
+      [
+        `let ran = false;`,
+        `process.stdout.write("::warning::dropped\\n", () => { ran = true; process.stdout.write("callback ran\\n"); });`,
+        `process.stdout.write(ran ? "callback ran before write returned\\n" : "write returned first\\n");`,
+      ].join("\n"),
+    );
+    expect(out, "Node's stream.write never calls its callback synchronously").toContain(
+      "write returned first",
+    );
+    expect(out, "a deferred callback must still run").toContain("callback ran");
+    expect(out).not.toContain("callback ran before write returned");
+  });
+
   it("writes a rewritten chunk in the encoding the caller named", () => {
     const out = stdoutOf(
       `process.stdout.write("before\\n::warning::dropped\\nafter\\n", "utf16le", () => { process.stdout.write("callback ran\\n"); });`,

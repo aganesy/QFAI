@@ -11,7 +11,7 @@ import path from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { safeCompletedCorpus } from "../../../src/core/graph/reuse.js";
 
-const DELIBERATION = ".qfai/discussion";
+const DELIBERATION = ".qfai/deliberation";
 let analysis: string;
 
 beforeEach(async () => {
