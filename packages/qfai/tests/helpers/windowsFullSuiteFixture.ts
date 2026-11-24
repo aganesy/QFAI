@@ -34,6 +34,8 @@ export type WindowsSuiteMode =
   | "runner-failed";
 
 export type WindowsSuiteResult = {
+  error: Error | undefined;
+  signal: NodeJS.Signals | null;
   status: number | null;
   stdout: string;
   stderr: string;
@@ -161,6 +163,28 @@ export function expectWindowsPreflightRefusal(result: SpawnSyncReturns<string>):
   });
 }
 
+/** The runner's own failure line when the identity check it repeats before Vitest refuses. */
+export const RUNNER_IDENTITY_FAILURE = "Failure: identity changed or became unavailable.\n";
+
+/**
+ * A head that moved before the runner is the runner's own exit 1, never a launch error or a
+ * signal: the repeated preflight's refusal on stderr, the runner's failed summary on stdout,
+ * and no Vitest invocation.
+ */
+export function expectWindowsRunnerHeadChangeRefusal(result: WindowsSuiteResult): void {
+  expect(result.error, "the runner must launch").toBeUndefined();
+  expect(result.signal, "the runner must exit, not be killed").toBeNull();
+  expect({ status: result.status, stderr: result.stderr }).toEqual({
+    status: 1,
+    stderr: PREFLIGHT_REFUSAL,
+  });
+  expect(result.stdout.startsWith("Windows full-suite diagnostic: failed\n"), result.stdout).toBe(
+    true,
+  );
+  expect(result.stdout).toContain(RUNNER_IDENTITY_FAILURE);
+  expect(result.invocation).toBeUndefined();
+}
+
 export const FULL_FLOW_TITLE =
   "returns findings to their owners, then carries the same flow through acceptance, implementation and report";
 
@@ -281,6 +305,8 @@ process.exitCode = control.status;
       ? JSON.parse(readFileSync(invocationPath, "utf-8"))
       : undefined;
     return {
+      error: result.error,
+      signal: result.signal,
       status: result.status,
       stdout: result.stdout,
       stderr: result.stderr,

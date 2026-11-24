@@ -42,6 +42,7 @@ import {
 } from "../helpers/spec0017WorkflowSurfaces.js";
 import {
   expectWindowsPreflightRefusal,
+  expectWindowsRunnerHeadChangeRefusal,
   FULL_FLOW_TITLE,
   namedFixture,
   namedGit,
@@ -2080,9 +2081,7 @@ describe("the optional Windows full-suite acceptance", () => {
     } finally {
       await removeTempTree(fixture.root);
     }
-    const changed = runWindowsSuite("success", true);
-    expect(changed.status, changed.stdout + changed.stderr).not.toBe(0);
-    expect(changed.invocation).toBeUndefined();
+    expectWindowsRunnerHeadChangeRefusal(runWindowsSuite("success", true));
   });
 
   // QFAI:AC-0002-0027-02
