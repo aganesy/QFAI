@@ -277,6 +277,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     migration not yet past step 3 can instead start over: delete
     `tmp/qfai-migration/` and run it again from step 1 with this version.
 
+- **A graph corpus mirror skips its link check only for the directory a safety
+  walk just checked.** The document graph's freshness check no longer tells
+  the corpus mirror to skip its shared-file and link check with a plain flag:
+  it passes the result of the safety walk, which names the directory it
+  walked. A mirror into any other directory runs the check, so no future
+  caller can write through a hard-linked file by passing the flag by mistake.
+
 - **Data values need no `qfai-text` reason, and one reason covers a whole
   element.** `QFAI-UITEXT-001` stays an error but no longer reports a short
   value that is not a sentence (at most 20 characters, with no sentence-ending

@@ -25,6 +25,7 @@ import {
   safeCompletedCorpus,
   safeInventoryFiles,
   sameEnvironment,
+  type CheckedCorpus,
   type GraphReuseEnvironment,
 } from "./reuse.js";
 import {
@@ -147,9 +148,10 @@ export async function safeDocumentCopy(
   root: string,
   analysis: string,
   run: GraphProcess,
-): Promise<boolean> {
+): Promise<CheckedCorpus | undefined> {
   const deliberationDir = await graphDeliberationDir(root);
-  if (!(await safeCompletedCorpus(analysis, deliberationDir, "", "graphify-out"))) return false;
+  const checked = await safeCompletedCorpus(analysis, deliberationDir, "graphify-out");
+  if (!checked) return undefined;
   const result = await run(
     graphRuntimePaths(root).python,
     [
@@ -160,7 +162,7 @@ export async function safeDocumentCopy(
     ],
     { cwd: analysis, env: graphifyCorpusEnvironment(root, analysis) },
   );
-  if (result.exitCode !== 0) return false;
+  if (result.exitCode !== 0) return undefined;
   try {
     const inventory: unknown = JSON.parse(result.stdout);
     if (
@@ -170,10 +172,12 @@ export async function safeDocumentCopy(
       !("files" in inventory) ||
       !Array.isArray(inventory.files)
     )
-      return false;
-    return await safeInventoryFiles(analysis, inventory.files, deliberationDir);
+      return undefined;
+    return (await safeInventoryFiles(analysis, inventory.files, deliberationDir))
+      ? checked
+      : undefined;
   } catch {
-    return false;
+    return undefined;
   }
 }
 
