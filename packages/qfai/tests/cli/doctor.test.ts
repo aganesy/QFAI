@@ -182,7 +182,7 @@ describe("doctor", () => {
   });
 
   // `traceability.testGlobs` is the check `/qfai-configure` owns end to end, and
-  // its Completion Contract smoke check reads `doctor --fail-on error`'s exit
+  // its completion checklist smoke check reads `doctor --fail-on error`'s exit
   // code as the verdict. While globs that matched nothing were `warning`, that
   // exit code was 0 for a configuration collecting no test at all — the one
   // defect the stage exists to prevent — even though `validate` already calls
