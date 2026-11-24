@@ -747,6 +747,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read only tables Markdown renders, as the index and example readers already
   do. Closes #5328.
 
+- **`qfai doctor` matches matrix values by content in `workflows.cost`.** An
+  `exclude` entry that wrote an object value's keys in another order than its
+  axis did not remove the combination, and an `include` entry like it added a
+  leg, so the count was too high; a `${{ }}` value inside a literal axis, an
+  `include` or an `exclude` was matched as text. An object value now matches
+  whatever its key order. A `${{ }}` value inside those lists, and a number or
+  boolean compared with the string spelled the same, which the runner may
+  merge, make the workflow named as not counted. Closes #5436.
+
 - **`qfai validate` reports a self-governance input it cannot observe instead
   of stopping.** Deciding whether `QFAI-HANDOFF-001` and `QFAI-MANIFEST-001`
   could run, the check let an error other than "absent", such as a permission
