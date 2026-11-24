@@ -80,6 +80,27 @@ describe("the tech.md template's examples", () => {
     expect(left[0]?.refs).toEqual(["Standard commands (copy-paste)"]);
   });
 
+  // QFAI:AC-0001-0052-02
+  // QFAI:EX-0001-0052-14
+  it("count only the template's own slots and quote the first one a section holds", async () => {
+    const copied = copyExamples(await template());
+    const described = copied.replace("`Vitest`", "`Vitest`, one suite per tests/<name>/");
+    expect(described).toContain("tests/<name>/");
+    await writeTech(described);
+    const { config } = await loadConfig(root);
+
+    expect(await validateStoryPolicyPlaceholders(root, config)).toEqual([]);
+
+    await writeTech(described.replace("- Build: `pnpm build`", "- Build: `<example: pnpm build>`"));
+    const left = await validateStoryPolicyPlaceholders(root, config);
+
+    expect(left.map((finding) => finding.refs)).toEqual([["Standard commands (copy-paste)"]]);
+    expect(left[0]?.message).toContain(
+      'Standard commands (copy-paste) (1, first "<example: pnpm build>")',
+    );
+    expect(left[0]?.message).not.toContain("<name>");
+  });
+
   // QFAI:EX-0001-0011-19
   it("are named by validation in place of the pattern when a required line is missing", async () => {
     await writeTech(

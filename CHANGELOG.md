@@ -609,6 +609,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file that calls it, directly or through another routine, raises the warning.
   Closes #5180.
 
+- **The `tech.md` placeholder check counts only the template's own slots and
+  quotes what it flags.** `QFAI-ASSETS-003` treated any `<...>` in the
+  contract-layer `tech.md` as an unfilled slot, so a generic path such as
+  `tests/<name>/` in a Stack cell failed validation, and the message gave only
+  a count per section. Only the template's `<example: ...>` and
+  `<optional example: ...>` slots and bare `TODO` / `TBD` values count now, and
+  the message quotes the first unfilled value of each section. Closes #5461.
+
 - **The Mermaid check skips diagrams inside comments, and `.mdx` files get an
   ignore marker they can compile.** `check-mermaid.mjs` collected a fence
   even inside a comment, so a commented-out broken diagram failed the shipped
