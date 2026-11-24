@@ -52,10 +52,41 @@ type ReportModule = typeof ReportCommandModule;
 const dirs: string[] = [];
 
 function errno(code: string, target: string): NodeJS.ErrnoException {
-  const error = new Error(`${code}: simulated, stat '${target}'`) as NodeJS.ErrnoException;
+  const error: NodeJS.ErrnoException = new Error(`${code}: simulated, stat '${target}'`);
   error.code = code;
   error.path = target;
   return error;
+}
+
+type Finding = { code: string; severity: string; message: string };
+
+function isFinding(value: unknown): value is Finding {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "code" in value &&
+    typeof value.code === "string" &&
+    "severity" in value &&
+    typeof value.severity === "string" &&
+    "message" in value &&
+    typeof value.message === "string"
+  );
+}
+
+/** A written validation result, read as `unknown` for the caller to narrow. */
+async function readResult(file: string): Promise<unknown> {
+  const parsed: unknown = JSON.parse(await readFile(file, "utf-8"));
+  return parsed;
+}
+
+/** The findings of a written validation result; throws when it holds no finding list. */
+function findingsOf(result: unknown): Finding[] {
+  const issues: unknown =
+    typeof result === "object" && result !== null && "issues" in result ? result.issues : null;
+  if (!Array.isArray(issues) || !issues.every(isFinding)) {
+    throw new Error("the validation result holds no finding list");
+  }
+  return issues;
 }
 
 beforeEach(() => {
@@ -237,6 +268,67 @@ describe("the boundary is wired into every command", () => {
   });
 });
 
+/**
+ * Run `command` once on a clean project, then with validators that throw under
+ * `--fail-on never` and `--fail-on error`, and check that each unfinished run
+ * replaced the clean result with its own `QFAI-SCAN-002` and exited 0 and 1.
+ */
+async function expectCleanResultReplaced(
+  name: "validate" | "report",
+  runCommand: (root: string, failOn: "never" | "error") => Promise<number>,
+): Promise<void> {
+  for (const [failOn, expectedExit] of [
+    ["never", 0],
+    ["error", 1],
+  ] as const) {
+    validateProjectSpy.mockReset();
+    validateProjectSpy.mockImplementation(
+      (
+        actual: CoreValidate,
+        target: Parameters<CoreValidate["validateProject"]>[0],
+        config: Parameters<CoreValidate["validateProject"]>[1],
+        opts: Parameters<CoreValidate["validateProject"]>[2],
+      ) => actual.validateProject(target, config, opts),
+    );
+    const root = await project();
+    const resultPath = path.join(root, ".qfai", "report", "validate.json");
+    const lines: string[] = [];
+    const write = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+      lines.push(String(chunk));
+      return true;
+    });
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      await runCommand(root, "never");
+      const clean = findingsOf(await readResult(resultPath));
+      expect(clean.map((entry) => entry.code)).not.toContain("QFAI-SCAN-002");
+      expect(lines.join("")).not.toContain("not a clean result");
+
+      validateProjectSpy.mockImplementation(() => Promise.reject(errno("EPERM", root)));
+      expect(await runCommand(root, failOn), `${name} --fail-on ${failOn}`).toBe(expectedExit);
+      if (name === "report") {
+        expect(lines.join("")).toContain(
+          "report: validation did not finish, so this report is not a clean result.",
+        );
+      }
+    } finally {
+      write.mockRestore();
+      stderr.mockRestore();
+    }
+
+    const parsed = await readResult(resultPath);
+    const finding = findingsOf(parsed).find((entry) => entry.code === "QFAI-SCAN-002");
+    expect(finding?.severity, name).toBe("error");
+    expect(finding?.message, name).toContain(`${name}: validation could not run to completion`);
+    expect(parsed, name).toMatchObject({ counts: { error: expect.any(Number) } });
+    expect(parsed, name).not.toMatchObject({ counts: { error: 0 } });
+    if (name === "report") {
+      const report = await readFile(path.join(root, ".qfai", "report", "report.md"), "utf-8");
+      expect(report).toContain("QFAI-SCAN-002");
+    }
+  }
+}
+
 describe("validate reports a run it could not finish", () => {
   it("emits QFAI-SCAN-002 instead of letting the error escape", async () => {
     const root = await project();
@@ -280,16 +372,13 @@ describe("validate reports a run it could not finish", () => {
       write.mockRestore();
     }
 
-    const raw = await readFile(path.join(root, ".qfai", "report", "validate.json"), "utf-8");
-    const parsed = JSON.parse(raw) as {
-      counts: { error: number; warning: number; info: number };
-      issues: { code: string; severity: string }[];
-    };
+    const parsed = await readResult(path.join(root, ".qfai", "report", "validate.json"));
     // A downstream reader must not be able to take this for "no problems
     // found": the error count is non-zero and the finding says why.
-    expect(parsed.counts.error).toBe(1);
-    expect(parsed.issues.map((entry) => entry.code)).toContain("QFAI-SCAN-002");
-    expect(parsed.issues.find((entry) => entry.code === "QFAI-SCAN-002")?.severity).toBe("error");
+    expect(parsed).toMatchObject({ counts: { error: 1 } });
+    const issues = findingsOf(parsed);
+    expect(issues.map((entry) => entry.code)).toContain("QFAI-SCAN-002");
+    expect(issues.find((entry) => entry.code === "QFAI-SCAN-002")?.severity).toBe("error");
   });
 
   // QFAI:EX-0001-0066-06
@@ -311,8 +400,7 @@ describe("validate reports a run it could not finish", () => {
         flowIds: ["BF-0001", "BF-0001"],
       });
       const scoped = path.join(root, ".qfai", "report", "validate.flow-0001.json");
-      const parsed = JSON.parse(await readFile(scoped, "utf-8")) as { flowIds?: string[] };
-      expect(parsed.flowIds).toEqual(["BF-0001"]);
+      expect(await readResult(scoped)).toMatchObject({ flowIds: ["BF-0001"] });
 
       const { runReport } = await vi.importActual<ReportModule>("../../src/cli/commands/report.js");
       expect(await runReport({ root, format: "md", failOn: "never", flowIds: ["BF-0001"] })).toBe(
@@ -424,77 +512,56 @@ describe("validate reports a run it could not finish", () => {
     expect(run.validatorJson).toMatchObject({ status: "pass" });
   });
 
+  // QFAI:EX-0001-0039-69
+  it("replaces an earlier clean result with the unfinished verdict, from validate", async () => {
+    await expectCleanResultReplaced("validate", (root, failOn) =>
+      runValidate({ root, strict: false, format: "text", failOn }),
+    );
+  });
+
   // QFAI:EX-0001-0061-03
-  it("replaces an earlier clean result with the unfinished verdict, from validate and from report --run-validate", async () => {
+  it("replaces an earlier clean result with the unfinished verdict, from report --run-validate", async () => {
     // `report --run-validate` let the rejection escape before it wrote any
     // result, so the clean `validate.json` of the run before stayed in place
     // and `--fail-on never` ended in an uncaught error instead of a verdict.
-    const commands = {
-      validate: (root: string, failOn: "never" | "error") =>
-        runValidate({ root, strict: false, format: "text", failOn }),
-      report: async (root: string, failOn: "never" | "error") => {
-        const { runReport } = await vi.importActual<ReportModule>(
-          "../../src/cli/commands/report.js",
-        );
-        return runReport({ root, format: "md", runValidate: true, failOn });
-      },
-    };
-    for (const [name, runCommand] of Object.entries(commands)) {
-      for (const [failOn, expectedExit] of [
-        ["never", 0],
-        ["error", 1],
-      ] as const) {
-        const root = await project();
-        const resultPath = path.join(root, ".qfai", "report", "validate.json");
-        const lines: string[] = [];
-        const write = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-          lines.push(String(chunk));
-          return true;
-        });
-        const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-        try {
-          await runCommand(root, "never");
-          const clean = JSON.parse(await readFile(resultPath, "utf-8")) as {
-            issues: { code: string }[];
-          };
-          expect(clean.issues.map((entry) => entry.code)).not.toContain("QFAI-SCAN-002");
-          expect(lines.join("")).not.toContain("not a clean result");
+    await expectCleanResultReplaced("report", async (root, failOn) => {
+      const { runReport } = await vi.importActual<ReportModule>("../../src/cli/commands/report.js");
+      return runReport({ root, format: "md", runValidate: true, failOn });
+    });
+  });
 
-          validateProjectSpy.mockImplementation(() => Promise.reject(errno("EPERM", root)));
-          expect(await runCommand(root, failOn), `${name} --fail-on ${failOn}`).toBe(expectedExit);
-          if (name === "report") {
-            expect(lines.join("")).toContain(
-              "report: validation did not finish, so this report is not a clean result.",
-            );
-          }
-        } finally {
-          write.mockRestore();
-          stderr.mockRestore();
-          validateProjectSpy.mockReset();
-          validateProjectSpy.mockImplementation(
-            (
-              actual: CoreValidate,
-              target: Parameters<CoreValidate["validateProject"]>[0],
-              config: Parameters<CoreValidate["validateProject"]>[1],
-              opts: Parameters<CoreValidate["validateProject"]>[2],
-            ) => actual.validateProject(target, config, opts),
-          );
-        }
+  // QFAI:EX-0001-0061-05
+  it("says a plain report of an unfinished run is not a clean result", async () => {
+    // The notice belongs to the result the report renders, not to the
+    // `--run-validate` path: a plain `qfai report` reading the result an
+    // unfinished `qfai validate` wrote holds no verdict on the tree either.
+    const { runReport } = await vi.importActual<ReportModule>("../../src/cli/commands/report.js");
+    const notice = "report: validation did not finish, so this report is not a clean result.";
+    const root = await project();
+    const lines: string[] = [];
+    const write = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+      lines.push(String(chunk));
+      return true;
+    });
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      // The control: a plain report of a finished run says nothing of the kind.
+      await runValidate({ root, strict: false, format: "text", failOn: "never" });
+      expect(await runReport({ root, format: "md", failOn: "never" })).toBe(0);
+      expect(lines.join("")).not.toContain(notice);
 
-        const parsed = JSON.parse(await readFile(resultPath, "utf-8")) as {
-          counts: { error: number };
-          issues: { code: string; severity: string; message: string }[];
-        };
-        const finding = parsed.issues.find((entry) => entry.code === "QFAI-SCAN-002");
-        expect(finding?.severity, name).toBe("error");
-        expect(finding?.message, name).toContain(`${name}: validation could not run to completion`);
-        expect(parsed.counts.error, name).toBeGreaterThanOrEqual(1);
-        if (name === "report") {
-          const report = await readFile(path.join(root, ".qfai", "report", "report.md"), "utf-8");
-          expect(report).toContain("QFAI-SCAN-002");
-        }
-      }
+      validateProjectSpy.mockImplementation(() => Promise.reject(errno("EPERM", root)));
+      await runValidate({ root, strict: false, format: "text", failOn: "never" });
+      lines.length = 0;
+      expect(await runReport({ root, format: "md", failOn: "never" })).toBe(0);
+      expect(lines.join("")).toContain(notice);
+      expect(await runReport({ root, format: "md", failOn: "error" })).toBe(1);
+    } finally {
+      write.mockRestore();
+      stderr.mockRestore();
     }
+    const report = await readFile(path.join(root, ".qfai", "report", "report.md"), "utf-8");
+    expect(report).toContain("QFAI-SCAN-002");
   });
 
   it("does not report an incomplete run when validation completes", async () => {
@@ -531,11 +598,9 @@ describe("validate reports a run it could not finish", () => {
     // The positive half: an early return would print no pass summary and
     // write no result, so the absence above alone could not tell it apart.
     expect(out).toMatch(/^qfai validate: passed \(fail-on never\): profile full, 0 errors/m);
-    const parsed = JSON.parse(
-      await readFile(path.join(root, ".qfai", "report", "validate.json"), "utf-8"),
-    ) as { counts: { error: number }; issues: { code: string }[] };
-    expect(parsed.counts.error).toBe(0);
-    expect(parsed.issues.map((entry) => entry.code)).not.toContain("QFAI-SCAN-002");
+    const parsed = await readResult(path.join(root, ".qfai", "report", "validate.json"));
+    expect(parsed).toMatchObject({ counts: { error: 0 } });
+    expect(findingsOf(parsed).map((entry) => entry.code)).not.toContain("QFAI-SCAN-002");
     const run = await readRunLog(root);
     expect(run.validateLog).toMatch(/^- status: pass$/m);
   });

@@ -627,6 +627,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now uses `{/* mermaid-lint:ignore */}` on the line above the fence instead.
   Closes #5341.
 
+- **A plain `qfai report` of an unfinished run also says it is not a clean
+  result.** The notice that the report is not a clean result was documented
+  only for `qfai report --run-validate`. It is printed whenever the report
+  renders an incomplete-run result, including one a plain `qfai report` reads
+  from an earlier `qfai validate`, and this is now the documented behaviour.
+  Closes #5361.
+
 - **`qfai sdd preflight` reads no previous summary through a link.** A
   `preflight_summary.md` that was a link to a file elsewhere was read before
   being replaced: the run copied that file's carry-over list into its own
