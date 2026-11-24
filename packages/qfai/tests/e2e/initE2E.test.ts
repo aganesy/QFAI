@@ -8,7 +8,7 @@
  * migration support, version normalization, module documentation,
  * and canonical template generation.
  */
-import { access, lstat, mkdtemp, readFile, readlink, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -16,18 +16,10 @@ import { describe, expect, it } from "vitest";
 
 import { runInit } from "../helpers/legacyInit.js";
 import { captureStdout } from "../helpers/stdout.js";
+import { pathExists } from "../helpers/pathExists.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const _assetsRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
-
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 async function createTempDir(): Promise<string> {
   return mkdtemp(path.join(os.tmpdir(), "qfai-e2e-init-"));

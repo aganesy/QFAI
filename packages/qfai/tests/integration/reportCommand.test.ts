@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -9,6 +9,7 @@ import type { Issue, ValidationResult } from "../../src/core/types.js";
 import { captureStderr } from "../helpers/stderr.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
+import { pathExists } from "../helpers/pathExists.js";
 
 const roots: string[] = [];
 
@@ -70,15 +71,6 @@ async function writeValidation(root: string, issues: Issue[]): Promise<void> {
   const output = path.join(root, ".qfai/report/validate.json");
   await mkdir(path.dirname(output), { recursive: true });
   await writeFile(output, `${JSON.stringify(result)}\n`, "utf8");
-}
-
-async function exists(file: string): Promise<boolean> {
-  try {
-    await access(file);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 async function cli(root: string, args: string[]) {
@@ -187,7 +179,7 @@ describe("qfai report", () => {
       ],
       issues: [warning, note],
     });
-    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });
 
   // QFAI:AC-0001-0060-01
@@ -243,7 +235,7 @@ describe("qfai report", () => {
   it("builds the report from a validation it runs itself and ignores --in", async () => {
     const root = await storyRoot();
     const validateJson = path.join(root, ".qfai/report/validate.json");
-    expect(await exists(validateJson)).toBe(false);
+    expect(await pathExists(validateJson)).toBe(false);
 
     const result = await cli(root, [
       "report",
@@ -309,7 +301,7 @@ describe("qfai report", () => {
 
     expect(result.exit).toBe(2);
     expect(result.stderr).toContain("qfai report: input file not found");
-    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });
 
   // QFAI:AC-0001-0063-01
@@ -323,7 +315,7 @@ describe("qfai report", () => {
 
     expect(result.exit).toBe(0);
     expect((await readFile(target, "utf8")).split("\n")[0]).toBe("# QFAI Report");
-    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });
 
   // QFAI:EX-0001-0064-01
@@ -350,7 +342,7 @@ describe("qfai report", () => {
 
     expect(result.exit).toBe(0);
     const reportDir = path.join(root, ".qfai/report");
-    expect(await exists(path.join(reportDir, "report.md"))).toBe(true);
+    expect(await pathExists(path.join(reportDir, "report.md"))).toBe(true);
     for (const flowDir of ["business-flow-0001", "business-flow-0002"]) {
       expect((await readdir(path.join(reportDir, flowDir))).sort()).toEqual([
         "coverage.md",

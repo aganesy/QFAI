@@ -7,7 +7,7 @@
 // QFAI:EX-0001-0047-01
 // QFAI:EX-0001-0047-01
 
-import { mkdtemp, readFile, access } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -15,15 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { removeTempTree } from "../helpers/tempTree.js";
-
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { pathExists } from "../helpers/pathExists.js";
 
 async function newRoot(prefix: string): Promise<string> {
   return mkdtemp(path.join(os.tmpdir(), `qfai-spec0004-chg005-${prefix}-`));

@@ -4,7 +4,7 @@
  * `DESIGN.md`.
  */
 
-import { mkdir, mkdtemp, readFile, readdir, rm, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -14,6 +14,7 @@ import type { Issue, ValidationProfile } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runCliCaptured as cli } from "../helpers/cliCapture.js";
+import { pathExists } from "../helpers/pathExists.js";
 
 const roots: string[] = [];
 const TOKENS = ".qfai/catalog/design.tokens.json";
@@ -62,10 +63,7 @@ const readAt = (root: string, relative: string): Promise<string> =>
   readFile(path.join(root, ...relative.split("/")), "utf-8");
 
 async function exists(root: string, relative: string): Promise<boolean> {
-  return stat(path.join(root, ...relative.split("/"))).then(
-    () => true,
-    () => false,
-  );
+  return pathExists(path.join(root, ...relative.split("/")));
 }
 
 async function changePrimary(root: string): Promise<void> {

@@ -2,7 +2,7 @@ import { legacyInitArguments } from "../helpers/legacyInitArguments.js";
 // QFAI:BF-0003
 
 import { spawnSync } from "node:child_process";
-import { access, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { assertBuiltCliFresh } from "../helpers/builtCli.js";
 import { removeTempTree } from "../helpers/tempTree.js";
+import { pathExists } from "../helpers/pathExists.js";
 
 const CLI = path.resolve(__dirname, "../../dist/cli/index.mjs");
 assertBuiltCliFresh(CLI);
@@ -52,15 +53,6 @@ async function fixture(): Promise<string> {
     "utf8",
   );
   return root;
-}
-
-async function exists(file: string): Promise<boolean> {
-  try {
-    await access(file);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 afterEach(async () => {
@@ -109,7 +101,7 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     );
     expect(missingFlow.status).toBe(1);
     expect(missingFlow.stdout + missingFlow.stderr).toContain("QFAI-FLOW-005");
-    expect(await exists(scopedPath)).toBe(false);
+    expect(await pathExists(scopedPath)).toBe(false);
 
     // The path and the absent flow belong to the story tree. Repair those
     // sources, then rerun each diagnostic.
@@ -189,8 +181,8 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     expect(validated.status).toBe(0);
     const validation = JSON.parse(await readFile(scopedPath, "utf8")) as ValidateResult;
     expect(validation.issues.some((issue) => issue.code === "QFAI-FLOW-005")).toBe(false);
-    expect(await exists(beforePath)).toBe(true);
-    expect(await exists(afterPath)).toBe(true);
+    expect(await pathExists(beforePath)).toBe(true);
+    expect(await pathExists(afterPath)).toBe(true);
   });
 
   // Exercises US-0003-0001.

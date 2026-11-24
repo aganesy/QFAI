@@ -6,7 +6,6 @@
 
 import { execFile as execFileCb } from "node:child_process";
 import {
-  access,
   lstat,
   mkdir,
   mkdtemp,
@@ -27,6 +26,7 @@ import { runInit } from "../helpers/legacyInit.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
+import { pathExists } from "../helpers/pathExists.js";
 
 const execFile = promisify(execFileCb);
 const roots: string[] = [];
@@ -46,15 +46,6 @@ async function initProject(): Promise<string> {
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
-
-async function exists(target: string): Promise<boolean> {
-  try {
-    await access(target);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /** The bullet paths one run-report section lists, named by its header line. */
 function sectionPaths(output: string, header: string): string[] {
@@ -93,7 +84,7 @@ describe("init distribution: agents and wrappers", () => {
     }
 
     for (const dir of [".agents", ".codex", ".claude/agents", ".github/agents"]) {
-      expect(await exists(path.join(root, ...dir.split("/"), "README.md")), dir).toBe(false);
+      expect(await pathExists(path.join(root, ...dir.split("/"), "README.md")), dir).toBe(false);
     }
   });
 });
@@ -125,7 +116,7 @@ describe("init distribution: git symlink setting", () => {
       runInit({ dir: outside, force: false, dryRun: false, yes: true }),
     );
     expect(output).not.toContain("core.symlinks");
-    expect(await exists(path.join(outside, ".git"))).toBe(false);
+    expect(await pathExists(path.join(outside, ".git"))).toBe(false);
   });
 
   // QFAI:AC-0001-0028-02
@@ -269,7 +260,9 @@ describe("init distribution: assistant tree", () => {
     }
     const skills = await readdir(path.join(assistant, "skill"));
     expect(skills).toContain("qfai-discussion");
-    expect(await exists(path.join(assistant, "skill", "qfai-discussion", "SKILL.md"))).toBe(true);
+    expect(await pathExists(path.join(assistant, "skill", "qfai-discussion", "SKILL.md"))).toBe(
+      true,
+    );
     expect(
       (await lstat(path.join(assistant, "skill", "qfai-discussion", "references"))).isDirectory(),
     ).toBe(true);
