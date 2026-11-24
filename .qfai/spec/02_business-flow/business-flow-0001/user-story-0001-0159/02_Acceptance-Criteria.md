@@ -12,7 +12,7 @@ Feature: Removed compatibility namespaces
 
   # AC-0001-0159-03
   Scenario: Verify Loads Constitution and Settings From the Recut Assistant Tree
-    Given a project with the `rule/ skill/ agent/ prompt/` assistant tree,
+    Given a project,
     When `/qfai-verify` loads its constitution and the acting agent's entry,
     Then it reads the constitution from `.qfai/assistant/rule/` and the agent's entry from its card frontmatter.
 ```
