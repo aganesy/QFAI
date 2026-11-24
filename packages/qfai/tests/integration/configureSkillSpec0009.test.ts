@@ -261,7 +261,7 @@ describe("Context Refresh", () => {
   it("points to the Definition of Done instead of restating it", async () => {
     const refresh = section(await readFile(SKILL_PATH, "utf-8"), "Context Refresh");
     expect(refresh).toContain(
-      "Which items of Success Criteria (Definition of Done) and Not-done criteria above are met and which are open, checked there rather than copied",
+      "Which Success Criteria (Definition of Done) and Not-done criteria items above are met and which are open; read them there, do not copy them",
     );
     expect(refresh).not.toContain('prohibited "done" criteria');
   });

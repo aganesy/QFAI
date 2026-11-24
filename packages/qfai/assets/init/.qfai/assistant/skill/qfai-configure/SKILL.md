@@ -182,10 +182,10 @@ wrote; the delegation baseline says how it is briefed.
 
 ## Context Refresh (long tasks)
 
-Every 5 major actions, pause and restate:
+Every 5 major actions, pause and report:
 
-- Which items of Success Criteria (Definition of Done) and Not-done criteria
-  above are met and which are open, checked there rather than copied
+- Which Success Criteria (Definition of Done) and Not-done criteria items
+  above are met and which are open; read them there, do not copy them
 - Evidence samples collected vs missing
 - Config changes and policy updates completed
 
