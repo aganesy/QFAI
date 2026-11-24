@@ -760,6 +760,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The corpus walk compares file sizes before it reads any contents, so a file
   of another size is no longer read in full to find it changed. Closes #5204.
 
+- **A comment opened mid-line stops at a line that starts another block.**
+  When a spec document's text held `<!--` part-way through a line, a `-->`
+  on the next line closed it even when that line opened a comment block, a
+  raw HTML block, a block quote or a list item, so the text after the `<!--`
+  disappeared from what `qfai validate` reads. Such a line now ends the
+  paragraph, and the `<!--` stays the literal text Markdown shows. Closes
+  #5655.
+
 - **`/qfai-sdd` fetches the base before it merges a register conflict.** The
   `sdd-triage` step resolved a conflict in `decisions.md`, its pages or
   `open-questions.md` with `git merge origin/<base>` and never said to fetch,
