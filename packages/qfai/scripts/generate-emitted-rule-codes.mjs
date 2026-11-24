@@ -22,8 +22,7 @@
  *     through a constant rather than a literal (`issue(RULE_ID, …)`), so the
  *     first argument is resolved against every `const NAME = "…"` in the tree.
  *     Others carry the code on a record and hand it over as a property
- *     (`issue(finding.ruleId, …)`, `issue(input.missingCode, …)`,
- *     `issue(group.code, …)`), so a property access is resolved against the
+ *     (`issue(finding.ruleId, …)`), so a property access is resolved against the
  *     values that property is given in object literals **in the same file** —
  *     the file that spells `ruleId: "…"` is always the file that passes
  *     `finding.ruleId` on. Scanning only literals and identifiers dropped every
@@ -401,11 +400,10 @@ function resolveValue(raw, literals, constants) {
  *
  * Beyond {@link resolveValue}'s literal and identifier, a property access
  * resolves to every string that property is given in an object literal in the
- * same file. Several validators carry the code on a record and hand it to the
- * factory that way — `issue(finding.ruleId, …)` in `designAudit`,
- * `issue(input.missingCode, …)` in `orphanProhibition` — and each of them
- * builds those records in the file that passes them on, so the same file always
- * holds the answer.
+ * same file. A validator may carry the code on a record and hand it to the
+ * factory that way — `issue(finding.ruleId, …)` in `designAudit` — and such a
+ * validator builds those records in the file that passes them on, so the same
+ * file always holds the answer.
  *
  * Same-file is also what keeps the resolution honest: widening it to the whole
  * tree would let any `code:` field anywhere — `HandoffValidationIssue`'s included —
