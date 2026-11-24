@@ -635,6 +635,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   writes nothing and exits 1, saying whether to retry once the other run
   finishes or to remove a lock no running process holds. Closes #5382.
 
+- **`qfai doctor` names a workflow-precondition file it cannot read instead
+  of treating it as absent.** The checks behind `workflows.packageManager`,
+  `workflows.nodeVersionFile` and `workflows.nodePin` read `package.json`, the
+  Node version files and the workflows under `.github/workflows/`, and dropped
+  any of them that failed to read, so doctor reported fewer problems than it
+  saw. Only a missing file counts as absent now: a file that exists and cannot
+  be read (`EACCES`, `EIO`, a directory) is a `workflows.preconditionsUnread`
+  warning naming the file and the cause, and the other files are still
+  checked. Closes #5444.
+
 - **`qfai init` on Windows names no rerun command PowerShell would split.**
   The recovery line of a failed graph download double-quotes a temporary
   directory that holds a space, and PowerShell also ends such a string at a
