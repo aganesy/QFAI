@@ -667,6 +667,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   shows both: `pnpm approve-builds`, or `"@jackchuka/mdschema": false` under
   `allowBuilds` in `pnpm-workspace.yaml`. Closes #5227.
 
+- **The `validate.json` guide lists `flowIds`.** The guide calls itself the
+  source for the file's keys but left out `flowIds`, which a `--flow` run
+  writes and `qfai report` checks before it reads the file. Its top-level table
+  now lists the key, and the guide says a repository-wide run leaves it out and
+  that `qfai report` refuses a file recording another scope. Closes #5348.
+
 - **A directory whose name begins with two dots counts as inside its base
   everywhere.** Several more checks tested whether a path relative to its base
   began with `..`, so a directory such as `..fixtures` or `..archive` read as
