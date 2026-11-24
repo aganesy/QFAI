@@ -481,7 +481,12 @@ describe("BF-0003 failure threshold", () => {
     // QFAI:AC-0003-0012-03
     const dir = await treeWithOneError();
     const data = await createDoctorData({ startDir: dir, rootExplicit: true });
-    expect(data.summary.warning).toBe(0);
+    // The tree must hold no warning, so each one is listed with its message: a
+    // shipped asset over its line budget, for one, names the file to shorten.
+    const warnings = data.checks
+      .filter((entry) => entry.severity === "warning")
+      .map((entry) => `${entry.id}: ${entry.message}`);
+    expect(warnings, "the seeded tree raises a warning of its own").toEqual([]);
     expect(data.summary.error).toBeGreaterThan(0);
     const exitCode = await runDoctor({
       root: dir,
