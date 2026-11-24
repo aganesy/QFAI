@@ -45,7 +45,7 @@ Feature: Unified SDD Workflow
 
   # AC-0001-0147-07
   Scenario: qfai-sdd Cites Assistant Documents Where They Live
-    Given the `rule/ skill/ agent/ prompt/` assistant tree,
+    Given the assistant tree,
     When the `qfai-sdd` skill cites the change-classification or the requirements-decomposition document,
     Then it cites `.qfai/assistant/rule/change-classification.md` and `<paths.skillsDir>/qfai-sdd/references/requirements-decomposition.md`, and each citation resolves to a file that exists.
 

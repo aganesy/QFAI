@@ -93,6 +93,48 @@ describe("the shipped set's cost is pinned", () => {
   });
 });
 
+describe("the cost reader counts a matrix job's legs as qfai doctor does", () => {
+  const allScripts = COST_PATHS.find((spec) => spec.id === "all-test-scripts");
+  if (allScripts === undefined) throw new Error("no all-test-scripts path is declared");
+  const legs = (matrix: Record<string, unknown>): number =>
+    instancesOf({ strategy: { matrix } }, allScripts);
+
+  it("multiplies the axes instead of taking the widest", () => {
+    expect(legs({ check: ["shape", "mermaid"], node: [20, 22, 24] })).toBe(6);
+    expect(
+      legs({ layer: "${{ fromJSON(needs.detection.outputs.selected) }}", node: [20, 22] }),
+    ).toBe(10);
+  });
+
+  it("removes each excluded combination and adds each include entry that extends none", () => {
+    expect(
+      legs({
+        check: ["shape", "mermaid"],
+        os: ["ubuntu-latest", "windows-latest"],
+        exclude: [{ check: "mermaid", os: "windows-latest" }],
+        include: [{ check: "shape", os: "ubuntu-latest", node: 22 }, { check: "links" }],
+      }),
+    ).toBe(4);
+    expect(legs({ include: [{ check: "shape" }, { check: "mermaid" }, { check: "links" }] })).toBe(
+      3,
+    );
+  });
+
+  it("matches an object value whatever its key order", () => {
+    expect(
+      legs({
+        check: ["shape", "mermaid"],
+        cfg: [
+          { a: 1, b: 2 },
+          { a: 3, b: 4 },
+        ],
+        exclude: [{ check: "mermaid", cfg: { b: 2, a: 1 } }],
+        include: [{ cfg: { b: 4, a: 3 }, label: "wide" }],
+      }),
+    ).toBe(3);
+  });
+});
+
 describe("what the cost reader refuses", () => {
   /** Any path will do for a condition the reader rejects outright; this is the first. */
   const anyPath = COST_PATHS[0];
@@ -111,6 +153,29 @@ describe("what the cost reader refuses", () => {
     expect(() =>
       instancesOf({ strategy: { matrix: { leg: "${{ fromJSON(vars.LEGS) }}" } } }, anyPath),
     ).toThrow(/unrecognised matrix axis/);
+  });
+
+  it("throws on each matrix shape qfai doctor names as not counted", () => {
+    // The pinned figures and the doctor's count are held against each other, so a matrix one of
+    // them cannot read is refused by the other too.
+    const layers = { layer: "${{ fromJSON(needs.detection.outputs.selected) }}" };
+    const unreadable: Record<string, unknown>[] = [
+      { check: ["shape", "mermaid"], include: "${{ fromJSON(vars.EXTRA) }}" },
+      { check: ["shape", "mermaid"], exclude: [{ os: "windows-latest" }] },
+      { check: ["shape", "mermaid"], node: [] },
+      { check: ["shape", "mermaid"], exclude: [{ check: "shape" }, { check: "mermaid" }] },
+      { ...layers, include: [{ node: 22 }] },
+      { check: ["shape", "mermaid"], node: [22], include: [{ node: "22" }] },
+      { check: ["shape", "mermaid"], node: [22], exclude: [{ check: "shape", node: "22" }] },
+      { check: ["shape", "${{ vars.EXTRA_CHECK }}"] },
+      { check: ["shape", "mermaid"], os: ["ubuntu-latest"], include: [{ os: "${{ vars.OS }}" }] },
+      { check: ["shape", "mermaid"], exclude: [{ check: "${{ vars.SKIPPED_CHECK }}" }] },
+    ];
+    for (const matrix of unreadable) {
+      expect(() => instancesOf({ strategy: { matrix } }, anyPath), JSON.stringify(matrix)).toThrow(
+        /unrecognised matrix/,
+      );
+    }
   });
 
   it("reads the close gate as the one condition that empties a path", () => {

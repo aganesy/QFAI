@@ -399,7 +399,7 @@ export type WorkflowCostCheck = {
 };
 
 const NOT_READ_FORM =
-  "the file, its triggers or one of its job conditions is not one this check reads";
+  "the file, its triggers, one of its job conditions or a job's matrix is not one this check reads";
 
 /**
  * What a pull request event costs in jobs, by shipped workflow installed in the project. GitHub
