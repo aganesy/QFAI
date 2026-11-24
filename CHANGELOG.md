@@ -617,6 +617,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   error a validator fault gives, written to `validate.json`, and the command
   fails under every `--fail-on` except `never`. Closes #5360.
 
+- **The test-layer rule and the gate failure protocol read the validation
+  result the current run wrote.** Both told the reader to inspect the fixed
+  `.qfai/report/validate.json`, which is only the default path and holds
+  whichever repository-wide run finished last. They now point at the
+  profile-suffixed `output.validateJsonPath` file, checked by its `profile`
+  and `generatedAt`. A run log's `validator.json` is read by the `code` of its
+  `errors` and `warnings` entries, since it has no `issues` key; the
+  `qfai-configure` skill said to read its issues. Closes #5261.
+
 - **The Mermaid check skips diagrams inside comments, and `.mdx` files get an
   ignore marker they can compile.** `check-mermaid.mjs` collected a fence
   even inside a comment, so a commented-out broken diagram failed the shipped
@@ -634,6 +643,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   from an earlier `qfai validate`, and this is now the documented behaviour.
   Closes #5361.
 
+- **The `tech.md` placeholder check counts only the template's own slots and
+  quotes what it flags.** `QFAI-ASSETS-003` treated any `<...>` in the
+  contract-layer `tech.md` as an unfilled slot, so a generic path such as
+  `tests/<name>/` in a Stack cell failed validation, and the message gave only
+  a count per section. Only the template's `<example: ...>` and
+  `<optional example: ...>` slots and bare `TODO` / `TBD` values count now, and
+  the message quotes the first unfilled value of each section. Closes #5461.
+
+- **The shipped test lane no longer calls a blank layer script an unreadable
+  manifest.** For a `package.json` that parsed but declared a blank
+  `test:unit` script, the `qfai-tests.yml` annotation said the file "could not
+  be read as a manifest". It now says the file does not declare the test
+  layers in a usable form, which covers both cases; the line above it still
+  names the exact reason. Closes #5222.
+
 - **`qfai sdd preflight` reads no previous summary through a link.** A
   `preflight_summary.md` that was a link to a file elsewhere was read before
   being replaced: the run copied that file's carry-over list into its own
@@ -649,6 +673,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   beside the lock `qfai catalog design` takes. A run that finds the lock held
   writes nothing and exits 1, saying whether to retry once the other run
   finishes or to remove a lock no running process holds. Closes #5382.
+
+- **`qfai doctor` names a workflow-precondition file it cannot read instead
+  of treating it as absent.** The checks behind `workflows.packageManager`,
+  `workflows.nodeVersionFile` and `workflows.nodePin` read `package.json`, the
+  Node version files and the workflows under `.github/workflows/`, and dropped
+  any of them that failed to read, so doctor reported fewer problems than it
+  saw. Only a missing file counts as absent now: a file that exists and cannot
+  be read (`EACCES`, `EIO`, a directory) is a `workflows.preconditionsUnread`
+  warning naming the file and the cause, and the other files are still
+  checked. Closes #5444.
 
 - **`qfai init` on Windows names no rerun command PowerShell would split.**
   The recovery line of a failed graph download double-quotes a temporary
@@ -675,12 +709,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The corpus walk compares file sizes before it reads any contents, so a file
   of another size is no longer read in full to find it changed. Closes #5204.
 
+- **`qfai session-review` counts no write-redirection target as a read, and
+  counts a `qfai` command after a leading assignment.** `cat x > <path>`
+  counted `<path>` as a file read although the shell writes it; the target of
+  `>`, `>>` or `&>` is no longer a read, and the target of `<` still is.
+  `CI=1 npx qfai validate` was not counted as a `qfai` command, so neither its
+  run nor its exit status was recorded; the `NAME=value` words that lead a
+  command are now skipped first. Closes #5487.
+
 - **The README says pnpm 11 stops on mdschema's install script.** It said pnpm
   only reports the `@jackchuka/mdschema` install script as unapproved. pnpm 11
   turned `strictDepBuilds` on by default, so `pnpm add qfai` exits with an
   error until the script is approved or declined. The README now says so and
   shows both: `pnpm approve-builds`, or `"@jackchuka/mdschema": false` under
   `allowBuilds` in `pnpm-workspace.yaml`. Closes #5227.
+
+- **The `validate.json` guide lists `flowIds`.** The guide calls itself the
+  source for the file's keys but left out `flowIds`, which a `--flow` run
+  writes and `qfai report` checks before it reads the file. Its top-level table
+  now lists the key, and the guide says a repository-wide run leaves it out and
+  that `qfai report` refuses a file recording another scope. Closes #5348.
 
 - **A directory whose name begins with two dots counts as inside its base
   everywhere.** Several more checks tested whether a path relative to its base
@@ -701,6 +749,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   by character code. The validate contract also states where a chain longer
   than ten raises its finding: at the token nearest the chain's end whose
   chain below passes ten, with no finding above it. Closes #5325.
+
+- **`QFAI-DELIB-001` requires both decision tables under each stage of a
+  deliberation record.** The check passed when the `Interview` and `Agent
+decisions` headings appeared anywhere in the file, so a record with several
+  stages could miss a table under one of them and still validate. Each stage
+  subheading that holds one of the two sections must now hold the other too,
+  and the finding names the stage that lacks it. Closes #5470.
 
 - **The change classification rule names the reviewer cards QFAI ships.**
   Its review-focus line named QA, Architect and Code Reviewer, roles no
@@ -725,6 +780,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.qfai/assistant/` unreported, where a later commit could take it. Step 11
   now lists that directory under `## For a person`, asks for it to be deleted
   before the next commit, and exits 3. Closes #5061.
+
+- **The `qfai --help` exit codes name every reason `qfai report` stops.** The
+  `report` row gave a missing input file as its only exit 2. It now also names
+  a bad or unknown `--flow`, an input recording other flows or, for a
+  flow-scoped input, another profile, a bad `--base-url`, and a project with
+  no story tree. Its exit 1 now also names the stale install that stops
+  `report --run-validate`, even under `--fail-on never`. Closes #5492.
 
 - **The code-graph corpus mirror leaves no empty staged directory behind.** When
   a source directory disappeared, or its path came to name a file the mirror
@@ -761,6 +823,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   finding or named a catalogue the project does not use. These readers now
   read only tables Markdown renders, as the index and example readers already
   do. Closes #5328.
+
+- **`qfai doctor` matches matrix values by content in `workflows.cost`.** An
+  `exclude` entry that wrote an object value's keys in another order than its
+  axis did not remove the combination, and an `include` entry like it added a
+  leg, so the count was too high; a `${{ }}` value inside a literal axis, an
+  `include` or an `exclude` was matched as text. An object value now matches
+  whatever its key order. A `${{ }}` value inside those lists, and a number or
+  boolean compared with the string spelled the same, which the runner may
+  merge, make the workflow named as not counted. Closes #5436.
 
 - **`qfai validate` reports a self-governance input it cannot observe instead
   of stopping.** Deciding whether `QFAI-HANDOFF-001` and `QFAI-MANIFEST-001`
@@ -828,6 +899,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reported it after the one note printed at the time. A later `qfai init` now
   names each such directory beside a wrapper it writes, and leaves it in place.
   Closes #5317.
+
+- **The README skill list names every skill `qfai init` installs.** It left
+  out `qfai-grilling`, the interview a stage starts when a design needs
+  settling, and `web-research`, the cited web research pipeline, so a reader
+  could not find either from the README. Both READMEs now list them.
+  Closes #5496.
 
 - **A forced relink that cannot write the new link keeps the old one.**
   `qfai init --force` deleted a wrapper link that named the wrong target, or

@@ -136,9 +136,12 @@ An acceptance test with an empty body raises no finding, whoever wrote it:
 who wrote an empty body, so the exemption covers every one. It is still not
 behavioral proof until its assertions are written.
 
-Check
-`.qfai/report/validate.json#issues` by finding code and inspect the test
-it names. An unreadable or truncated test scan cannot certify absence of
+Check the `issues` of the validation result the current run wrote by
+finding code, and inspect the test each one names. That result is the file
+`.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md` names
+for the run, not the fixed `.qfai/report/validate.json`, and only when its
+`profile` is the one run and its `generatedAt` is no earlier than the run's
+start. An unreadable or truncated test scan cannot certify absence of
 remaining obligations.
 
 ## Selecting a test layer

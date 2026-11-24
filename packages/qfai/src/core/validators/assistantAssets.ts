@@ -25,60 +25,35 @@ const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
 
 /**
  * The policy files the policy check reads at the start of a run. They ship
- * from `qfai init` as templates whose values are literal `<...>` placeholders,
+ * from `qfai init` as templates whose values are `<example: ...>` slots,
  * and `qfai-implement` is told to take every Test / Lint / Typecheck / Build command from
  * `tech.md#standard-commands-copy-paste` rather than inventing one — so an
- * unreplaced `<test command>` is a gate that cannot run, which the
+ * unreplaced `<example: pnpm vitest run>` is a gate that cannot run, which the
  * rule classes as UNRUN rather than passed.
  */
 
 /**
- * An unreplaced angle-bracket placeholder, e.g. `<test command>`.
+ * A `<...>` token, the candidate for a template slot.
  *
- * Deliberately narrow: the inner text may not span a line or nest another
- * bracket, and the negative lookahead drops closing tags (`</p>`) and
- * doctypes. HTML **comments** are not excluded here — the lookahead only
- * declined the opening `<!--`, leaving a commented-out `<obsolete command>`
- * inside it to match as the next token and fail a finished catalog under
- * `--strict`; whole comment spans are blanked by
- * {@link stripHtmlComments} before any line is scanned. Autolinks and mail
- * addresses are filtered in {@link isPlaceholderToken}, and bracketed link
- * destinations in {@link isLinkDestination}, rather than in the pattern, so
- * the reason each exclusion exists stays readable. Known
- * limitation: a genuine inline HTML tag written into a policy file
- * (`<br>`) still matches — these four files are prose templates, and the
- * alternative (a keyword allow-list) would miss the placeholders the
- * templates actually ship.
+ * The inner text may not span a line or nest another bracket, and the negative lookahead drops
+ * closing tags (`</p>`) and doctypes. Whole HTML comment spans are blanked by
+ * {@link stripHtmlComments} before any line is scanned. Only a token {@link isTemplateSlot}
+ * accepts counts: other angle-bracket wording a project writes, such as a generic path
+ * `tests/<name>/`, an autolink or an inline tag, is content.
  */
 const PLACEHOLDER_TOKEN_PATTERN = /<(?![/!])([^<>\n]{1,120})>/g;
+
+/**
+ * The slots the shipped `tech.md` template writes: `<example: value>` and, for an optional line,
+ * `<optional example: value>`.
+ */
+const TEMPLATE_SLOT_PATTERN = /^(?:optional\s+)?example:/u;
 
 /** An HTML comment, however many lines it spans. */
 const HTML_COMMENT_PATTERN = /<!--[\s\S]*?-->/g;
 
-/**
- * A CommonMark URI autolink body: `scheme:` then no whitespace or brackets.
- *
- * `<https://...>` is covered by this too, but so are `<tel:+1-212-555-0100>`
- * and `<urn:isbn:978...>`, which carry neither `://` nor an `@` and were
- * counted as unfilled slots — a false `QFAI-ASSETS-003` for any project whose
- * policy values are non-HTTP URIs.
- */
-const URI_AUTOLINK_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\s<>]*$/;
-
-/** A CommonMark email autolink body, e.g. `<team@example.com>`. */
-const EMAIL_AUTOLINK_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/**
- * What may follow a pointy-bracket link destination: an optional title, `)`.
- *
- * `[Design doc](<docs/System Design.md>)` is a *written* link whose destination is
- * bracketed because it carries a space — the one CommonMark shape that needs
- * the brackets. Its inner text is neither an autolink nor a mail address, so
- * it was counted as an unfilled slot and failed a finished catalog under
- * `--strict`. The token alone cannot tell the two apart; only the `](` before
- * it and the closing `)` after can, which is why the context is matched here.
- */
-const LINK_DESTINATION_TAIL_PATTERN = /^\s*(?:"[^"]*"|'[^']*'|\([^()]*\))?\s*\)/;
+/** How much of one flagged text the finding quotes. */
+const QUOTED_TEXT_LIMIT = 60;
 
 /** Text before the first `## ` heading — the title and the "replace this" note. */
 const PREAMBLE_SECTION = "(preamble)";
@@ -389,7 +364,9 @@ export async function validateStoryPolicyPlaceholders(
   if (content === null) return [];
   const sections = collectPolicyPlaceholders(content);
   if (sections.length === 0) return [];
-  const detail = sections.map((entry) => `${entry.section} (${entry.count})`).join(", ");
+  const detail = sections
+    .map((entry) => `${entry.section} (${entry.count}, first ${quoted(entry.firstText)})`)
+    .join(", ");
   return [
     issue(
       "QFAI-ASSETS-003",
@@ -403,6 +380,14 @@ export async function validateStoryPolicyPlaceholders(
       { loc: { line: sections[0]?.firstLine ?? 1 } },
     ),
   ];
+}
+
+/** One flagged text for a finding: on one line, cut to {@link QUOTED_TEXT_LIMIT} characters. */
+function quoted(text: string): string {
+  const line = text.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/gu, " ").trim();
+  const shown =
+    line.length > QUOTED_TEXT_LIMIT ? `${line.slice(0, QUOTED_TEXT_LIMIT - 3)}...` : line;
+  return `"${shown}"`;
 }
 
 /**
@@ -452,7 +437,13 @@ async function readPolicyFile(filePath: string): Promise<string | null> {
   }
 }
 
-type PolicyPlaceholderSection = { section: string; count: number; firstLine: number };
+/** A section's unfilled values: how many, the line of the first, and the first one's text. */
+type PolicyPlaceholderSection = {
+  section: string;
+  count: number;
+  firstLine: number;
+  firstText: string;
+};
 
 /**
  * Comment spans replaced by spaces, keeping every line break in place.
@@ -509,7 +500,7 @@ function markTableRows(lines: string[]): boolean[] {
 
 /** Placeholder counts per `## ` section, in document order. */
 function collectPolicyPlaceholders(content: string): PolicyPlaceholderSection[] {
-  const bySection = new Map<string, { count: number; firstLine: number }>();
+  const bySection = new Map<string, { count: number; firstLine: number; firstText: string }>();
   let section = PREAMBLE_SECTION;
   const stripped = stripHtmlComments(content);
   const lines = stripped.split(/\r?\n/);
@@ -523,108 +514,51 @@ function collectPolicyPlaceholders(content: string): PolicyPlaceholderSection[] 
     const heading = headings.get(index);
     if (heading?.level === 2) {
       // The heading names the section from here on — and is scanned too. A
-      // `## <product area>` left unreplaced is exactly the work `/qfai-configure`
+      // `## <example: Core>` left unreplaced is exactly the work `/qfai-configure`
       // still owes, and skipping the line hid it whenever the body beneath it
       // had been filled in.
       section = heading.title;
     }
-    const count = countUnfilledMarkers(heading?.title ?? line, tableRows[index] === true);
-    if (count === 0) {
+    const flagged = unfilledMarkers(heading?.title ?? line, tableRows[index] === true);
+    const first = flagged[0];
+    if (first === undefined) {
       continue;
     }
     const seen = bySection.get(section);
     if (seen === undefined) {
-      bySection.set(section, { count, firstLine: index + 1 });
+      bySection.set(section, { count: flagged.length, firstLine: index + 1, firstText: first });
     } else {
-      seen.count += count;
+      seen.count += flagged.length;
     }
   }
-  return Array.from(bySection, ([name, entry]) => ({
-    section: name,
-    count: entry.count,
-    firstLine: entry.firstLine,
-  }));
+  return Array.from(bySection, ([name, entry]) => ({ section: name, ...entry }));
 }
 
 /**
- * Unfilled slots on one line: `<...>` tokens **plus** bare `TODO`/`TBD` values.
+ * The unfilled values on one line, as written: template slots **plus** bare `TODO`/`TBD` values.
  *
- * A partly filled row carries both shapes at once — `| <milestone name> | TBD |`
- * is two slots, not one — so the two kinds are added rather than the first
- * kind short-circuiting the line. Each counted `<...>` token is blanked out of
- * the text handed to {@link countBareTodoValues} so a slot whose inner text is
- * itself a placeholder keyword (`<placeholder>`) is still charged once.
+ * A partly filled row carries both shapes at once — `| <example: Vitest> | TBD |` is two values,
+ * not one — so the two kinds are added rather than the first kind short-circuiting the line. Each
+ * slot is blanked out of the text handed to {@link bareTodoValues} so it is charged once.
  */
-function countUnfilledMarkers(line: string, isTableRow: boolean): number {
-  let count = 0;
-  const withoutSlots = line.replace(
-    PLACEHOLDER_TOKEN_PATTERN,
-    (match: string, inner: unknown, offset: unknown) => {
-      const at = typeof offset === "number" ? offset : -1;
-      if (
-        typeof inner === "string" &&
-        !isFilledLinkDestination(line, at, match.length, inner) &&
-        isPlaceholderToken(inner)
-      ) {
-        count += 1;
-        return "";
-      }
-      return match;
-    },
-  );
-  return count + countBareTodoValues(withoutSlots, isTableRow);
+function unfilledMarkers(line: string, isTableRow: boolean): string[] {
+  const slots: string[] = [];
+  const withoutSlots = line.replace(PLACEHOLDER_TOKEN_PATTERN, (match: string, inner: unknown) => {
+    if (typeof inner === "string" && isTemplateSlot(inner)) {
+      slots.push(match);
+      return "";
+    }
+    return match;
+  });
+  return [...slots, ...bareTodoValues(withoutSlots, isTableRow)];
+}
+
+function isTemplateSlot(inner: string): boolean {
+  return TEMPLATE_SLOT_PATTERN.test(inner.trim());
 }
 
 /**
- * Whether this `<...>` token is a **written** destination in `[text](<dest>)`.
- *
- * Read off the surrounding line rather than the token, because the token is
- * identical either way: `<docs/System Design.md>` is a filled-in destination
- * only when a `](` opens it and a `)` — optionally after a link title —
- * closes it.
- *
- * A destination that spells a placeholder keyword is not written, though:
- * `[Design doc](<TBD>)` is a broken link and the very work the rule reports, so
- * the link context alone stopped being enough to excuse a token.
- */
-function isFilledLinkDestination(
-  line: string,
-  offset: number,
-  length: number,
-  inner: string,
-): boolean {
-  if (isUnfilledValue(inner)) {
-    return false;
-  }
-  if (offset < 2 || line.slice(offset - 2, offset) !== "](") {
-    return false;
-  }
-  return LINK_DESTINATION_TAIL_PATTERN.test(line.slice(offset + length));
-}
-
-function isPlaceholderToken(inner: string): boolean {
-  const trimmed = inner.trim();
-  if (trimmed.length === 0) {
-    return false;
-  }
-  // `<https://example.com>`, `<tel:+1-212-555-0100>`, `<urn:isbn:978...>` and
-  // `<team@example.com>` are markdown autolinks — filled content, not a slot
-  // still waiting for one. Matched on the autolink *syntax* (a scheme, then
-  // no whitespace) rather than on `://`, so a project whose policy values
-  // use a non-HTTP scheme is not told its catalog is unfilled.
-  if (URI_AUTOLINK_PATTERN.test(trimmed) || EMAIL_AUTOLINK_PATTERN.test(trimmed)) {
-    return false;
-  }
-  // Every shipped slot is prose or a slot name, so it carries a letter. Keeps
-  // `<3`-style typography out of the count. Any Unicode letter counts, not
-  // only `[A-Za-z]`: a policy file localised into Japanese names its slots
-  // in Japanese, and demanding an ASCII letter let every one of them
-  // (a slot named in Japanese) pass as filled.
-  return /\p{L}/u.test(trimmed);
-}
-
-/**
- * Bare `TODO` / `TBD` values on one line, in whichever shape the file uses.
+ * Bare `TODO` / `TBD` values on one line, as written, in whichever shape the file uses.
  *
  * Recognising only a bullet (`- Key: TBD`) would let the Milestones **table**
  * the shipped `product.md` actually carries read as filled once someone typed
@@ -638,15 +572,15 @@ function isPlaceholderToken(inner: string): boolean {
  * pipes optional, and `TBD | TBD` is only recognisable as two cells from the
  * delimiter row above it.
  */
-function countBareTodoValues(line: string, isTableRow: boolean): number {
+function bareTodoValues(line: string, isTableRow: boolean): string[] {
   if (isTableRow) {
     // The repo's own GFM row splitter, not `split("|")`: it drops the outer
     // pipes and honours `\|`, the only way to write a pipe inside a cell. A
     // plain split cut `` `echo ok \| TBD` `` in half and read the tail as an
     // unfilled cell, failing a finished catalog under `--strict`.
-    return splitMarkdownRow(line).filter((cell) => isUnfilledValue(cell)).length;
+    return splitMarkdownRow(line).filter((cell) => isUnfilledValue(cell));
   }
-  return isUnfilledListValue(line) ? 1 : 0;
+  return isUnfilledListValue(line) ? [line.trim()] : [];
 }
 
 /**

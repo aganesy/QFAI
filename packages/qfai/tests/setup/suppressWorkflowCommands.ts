@@ -76,9 +76,12 @@ process.stdout.write = ((...args: WriteArgs): boolean => {
   const rebuilt = kept.join("\n");
   if (rebuilt.trim().length === 0) {
     // Nothing but commands: report the write as accepted without making one.
+    // The callback runs on the next tick, never before `write()` returns, as
+    // Node's own `stream.write` does: code whose behaviour depends on that
+    // order must not act differently only under this setup.
     const callback = args.find((argument) => typeof argument === "function");
     if (typeof callback === "function") {
-      (callback as () => void)();
+      process.nextTick(callback);
     }
     return true;
   }

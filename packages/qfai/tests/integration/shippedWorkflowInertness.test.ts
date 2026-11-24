@@ -624,29 +624,61 @@ describe("a manifest or an input the detection job cannot read stops it instead 
   }
 
   it.each([
-    { label: "text that is not JSON", manifest: "{ not json" },
-    { label: "an empty file", manifest: "" },
-    { label: "a JSON array", manifest: "[]" },
-    { label: "JSON null", manifest: "null" },
-    { label: "a scripts field that is an array", manifest: '{"scripts": []}' },
-    { label: "a scripts field that is null", manifest: '{"scripts": null}' },
-    { label: "a scripts field that is a string", manifest: '{"scripts": "vitest"}' },
-    { label: "a layer script that is a number", manifest: '{"scripts": {"test:unit": 1}}' },
-    { label: "a layer script that is null", manifest: '{"scripts": {"test:e2e": null}}' },
+    {
+      label: "text that is not JSON",
+      manifest: "{ not json",
+      reason: "package.json cannot be read as JSON",
+    },
+    { label: "an empty file", manifest: "", reason: "package.json cannot be read as JSON" },
+    { label: "a JSON array", manifest: "[]", reason: "package.json is not a JSON object" },
+    { label: "JSON null", manifest: "null", reason: "package.json is not a JSON object" },
+    {
+      label: "a scripts field that is an array",
+      manifest: '{"scripts": []}',
+      reason: "the scripts field of package.json is not an object",
+    },
+    {
+      label: "a scripts field that is null",
+      manifest: '{"scripts": null}',
+      reason: "the scripts field of package.json is not an object",
+    },
+    {
+      label: "a scripts field that is a string",
+      manifest: '{"scripts": "vitest"}',
+      reason: "the scripts field of package.json is not an object",
+    },
+    {
+      label: "a layer script that is a number",
+      manifest: '{"scripts": {"test:unit": 1}}',
+      reason: "the test:unit script is not a string",
+    },
+    {
+      label: "a layer script that is null",
+      manifest: '{"scripts": {"test:e2e": null}}',
+      reason: "the test:e2e script is not a string",
+    },
     // A blank npm script exits 0 without running anything, so declaring one would turn its lane
     // green over no tests at all.
-    { label: "a layer script that is empty", manifest: '{"scripts": {"test:unit": ""}}' },
+    {
+      label: "a layer script that is empty",
+      manifest: '{"scripts": {"test:unit": ""}}',
+      reason: "the test:unit script is blank",
+    },
     {
       label: "a layer script that is only whitespace",
       manifest: JSON.stringify({ scripts: { "test:unit": "vitest run", "test:api": " \t\n " } }),
+      reason: "the test:api script is blank",
     },
   ])(
-    "the probe stops, publishes no script list and names the error for $label",
-    async ({ manifest }) => {
+    "the probe stops, publishes no script list and names the error and its reason for $label",
+    async ({ manifest, reason }) => {
       const run = await probeWith(manifest);
       expect(run.status).toBe(1);
       expect(run.outputs["scripts"]).toBeUndefined();
-      expect(run.stdout).toMatch(/::error file=package\.json::qfai tests:/);
+      expect(run.stdout).toMatch(
+        /::error file=package\.json::qfai tests: package\.json does not declare the test layers in a usable form/,
+      );
+      expect(run.stderr).toContain(`qfai tests: ${reason}\n`);
     },
   );
 

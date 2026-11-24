@@ -8,6 +8,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const LOCKFILE_NAMES = new Set(["pnpm-lock.yaml", "yarn.lock", "package-lock.json"]);
 // Every lockfile the code under test opened for reading, by base name.
 const lockfileReads: string[] = [];
+// Paths below a fixture project, `/`-separated, whose read fails with the given code: files that
+// exist and cannot be read. Matched below the fixture's directory name, so a resolved temp path
+// (a symlinked or short-name temp directory) still matches.
+const failingReads = new Map<string, string>();
+const FIXTURE_PREFIX = "qfai-workflow-preconditions-";
+
+function fixtureRelative(file: string): string | undefined {
+  const parts = path.resolve(file).split(path.sep);
+  const index = parts.findIndex((part) => part.startsWith(FIXTURE_PREFIX));
+  return index === -1 ? undefined : parts.slice(index + 1).join("/");
+}
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<typeof fsPromises>("node:fs/promises");
@@ -17,6 +28,13 @@ vi.mock("node:fs/promises", async () => {
       const [file] = args;
       if (typeof file === "string" && LOCKFILE_NAMES.has(path.basename(file))) {
         lockfileReads.push(path.basename(file));
+      }
+      const code =
+        typeof file === "string" ? failingReads.get(fixtureRelative(file) ?? "") : undefined;
+      if (code !== undefined) {
+        return Promise.reject(
+          Object.assign(new Error(`${code}: controlled read failure`), { code }),
+        );
       }
       return actual.readFile(...args);
     },
@@ -31,6 +49,7 @@ const roots: string[] = [];
 
 afterEach(async () => {
   lockfileReads.splice(0);
+  failingReads.clear();
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
@@ -40,7 +59,7 @@ type Fixture = {
 };
 
 async function project(fixture: Fixture): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-workflow-preconditions-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), FIXTURE_PREFIX));
   roots.push(root);
   await writeFile(path.join(root, "qfai.config.yaml"), "paths:\n  specsDir: .qfai/spec\n", "utf-8");
   if (fixture.packageJson !== undefined) {
@@ -54,7 +73,12 @@ async function project(fixture: Fixture): Promise<string> {
   return root;
 }
 
-type Finding = { id: string; severity: string; message: string };
+type Finding = {
+  id: string;
+  severity: string;
+  message: string;
+  details?: Record<string, unknown>;
+};
 
 async function preconditions(root: string): Promise<Finding[]> {
   const data = await createDoctorData({ startDir: root, rootExplicit: true });
@@ -372,5 +396,53 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect((await finding(root, "workflows.nodeVersionFile"))?.message).toContain(
       `Node ${fallback}`,
     );
+  });
+
+  // QFAI:EX-0003-0011-46
+  it("reports a file that exists and cannot be read instead of treating it as absent", async () => {
+    // QFAI:AC-0003-0011-08
+    const manifestRoot = await project({
+      packageJson: { name: "demo" },
+      files: { "pnpm-lock.yaml": "" },
+    });
+    failingReads.set("package.json", "EACCES");
+
+    const manifestFindings = await preconditions(manifestRoot);
+    const manifestUnread = manifestFindings.filter(
+      (check) => check.id === "workflows.preconditionsUnread",
+    );
+
+    expect(manifestUnread).toHaveLength(1);
+    expect(manifestUnread[0]?.severity).toBe("warning");
+    expect(manifestUnread[0]?.message).toContain("package.json");
+    expect(manifestUnread[0]?.message).toContain("EACCES: controlled read failure");
+    expect(manifestUnread[0]?.details).toMatchObject({ path: "package.json", code: "EACCES" });
+    expect(manifestFindings.map((check) => check.id)).not.toContain("workflows.packageManager");
+
+    failingReads.clear();
+    const workflowRoot = await project({
+      packageJson: { engines: { node: ">=20.19.0" } },
+      files: {
+        ".nvmrc": "22\n",
+        ".github/workflows/old.yml": "steps:\n  - with:\n      node-version: 16\n",
+        ".github/workflows/ci.yml": "steps:\n  - with:\n      node-version: 18\n",
+      },
+    });
+    failingReads.set(".nvmrc", "EACCES");
+    failingReads.set(".github/workflows/old.yml", "EIO");
+
+    const workflowFindings = await preconditions(workflowRoot);
+    const unread = workflowFindings.filter((check) => check.id === "workflows.preconditionsUnread");
+
+    expect(unread.map((check) => check.details?.["path"]).sort()).toEqual([
+      ".github/workflows/old.yml",
+      ".nvmrc",
+    ]);
+    expect(unread.map((check) => check.details?.["code"]).sort()).toEqual(["EACCES", "EIO"]);
+    expect(unread.every((check) => check.severity === "warning")).toBe(true);
+    expect(workflowFindings.map((check) => check.id)).not.toContain("workflows.nodeVersionFile");
+    const pin = workflowFindings.find((check) => check.id === "workflows.nodePin");
+    expect(pin?.message).toContain(".github/workflows/ci.yml pins Node 18");
+    expect(pin?.message).not.toContain("old.yml");
   });
 });

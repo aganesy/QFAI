@@ -15,7 +15,8 @@ Feature: Contract index and contract-layer validation
   Scenario: Placeholders are read from the contract-layer policy files
     Given the story tree, and `tech.md` under `paths.contractsDir` with a section still holding a shipped placeholder, its Standard commands section included
     When `qfai validate` runs with a profile that runs `QFAI-ASSETS-*`
-    Then `QFAI-ASSETS-003` names that file under `paths.contractsDir` and each section still holding a placeholder
+    Then `QFAI-ASSETS-003` names that file under `paths.contractsDir` and each section still holding a placeholder, quoting the first one
+    And angle-bracket wording that is not a shipped placeholder, such as `tests/<name>/`, is not counted
     And the catalog copy of `tech.md` is not read for this finding on the story tree
 
   # AC-0001-0052-03
