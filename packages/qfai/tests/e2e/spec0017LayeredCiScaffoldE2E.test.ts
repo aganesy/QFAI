@@ -91,6 +91,7 @@ import {
 } from "../helpers/shippedLaneCommands.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { reviewedGraphInitFiles } from "../helpers/graphInitSurface.js";
+import { pathExists } from "../helpers/pathExists.js";
 
 /** The initialised project, built once for the whole file. */
 let projectPromise: Promise<string> | undefined;
@@ -120,12 +121,7 @@ async function workflowText(file: string): Promise<string> {
 }
 
 async function exists(rel: string): Promise<boolean> {
-  try {
-    await access(path.join(await project(), rel));
-    return true;
-  } catch {
-    return false;
-  }
+  return pathExists(path.join(await project(), rel));
 }
 
 /**

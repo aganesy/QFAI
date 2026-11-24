@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -8,6 +8,7 @@ import { runReport } from "../../../../src/cli/commands/report.js";
 import { runValidate, scopedReportPath } from "../../../../src/cli/commands/validate.js";
 import { validateProject } from "../../../../src/core/validate.js";
 import { captureStdout } from "../../../helpers/stdout.js";
+import { pathExists } from "../../../helpers/pathExists.js";
 
 const roots: string[] = [];
 
@@ -38,15 +39,6 @@ async function storyRoot(): Promise<string> {
   return root;
 }
 
-async function exists(file: string): Promise<boolean> {
-  try {
-    await access(file);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /** The scoped validate results under the report directory, whatever flow they name. */
 async function scopedResults(root: string): Promise<string[]> {
   try {
@@ -64,8 +56,8 @@ describe("story-tree CLI flow scope", () => {
     const shared = path.join(root, ".qfai/report/validate.json");
     const scoped = path.join(root, ".qfai/report/validate.flow-0001.json");
     await runValidate({ root, strict: false, failOn: "never", flowIds: ["BF-0001"] });
-    expect(await exists(scoped)).toBe(true);
-    expect(await exists(shared)).toBe(false);
+    expect(await pathExists(scoped)).toBe(true);
+    expect(await pathExists(shared)).toBe(false);
   });
 
   // QFAI:EX-0001-0057-01
@@ -86,7 +78,7 @@ describe("story-tree CLI flow scope", () => {
     }
     await runValidate({ root, strict: false, failOn: "never", flowIds: ["BF-0002", "BF-0001"] });
     const scoped = path.join(root, ".qfai/report/validate.flow-0001+0002.json");
-    expect(await exists(scoped)).toBe(true);
+    expect(await pathExists(scoped)).toBe(true);
     const result = JSON.parse(await readFile(scoped, "utf8")) as {
       flowIds?: string[];
       issues: Array<{ code: string; file?: string; message: string }>;
@@ -106,15 +98,15 @@ describe("story-tree CLI flow scope", () => {
     await runValidate({ root, strict: false, failOn: "never", flowIds: ["BF-0001"] });
     const out = path.join(root, "custom", "flow-report.md");
     await runReport({ root, format: "md", flowIds: ["BF-0001"], outPath: out });
-    expect(await exists(out)).toBe(true);
-    expect(await exists(path.join(root, ".qfai/report/report.flow-0001.md"))).toBe(false);
+    expect(await pathExists(out)).toBe(true);
+    expect(await pathExists(path.join(root, ".qfai/report/report.flow-0001.md"))).toBe(false);
   });
 
   it.each(["../outside", "BF-0009"])("TC-0004-0113: %s writes no scoped result", async (value) => {
     const root = await storyRoot();
     await runValidate({ root, strict: false, failOn: "never", flowIds: [value] });
-    expect(await exists(path.join(root, ".qfai/report/validate.flow-0009.json"))).toBe(false);
-    expect(await exists(path.join(root, ".qfai/report/validate.json"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/validate.flow-0009.json"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/validate.json"))).toBe(false);
   });
 
   it("TC-0004-0111: writes the scoped result when a v1 stateDiagram warning is present", async () => {
@@ -128,7 +120,7 @@ describe("story-tree CLI flow scope", () => {
     );
     await runValidate({ root, strict: false, failOn: "never", flowIds: ["BF-0001"] });
     const scoped = path.join(root, ".qfai/report/validate.flow-0001.json");
-    expect(await exists(scoped)).toBe(true);
+    expect(await pathExists(scoped)).toBe(true);
     const result = JSON.parse(await readFile(scoped, "utf8")) as {
       issues: Array<{ code: string; severity: string }>;
     };
@@ -178,12 +170,14 @@ describe("story-tree CLI flow scope", () => {
       const root = await storyRoot();
       await runValidate({ root, strict: false, failOn: "never", flowIds: ["BF-0001"] });
       await runReport({ root, format, failOn: "never", flowIds: ["BF-0001"] });
-      expect(await exists(path.join(root, `.qfai/report/report.flow-0001.${format}`))).toBe(true);
-      expect(await exists(path.join(root, `.qfai/report/report.${format}`))).toBe(false);
-      expect(await exists(path.join(root, ".qfai/report/business-flow-0001/coverage.md"))).toBe(
+      expect(await pathExists(path.join(root, `.qfai/report/report.flow-0001.${format}`))).toBe(
         true,
       );
-      expect(await exists(path.join(root, ".qfai/report/business-flow-0002/coverage.md"))).toBe(
+      expect(await pathExists(path.join(root, `.qfai/report/report.${format}`))).toBe(false);
+      expect(await pathExists(path.join(root, ".qfai/report/business-flow-0001/coverage.md"))).toBe(
+        true,
+      );
+      expect(await pathExists(path.join(root, ".qfai/report/business-flow-0002/coverage.md"))).toBe(
         false,
       );
       const rendered = await readFile(
@@ -200,7 +194,7 @@ describe("story-tree CLI flow scope", () => {
   it("TC-0005-0016/0017: refuses a malformed --flow before writing", async () => {
     const root = await storyRoot();
     expect(await runReport({ root, format: "md", flowIds: ["../../outside"] })).toBe(2);
-    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });
 
   it("TC-0005-0015: missing input guidance retains the flow scope", async () => {
@@ -267,7 +261,7 @@ describe("story-tree CLI flow scope", () => {
     await mkdir(malformed, { recursive: true });
     await writeFile(path.join(malformed, "business-flow.md"), "# BF-123456: Invalid\n", "utf8");
     await runReport({ root, format: "json", failOn: "never", runValidate: true });
-    expect(await exists(path.join(root, ".qfai/report/business-flow-123456"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/business-flow-123456"))).toBe(false);
   });
 });
 

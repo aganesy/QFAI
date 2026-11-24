@@ -10,13 +10,14 @@
  * to module scope and would otherwise apply to every case in that file.
  */
 
-import { access, mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import type { PathLike, StatOptions } from "node:fs";
 import type * as fsPromises from "node:fs/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pathExists } from "../../../helpers/pathExists.js";
 
 type FsPromises = typeof fsPromises;
 
@@ -62,15 +63,6 @@ async function seedRunLog(root: string, runId: string): Promise<string> {
   return dir;
 }
 
-async function exists(target: string): Promise<boolean> {
-  try {
-    await access(target);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 afterEach(async () => {
   failingStats.clear();
   while (tempDirs.length > 0) {
@@ -92,7 +84,7 @@ describe("cleanStaleRunLogs — a run directory whose stat fails", () => {
     await expect(cleanStaleRunLogs(root, defaultConfig, { keepLatest: 1 })).rejects.toThrow(
       /failed to stat run log run-20260402120000002 .*EACCES/u,
     );
-    expect(await exists(older)).toBe(true);
+    expect(await pathExists(older)).toBe(true);
   });
 
   it("skips a run that vanished before its stat and prunes the rest", async () => {

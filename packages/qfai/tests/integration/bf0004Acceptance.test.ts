@@ -30,6 +30,7 @@ import { expectLinkToCanonicalSkill } from "../helpers/skillLink.js";
 import { atLocation } from "../helpers/reportLocation.js";
 import { expectSentence, sentencesOf } from "../helpers/shippedSentences.js";
 import { removeTempTree } from "../helpers/tempTree.js";
+import { pathExists } from "../helpers/pathExists.js";
 
 const packageRoot = path.resolve(__dirname, "../..");
 const fixtureRoot = path.join(packageRoot, "tests/fixtures/migration-spec-to-story/old-layout");
@@ -392,16 +393,6 @@ async function writeGuard(root: string): Promise<string> {
   return file;
 }
 
-async function exists(target: string): Promise<boolean> {
-  try {
-    await lstat(target);
-    return true;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
-    throw error;
-  }
-}
-
 async function project(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf4-ac-"));
   temporary.push(root);
@@ -513,8 +504,8 @@ beforeAll(async () => {
         .sort(),
     );
     presentAfterStep.push({
-      pack: await exists(path.join(root, ".qfai/spec/spec-0001")),
-      policies: await exists(path.join(root, ".qfai/spec/_policies")),
+      pack: await pathExists(path.join(root, ".qfai/spec/spec-0001")),
+      policies: await pathExists(path.join(root, ".qfai/spec/_policies")),
     });
     if (number === 7) {
       afterStep7DirectoriesRemoved = await Promise.all(
@@ -1263,7 +1254,7 @@ describe("BF-0004 acceptance criteria", () => {
       expect(result.stderr, name).toContain("plan.yaml");
       expect(result.stderr, name).toContain(offender);
       expect(await fingerprint(root), name).toBe(before);
-      expect(await exists(path.join(root, "tmp/qfai-migration/id-map.json"))).toBe(false);
+      expect(await pathExists(path.join(root, "tmp/qfai-migration/id-map.json"))).toBe(false);
     }
   });
 

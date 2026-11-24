@@ -3,7 +3,7 @@
 // nothing) while keeping the newest runs — which `validate.log`'s
 // `run_log:` pointer names — unreachable by the pruner.
 
-import { access, mkdir, mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../../src/core/config.js";
 import { cleanStaleRunLogs } from "../../../../src/core/doctor/cleanRunLogs.js";
+import { pathExists } from "../../../helpers/pathExists.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const tempDirs: string[] = [];
@@ -50,15 +51,6 @@ async function seedRunLog(
   return dir;
 }
 
-async function exists(target: string): Promise<boolean> {
-  try {
-    await access(target);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 describe("cleanStaleRunLogs — TTL + keep-latest pruning of validate run logs", () => {
   it("removes a TTL-expired run beyond the keep-latest floor", async () => {
     const root = await newTempDir("prune");
@@ -69,8 +61,8 @@ describe("cleanStaleRunLogs — TTL + keep-latest pruning of validate run logs",
 
     expect(result.removed.map((entry) => entry.runId)).toEqual(["run-20260401120000001"]);
     expect(result.retainedLatest.map((entry) => entry.runId)).toEqual(["run-20260811120000002"]);
-    expect(await exists(stale)).toBe(false);
-    expect(await exists(fresh)).toBe(true);
+    expect(await pathExists(stale)).toBe(false);
+    expect(await pathExists(fresh)).toBe(true);
   });
 
   it("keeps the newest N runs regardless of age so run_log: can never dangle", async () => {
@@ -82,8 +74,8 @@ describe("cleanStaleRunLogs — TTL + keep-latest pruning of validate run logs",
 
     expect(result.removed).toEqual([]);
     expect(result.retainedLatest).toHaveLength(2);
-    expect(await exists(older)).toBe(true);
-    expect(await exists(newer)).toBe(true);
+    expect(await pathExists(older)).toBe(true);
+    expect(await pathExists(newer)).toBe(true);
   });
 
   it("dry-run reports the plan without removing anything", async () => {
@@ -94,7 +86,7 @@ describe("cleanStaleRunLogs — TTL + keep-latest pruning of validate run logs",
     const result = await cleanStaleRunLogs(root, defaultConfig, { keepLatest: 1, dryRun: true });
 
     expect(result.removed.map((entry) => entry.runId)).toEqual(["run-20260401120000001"]);
-    expect(await exists(stale)).toBe(true);
+    expect(await pathExists(stale)).toBe(true);
   });
 
   it("ttlDays: 0 opts out entirely (audit-evidence projects keep every run)", async () => {
@@ -106,7 +98,7 @@ describe("cleanStaleRunLogs — TTL + keep-latest pruning of validate run logs",
 
     expect(result.removed).toEqual([]);
     expect(result.skippedInTtl).toHaveLength(1);
-    expect(await exists(stale)).toBe(true);
+    expect(await pathExists(stale)).toBe(true);
   });
 
   it("never touches the sibling artifacts an operator greps", async () => {
@@ -150,8 +142,8 @@ describe("cleanStaleRunLogs — TTL + keep-latest pruning of validate run logs",
 
     expect(result.keepLatest).toBe(1);
     expect(result.removed.map((entry) => entry.runId)).toEqual(["run-20260401120000001"]);
-    expect(await exists(newest)).toBe(true);
-    expect(await exists(older)).toBe(false);
+    expect(await pathExists(newest)).toBe(true);
+    expect(await pathExists(older)).toBe(false);
   });
 
   it("retains the run validate.log points at even when it falls past keep-latest", async () => {
@@ -168,8 +160,8 @@ describe("cleanStaleRunLogs — TTL + keep-latest pruning of validate run logs",
 
     expect(result.removed).toEqual([]);
     expect(result.retainedPointer.map((entry) => entry.runId)).toEqual(["run-20260401120000001"]);
-    expect(await exists(pointed)).toBe(true);
-    expect(await exists(newest)).toBe(true);
+    expect(await pathExists(pointed)).toBe(true);
+    expect(await pathExists(newest)).toBe(true);
   });
 
   it("retains the pointed-at run when outDir — and so the run_log: path — holds a space", async () => {
@@ -197,7 +189,7 @@ describe("cleanStaleRunLogs — TTL + keep-latest pruning of validate run logs",
 
     expect(result.removed).toEqual([]);
     expect(result.retainedPointer.map((entry) => entry.runId)).toEqual(["run-20260401120000001"]);
-    expect(await exists(pointed)).toBe(true);
+    expect(await pathExists(pointed)).toBe(true);
   });
 
   it("retains a run named only by run_id: when the run_log: path is unusable", async () => {
@@ -214,7 +206,7 @@ describe("cleanStaleRunLogs — TTL + keep-latest pruning of validate run logs",
 
     expect(result.removed).toEqual([]);
     expect(result.retainedPointer.map((entry) => entry.runId)).toEqual(["run-20260401120000001"]);
-    expect(await exists(pointed)).toBe(true);
+    expect(await pathExists(pointed)).toBe(true);
   });
 
   it("keeps the run that really started last when a clock rollback inverts the run ids", async () => {
@@ -239,8 +231,8 @@ describe("cleanStaleRunLogs — TTL + keep-latest pruning of validate run logs",
 
     expect(result.retainedLatest.map((entry) => entry.runId)).toEqual(["run-20261101010500000"]);
     expect(result.removed.map((entry) => entry.runId)).toEqual(["run-20261101015900000"]);
-    expect(await exists(afterRollback)).toBe(true);
-    expect(await exists(beforeRollback)).toBe(false);
+    expect(await pathExists(afterRollback)).toBe(true);
+    expect(await pathExists(beforeRollback)).toBe(false);
   });
 
   it("reports an unreadable outDir instead of returning an empty plan", async () => {

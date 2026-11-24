@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -9,6 +9,7 @@ import type { Issue, ValidationResult } from "../../src/core/types.js";
 import { captureStderr } from "../helpers/stderr.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
+import { pathExists } from "../helpers/pathExists.js";
 
 const roots: string[] = [];
 
@@ -53,15 +54,6 @@ async function cli(root: string, args: string[]) {
     return { exit: process.exitCode, stdout, stderr };
   } finally {
     process.exitCode = previous;
-  }
-}
-
-async function exists(file: string): Promise<boolean> {
-  try {
-    await access(file);
-    return true;
-  } catch {
-    return false;
   }
 }
 
@@ -121,7 +113,7 @@ describe("flow-scoped validate", () => {
     );
 
     await cli(root, ["validate", "--flow", "BF-0001", "--flow", "BF-0002", "--fail-on", "never"]);
-    expect(await exists(path.join(report, "validate.flow-0001+0002.json"))).toBe(true);
+    expect(await pathExists(path.join(report, "validate.flow-0001+0002.json"))).toBe(true);
   });
 });
 
@@ -152,8 +144,8 @@ describe("flow-scoped report", () => {
       expect(rendered).toContain("BF-0001");
       expect(rendered).not.toContain("QFAI-TEST-999");
       expect(rendered).not.toContain("BF-0002");
-      expect(await exists(path.join(report, "business-flow-0001/coverage.md"))).toBe(true);
-      expect(await exists(path.join(report, "business-flow-0002"))).toBe(false);
+      expect(await pathExists(path.join(report, "business-flow-0001/coverage.md"))).toBe(true);
+      expect(await pathExists(path.join(report, "business-flow-0002"))).toBe(false);
       expect(await readFile(path.join(report, "report.md"), "utf8")).toBe("earlier report.md\n");
       expect(await readFile(path.join(report, "report.json"), "utf8")).toBe(
         "earlier report.json\n",
@@ -169,7 +161,7 @@ describe("flow-scoped report", () => {
     await cli(root, ["report", "--flow", "BF-0001", "--out", target]);
 
     expect(await readFile(target, "utf8")).toContain("QFAI-TEST-001");
-    expect(await exists(path.join(root, ".qfai/report/report.flow-0001.md"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/report.flow-0001.md"))).toBe(false);
   });
 
   // QFAI:AC-0001-0066-04
@@ -204,7 +196,7 @@ describe("flow-scoped report", () => {
       "never",
     ]);
     expect(fresh.exit).toBe(0);
-    expect(await exists(path.join(report, "report.flow-0001.md"))).toBe(true);
+    expect(await pathExists(path.join(report, "report.flow-0001.md"))).toBe(true);
 
     await cli(root, ["validate", "--flow", "BF-0001", "--profile", "atdd", "--fail-on", "never"]);
     await rm(path.join(report, "report.flow-0001.md"));
@@ -219,7 +211,7 @@ describe("flow-scoped report", () => {
     ]);
     expect(mismatched.exit).toBe(2);
     expect(mismatched.stderr).toContain("qfai validate --flow BF-0001 --profile sdd");
-    expect(await exists(path.join(report, "report.flow-0001.md"))).toBe(false);
+    expect(await pathExists(path.join(report, "report.flow-0001.md"))).toBe(false);
   });
 
   // QFAI:AC-0001-0066-03
@@ -232,6 +224,6 @@ describe("flow-scoped report", () => {
 
     expect(result.exit).toBe(2);
     expect(await listing(root)).toEqual(before);
-    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });
 });

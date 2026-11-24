@@ -3,7 +3,7 @@
  * the project edited it, keeps no record of what it wrote, and leaves the
  * project's own files alone.
  */
-import { access, link, lstat, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { link, lstat, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -12,6 +12,7 @@ import { runInit } from "../helpers/legacyInit.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { useTempDirPool } from "../helpers/shippedWorkflowFixtures.js";
 import { captureStdout } from "../helpers/stdout.js";
+import { pathExists } from "../helpers/pathExists.js";
 
 const newTempDir = useTempDirPool("qfai-init-force-");
 
@@ -21,13 +22,6 @@ const editFor = (file: string): string =>
 
 async function init(dir: string, force = false): Promise<string> {
   return captureStdout(() => runInit({ dir, force, dryRun: false, yes: true }));
-}
-
-async function exists(file: string): Promise<boolean> {
-  return access(file).then(
-    () => true,
-    () => false,
-  );
 }
 
 async function append(file: string): Promise<string> {
@@ -78,7 +72,7 @@ describe("init --force overwrites the regenerated assets", () => {
       ).toBe(await readFile(shippedAssistant(relative), "utf-8"));
     }
     expect(await readFile(localSkill, "utf-8")).toBe("# My skill\n");
-    expect(await exists(path.join(dir, ".qfai", "assistant", ".assets.lock.json"))).toBe(false);
+    expect(await pathExists(path.join(dir, ".qfai", "assistant", ".assets.lock.json"))).toBe(false);
     for (const [file, text] of kept) {
       expect(await readFile(path.join(dir, ...file.split("/")), "utf-8"), file).toBe(text);
     }
@@ -187,6 +181,6 @@ describe("plain init leaves the rule masters create-only", () => {
     expect(await readFile(path.join(rules, "user-questions.md"), "utf-8")).toBe(
       await readFile(shippedMaster("user-questions.md"), "utf-8"),
     );
-    expect(await exists(path.join(rules, ".qfai-rules.lock.json"))).toBe(false);
+    expect(await pathExists(path.join(rules, ".qfai-rules.lock.json"))).toBe(false);
   });
 });
