@@ -11,7 +11,7 @@ import { IDENT_CHAR_RE, IDENT_START_RE } from "../../../../src/core/uiux/cssUrlR
 
 describe("the CSS identifier character classes are written with escapes", () => {
   it("pins the identifier character class", () => {
-    expect(IDENT_CHAR_RE.source).toBe(String.raw`^[a-z0-9_\u0080-￿-]$`);
+    expect(IDENT_CHAR_RE.source).toBe(String.raw`^[a-z0-9_\u0080-\uFFFF-]$`);
     for (const char of ["a", "Z", "0", "_", "-", "\u0080", String.fromCharCode(0xffff)]) {
       expect(IDENT_CHAR_RE.test(char)).toBe(true);
     }
@@ -21,7 +21,7 @@ describe("the CSS identifier character classes are written with escapes", () => 
   });
 
   it("pins the identifier start class", () => {
-    expect(IDENT_START_RE.source).toBe(String.raw`^[a-z_\u0080-￿-]$`);
+    expect(IDENT_START_RE.source).toBe(String.raw`^[a-z_\u0080-\uFFFF-]$`);
     for (const char of ["a", "Z", "_", "-", "\u0080", String.fromCharCode(0xffff)]) {
       expect(IDENT_START_RE.test(char)).toBe(true);
     }
