@@ -3,8 +3,8 @@
 # A constraint is policy: it says what the design must accept and why, in plain
 # words. A file name, a command or a configuration key is concrete, so a
 # backtick is refused, and so is a business rule, example, acceptance criterion
-# or contract ID, written as `CLI-0010` or as its file name `cli-0010`: policy
-# is read by the documents below it and cites none of them. Each section's IDs (TC, OC, BC, QT and LC) run from 01 in table
+# or contract ID, in capitals or in the lowercase form of a contract's file
+# name: policy is read by the documents below it and cites none of them. Each section's IDs (TC, OC, BC, QT and LC) run from 01 in table
 # order; `qfai validate` checks that, since this schema cannot count rows.
 heading_rules:
   no_skip_levels: true
@@ -41,7 +41,7 @@ structure:
           - pattern: "`"
             regex: true
           # A business rule, example, acceptance criterion or contract ID, the
-          # contract ID also in the lowercase form of its file name (cli-0010).
+          # contract ID also in the lowercase form of its file name.
           - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-(?:(?:CLI|API|DB|UI)-)?[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI|cli|api|db|ui)-[0-9]{4})"
             regex: true
       - heading:
