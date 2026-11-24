@@ -23,7 +23,11 @@ const HEADING_RE = /^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/;
 const DELIMITER_CELL_RE = /^:?-+:?$/;
 
 type Line = { text: string; number: number };
-type Section = { name: string; lines: Line[] };
+/**
+ * One Interview or Agent decisions section. `stage` is the heading text of the stage subheading it
+ * sits under, or `null` when it sits directly under the record's title or under no heading.
+ */
+type Section = { name: string; stage: string | null; lines: Line[] };
 
 /**
  * The layout check of the deliberation records: every `*.md` file directly
@@ -60,9 +64,11 @@ export async function validateDeliberationRecords(
 function checkRecord(file: string, text: string): Issue[] {
   const sections = collectSections(text);
   const issues: Issue[] = [];
-  for (const name of SECTIONS) {
-    if (!sections.some((section) => section.name === name)) {
-      issues.push(defect(file, `${file} has no \`${name}\` section.`));
+  for (const stage of stagesOf(sections)) {
+    for (const name of SECTIONS) {
+      if (!sections.some((section) => section.stage === stage && section.name === name)) {
+        issues.push(defect(file, missingSectionMessage(file, stage, name)));
+      }
     }
   }
   for (const section of sections) {
@@ -74,7 +80,25 @@ function checkRecord(file: string, text: string): Issue[] {
 }
 
 /**
+ * Each stage that holds an Interview or Agent decisions section, in the order they appear, so
+ * each one is checked for both tables. A record with no such section has one stage, the record
+ * itself (`null`), which then lacks both.
+ */
+function stagesOf(sections: Section[]): (string | null)[] {
+  const stages = [...new Set(sections.map((section) => section.stage))];
+  return stages.length === 0 ? [null] : stages;
+}
+
+function missingSectionMessage(file: string, stage: string | null, name: string): string {
+  return stage === null
+    ? `${file} has no \`${name}\` section.`
+    : `${file}: the stage \`${stage}\` has no \`${name}\` section.`;
+}
+
+/**
  * The lines under each Interview or Agent decisions heading, up to the next heading of its level or above.
+ * A section's stage is the nearest heading above it of a higher level, when that heading is not the
+ * record's level-1 title.
  *
  * It reads the text {@link maskNonSpecRegions} leaves, so a heading or table inside a fenced
  * sample, an HTML comment or another region it blanks is not a section or a table, and every line keeps
@@ -83,6 +107,8 @@ function checkRecord(file: string, text: string): Issue[] {
 function collectSections(text: string): Section[] {
   const sections: Section[] = [];
   let open: { section: Section; level: number } | null = null;
+  // The headings that enclose the current line, outermost first.
+  const enclosing: { text: string; level: number }[] = [];
   maskNonSpecRegions(text)
     .split("\n")
     .forEach((raw, index) => {
@@ -90,10 +116,15 @@ function collectSections(text: string): Section[] {
       const heading = HEADING_RE.exec(raw);
       if (heading?.[1] && heading[2] !== undefined) {
         const level = heading[1].length;
+        const headingText = heading[2].trim();
         if (open !== null && level <= open.level) open = null;
-        const name = SECTIONS.find((candidate) => candidate === heading[2]?.trim());
+        while ((enclosing.at(-1)?.level ?? 0) >= level) enclosing.pop();
+        const parent = enclosing.at(-1);
+        enclosing.push({ text: headingText, level });
+        const name = SECTIONS.find((candidate) => candidate === headingText);
         if (name !== undefined) {
-          const section: Section = { name, lines: [] };
+          const stage = parent !== undefined && parent.level > 1 ? parent.text : null;
+          const section: Section = { name, stage, lines: [] };
           sections.push(section);
           open = { section, level };
         }
