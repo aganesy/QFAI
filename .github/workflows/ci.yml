@@ -683,6 +683,14 @@ jobs:
           TEMP: ${{ runner.temp }}\qfai tmp
           TMP: ${{ runner.temp }}\qfai tmp
         run: node scripts/link-assistant-tree.mjs
+      # pnpm hands a manifest entry to the platform shell, which on Windows is
+      # cmd.exe. An aggregate entry written inline again would be refused there
+      # before any check ran, and no Linux leg would see it. This runs one
+      # aggregate entry through pnpm on this runner; its three scans are cheap.
+      - name: Run an aggregate entry through pnpm on Windows
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped templates run no lint aggregate, so there is no entry on that side to run on Windows.
+        run: pnpm run ci:gate:scans
       - name: Run the Windows parity suites
         # SHIPPED-CI: not-applicable
         # Because: this profiles the repository's validation corpus, which
