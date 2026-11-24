@@ -693,6 +693,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `<optional example: ...>` slots and bare `TODO` / `TBD` values count now, and
   the message quotes the first unfilled value of each section. Closes #5461.
 
+- **A constraint row that names a contract by its file name is refused.** The
+  `constraint.md` schema refused `CLI-0010` in a constraint row but read
+  `cli-0010` as plain words, so a row citing a contract by its file name passed
+  `qfai validate`. `QFAI-DOCSCHEMA-001` now reports the lowercase form of a
+  contract ID (`cli-`, `api-`, `db-` or `ui-` followed by four digits) in every
+  section. Closes #5467.
+
 - **The shipped test lane no longer calls a blank layer script an unreadable
   manifest.** For a `package.json` that parsed but declared a blank
   `test:unit` script, the `qfai-tests.yml` annotation said the file "could not
