@@ -255,7 +255,8 @@ Fill policy templates with repo evidence.
 - Keep existing content when already accurate.
 - When evidence is missing, write `TBD` and record what is missing.
 - Do not invent facts.
-- Fill `<paths.contractsDir>/tech.md` in its template's shape: a Stack row for the runtime, the platform and each tool detected, with one row per test layer whose Choice names the tool, the files it was observed in, and why it fits; each runtime dependency with its reason, and the quality-gate commands under Standard commands, one labelled item each. It holds no rule and no constraint; a constraint goes to `01_policy/constraint.md`.
+- Fill `<paths.contractsDir>/tech.md` in its template's shape: a Stack row for the runtime, the platform and each tool detected, with one row per test layer whose Choice names the tool, the files it was observed in, and why it fits;
+  each runtime dependency with its reason, and the quality-gate commands under Standard commands, one labelled item each. It holds no rule and no constraint; a constraint goes to `01_policy/constraint.md`.
 - Fill `## Architecture` of `<paths.contractsDir>/tech.md` from the codebase: one row per layer the module layout shows, what it is responsible for, and the layers its imports reach, or `-`. Name layers, never paths. Implementation places new code by this table and reviewers judge a change against it, so write the import directions the code has.
   - A layer is a group of modules whose imports point one way: an upper layer uses the layers below it, and a lower layer never imports an upper one.
   - Draw the layers first, as one `mermaid` `flowchart TD` with a node per layer and an `Upper --> Lower` edge per import direction. Then write the table rows from the uppermost layer down, so each Depends on names only rows below it. `npx qfai validate` reports a diagram and a table that disagree.
