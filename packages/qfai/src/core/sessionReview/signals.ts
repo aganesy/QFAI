@@ -298,7 +298,7 @@ export function pathsInCommand(
       if (files.length === 0 && SHELL_BREAK.test(token.word)) visit(token.word);
     }
   };
-  visit(slashed(command));
+  visit(command);
   return [...new Set(found)];
 }
 
@@ -306,12 +306,15 @@ export function pathsInCommand(
 function watchedFilesIn(word: string, facts: Pick<ProjectFacts, "root" | "platform">): string[] {
   const values = word.includes("=") ? [word, word.slice(word.indexOf("=") + 1)] : [word];
   return values
-    .map((value) => watchedOnly(relativeToRoot(value, facts)))
+    .map((value) => watchedOnly(relativeToRoot(slashed(value), facts)))
     .filter((file): file is string => file !== null && namesOneFile(file));
 }
 
 /** A character that ends a shell word outside quotes: a blank, a separator or a redirection. */
 const SHELL_BREAK = /[\s;|&()`<>]/;
+
+/** A character a backslash escapes outside quotes: one that would end the word or open a quote. */
+const ESCAPED = /[\s;|&()`<>'"]/;
 
 /**
  * The words of a shell line with their quotes removed, split at blanks and at separators and
@@ -319,6 +322,9 @@ const SHELL_BREAK = /[\s;|&()`<>]/;
  * belongs to a redirection: the target after `>`, `>>`, `<` or `&>`, as in `2>/dev/null` or `> out`, an `&`
  * duplicate such as the `1` of `2>&1`, and the descriptor number fused before the operator.
  * The target of `>` is also marked written: the shell writes that file, it does not read it.
+ * A backslash outside quotes escapes a following blank, separator, redirection or quote, as in
+ * `feature\ notes.md`; any other backslash is kept, so a Windows path such as `.agents\rules\a.md`
+ * keeps its separators for `slashed` to turn into slashes.
  */
 function shellTokens(command: string): ShellToken[] {
   const tokens: ShellToken[] = [];
@@ -336,10 +342,16 @@ function shellTokens(command: string): ShellToken[] {
     current = "";
     quoted = false;
   };
-  for (const char of command) {
+  for (let at = 0; at < command.length; at += 1) {
+    const char = command[at] ?? "";
+    const next = command[at + 1] ?? "";
     if (quote !== null) {
       if (char === quote) quote = null;
       else current += char;
+    } else if (char === "\\" && ESCAPED.test(next)) {
+      // An escaped line break continues the line and adds nothing to the word.
+      if (next !== "\n") current += next;
+      at += 1;
     } else if (char === "'" || char === '"') {
       quote = char;
       quoted = true;
@@ -434,9 +446,9 @@ const TEXT_ONLY = new Set(["echo", "printf"]);
  */
 function otherOperands(command: string, facts: Pick<ProjectFacts, "root" | "platform">): number {
   let count = 0;
-  for (const segment of shellSegments(slashed(command))) {
+  for (const segment of shellSegments(command)) {
     const { name, words } = commandWords(segment);
-    const base = path.posix.basename(name).toLowerCase();
+    const base = path.posix.basename(slashed(name)).toLowerCase();
     if (TEXT_ONLY.has(base)) continue;
     let scriptPending = SCRIPT_FIRST.has(base);
     for (const word of words) {

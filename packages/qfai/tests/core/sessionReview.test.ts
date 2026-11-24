@@ -1124,6 +1124,29 @@ describe("the gaps a host's record shapes and a shell line's syntax leave", () =
     expect(pathsInCommand(`bash -c "cat src/x.ts > .agents/rules/a.md"`, FACTS)).toEqual([]);
   });
 
+  it("keeps a backslash-escaped blank inside its word, and reads any other backslash as a slash", () => {
+    expect(pathsInCommand("cat .agents/rules/feature\\ notes.md", FACTS)).toEqual([
+      ".agents/rules/feature notes.md",
+    ]);
+    expect(pathsInCommand(`bash -c "cat .agents/rules/a\\ b.md"`, FACTS)).toEqual([
+      ".agents/rules/a b.md",
+    ]);
+    expect(pathsInCommand("cat .agents/rules/\\\na.md", FACTS)).toEqual([".agents/rules/a.md"]);
+    const windows = { root: "C:\\Work\\App", platform: "win32" as const };
+    expect(pathsInCommand("type .agents\\rules\\a.md", windows)).toEqual([".agents/rules/a.md"]);
+    expect(pathsInCommand("type C:\\Work\\App\\.agents\\rules\\a.md", windows)).toEqual([
+      ".agents/rules/a.md",
+    ]);
+    const events: SessionEvents = {
+      ...emptyEvents(),
+      calls: [{ id: "a", name: "Bash", command: "cat .agents/rules/feature\\ notes.md" }],
+      results: [{ id: "a", isError: false, text: "123456", exitCode: 0 }],
+    };
+    expect(summarise(events, FACTS).reads).toEqual([
+      { path: ".agents/rules/feature notes.md", reads: 1, repeats: 0, bytes: 6 },
+    ]);
+  });
+
   it("counts a qfai command and its status after leading NAME=value assignments", () => {
     expect(qfaiCommandsIn("CI=1 npx qfai validate")).toEqual(["qfai validate"]);
     expect(qfaiCommandsIn("CI=1 FOO='a b' qfai workflow plan")).toEqual(["qfai workflow plan"]);
