@@ -609,6 +609,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file that calls it, directly or through another routine, raises the warning.
   Closes #5180.
 
+- **A fault after the validators finish is now an unfinished run, not a
+  crash.** When `qfai validate` or `qfai report --run-validate` failed to read
+  the filesystem while finishing its result, for the coverage notice, the error
+  escaped the command: it wrote no `validate.json` and printed no `counts:` or
+  `run-log:`. That fault is now reported as the `QFAI-SCAN-002` incomplete-run
+  error a validator fault gives, written to `validate.json`, and the command
+  fails under every `--fail-on` except `never`. Closes #5360.
+
 - **The Mermaid check skips diagrams inside comments, and `.mdx` files get an
   ignore marker they can compile.** `check-mermaid.mjs` collected a fence
   even inside a comment, so a commented-out broken diagram failed the shipped

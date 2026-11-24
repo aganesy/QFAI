@@ -68,7 +68,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   }
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
-  const validated = await validateProjectOrIncomplete(
+  const normalized = await validateProjectOrIncomplete(
     root,
     configResult,
     {
@@ -86,7 +86,6 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   await emitProvenance(effectiveToolVersion);
   const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
   const scopedFlowIds = options.flowIds ?? [];
-  const normalized = await finishValidationResult(root, validated, options.profile);
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
   // No special case for an incomplete run. `QFAI-SCAN-002` is an `error`, so
@@ -178,9 +177,15 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
 }
 
 /**
- * Run the validators, or return the incomplete-run verdict when they reject.
- * `validate` and `report --run-validate` both run validation through here, so
- * a run that could not finish writes the same verdict from either command.
+ * Run the validators and finish their result with {@link finishValidationResult},
+ * or return the incomplete-run verdict when either step rejects. `validate` and
+ * `report --run-validate` both run validation through here, so a run that could
+ * not finish writes the same verdict from either command.
+ *
+ * The finishing step is inside the boundary too: it reads the filesystem for the
+ * coverage notice, and a fault there escaped both commands the way a validator
+ * fault once did. When the validators had already failed, their verdict is kept,
+ * since it names the first fault.
  *
  * Wrapped, because an unhandled rejection here would leave the operator with
  * one stderr line and no verdict — no `counts:`, no `run-log:`, no
@@ -200,9 +205,7 @@ export async function validateProjectOrIncomplete(
   command: "validate" | "report",
   toolVersionOverride?: string,
 ): Promise<ValidationResult> {
-  try {
-    return await validateProject(root, configResult, options);
-  } catch (error: unknown) {
+  const incompleteFor = async (error: unknown): Promise<ValidationResult> => {
     const incomplete = incompleteRunResult(
       toolVersionOverride ?? (await resolveToolVersion()),
       buildIncompleteRunIssue(error, command),
@@ -214,6 +217,15 @@ export async function validateProjectOrIncomplete(
     return options.flowIds && options.flowIds.length > 0
       ? { ...incomplete, flowIds: [...new Set(options.flowIds)].sort() }
       : incomplete;
+  };
+  const validated = await validateProject(root, configResult, options).catch(incompleteFor);
+  try {
+    return await finishValidationResult(root, validated, options.profile);
+  } catch (error: unknown) {
+    return normalizeValidationResult(
+      root,
+      isIncompleteRunResult(validated) ? validated : await incompleteFor(error),
+    );
   }
 }
 
@@ -645,7 +657,7 @@ function profileNotice(message: string): Issue {
  *   evaluate, is appended last, after waiver processing, so no waiver can
  *   suppress it.
  */
-export async function finishValidationResult(
+async function finishValidationResult(
   root: string,
   validated: ValidationResult,
   profile: ValidationProfile | undefined,
