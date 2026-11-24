@@ -10,9 +10,11 @@
 const CSS_WHITESPACE = new Set([" ", "\t", "\n", "\r", "\f"]);
 const LINE_BREAKS = new Set(["\n", "\r", "\f"]);
 const HEX_DIGIT_RE = /^[0-9a-f]$/i;
-const IDENT_CHAR_RE = /^[a-z0-9_\u0080-￿-]$/i;
+// The non-ASCII ranges end in the escape `\uFFFF`, never the raw character, which an editor
+// or an encoding pass could change with no diff showing it. Exported for the test that pins it.
+export const IDENT_CHAR_RE = /^[a-z0-9_\u0080-\uFFFF-]$/i;
 const DIGIT_RE = /^[0-9]$/;
-const IDENT_START_RE = /^[a-z_\u0080-￿-]$/i;
+export const IDENT_START_RE = /^[a-z_\u0080-\uFFFF-]$/i;
 
 /** Functions whose own string arguments are resource URLs. */
 const STRING_URL_FUNCTIONS = new Set(["src", "image-set", "-webkit-image-set"]);
