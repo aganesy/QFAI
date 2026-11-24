@@ -877,6 +877,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   names each such directory beside a wrapper it writes, and leaves it in place.
   Closes #5317.
 
+- **The README skill list names every skill `qfai init` installs.** It left
+  out `qfai-grilling`, the interview a stage starts when a design needs
+  settling, and `web-research`, the cited web research pipeline, so a reader
+  could not find either from the README. Both READMEs now list them.
+  Closes #5496.
+
 - **A forced relink that cannot write the new link keeps the old one.**
   `qfai init --force` deleted a wrapper link that named the wrong target, or
   named nothing, before it wrote the managed link. When the write was refused,
