@@ -738,6 +738,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read only tables Markdown renders, as the index and example readers already
   do. Closes #5328.
 
+- **The README skill list names every skill `qfai init` installs.** It left
+  out `qfai-grilling`, the interview a stage starts when a design needs
+  settling, and `web-research`, the cited web research pipeline, so a reader
+  could not find either from the README. Both READMEs now list them.
+  Closes #5496.
+
 - **`qfai validate` reports a self-governance input it cannot observe instead
   of stopping.** Deciding whether `QFAI-HANDOFF-001` and `QFAI-MANIFEST-001`
   could run, the check let an error other than "absent", such as a permission
