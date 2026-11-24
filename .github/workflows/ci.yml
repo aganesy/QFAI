@@ -521,7 +521,7 @@ jobs:
           fi
       # `dist/` is not committed, and the `e2e` and `integration` slices read it —
       # `tests/integration/cliStartupCost.test.ts` fails with "no shipped bundle was readable" and
-      # `tests/e2e/spec0010DiscussionMockAndPointerE2E.test.ts` spawns `dist/cli/index.cjs`. Without
+      # `tests/e2e/bf0003DoctorRepairFlowE2E.test.ts` spawns `dist/cli/index.mjs`. Without
       # this those legs are structurally ALWAYS RED, and an always-red leg of a required lane
       # conveys no differential signal: a genuine Node 20 break and a missing bundle look identical,
       # so the lane gets un-required or "fixed" by dropping the pin. Same step, same condition, same
@@ -598,9 +598,9 @@ jobs:
       - uses: ./.github/actions/setup
       # The e2e AND integration slices contain tests that exec the built
       # CLI at `packages/qfai/dist/cli/index.{cjs,mjs}` (e.g.
-      # spec0010DiscussionMockAndPointerE2E, spec0008AtddScaffold,
-      # spec0014SaasPackageCertify, spec0006DoctorRemediation,
-      # spec0004SaasPackageAndPackLocation). In a clean GitHub Actions
+      # bf0003DoctorRepairFlowE2E and bf0001WorkflowPlanARouteE2E spawn
+      # `dist/cli/index.mjs`, and staleInstallAcceptance copies `dist/`;
+      # cliStartupCost reads both bundles). In a clean GitHub Actions
       # checkout `dist/` is not committed, so both slices need a build
       # step before the test step. Other slices run pure TS via vitest's
       # loader and do not need dist on disk. Codex r3338425862.
