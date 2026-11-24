@@ -724,6 +724,11 @@ decisions` headings appeared anywhere in the file, so a record with several
   subheading that holds one of the two sections must now hold the other too,
   and the finding names the stage that lacks it. Closes #5470.
 
+- **`qfai doctor` names a job's matrix as a reason `workflows.cost` did not
+  count a workflow.** The message said only that the file, its triggers or one
+  of its job conditions was not one the check reads, though a matrix it cannot
+  expand is also a reason. Closes #5435.
+
 - **The change classification rule names the reviewer cards QFAI ships.**
   Its review-focus line named QA, Architect and Code Reviewer, roles no
   shipped agent card defines, so no session could start them. It now points at
