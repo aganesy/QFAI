@@ -28,10 +28,11 @@ per-role navigation journey's test of each role this flow adds a screen to.
   contracts, under `paths.contractsDir`.
 - The worker session setup `implement-credentials` wrote, when a test needs an
   authenticated actor.
-- When an E2E test drives a browser, or a test depends on business time,
-  shares a database or server with other workers, or feeds a required CI
-  check:
+- When an E2E test drives a browser, or a test shares a database or server
+  with other workers or feeds a required CI check:
   `.qfai/assistant/skill/qfai-implement/references/test-runner-recipes.md`.
+- When a test depends on business time:
+  `.qfai/assistant/skill/qfai-implement/references/business-time-recipe.md`.
 
 ## Writes
 

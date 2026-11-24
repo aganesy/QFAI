@@ -489,6 +489,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `stale-install`. The upgrade guide now tells every checkout and worktree to
   run its install after pulling a qfai upgrade.
 
+- **Business time has its own recipe, and the test runner recipes import the
+  app adapters they call.** The deterministic business time section moved from
+  `qfai-implement/references/test-runner-recipes.md` into
+  `qfai-implement/references/business-time-recipe.md`, which the
+  `implement-acceptance` step names for a test that depends on business time.
+  Every recipe code block that calls `createAccount`, `issueSession`, `signIn`,
+  `acceptsSession` or `deleteAccount` now imports it from `./app-adapters`, the
+  one module the recipes' Status section says the application writes, and the
+  Vitest session code is split into `worker-session.ts` and `session-for.ts`
+  with their imports, so each block runs as written.
+
 - **The workflow rule delegates as the shared delegation baseline does.** Its
   delegation section no longer hands analysis, contracts and CI to technical
   roles, one of them a DevOps/CI Engineer no shipped card defines. It now says
@@ -765,6 +776,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   error until the script is approved or declined. The README now says so and
   shows both: `pnpm approve-builds`, or `"@jackchuka/mdschema": false` under
   `allowBuilds` in `pnpm-workspace.yaml`. Closes #5227.
+
+- **Init's path guards stop on a path they cannot inspect.** The checks that
+  keep `qfai init`, the run log, the graph files and the migration from writing
+  through a link read every `lstat` failure as "nothing there", so an `EACCES`
+  or an `EIO` on a directory let the write go ahead unseen. Only a missing entry
+  counts as absent now; any other failure stops the command with the path and
+  the cause. Closes #5616.
 
 - **The `validate.json` guide lists `flowIds`.** The guide calls itself the
   source for the file's keys but left out `flowIds`, which a `--flow` run

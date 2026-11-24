@@ -372,8 +372,8 @@ export async function isFlattenedLink(
   known?: Stats,
 ): Promise<boolean> {
   // The caller has already `lstat`ed this path, and re-probing it opened a hole
-  // the rest of this function had been closed against: `safeLstat` turns a
-  // transient `EIO` or an `EACCES` into `undefined`, which reads as "somebody
+  // the rest of this function had been closed against: `safeLstat` turned a
+  // transient `EIO` or an `EACCES` into `undefined`, which read as "somebody
   // else's file", so init left a flattened wrapper in the reassuring `skipped`
   // list. Pass the `Stats` it already holds.
   const stats = known ?? (await safeLstat(linkPath));

@@ -312,6 +312,21 @@ describe("the optional test runner recipes ship beside the rule set", () => {
     for (const adapter of adapters) {
       expect(status, `the adapter ${adapter} is not listed`).toContain(`\`${adapter}\``);
     }
+    // Every code block that uses an adapter imports it from the one module the
+    // Status section names, so the recipe runs as written once that module exists.
+    expect(status, "the adapter module is not named").toContain("one module, `./app-adapters`");
+    const unimported = Array.from(recipes.matchAll(/^```tsx?\n([\s\S]*?)^```$/gm), (match) => {
+      const block = match[1] ?? "";
+      const imported = Array.from(
+        block.matchAll(/^import \{([^}]*)\} from "\.\/app-adapters";$/gm),
+        (line) => (line[1] ?? "").split(",").map((name) => name.trim()),
+      ).flat();
+      const code = block.replace(/^import .*$/gm, "");
+      return adapters
+        .filter((adapter) => new RegExp(`(?<![\\w.])${adapter}\\b`).test(code))
+        .filter((adapter) => !imported.includes(adapter));
+    }).flat();
+    expect(unimported, "a recipe uses an adapter it does not import").toEqual([]);
     // Rule 4: the run-owned directory, removed at teardown, is the cache's
     // lifetime, and "worker" means the pool slot or the parallel index.
     const directory = section(recipes, "The run-owned session directory");
@@ -406,10 +421,12 @@ describe("the optional test runner recipes ship beside the rule set", () => {
     const acceptanceStep = await read(
       path.join(".qfai", "assistant", "step", "implement-acceptance", "STEP.md"),
     );
-    expect(acceptanceStep, "the acceptance step does not point to the recipes").toContain(
-      RECIPES_REL,
+    const TIME_REL = ".qfai/assistant/skill/qfai-implement/references/business-time-recipe.md";
+    expect(acceptanceStep, "the acceptance step does not point to the time recipe").toContain(
+      TIME_REL,
     );
-    const time = section(await read(RECIPES_REL), "Deterministic business time");
+    const time = section(await read(TIME_REL), "Deterministic business time");
+    expect(time, "the business time recipe has no business time section").not.toBe("");
     expect(time).toMatch(/\*\*Clock adapter\.\*\*[\s\S]*Server-side decisions read the same/);
     expect(time).toMatch(/\*\*Production-safe boundary\.\*\*[\s\S]*No ordinary production request/);
     expect(time).toMatch(/No case waits for real time and none skips on the time of day/);
