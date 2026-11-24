@@ -48,6 +48,8 @@ jobs:
           persist-credentials: false
       # SHIPPED-CI: not-applicable
       # Because: no shipped workflow selects tests by reading this repository's Vitest workspace configuration.
+      # SHIPPED-CI: not-applicable
+      # Because: the shipped set has no named-test diagnostic, so it reads no checkout file it would need to bound by its open handle.
       - name: Validate named test request
         run: |
           set -euo pipefail
