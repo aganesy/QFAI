@@ -177,6 +177,27 @@ describe("qfai doctor reports the jobs the shipped workflows start per pull requ
     expect(check?.message).toContain("up to 6 when its lane runs (scope, checks x4, docs)");
   });
 
+  // QFAI:EX-0003-0011-40
+  it("matches an object value in an exclude or include entry whatever its key order", async () => {
+    // QFAI:AC-0003-0011-12
+    const root = await project({
+      "qfai-docs.yml": await docsWithMatrix([
+        "check: [shape, mermaid]",
+        "cfg: [{a: 1, b: 2}, {a: 3, b: 4}]",
+        "exclude:",
+        "  - check: mermaid",
+        "    cfg: {b: 2, a: 1}",
+        "include:",
+        "  - cfg: {b: 4, a: 3}",
+        "    label: wide",
+      ]),
+    });
+
+    const check = await costCheck(root);
+
+    expect(check?.message).toContain("up to 5 when its lane runs (scope, checks x3, docs)");
+  });
+
   // QFAI:EX-0003-0011-41
   it("names a workflow whose matrix it cannot read instead of guessing a count", async () => {
     // QFAI:AC-0003-0011-12
@@ -212,6 +233,43 @@ describe("qfai doctor reports the jobs the shipped workflows start per pull requ
         ]),
       ],
       ["qfai-tests.yml", await testsWithMatrix(["include:", "  - node: 22"])],
+      [
+        "qfai-docs.yml",
+        await docsWithMatrix([
+          "check: [shape, mermaid]",
+          "node: [22]",
+          "include:",
+          "  - node: '22'",
+        ]),
+      ],
+      [
+        "qfai-docs.yml",
+        await docsWithMatrix([
+          "check: [shape, mermaid]",
+          "node: [22]",
+          "exclude:",
+          "  - check: shape",
+          "    node: '22'",
+        ]),
+      ],
+      ["qfai-docs.yml", await docsWithMatrix(["check: [shape, '${{ vars.EXTRA_CHECK }}']"])],
+      [
+        "qfai-docs.yml",
+        await docsWithMatrix([
+          "check: [shape, mermaid]",
+          "os: [ubuntu-latest]",
+          "include:",
+          "  - os: '${{ vars.OS }}'",
+        ]),
+      ],
+      [
+        "qfai-docs.yml",
+        await docsWithMatrix([
+          "check: [shape, mermaid]",
+          "exclude:",
+          "  - check: '${{ vars.SKIPPED_CHECK }}'",
+        ]),
+      ],
     ];
     for (const [name, text] of unreadable) {
       const root = await project({ [name]: text });
