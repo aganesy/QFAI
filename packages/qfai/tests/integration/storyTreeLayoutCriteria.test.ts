@@ -243,6 +243,7 @@ describe("the policy and contract layers of an initialized project", () => {
       ["an example ID", "Is shown by EX-0001-0001-01"],
       ["an acceptance criterion ID", "Is judged by AC-0001-0001-01"],
       ["a contract ID", "Obeys CLI-0001 on every run"],
+      ["a contract file name", "Deletes only what cli-0001 names"],
     ];
     for (const [label, wording] of concrete) {
       await put(root, constraint, constraints(`| TC-01 | ${wording} | Adopters use both |\n`));
