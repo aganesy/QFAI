@@ -755,6 +755,14 @@ decisions` headings appeared anywhere in the file, so a record with several
   no story tree. Its exit 1 now also names the stale install that stops
   `report --run-validate`, even under `--fail-on never`. Closes #5492.
 
+- **`qfai session-review` counts a rule file whose blank is escaped with a
+  backslash.** Every `\` in a shell line was read as a path separator, so
+  `cat .agents/rules/feature\ notes.md` split into a directory and a second
+  word and the read was not counted. A backslash outside quotes now escapes a
+  following blank, separator, redirection or quote, and an escaped line break
+  continues the line; any other backslash still reads as a separator, so a
+  Windows path such as `.agents\rules\a.md` is counted as before. Closes #5459.
+
 - **The code-graph corpus mirror leaves no empty staged directory behind.** When
   a source directory disappeared, or its path came to name a file the mirror
   skips (a hard-linked or non-regular file), the staged copy under

@@ -1131,6 +1131,7 @@ describe("the gaps a host's record shapes and a shell line's syntax leave", () =
     expect(pathsInCommand(`bash -c "cat .agents/rules/a\\ b.md"`, FACTS)).toEqual([
       ".agents/rules/a b.md",
     ]);
+    expect(pathsInCommand("cat .agents/rules/\\\na.md", FACTS)).toEqual([".agents/rules/a.md"]);
     const windows = { root: "C:\\Work\\App", platform: "win32" as const };
     expect(pathsInCommand("type .agents\\rules\\a.md", windows)).toEqual([".agents/rules/a.md"]);
     expect(pathsInCommand("type C:\\Work\\App\\.agents\\rules\\a.md", windows)).toEqual([
