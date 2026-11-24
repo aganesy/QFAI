@@ -1268,7 +1268,7 @@ function normalizeUiuxAudit(
   if (raw.maxRawTokenLiteralWarnings !== undefined) {
     if (
       typeof raw.maxRawTokenLiteralWarnings === "number" &&
-      Number.isFinite(raw.maxRawTokenLiteralWarnings) &&
+      Number.isInteger(raw.maxRawTokenLiteralWarnings) &&
       raw.maxRawTokenLiteralWarnings >= 0
     ) {
       result.maxRawTokenLiteralWarnings = raw.maxRawTokenLiteralWarnings;
@@ -1276,7 +1276,7 @@ function normalizeUiuxAudit(
       issues.push(
         configIssue(
           configPath,
-          "uiux.audit.maxRawTokenLiteralWarnings must be a number greater than or equal to 0.",
+          "uiux.audit.maxRawTokenLiteralWarnings must be an integer of 0 or more.",
         ),
       );
     }

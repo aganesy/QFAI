@@ -645,6 +645,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file that calls it, directly or through another routine, raises the warning.
   Closes #5180.
 
+- **`uiux.audit.maxRawTokenLiteralWarnings` must be a whole number.** The
+  design audit's token-drift threshold accepted a fraction such as `2.5`. It now
+  requires an integer of 0 or more, as the other count limits do, and reports
+  any other value as `QFAI-CFG-002`, leaving the default of 5 in place.
+  Closes #5642.
+
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read
   the filesystem while finishing its result, for the coverage notice, the error
