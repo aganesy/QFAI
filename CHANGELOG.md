@@ -702,6 +702,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now lists that directory under `## For a person`, asks for it to be deleted
   before the next commit, and exits 3. Closes #5061.
 
+- **The `qfai --help` exit codes name every reason `qfai report` stops.** The
+  `report` row gave a missing input file as its only exit 2. It now also names
+  a bad or unknown `--flow`, an input recording other flows or, for a
+  flow-scoped input, another profile, a bad `--base-url`, and a project with
+  no story tree. Its exit 1 now also names the stale install that stops
+  `report --run-validate`, even under `--fail-on never`. Closes #5492.
+
 - **The code-graph corpus mirror leaves no empty staged directory behind.** When
   a source directory disappeared, or its path came to name a file the mirror
   skips (a hard-linked or non-regular file), the staged copy under

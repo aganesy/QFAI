@@ -120,6 +120,34 @@ describe("qfai --help exit-code section", () => {
     );
   });
 
+  it("names every reason report returns 2, and the stale install that stops --run-validate", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+    const reportRow = section.slice(
+      section.indexOf("\n  report"),
+      section.indexOf("atdd scaffold"),
+    );
+    const exitOne = reportRow.slice(
+      reportRow.indexOf(`${EXIT_CODES.findings} = `),
+      reportRow.indexOf(`${EXIT_CODES.inputError} = `),
+    );
+    const exitTwo = reportRow.slice(reportRow.indexOf(`${EXIT_CODES.inputError} = `));
+
+    // runReport returns 2 for each of these before it writes a report
+    // (BR-CLI-0013-0008, BR-CLI-0013-0009, BR-CLI-0013-0011, BR-CLI-0013-0012),
+    // not only for a missing input file.
+    expect(exitTwo).toMatch(/the input validate\.json is missing/);
+    expect(exitTwo).toMatch(/a --flow value[\s\S]*?not a BF-NNNN ID[\s\S]*?undeclared flow/);
+    expect(exitTwo).toMatch(/records other flows[\s\S]*?another profile/);
+    expect(exitTwo).toMatch(/--base-url/);
+    expect(exitTwo).toMatch(/1\.x spec-pack layout/);
+    // main.ts stops `report --run-validate` with 1 on a stale install, before
+    // the command runs, whatever --fail-on says (staleInstall.test.ts).
+    expect(exitOne).toMatch(
+      /--run-validate[\s\S]*?not[\s\S]*?the version the lockfile pins[\s\S]*?even under --fail-on never/,
+    );
+  });
+
   it("awaits the command rather than handing it to a catch nobody reads", async () => {
     // The entry is the last place a promise can be consumed, and it handed the
     // command's to a `.catch` whose own promise reached no one. The rule asks
