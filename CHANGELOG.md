@@ -881,6 +881,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   `.qfai/tools/analysis/` lost its files but kept the directory tree, empty. The
   mirror now removes a staged directory left holding nothing. Closes #5104.
 
+- **`uiux.audit.maxRawTokenLiteralWarnings` must be a whole number.** The
+  design audit's token-drift threshold accepted a fraction such as `2.5`. It now
+  requires an integer of 0 or more, as the other count limits do, and reports
+  any other value as `QFAI-CFG-002`, leaving the default of 5 in place.
+  Closes #5642.
+
 - **`qfai workflow plan` refuses a plan whose added specification stage runs a
   step that is not installed.** A request naming the story tree can give a
   route a `spec` stage with `sdd-triage`, `sdd-story` or `sdd-contract`, but

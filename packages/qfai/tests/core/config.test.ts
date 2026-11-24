@@ -66,6 +66,47 @@ describe("uiux.surfacePaths", () => {
   });
 });
 
+// QFAI:EX-0001-0039-70
+describe("uiux.audit.maxRawTokenLiteralWarnings", () => {
+  async function thresholdOf(value: string) {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-token-drift-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        `uiux:\n  audit:\n    maxRawTokenLiteralWarnings: ${value}\n`,
+        "utf-8",
+      );
+      const { config, issues } = await loadConfig(root);
+      return {
+        threshold: config.uiux?.audit?.maxRawTokenLiteralWarnings,
+        issues: issues.map((entry) => [entry.code, entry.severity, entry.message]),
+      };
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  it.each(["2.5", "-1", '"3"'])("reports %s and keeps no threshold", async (value) => {
+    expect(await thresholdOf(value)).toEqual({
+      threshold: undefined,
+      issues: [
+        [
+          "QFAI-CFG-002",
+          "error",
+          "uiux.audit.maxRawTokenLiteralWarnings must be an integer of 0 or more.",
+        ],
+      ],
+    });
+  });
+
+  it.each([
+    ["0", 0],
+    ["4", 4],
+  ])("keeps %s", async (value, expected) => {
+    expect(await thresholdOf(value)).toEqual({ threshold: expected, issues: [] });
+  });
+});
+
 describe("baseBranch config", () => {
   it("loads baseBranch from config YAML", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-basebranch-"));
