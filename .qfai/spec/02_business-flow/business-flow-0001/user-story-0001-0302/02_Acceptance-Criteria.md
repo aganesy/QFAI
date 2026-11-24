@@ -13,9 +13,9 @@ Feature: Validate checks only the deliberation record's table layout
 
   # AC-0001-0302-02
   Scenario: A layout defect is an error
-    Given a record that lacks one of the two sections, has a table header with a column missing, added, renamed or moved, or has a data row whose cell count is not six
+    Given a record that lacks one of the two sections, or a stage of it that holds one section and lacks the other, has a table header with a column missing, added, renamed or moved, or has a data row whose cell count is not six
     When `qfai validate` runs
-    Then it raises `QFAI-DELIB-001` at error naming the file, the section and the column or row
+    Then it raises `QFAI-DELIB-001` at error naming the file, the section and the stage, column or row
 
   # AC-0001-0302-03
   Scenario: Nothing else about a record is checked

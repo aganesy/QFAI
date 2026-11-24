@@ -717,6 +717,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   than ten raises its finding: at the token nearest the chain's end whose
   chain below passes ten, with no finding above it. Closes #5325.
 
+- **`QFAI-DELIB-001` requires both decision tables under each stage of a
+  deliberation record.** The check passed when the `Interview` and `Agent
+decisions` headings appeared anywhere in the file, so a record with several
+  stages could miss a table under one of them and still validate. Each stage
+  subheading that holds one of the two sections must now hold the other too,
+  and the finding names the stage that lacks it. Closes #5470.
+
 - **The change classification rule names the reviewer cards QFAI ships.**
   Its review-focus line named QA, Architect and Code Reviewer, roles no
   shipped agent card defines, so no session could start them. It now points at
