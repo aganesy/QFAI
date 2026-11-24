@@ -87,6 +87,7 @@ import {
 } from "../../../../scripts/check-release-notes.mjs";
 import {
   expectWindowsPreflightRefusal,
+  expectWindowsRunnerHeadChangeRefusal,
   FULL_FLOW_TITLE,
   namedFixture,
   namedGit,
@@ -5583,9 +5584,7 @@ describe("the Windows diagnostic's actual Node programs", () => {
 
   // QFAI:EX-0002-0027-02
   it("does not launch Vitest after HEAD moves between setup and the runner", () => {
-    const result = runWindowsSuite("success", true);
-    expect(result.status, result.stdout + result.stderr).not.toBe(0);
-    expect(result.invocation).toBeUndefined();
+    expectWindowsRunnerHeadChangeRefusal(runWindowsSuite("success", true));
   });
   // QFAI:EX-0002-0027-04 QFAI:EX-0002-0027-06
   it("runs the native CLI without selectors and reports the actual full-flow duration", () => {
