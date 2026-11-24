@@ -142,12 +142,15 @@ it("reads an exact known source file without another graph query", async () => {
         : undefined;
     const answer: unknown = typeof text === "string" ? JSON.parse(text) : undefined;
     const files =
-      typeof answer === "object" && answer !== null && "relatedFiles" in answer
+      typeof answer === "object" &&
+      answer !== null &&
+      "relatedFiles" in answer &&
+      Array.isArray(answer.relatedFiles)
         ? answer.relatedFiles
-        : undefined;
+        : [];
     expect(files).toEqual(["checkout.ts"]);
     const queries = fixture.calls.length;
-    expect(await readFile(path.join(fixture.root, "checkout.ts"), "utf8")).toBe(
+    expect(await readFile(path.join(fixture.root, String(files[0])), "utf8")).toBe(
       "export function checkout() { return 3; }\n",
     );
     expect(fixture.calls).toHaveLength(queries);
