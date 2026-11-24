@@ -628,6 +628,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now uses `{/* mermaid-lint:ignore */}` on the line above the fence instead.
   Closes #5341.
 
+- **The `tech.md` placeholder check counts only the template's own slots and
+  quotes what it flags.** `QFAI-ASSETS-003` treated any `<...>` in the
+  contract-layer `tech.md` as an unfilled slot, so a generic path such as
+  `tests/<name>/` in a Stack cell failed validation, and the message gave only
+  a count per section. Only the template's `<example: ...>` and
+  `<optional example: ...>` slots and bare `TODO` / `TBD` values count now, and
+  the message quotes the first unfilled value of each section. Closes #5461.
+
 - **The shipped test lane no longer calls a blank layer script an unreadable
   manifest.** For a `package.json` that parsed but declared a blank
   `test:unit` script, the `qfai-tests.yml` annotation said the file "could not
