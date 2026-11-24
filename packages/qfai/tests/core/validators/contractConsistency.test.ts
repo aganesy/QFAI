@@ -596,6 +596,30 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       expect(issues[0]?.severity).toBe("error");
     });
 
+    // QFAI:EX-0001-0039-49
+    it("does not count a GLOBAL UNLOGGED or LOCAL UNLOGGED table, which PostgreSQL rejects", async () => {
+      // `GLOBAL` and `LOCAL` go only with a temporary table. Counted as tables,
+      // these two statements would make the one real table look like three.
+      const oneTable = [
+        "CREATE GLOBAL UNLOGGED TABLE archived_sim_lines (id uuid);",
+        "CREATE LOCAL UNLOGGED TABLE retired_sim_lines (id uuid);",
+        "CREATE TYPE sim_line_status AS ENUM ('active', 'inactive', 'in_call', 'error');",
+        "",
+        "CREATE TABLE sim_lines (",
+        "  id uuid PRIMARY KEY,",
+        "  status sim_line_status NOT NULL,",
+        "  CONSTRAINT sim_lines_status_ck",
+        "    CHECK (status IN ('active', 'inactive', 'in_call', 'error'))",
+        ");",
+        "",
+      ].join("\n");
+      const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": oneTable });
+
+      const issues = await validateContractConsistency([api], dbs);
+
+      expect(issues[0]?.severity).toBe("error");
+    });
+
     /**
      * A value computed at read time is not a contradiction: widening the domain
      * would make it possible to STORE a value the contract forbids storing, and

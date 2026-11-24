@@ -72,6 +72,20 @@ export const DOLLAR_QUOTE_MARKER = new RegExp(
   String.raw`(?<!${IDENTIFIER_CHAR_CLASS})\$(?:${IDENTIFIER_START_CLASS}${TAG_CHAR_CLASS}*)?\$`,
 );
 
+/**
+ * The words PostgreSQL allows between `CREATE` and `TABLE`:
+ * `[ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ]`. PostgreSQL has no
+ * `CREATE OR REPLACE TABLE`, and `GLOBAL` or `LOCAL` goes only with a temporary
+ * table. Any other word there makes it another statement, such as
+ * `CREATE PUBLICATION … FOR TABLE`, which creates no table.
+ *
+ * A regular-expression source fragment, optional as a whole and ending in
+ * whitespace when present, for `\bCREATE\s+${CREATE_TABLE_MODIFIERS}TABLE`.
+ * Every pattern that finds a table a contract creates builds on it, so no two
+ * of them can count tables differently.
+ */
+export const CREATE_TABLE_MODIFIERS = String.raw`(?:(?:(?:GLOBAL|LOCAL)\s+)?(?:TEMPORARY|TEMP)\s+|UNLOGGED\s+)?`;
+
 /** {@link DOLLAR_QUOTE_MARKER} at one offset of the whole text, so the lookbehind sees what precedes it. */
 const DOLLAR_QUOTE_AT = new RegExp(DOLLAR_QUOTE_MARKER.source, "y");
 

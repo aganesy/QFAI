@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { parseStructuredContract } from "../contracts.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
 import { assistantLayerDir } from "../paths/assistantPaths.js";
+import { CREATE_TABLE_MODIFIERS } from "../sqlContract.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -670,8 +671,11 @@ const NAMED_TYPE_USAGE_PATTERNS = [
   /\bALTER\s+(?:COLUMN\s+)?"?([A-Za-z_][A-Za-z0-9_]*)"?\s+(?:SET\s+DATA\s+)?TYPE\s+(?:"?[A-Za-z_][A-Za-z0-9_]*"?\s*\.\s*)?"?([A-Za-z_][A-Za-z0-9_]*)"?/gi,
 ] as const;
 
-const CREATE_TABLE_PATTERN =
-  /\bCREATE\s+(?:(?:GLOBAL|LOCAL)\s+)?(?:(?:TEMPORARY|TEMP|UNLOGGED)\s+)?TABLE\b/gi;
+/** A `CREATE TABLE` with the modifiers the apply-order check accepts, so both count the same tables. */
+const CREATE_TABLE_PATTERN = new RegExp(
+  String.raw`\bCREATE\s+${CREATE_TABLE_MODIFIERS}TABLE\b`,
+  "gi",
+);
 
 /** How many tables a contract declares, over text with comments removed. */
 function countCreateTables(rawText: string): number {
