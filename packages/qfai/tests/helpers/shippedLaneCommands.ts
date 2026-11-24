@@ -1250,7 +1250,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-docs.yml", "698f93291a942562a5449dd4cead0cfa0e6111f13b7bd7b6b0de6af098b20cfa"],
-  ["qfai-tests.yml", "a5367dce9a0a9c8e093b40ac407397ad2ea4379fd6f3b489edb359368f61651f"],
+  ["qfai-tests.yml", "ac9de437cefe45e68b5b29cea455f81a3d767cb5ab8aab0a005551fb6a81053b"],
   ["qfai-validate.yml", "b7edb0a89723c10822fba833a659a502eb8a3297559f97610d355f51e823b468"],
 ]);
 
@@ -2141,7 +2141,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Probe layer-named test scripts","id":"scripts","shell":"bash","run":"<body bbbde165253f76a6c6f8de4c1d2f132de8a8c3661ad90f60220655efdebaa36d>"}',
+    '{"name":"Probe layer-named test scripts","id":"scripts","shell":"bash","run":"<body 5988b47faeb04c16f69092442da4192db2bd9bc5cdfcfb491de8951625b5c0c6>"}',
   ],
   [
     "qfai-tests.yml#detection",
