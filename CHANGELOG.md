@@ -643,6 +643,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The corpus walk compares file sizes before it reads any contents, so a file
   of another size is no longer read in full to find it changed. Closes #5204.
 
+- **The README says pnpm 11 stops on mdschema's install script.** It said pnpm
+  only reports the `@jackchuka/mdschema` install script as unapproved. pnpm 11
+  turned `strictDepBuilds` on by default, so `pnpm add qfai` exits with an
+  error until the script is approved or declined. The README now says so and
+  shows both: `pnpm approve-builds`, or `"@jackchuka/mdschema": false` under
+  `allowBuilds` in `pnpm-workspace.yaml`. Closes #5227.
+
 - **A directory whose name begins with two dots counts as inside its base
   everywhere.** Several more checks tested whether a path relative to its base
   began with `..`, so a directory such as `..fixtures` or `..archive` read as
