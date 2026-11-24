@@ -237,7 +237,16 @@ describe("qfai-triage invoked by name", () => {
       await readShipped("rule/references/reviewer-remit.md"),
       "## Reviewer remit",
     );
-    expect(rowOf(remit, "`/qfai-triage`")).toMatch(/no tracked file changed/);
+    // The remit names the Reviewer Gate's exceptions, so a reviewer does not flag them.
+    const triageRow = rowOf(remit, "`/qfai-triage`");
+    expect(triageRow).toMatch(/no tracked file changed except/);
+    expect(triageRow).toMatch(/deliberation record/);
+    expect(triageRow).toMatch(/`open-questions\.md` rows/);
+    expect(triageRow).toMatch(/`triage-close` commits locally/);
+    expect(triageRow).toMatch(
+      /approval row `qfai-run` records in `decisions\.md` before `triage-handoff`/,
+    );
+    expect(triageRow).toMatch(/none of these after a private security intake/);
   });
 });
 

@@ -601,6 +601,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The reviewer remit for `/qfai-triage` names the files triage may change.**
+  Its row still said no tracked file changed, so a reviewer following it
+  flagged the run's deliberation record, the `open-questions.md` rows that
+  `triage-close` commits locally and the `decisions.md` approval row `qfai-run`
+  records before `triage-handoff`. The row now names those exceptions, and
+  none of them after a private security intake, as the skill's Reviewer Gate
+  does. Closes #5540.
+
 - **`QFAI-DB-001` warns when a DB contract calls a destructive function it
   defines.** A function or procedure body was skipped because creating it runs
   nothing, so a file that created one holding `TRUNCATE` and then ran
