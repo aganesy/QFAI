@@ -241,10 +241,15 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
   defines the plan and report. This skill is not
   a CLI command. See the [2.0.0 migration guide](https://github.com/aganesy/QFAI/blob/main/packages/qfai/docs/MIGRATION-2.0.0.md).
 - **qfai-verify**: Run documented quality gates and report the reviewer-approved result.
+- **qfai-grilling**: Interrogate a design before it is fixed, one round of open decisions at a time,
+  reading from the repository what it can rather than asking. A stage that needs a design settled
+  starts it, and so does a request to grill or stress-test a design.
 - **qfai-grill**: Interview you about a design, a product direction or a piece of writing, one round
   of open decisions at a time, until you confirm or close the session. It needs no repository and
   writes no file. The agent never starts it on its own, so a free-text request does not reach it:
   type it with its subject, for example `/qfai-grill the retry policy for failed payments`.
+- **web-research**: Research a topic on the web in eight stages: search, rank and fetch pages,
+  extract and sanitize their content, cache it, cross-check the claims, and cite each source.
 
 On a project with the old spec layout, `qfai init` installs the migration skill
 without seeding a competing `.qfai/spec/` tree. Run the skill before adopting
