@@ -24,7 +24,7 @@ import {
 } from "../../src/core/claudeCodeHooks.js";
 import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
 import { reminderSettings } from "../helpers/reminderSettings.js";
-import { runOnEveryShell } from "../helpers/codexHookShells.js";
+import { CODEX_SHELL_TEST_TIMEOUT, runOnEveryShell } from "../helpers/codexHookShells.js";
 import { EXIT_ZERO, spawnCaptured } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 import { expectNoEmbeddedReminderText } from "../helpers/reminderAssertions.js";
@@ -299,7 +299,7 @@ describe("the free-text entry reminder", () => {
   });
 });
 
-describe("the Codex hook file", () => {
+describe("the Codex hook file", { timeout: CODEX_SHELL_TEST_TIMEOUT }, () => {
   it("is the same in the shipped template and this repository", async () => {
     const [shipped, own] = await Promise.all(
       [SHIPPED_CODEX, OWN_CODEX].map((rel) => readFile(path.join(repoRoot, rel), "utf-8")),

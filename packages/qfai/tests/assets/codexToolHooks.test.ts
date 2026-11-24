@@ -27,7 +27,12 @@ import {
   GRILLING_PLAN_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
-import { CODEX_SHELLS, type CodexShell, runCodexLine } from "../helpers/codexHookShells.js";
+import {
+  CODEX_SHELL_TEST_TIMEOUT,
+  CODEX_SHELLS,
+  type CodexShell,
+  runCodexLine,
+} from "../helpers/codexHookShells.js";
 import { EXIT_ZERO, type Spawned, spawnCaptured } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 import { expectNoEmbeddedReminderText, expectPointer } from "../helpers/reminderAssertions.js";
@@ -212,7 +217,7 @@ function patch(header: string): string {
 // QFAI:EX-0001-0196-38
 // QFAI:EX-0001-0196-40
 // QFAI:EX-0001-0196-41
-describe("the Codex tool-time reminders", () => {
+describe("the Codex tool-time reminders", { timeout: CODEX_SHELL_TEST_TIMEOUT }, () => {
   it("mirror each Claude Code tool-time group that has a Codex moment", async () => {
     const expected: Record<string, [string, string][]> = {
       PreToolUse: [
@@ -473,7 +478,7 @@ async function firedContext(
 }
 
 // QFAI:EX-0001-0196-40
-describe("the Codex reminders that repeat", () => {
+describe("the Codex reminders that repeat", { timeout: CODEX_SHELL_TEST_TIMEOUT }, () => {
   describe.each(CODEX_SHELLS)("through %s", (shell) => {
     // QFAI:EX-0001-0196-55
     it.each(POINTERS)(

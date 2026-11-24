@@ -42,6 +42,19 @@ function platformShells(): CodexShell[] {
 /** The shells whose Codex line this platform can run. */
 export const CODEX_SHELLS: readonly CodexShell[] = platformShells();
 
+/**
+ * The per-test timeout of a suite that runs Codex lines through these shells.
+ *
+ * Measured on `windows-parity`: the first test in each file to start Windows PowerShell took
+ * 2.5 s to 4.1 s across eight runs on 2026-11-24, yet in run 44743927115 both files reached
+ * that first start at the same moment and both stalled past the declared 120 s, while the
+ * next test in each took 28 s to 33 s. The worst completed overrun on that lane, a
+ * post-build guard test in `shippedAssets.test.ts`, took 188 s. 300 s covers that with room
+ * left, so a loaded runner finishes the test rather than failing a pull request that did not
+ * touch the hooks.
+ */
+export const CODEX_SHELL_TEST_TIMEOUT = 300_000;
+
 /** The line Codex runs for `entry` on this platform. */
 export function codexLine(entry: Readonly<Record<string, unknown>>): string {
   const windows = process.platform === "win32" ? entry.commandWindows : undefined;
