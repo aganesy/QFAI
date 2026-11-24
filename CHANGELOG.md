@@ -651,6 +651,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   writes nothing and exits 1, saying whether to retry once the other run
   finishes or to remove a lock no running process holds. Closes #5382.
 
+- **`qfai doctor` names a workflow-precondition file it cannot read instead
+  of treating it as absent.** The checks behind `workflows.packageManager`,
+  `workflows.nodeVersionFile` and `workflows.nodePin` read `package.json`, the
+  Node version files and the workflows under `.github/workflows/`, and dropped
+  any of them that failed to read, so doctor reported fewer problems than it
+  saw. Only a missing file counts as absent now: a file that exists and cannot
+  be read (`EACCES`, `EIO`, a directory) is a `workflows.preconditionsUnread`
+  warning naming the file and the cause, and the other files are still
+  checked. Closes #5444.
+
 - **`qfai init` on Windows names no rerun command PowerShell would split.**
   The recovery line of a failed graph download double-quotes a temporary
   directory that holds a space, and PowerShell also ends such a string at a
@@ -874,6 +884,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   reported it after the one note printed at the time. A later `qfai init` now
   names each such directory beside a wrapper it writes, and leaves it in place.
   Closes #5317.
+
+- **The README skill list names every skill `qfai init` installs.** It left
+  out `qfai-grilling`, the interview a stage starts when a design needs
+  settling, and `web-research`, the cited web research pipeline, so a reader
+  could not find either from the README. Both READMEs now list them.
+  Closes #5496.
 
 - **A forced relink that cannot write the new link keeps the old one.**
   `qfai init --force` deleted a wrapper link that named the wrong target, or
