@@ -49,10 +49,66 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
+
+/**
+ * Options every scratch-repository `git` call carries, so the developer's global config cannot
+ * sign the setup commits or run hooks on them before the step under test runs.
+ */
+const SCRATCH_GIT = [
+  "-c",
+  "commit.gpgsign=false",
+  "-c",
+  "core.hooksPath=",
+  "-c",
+  "user.name=t",
+  "-c",
+  "user.email=t@example.invalid",
+];
+
+/**
+ * Runs `body` with a global git config that signs every commit through a program that does not
+ * exist and points `core.hooksPath` at a `pre-commit` hook that refuses — the setup a scratch
+ * repository must survive.
+ */
+function underHostileGlobalConfig<T>(body: () => T): T {
+  const dir = mkdtempSync(path.join(tmpdir(), "qfai-renovate-global-"));
+  try {
+    const hooks = path.join(dir, "hooks");
+    mkdirSync(hooks);
+    writeFileSync(path.join(hooks, "pre-commit"), "#!/bin/sh\necho hook ran >&2\nexit 1\n", {
+      encoding: "utf-8",
+      mode: 0o755,
+    });
+    const config = path.join(dir, "gitconfig");
+    writeFileSync(
+      config,
+      [
+        "[commit]",
+        "\tgpgsign = true",
+        "[gpg]",
+        `\tprogram = ${JSON.stringify(path.join(dir, "no-such-gpg"))}`,
+        "[core]",
+        `\thooksPath = ${JSON.stringify(hooks)}`,
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    vi.stubEnv("GIT_CONFIG_GLOBAL", config);
+    const signs = execFileSync("git", ["config", "--global", "commit.gpgsign"], {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    expect(signs.trim(), "git must read the stand-in global config").toBe("true");
+    return body();
+  } finally {
+    vi.unstubAllEnvs();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
 const WORKFLOW_REL = ".github/workflows/renovate.yml";
 const CONFIG_REL = ".github/renovate.json5";
 const CONTEXTS_REL = ".github/required-status-contexts.json";
@@ -380,7 +436,7 @@ describe("the re-pin commits only the files its programs write", () => {
     try {
       const repo = path.join(dir, "repo");
       const git = (...args: string[]): void => {
-        execFileSync("git", args, { cwd: repo, stdio: "pipe" });
+        execFileSync("git", [...SCRATCH_GIT, ...args], { cwd: repo, stdio: "pipe" });
       };
       mkdirSync(path.join(repo, "scripts"), { recursive: true });
       git("init", "-q");
@@ -398,7 +454,7 @@ describe("the re-pin commits only the files its programs write", () => {
       }
       writeFileSync(path.join(repo, "scripts", "pin-guard-bytes.mjs"), STUB_WRITER, "utf-8");
       git("add", "-A");
-      git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "-m", "base");
+      git("commit", "-q", "-m", "base");
 
       const script = path.join(dir, "repin.sh");
       const outputFile = path.join(dir, "github-output");
@@ -460,6 +516,12 @@ describe("the re-pin commits only the files its programs write", () => {
     expect(run.changed).not.toContain("changed=true");
   });
 
+  it("builds its scratch repository whatever the global git config signs or hooks", () => {
+    const run = underHostileGlobalConfig(() => runRepin([".github/pinned-bytes.txt"]));
+    expect(run.status, run.output).toBe(0);
+    expect(run.changed).toContain("changed=true");
+  });
+
   it("stages the expected files by name rather than the whole work tree", () => {
     const body = stepBody(PUSH_STEP);
     expect(body).not.toMatch(/git add\s+(?:-A|--all|-u|--update|\.(?:\s|$))/u);
@@ -495,7 +557,7 @@ describe("the scripts guard tells a stale base from a branch that edited scripts
       const origin = path.join(dir, "origin");
       const work = path.join(dir, "work");
       const git = (cwd: string, ...args: string[]): void => {
-        execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.invalid", ...args], {
+        execFileSync("git", [...SCRATCH_GIT, ...args], {
           cwd,
           stdio: "pipe",
         });
@@ -567,6 +629,13 @@ describe("the scripts guard tells a stale base from a branch that edited scripts
     expect(run.status, run.output).not.toBe(0);
     expect(run.output).toContain("the branch itself changed scripts/");
     expect(run.output).not.toContain("stale base");
+  });
+
+  it("builds its scratch origin whatever the global git config signs or hooks", () => {
+    const run = underHostileGlobalConfig(() =>
+      runGuard({ branchEditsScripts: false, mainEditsScriptsLater: false }),
+    );
+    expect(run.status, run.output).toBe(0);
   });
 });
 
