@@ -23,7 +23,7 @@
 import path from "node:path";
 
 import { declaredContractId, extractDeclaredDependencies } from "../contractsDecl.js";
-import { DOLLAR_QUOTE_MARKER, opensEscapeString } from "../sqlContract.js";
+import { CREATE_TABLE_MODIFIERS, DOLLAR_QUOTE_MARKER, opensEscapeString } from "../sqlContract.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -44,14 +44,6 @@ const NAME_PART =
   String.raw`|\[[^\]]+\]|[A-Za-z_\u0080-\uFFFF][\w$\u0080-\uFFFF]*`;
 const TABLE_NAME = String.raw`(?:${NAME_PART})(?:\s*\.\s*(?:${NAME_PART}))*`;
 const NAME_PARTS = new RegExp(NAME_PART, "g");
-
-/**
- * The words PostgreSQL allows between `CREATE` and `TABLE`:
- * `[ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ]`. PostgreSQL has no
- * `CREATE OR REPLACE TABLE`. Any other word there makes it another statement,
- * such as `CREATE PUBLICATION … FOR TABLE`, which creates no table.
- */
-const CREATE_TABLE_MODIFIERS = String.raw`(?:(?:(?:GLOBAL|LOCAL)\s+)?(?:TEMPORARY|TEMP)\s+|UNLOGGED\s+)?`;
 
 /**
  * A double-quoted identifier, `CREATE [modifiers] TABLE [IF NOT EXISTS] <name>`,

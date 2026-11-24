@@ -758,6 +758,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   shows both: `pnpm approve-builds`, or `"@jackchuka/mdschema": false` under
   `allowBuilds` in `pnpm-workspace.yaml`. Closes #5227.
 
+- **`QFAI-CONTRACT-040` no longer counts `CREATE GLOBAL UNLOGGED TABLE` as a
+  table.** Its table count read `GLOBAL` or `LOCAL` before `UNLOGGED`, which
+  PostgreSQL rejects, so a contract with one real table could be taken for
+  several and an ENUM-and-CHECK finding fell from error to warning. The count
+  now uses the same `CREATE TABLE` modifier pattern as `QFAI-CONTRACT-036`, so
+  the two rules count the same tables. Closes #5637.
+
 - **The `validate.json` guide lists `flowIds`.** The guide calls itself the
   source for the file's keys but left out `flowIds`, which a `--flow` run
   writes and `qfai report` checks before it reads the file. Its top-level table
