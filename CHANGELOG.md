@@ -694,6 +694,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `requirements-reviewer`, `architecture-reviewer`, `implementation-reviewer`
   and `product-surface-reviewer`.
 
+- **A run that stops on an unreadable path no longer sends you to
+  `qfai init`.** When `qfai validate` could not finish because a path was
+  unreadable, such as a `paths.specsDir` it may not open, its `QFAI-SCAN-002`
+  finding told every operator to re-run `qfai init` inside a Windows worktree,
+  which repairs nothing there. The finding and the error other commands print
+  now say to make the reported path readable, or to point the configuration key
+  that names it at a readable directory. The worktree note now appears only for
+  `EPERM`, the error that case raises. Closes #5311.
+
 - **Migration step 11 names a staging directory it could not remove.** When
   step 11 replaced a shipped skill or step but could not remove the hidden
   `.<id>-replace-*` directory it staged in, the failure was ignored: the
