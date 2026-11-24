@@ -619,6 +619,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now uses `{/* mermaid-lint:ignore */}` on the line above the fence instead.
   Closes #5341.
 
+- **The shipped test lane no longer calls a blank layer script an unreadable
+  manifest.** For a `package.json` that parsed but declared a blank
+  `test:unit` script, the `qfai-tests.yml` annotation said the file "could not
+  be read as a manifest". It now says the file does not declare the test
+  layers in a usable form, which covers both cases; the line above it still
+  names the exact reason. Closes #5222.
+
 - **`qfai sdd preflight` reads no previous summary through a link.** A
   `preflight_summary.md` that was a link to a file elsewhere was read before
   being replaced: the run copied that file's carry-over list into its own
