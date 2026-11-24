@@ -677,6 +677,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and refused with `plan-invalid` and `step-missing` as for the route's own
   steps.
 
+- **The Mermaid check reads a list item that opens with spaces only, and
+  keeps the ignore marker inside its block quote.** In `check-mermaid.mjs`, a
+  list marker followed by nothing but spaces set the item's content four
+  columns in, so a diagram indented two columns below it was read as a
+  top-level fence that swallowed the text and diagrams after the item. Its
+  content now starts one column after the marker, as CommonMark says.
+  `<!-- mermaid-lint:ignore -->` inside a block quote or list item also
+  skipped a fence on the next line after that container had closed; it now
+  covers a fence only in the same block quotes and list items. Closes #5330.
+
 - **A sample table in a code fence or an HTML comment no longer counts in the
   decision and question registers, the layer table, the constraint IDs or the
   component catalogue.** `decisions.md`, `open-questions.md`, the

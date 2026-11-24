@@ -7,7 +7,7 @@
  *   - a ```mermaid nested inside a wider fence       -> not a diagram
  *   - a fence inside a block quote or list item      -> a diagram, ending with its container
  *   - a backtick run with a backtick after it        -> inline code, never a fence
- *   - `<!-- mermaid-lint:ignore -->` above a fence   -> that block is skipped
+ *   - `<!-- mermaid-lint:ignore -->` above a fence   -> that block is skipped, in the same containers only
  *   - unknown flag / unreadable path or directory    -> exit 2
  *   - a directory holding its own `.git`             -> not scanned (another checkout)
  *
@@ -662,6 +662,82 @@ describe("check-mermaid fence scanning inside containers", () => {
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0].ignored).toBe(true);
+  });
+
+  it("does not let an ignore comment inside a block quote cover a fence after the quote", () => {
+    const source = ["> <!-- mermaid-lint:ignore -->", "```mermaid", "graph TD", "```", ""].join(
+      "\n",
+    );
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].ignored).toBe(false);
+  });
+
+  it("does not let an ignore comment in one list item cover a fence in the next", () => {
+    const source = [
+      "- <!-- mermaid-lint:ignore -->",
+      "- ```mermaid",
+      "  graph TD",
+      "  ```",
+      "",
+    ].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].ignored).toBe(false);
+  });
+
+  it("applies the ignore comment that opens the list item holding the fence", () => {
+    const source = [
+      "- <!-- mermaid-lint:ignore -->",
+      "  ```mermaid",
+      "  graph TD",
+      "  ```",
+      "",
+    ].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].ignored).toBe(true);
+  });
+
+  it("starts a list item's content one column after a marker followed only by spaces", () => {
+    // 5.2 List items: a list item starting with a blank line takes its content
+    // indent from the marker width plus one, whatever spaces follow the marker.
+    // The fence is then the item's, so it ends where the item ends, and the
+    // diagram after the item is a block of its own rather than fence content.
+    const source = "-   \n  ```mermaid\n  graph TD\nProse.\n```mermaid\npie\n```\n";
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0].line).toBe(2);
+    expect(blocks[0].body).toBe("graph TD");
+    expect(blocks[1].line).toBe(5);
+    expect(blocks[1].body).toBe("pie");
+  });
+
+  it("expands a tab after a list marker and in the item's content to four-column stops", () => {
+    const source = "-\t```mermaid\n\tgraph TD\n\t```\n";
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].body).toBe("graph TD");
+  });
+
+  it("keeps a tab-indented closing fence as body text, since a tab is four columns", () => {
+    // 4.5 Fenced code blocks: a closing fence may be indented at most three columns.
+    const source = "```mermaid\ngraph TD\n\t```\n```\n";
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].body).toBe("graph TD\n    ```");
   });
 
   it("does not open a fence on a line of triple-backtick inline code", () => {
