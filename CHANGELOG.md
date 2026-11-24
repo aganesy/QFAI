@@ -489,6 +489,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `stale-install`. The upgrade guide now tells every checkout and worktree to
   run its install after pulling a qfai upgrade.
 
+- **Business time has its own recipe, and the test runner recipes import the
+  app adapters they call.** The deterministic business time section moved from
+  `qfai-implement/references/test-runner-recipes.md` into
+  `qfai-implement/references/business-time-recipe.md`, which the
+  `implement-acceptance` step names for a test that depends on business time.
+  Every recipe code block that calls `createAccount`, `issueSession`, `signIn`,
+  `acceptsSession` or `deleteAccount` now imports it from `./app-adapters`, the
+  one module the recipes' Status section says the application writes, and the
+  Vitest session code is split into `worker-session.ts` and `session-for.ts`
+  with their imports, so each block runs as written.
+
 - **The workflow rule delegates as the shared delegation baseline does.** Its
   delegation section no longer hands analysis, contracts and CI to technical
   roles, one of them a DevOps/CI Engineer no shipped card defines. It now says

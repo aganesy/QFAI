@@ -1,9 +1,9 @@
-# Test runner recipes: session reuse, shared state, business time and CI
+# Test runner recipes: session reuse, shared state and CI
 
 Optional recipes for Playwright and Vitest that put the worker session-reuse rules of
-`implement-credentials` into runnable form, together with the shared-state, business-time and CI
-patterns that make a parallel acceptance suite trustworthy. Copy what fits and adapt it. The rules
-stay the obligation; a recipe is one way to meet them.
+`implement-credentials` into runnable form, together with the shared-state and CI patterns that
+make a parallel acceptance suite trustworthy. Business time has a recipe of its own beside this
+one. Copy what fits and adapt it. The rules stay the obligation; a recipe is one way to meet them.
 
 ## Contents
 
@@ -15,7 +15,6 @@ stay the obligation; a recipe is one way to meet them.
 - Business data each file owns
 - Database hooks only where a group needs them
 - Shared and exclusive access to a common database or server
-- Deterministic business time
 - Credential directory hygiene
 - CI: auxiliary jobs inside the protected result
 - Adoption checklist
@@ -29,7 +28,8 @@ nothing in and runs no browser, so nothing here is executed in this repository: 
 pattern to adopt, then prove it in your own suite with the adoption checklist at the end.
 
 The application supplies five adapters. QFAI ships none of them, and no recipe below assumes how
-they work inside:
+they work inside. The recipes import them from one module, `./app-adapters`, which the application
+writes to export all five; point that import at your own module if it lives elsewhere:
 
 | Adapter          | What it does                                                                          |
 | ---------------- | ------------------------------------------------------------------------------------- |
@@ -40,7 +40,7 @@ they work inside:
 | `deleteAccount`  | Removes an account this run created, and nothing else                                 |
 
 When a test needs a controlled business time, the application also supplies a clock adapter, as
-the business time section describes.
+the business time recipe describes.
 
 ## The run-owned session directory
 
@@ -55,6 +55,7 @@ import { statSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { deleteAccount } from "./app-adapters";
 
 export async function createSessionDirectory(): Promise<string> {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "session-cache-"));
@@ -112,9 +113,11 @@ is stable per worker slot. Key the cache by the run's private directory, the slo
 a worker is that pool slot, and its cache lives until the run's teardown removes the directory.
 
 ```ts
+// worker-session.ts
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { ownedSessionDirectory } from "./session-directory";
 
 type SessionOptions = {
   actor: string;
@@ -158,6 +161,11 @@ A file-local map validates each actor once per file registry, so a file does not
 about the same session for every test:
 
 ```ts
+// session-for.ts
+import { acceptsSession, createAccount, issueSession } from "./app-adapters";
+import { ownedSessionDirectory, recordCreated } from "./session-directory";
+import { workerSession } from "./worker-session";
+
 const sessions = new Map<string, Promise<string>>();
 
 export function sessionFor(actor: string): Promise<string> {
@@ -183,6 +191,7 @@ Global setup creates the directory before the workers start; its teardown runs a
 ```ts
 // vitest.global-setup.ts
 import fs from "node:fs/promises";
+import { createSessionDirectory, deleteCreatedAccounts } from "./session-directory";
 
 export default async function setup() {
   const directory = await createSessionDirectory();
@@ -241,6 +250,7 @@ export default defineConfig({
 ```ts
 // global-setup.ts: the environment it sets reaches every worker
 import fs from "node:fs/promises";
+import { createSessionDirectory } from "./session-directory";
 
 export default async function globalSetup() {
   const directory = await createSessionDirectory();
@@ -254,6 +264,7 @@ export default async function globalSetup() {
 // auth.setup.ts
 import { chmod } from "node:fs/promises";
 import { test as setup } from "@playwright/test";
+import { createAccount, signIn } from "./app-adapters";
 import { ownedSessionDirectory, recordCreated, statePath } from "./session-directory";
 
 setup("sign in one account per worker", async ({ browser }) => {
@@ -402,34 +413,6 @@ The simplest bounded admission is two passes: the shared files with the measured
 then the exclusive files with one worker: a Vitest project with `fileParallelism: false`, or
 `npx --no-install playwright test --project=exclusive --workers=1` after the `e2e` project.
 
-## Deterministic business time
-
-A test that depends on the wall clock waits for a time of day or skips outside it. Control business time instead:
-
-- **Clock adapter.** The application reads business time through an adapter it supplies, with an
-  explicit time zone and a fixed date and time per profile. Server-side decisions read the same
-  adapter as the browser display; fixing only the browser leaves the server deciding on real time.
-- **Production-safe boundary.** Test clock control is enabled only by start-up configuration of a
-  non-production build or environment. No ordinary production request can enable it or set it,
-  and a test proves that a production configuration ignores the control.
-- **Independent cases per profile.** Each profile, such as inside and outside a business window,
-  runs its own cases: before, inside and after the window, and holiday and boundary instants where
-  the business has them. No case waits for real time and none skips on the time of day.
-- **Workers.** A profile's clock is immutable while that profile is active. Workers sharing one
-  server and database share its clock, so two profiles never run against one mutable clock at once:
-  give each concurrently active profile its own server, or run the profiles one after another.
-  Data stays owned per file, as above.
-- **Reports.** CI shows that every profile ran: one report per profile, each with the actual worker
-  count, the cases run, the skips and the flaky results.
-
-```ts
-// One definition read by the server start-up and by the browser context of each profile.
-export const clockProfiles = {
-  "in-window": { timeZone: "Asia/Tokyo", instant: "2030-01-15T10:30:00+09:00" },
-  "out-of-window": { timeZone: "Asia/Tokyo", instant: "2030-01-15T22:30:00+09:00" },
-} as const;
-```
-
 ## Credential directory hygiene
 
 - The run owns its session directory: it creates it fresh, outside the checked-out tree, and
@@ -489,8 +472,6 @@ source-mutation probes and their counts separately; a probe count is not a test 
   fails without its database.
 - Every file passes alone and in any order, with no seed reset.
 - Exclusive files never overlap another file on the same database or server.
-- Each clock profile's report shows its cases ran with zero skips; a production configuration
-  ignores the test clock.
 - The aggregate check fails when any required lane fails, is cancelled or is skipped unexpectedly.
 - No artifact holds a session, a storage state or an account secret, and no trace, HAR file or
   HTML report from an authenticated project is uploaded where it is public or kept long.
