@@ -94,6 +94,46 @@ function citedPaths(markdown: string): string[] {
   return cited.filter((cite) => !NOT_A_PATH.some((shape) => shape.test(cite)));
 }
 
+/** The flags that make `git tag` delete, list or verify a tag instead of creating one. */
+const NON_CREATING_TAG_FLAGS = new Set(["-d", "--delete", "-l", "--list", "-v", "--verify"]);
+
+/**
+ * Every `git tag` command in `markdown` that creates a tag: whole lines and
+ * inline code spans alike, split at `&&`, `||`, `;` and `|` so a chained or
+ * piped command is read on its own. A bare `git tag` lists and is left out.
+ */
+function tagCreations(markdown: string): string[] {
+  const spans = Array.from(markdown.matchAll(/`([^`\n]+)`/g), (m) => m[1] ?? "");
+  return [...markdown.split(/\r?\n/), ...spans]
+    .flatMap((text) => text.split(/&&|\|\||;|\|/))
+    .map((part) => part.trim().replace(/\\$/, "").trim())
+    .filter((part) => /^git\s+tag(?:\s|$)/.test(part))
+    .filter((part) => {
+      const args = part.split(/\s+/).slice(2);
+      return args.length > 0 && !args.some((arg) => NON_CREATING_TAG_FLAGS.has(arg));
+    });
+}
+
+/** The `git tag` flags whose next word is their value, not the commit. */
+const VALUE_TAKING_TAG_FLAGS = new Set(["-m", "--message", "-F", "--file", "-u", "--local-user"]);
+
+/**
+ * Whether a tag command names its commit: the last word is the `<SHA>`
+ * placeholder or a full 40-hex SHA and is no flag's value, and no word is
+ * `HEAD` or `@`. Without a commit, `git tag` tags whatever the checkout has as
+ * HEAD.
+ */
+function namesItsCommit(command: string): boolean {
+  const words = command.split(/\s+/);
+  const last = words[words.length - 1] ?? "";
+  const beforeLast = words[words.length - 2] ?? "";
+  return (
+    /^(?:<SHA>|[0-9a-f]{40})$/.test(last) &&
+    !VALUE_TAKING_TAG_FLAGS.has(beforeLast) &&
+    !words.some((word) => /^(?:HEAD|@)(?:[~^].*)?$/.test(word))
+  );
+}
+
 describe("the project layer describes the repository it is in", () => {
   it("names no repository path that does not exist", async () => {
     const missing: string[] = [];
@@ -191,16 +231,71 @@ describe("the project layer describes the repository it is in", () => {
   // wrong checkout would publish a commit nobody approved.
   it("tags a release by the commit it names, never the local HEAD", async () => {
     const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
-    const creates = guide
-      .split(/\r?\n/)
-      .map((line) => line.trim().replace(/^`|`$/g, ""))
-      .filter((line) => /^git tag\s/.test(line) && !/^git tag\s+-/.test(line));
+    const creates = tagCreations(guide);
 
     expect(creates.length, "the release guide shows no tag command to check").toBeGreaterThan(0);
     expect(
-      creates.filter((line) => line.split(/\s+/).length < 4),
+      creates.filter((command) => !namesItsCommit(command)),
       "each tag command names the commit after the tag",
     ).toEqual([]);
+  });
+
+  // The check above is only as strict as the reading behind it. Each sample
+  // here is a way the step could be edited back into tagging HEAD.
+  it("reads every way of tagging HEAD as a tag command that names no commit", () => {
+    const tagsHead = [
+      '```sh\ngit tag -a vX.Y.Z -m "Release X.Y.Z"\n```',
+      "```sh\ngit tag vX.Y.Z HEAD\n```",
+      "Then run `git tag vX.Y.Z` to tag it.",
+      "```sh\ngit fetch origin main && git tag vX.Y.Z\n```",
+      "```sh\ngit tag vX.Y.Z -m <SHA>\n```",
+    ];
+    for (const sample of tagsHead) {
+      const creates = tagCreations(sample);
+      expect(creates.length, sample).toBe(1);
+      expect(creates.filter((command) => !namesItsCommit(command)).length, sample).toBe(1);
+    }
+
+    expect(tagCreations("Delete it with `git tag -d vX.Y.Z`, or list with `git tag -l`.")).toEqual(
+      [],
+    );
+    const chained = tagCreations("```sh\n  git tag vX.Y.Z <SHA> &&\n```\n");
+    expect(chained).toEqual(["git tag vX.Y.Z <SHA>"]);
+    expect(chained.every((command) => namesItsCommit(command))).toBe(true);
+    expect(namesItsCommit(`git tag vX.Y.Z ${"a".repeat(40)}`)).toBe(true);
+  });
+
+  // Pasted as separate lines, the block tagged even when the ancestry check
+  // failed, because a failing line does not stop the next one. Chained with
+  // `&&`, the tag is created only after every check before it passed.
+  it("creates the release tag only after its checks pass", async () => {
+    const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
+    const statements = [...guide.matchAll(/^\s*```sh\r?\n([\s\S]*?)^\s*```/gm)]
+      .map(([, body]) => (body ?? "").replace(/&&[ \t]*\r?\n\s*/g, "&& "))
+      .flatMap((body) => body.split(/\r?\n/))
+      .map((line) => line.trim());
+    const tagging = statements.filter((statement) => tagCreations(statement).length > 0);
+
+    expect(tagging.length, "the release guide shows one tag command in a shell block").toBe(1);
+    const steps = (tagging[0] ?? "").split("&&").map((step) => step.trim());
+    const at = (pattern: RegExp): number => steps.findIndex((step) => pattern.test(step));
+    const tag = at(/^git\s+tag\s/);
+    expect(steps.slice(0, tag).join(" "), "a check is joined by ; or ||").not.toMatch(/;|\|\|/);
+    expect(
+      at(/^git merge-base --is-ancestor <SHA> origin\/main$/),
+      "the ancestry check",
+    ).toBeGreaterThanOrEqual(0);
+    expect(at(/^git merge-base --is-ancestor\b/)).toBeLessThan(tag);
+    expect(
+      at(/^git show <SHA>:packages\/qfai\/package\.json \| grep -F '"version": "X\.Y\.Z"'$/),
+      "the version check",
+    ).toBeGreaterThanOrEqual(0);
+    expect(at(/^git show <SHA>:/)).toBeLessThan(tag);
+
+    // An unmerged pull request has no merge commit, and `--jq` prints `null`.
+    expect(guide, "the guide says to stop when there is no merge commit").toMatch(
+      /prints nothing or `null`[^.]*\bstop here\b/,
+    );
   });
 
   // npm installs into the nearest directory holding a `package.json`. The smoke
