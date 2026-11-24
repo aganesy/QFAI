@@ -109,17 +109,6 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#rejected-option-
 - Stop and escalate if tooling choices or runnable path remain ambiguous. This stop is a `hard-required` input, not a clarification, so it outlives an exhausted Article VI budget — with the budget spent and the ambiguity unresolved, escalate rather than picking a runner.
 - Completion must be approved by a reviewer who did not modify the config.
 
-## Completion Contract (Shared)
-
-Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`.
-The smallest applicable smoke check is one terminating command from the documented runnable path plus `npx qfai doctor --fail-on error`.
-Require `traceability.testGlobs` to report `[ok]`; exit 0 with a warning or truncated scan does not prove test discovery.
-Also run `npx qfai validate --fail-on error` and inspect `issues` by code in the result it wrote: the configured `output.validateJsonPath` with `-full` before the extension (default `.qfai/report/validate-full.json`), once its `generatedAt` is no earlier than the run's start.
-Where another `full` run can overlap on the same tree, read the run's own `run-*/validator.json` instead, in the directory its `run-log:` line names, and inspect its `errors` and `warnings` entries by `code`.
-Resolve config and test-glob errors this skill owns, including `QFAI-SCAN-002`; report `QFAI-STORY-006` through `QFAI-STORY-009` uncovered obligations to the testing stage.
-A path recorded but never executed is UNRUN.
-Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
-
 ## Goal
 
 Analyze the repository and update `qfai.config.yaml` so traceability checks are actionable, with a documented minimum runnable path.
@@ -190,12 +179,6 @@ Do not create `.qfai/**/README.md` files as scaffold or format documentation; ke
 The session agent analyzes the repository and writes the configuration itself.
 The one sub-agent is `implementation-reviewer`, which reviews what the session
 wrote; the delegation baseline says how it is briefed.
-
-## Completion Separation
-
-- The session agent's configuration change and its approval are separate: the
-  reviewer approves, never the session agent.
-- The reviewer confirms the evidence sampling before approval.
 
 ## Context Refresh (long tasks)
 
@@ -324,7 +307,9 @@ When you declare DONE, include:
 
 ## Completion Checklist
 
-Check it last; the deliverables themselves are listed in Final report.
+Check it last; the deliverables themselves are listed in Final report. It is
+this skill's form of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`.
 
 - [ ] Repository analysis completed (frameworks, test layout, naming rules).
 - [ ] BF, AC, and EX test layers inspected.
@@ -332,8 +317,14 @@ Check it last; the deliverables themselves are listed in Final report.
 - [ ] Standard commands recorded only in `03_contract/tech.md`.
 - [ ] Include and exclude globs proposed with rationale, and their matches sampled before `qfai.config.yaml` was written (minimal diff).
 - [ ] Hard Constraints followed, and all mandatory checks executed and recorded.
+- [ ] The smoke check passed: one terminating command from the documented runnable path plus `npx qfai doctor --fail-on error`. A path recorded but never executed is UNRUN.
+- [ ] Require `traceability.testGlobs` to report `[ok]`; exit 0 with a warning or truncated scan does not prove test discovery.
+- [ ] `npx qfai validate --fail-on error` ran, and `issues` were inspected by code in the result it wrote: the configured `output.validateJsonPath` with `-full` before the extension (default `.qfai/report/validate-full.json`), once its `generatedAt` is no earlier than the run's start.
+      Where another `full` run can overlap on the same tree, read the run's own `run-*/validator.json` instead, in the directory its `run-log:` line names, and inspect its `errors` and `warnings` entries by `code`.
+- [ ] Config and test-glob errors this skill owns are resolved, including `QFAI-SCAN-002`; `QFAI-STORY-006` through `QFAI-STORY-009` uncovered obligations are reported to the testing stage.
+- [ ] Validate, doctor, and quality-gate failures followed `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 - [ ] The final report is complete, and no untracked gaps remain (or they are explicitly documented).
-- [ ] Completion approved by a reviewer who did not modify the config.
+- [ ] Completion approved by a reviewer who did not modify the config, after the reviewer confirmed the evidence sampling; the session agent never approves its own change.
 - [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / proposed specification change per `.qfai/assistant/rule/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `open-questions.md`.
 - [ ] The completion message was presented to the user, with next actions for all available options.
 
