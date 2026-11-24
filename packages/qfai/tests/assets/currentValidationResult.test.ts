@@ -52,5 +52,29 @@ describe("readers of a validation result read the one the current command wrote"
     expect(configure).not.toContain("inspect `.qfai/report/validate.json#issues`");
     expect(configure).toContain("output.validateJsonPath");
     expect(configure).toContain("`run-log:`");
+    // A run log's `validator.json` has `errors` and `warnings` arrays and no
+    // `issues` key.
+    expect(configure).toContain("`errors` and `warnings` entries by `code`");
+    expect(configure).not.toMatch(/`run-\*\/validator\.json`[^.]*`issues`/);
+  });
+
+  it("the test-layer rule checks the result the current run wrote", async () => {
+    const rule = await read("rule/test-layers.md");
+    expect(rule).not.toContain("`.qfai/report/validate.json#issues`");
+    expect(rule).toContain("qfai-verify/references/validate-json-schema.md");
+    expect(rule).toContain("`generatedAt`");
+  });
+
+  it("gate failure autorepair inspects the failing run's own result", async () => {
+    const protocol = await read("rule/references/gate-failure-autorepair.md");
+    // The bullet runs from its marker to the next bullet.
+    const inspect = protocol
+      .split(/\n(?=- )/)
+      .find((item) => item.startsWith("- inspect exit code"));
+    expect(inspect).toBeDefined();
+    expect(inspect).toContain("output.validateJsonPath");
+    expect(inspect).toContain("`profile`");
+    expect(inspect).toContain("`generatedAt`");
+    expect(inspect).toContain("`errors` and `warnings` entries by `code`");
   });
 });

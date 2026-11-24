@@ -609,6 +609,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file that calls it, directly or through another routine, raises the warning.
   Closes #5180.
 
+- **The test-layer rule and the gate failure protocol read the validation
+  result the current run wrote.** Both told the reader to inspect the fixed
+  `.qfai/report/validate.json`, which is only the default path and holds
+  whichever repository-wide run finished last. They now point at the
+  profile-suffixed `output.validateJsonPath` file, checked by its `profile`
+  and `generatedAt`. A run log's `validator.json` is read by the `code` of its
+  `errors` and `warnings` entries, since it has no `issues` key; the
+  `qfai-configure` skill said to read its issues. Closes #5261.
+
 - **The Mermaid check skips diagrams inside comments, and `.mdx` files get an
   ignore marker they can compile.** `check-mermaid.mjs` collected a fence
   even inside a comment, so a commented-out broken diagram failed the shipped
