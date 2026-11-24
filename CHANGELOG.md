@@ -802,6 +802,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   than ten raises its finding: at the token nearest the chain's end whose
   chain below passes ten, with no finding above it. Closes #5325.
 
+- **`QFAI-CONTRACT-040` no longer counts `CREATE GLOBAL UNLOGGED TABLE` as a
+  table.** Its table count read `GLOBAL` or `LOCAL` before `UNLOGGED`, which
+  PostgreSQL rejects, so a contract with one real table could be taken for
+  several and an ENUM-and-CHECK finding fell from error to warning. The count
+  now uses the same `CREATE TABLE` modifier pattern as `QFAI-CONTRACT-036`, so
+  the two rules count the same tables. Closes #5637.
+
 - **`QFAI-DELIB-001` requires both decision tables under each stage of a
   deliberation record.** The check passed when the `Interview` and `Agent
 decisions` headings appeared anywhere in the file, so a record with several
