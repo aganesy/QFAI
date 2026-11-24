@@ -275,8 +275,8 @@ export async function collectTemplateFiles(root: string): Promise<string[]> {
   }
 
   // A caller may name a single file rather than a directory — `qfai init`
-  // forces `assistant/manifest/agent-catalog.yml` without forcing the tunable
-  // manifests beside it. Without this, `readdir` throws ENOTDIR on the path.
+  // copies each story-tree seed file and each shipped workflow file by its own
+  // path. Without this, `readdir` throws ENOTDIR on the path.
   //
   // Still propagates, and now says what it could not classify. `exists()` two
   // lines above asks `lstat`, which SUCCEEDS on a symlink whose reparse type

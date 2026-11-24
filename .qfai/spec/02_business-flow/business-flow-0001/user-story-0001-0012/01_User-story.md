@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a maintainer, I want the top-level directories of `.qfai/assistant/` in the `rule/ skill/ agent/ prompt/` layout defined, with where a file shared by several readers goes, so that each assistant file has one home.
+As a maintainer, I want the top-level directories of `.qfai/assistant/` defined, with where a file shared by several readers goes, so that each assistant file has one home.
 
 ## Non-goals
 
