@@ -87,6 +87,8 @@ const FINDING_CODE = /\bQFAI-[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\d{3}\b/g;
  */
 const QFAI_SEGMENT =
   /^(?:npx[ \t]+(?:-y[ \t]+|--yes[ \t]+)?|(?:pnpm|yarn)[ \t]+(?:exec[ \t]+)?|(?:\.\/)?node_modules\/\.bin\/)?qfai[ \t]+([a-z][a-z-]*)(?:[ \t]+([a-z][a-z-]*))?/;
+/** The `NAME=value` words before a command's name, a quoted part of a value kept whole. */
+const LEADING_ASSIGNMENTS = /^(?:[A-Za-z_][A-Za-z0-9_]*=(?:'[^']*'|"[^"]*"|[^\s'"])*[ \t]+)+/;
 /** The characters that end a shell command outside quotes. */
 const COMMAND_SEPARATORS: ReadonlySet<string> = new Set([";", "&", "|", "(", ")", "\n"]);
 const COMMANDS_WITH_SUBCOMMAND: ReadonlySet<string> = new Set([
@@ -279,7 +281,8 @@ function relativeToRoot(file: string, facts: Pick<ProjectFacts, "root" | "platfo
  * The watched files a shell command names. Each word is read whole, a quoted blank included,
  * then normalized, and only then tested against the watched directories. A quoted word that
  * names no file, such as the script of `bash -c "cat <path>"`, is read as a command in turn.
- * A patch names files it writes, so it names none.
+ * A patch names files it writes, so it names none, and so does the target of `>`, `>>` or `&>`;
+ * the target of `<` is read.
  */
 export function pathsInCommand(
   command: string,
@@ -287,12 +290,15 @@ export function pathsInCommand(
 ): string[] {
   if (command.includes("apply_patch")) return [];
   const found: string[] = [];
-  const visit = (word: string): void => {
-    const files = watchedFilesIn(word, facts);
-    found.push(...files);
-    if (files.length === 0 && SHELL_BREAK.test(word)) shellWords(word).forEach(visit);
+  const visit = (line: string): void => {
+    for (const token of shellTokens(line)) {
+      if (token.written) continue;
+      const files = watchedFilesIn(token.word, facts);
+      found.push(...files);
+      if (files.length === 0 && SHELL_BREAK.test(token.word)) visit(token.word);
+    }
   };
-  shellWords(slashed(command)).forEach(visit);
+  visit(slashed(command));
   return [...new Set(found)];
 }
 
@@ -309,27 +315,22 @@ const SHELL_BREAK = /[\s;|&()`<>]/;
 
 /**
  * The words of a shell line with their quotes removed, split at blanks and at separators and
- * redirections outside quotes, so a quoted blank stays inside its word.
- */
-function shellWords(command: string): string[] {
-  return shellTokens(command).map((token) => token.word);
-}
-
-/**
- * The words of a shell line as `shellWords` reads them, each marked when it belongs to a
- * redirection: the target after `>`, `>>`, `<` or `&>`, as in `2>/dev/null` or `> out`, an `&`
+ * redirections outside quotes, so a quoted blank stays inside its word. Each is marked when it
+ * belongs to a redirection: the target after `>`, `>>`, `<` or `&>`, as in `2>/dev/null` or `> out`, an `&`
  * duplicate such as the `1` of `2>&1`, and the descriptor number fused before the operator.
+ * The target of `>` is also marked written: the shell writes that file, it does not read it.
  */
-function shellTokens(command: string): { word: string; redirection: boolean }[] {
-  const tokens: { word: string; redirection: boolean }[] = [];
+function shellTokens(command: string): ShellToken[] {
+  const tokens: ShellToken[] = [];
   let current = "";
   let quoted = false;
   let quote: "'" | '"' | null = null;
-  // Whether the next word is a redirection's target.
+  // Whether the next word is a redirection's target, and whether the shell writes that target.
   let target = false;
+  let written = false;
   const finish = (): void => {
     if (current !== "" || quoted) {
-      tokens.push({ word: current, redirection: target });
+      tokens.push({ word: current, redirection: target, written: target && written });
       target = false;
     }
     current = "";
@@ -343,16 +344,25 @@ function shellTokens(command: string): { word: string; redirection: boolean }[] 
       quote = char;
       quoted = true;
     } else if (char === "<" || char === ">") {
-      if (!quoted && /^\d+$/.test(current)) tokens.push({ word: current, redirection: true });
-      else finish();
+      if (!quoted && /^\d+$/.test(current)) {
+        tokens.push({ word: current, redirection: true, written: false });
+      } else finish();
       current = "";
       quoted = false;
       target = true;
+      written = char === ">";
     } else if (SHELL_BREAK.test(char)) finish();
     else current += char;
   }
   finish();
   return tokens.filter((token) => token.word !== "");
+}
+
+/** One word of a shell line, marked when it belongs to a redirection and when the shell writes it. */
+interface ShellToken {
+  word: string;
+  redirection: boolean;
+  written: boolean;
 }
 
 /** A leading `NAME=value` word: an assignment the shell makes for the command, not its name. */
@@ -458,11 +468,15 @@ function countToolErrors(events: SessionEvents): ToolErrors[] {
     .sort((a, b) => compareText(a.tool, b.tool));
 }
 
-/** Each `qfai` command a shell command runs, as `qfai <command>` or `qfai <command> <subcommand>`. */
+/**
+ * Each `qfai` command a shell command runs, as `qfai <command>` or `qfai <command> <subcommand>`,
+ * after any `NAME=value` assignments that lead its segment.
+ */
 export function qfaiCommandsIn(command: string): string[] {
   const found: string[] = [];
   for (const segment of shellSegments(command)) {
-    const [, name, sub] = QFAI_SEGMENT.exec(slashed(segment).trim()) ?? [];
+    const words = slashed(segment).trim().replace(LEADING_ASSIGNMENTS, "");
+    const [, name, sub] = QFAI_SEGMENT.exec(words) ?? [];
     if (name === undefined) continue;
     found.push(
       sub !== undefined && COMMANDS_WITH_SUBCOMMAND.has(name)

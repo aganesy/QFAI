@@ -10,7 +10,7 @@ import path from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { safeInventoryFiles } from "../../../src/core/graph/reuse.js";
 
-const DELIBERATION = ".qfai/discussion";
+const DELIBERATION = ".qfai/deliberation";
 let analysis: string;
 
 beforeEach(async () => {
@@ -55,10 +55,10 @@ it("rejects a reported path that is not a plain relative path", async () => {
 
 it("rejects an excluded input, a missing file, a directory and a linked file", async () => {
   await writeFile(path.join(analysis, ".env"), "SECRET=1\n");
-  await mkdir(path.join(analysis, ".qfai", "discussion"), { recursive: true });
-  await writeFile(path.join(analysis, ".qfai", "discussion", "notes.md"), "notes\n");
+  await mkdir(path.join(analysis, ".qfai", "deliberation"), { recursive: true });
+  await writeFile(path.join(analysis, ".qfai", "deliberation", "notes.md"), "notes\n");
   await link(path.join(analysis, "README.md"), path.join(analysis, "alias.md"));
-  for (const file of [".env", ".qfai/discussion/notes.md", "missing.ts", "src", "alias.md"]) {
+  for (const file of [".env", ".qfai/deliberation/notes.md", "missing.ts", "src", "alias.md"]) {
     expect(await safeInventoryFiles(analysis, [file], DELIBERATION), file).toBe(false);
   }
 });

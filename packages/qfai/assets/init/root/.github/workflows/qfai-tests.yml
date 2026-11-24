@@ -306,7 +306,7 @@ jobs:
               }
               process.stdout.write(JSON.stringify(declared));
             ')"; then
-              echo "::error file=package.json::qfai tests: package.json could not be read as a manifest (the reason is in the line above), so the declared test layers are unknown. Fix package.json: this check stops here instead of reporting green over tests it could not select."
+              echo "::error file=package.json::qfai tests: package.json does not declare the test layers in a usable form (the reason is in the line above), so the declared test layers are unknown. Fix package.json: this check stops here instead of reporting green over tests it could not select."
               exit 1
             fi
           fi

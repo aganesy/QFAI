@@ -1008,6 +1008,15 @@ describe("assets guardrails", () => {
     expect(content).not.toContain(".github/prompts/");
   });
 
+  it("states the scratch-file precedence of the temporary-files rule in root copilot-instructions", async () => {
+    const copilotInstructionsPath = path.join(repoRoot, ".github", "copilot-instructions.md");
+    const content = await readFile(copilotInstructionsPath, "utf-8");
+
+    expect(content).toContain(
+      "`.agents/rules/temporary-files.md` — a scratch file goes in the scratch directory the host names for the session, else under `tmp/`.",
+    );
+  });
+
   it("runs init -> validate -> report smoke", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assets-"));
     try {

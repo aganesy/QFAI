@@ -24,6 +24,29 @@ function libuvDetail(error: unknown): { code: string; syscall: string; path?: st
 }
 
 /**
+ * What to do about a run that stopped on a read fault with errno `code`.
+ *
+ * The fault can be any read error on any path the run reaches: `EACCES` on a
+ * configured `paths.specsDir`, `ENOTDIR` under a parent that is a file, `ELOOP`.
+ * Advice that assumed the Windows worktree case sent the operator of an
+ * unreadable `specsDir` to `qfai init`, which changes nothing there. So every
+ * fault gets the advice to make the reported path readable, and the worktree
+ * note is added only for `EPERM`, the errno that case raises.
+ */
+function incompleteRunAdvice(code: string): string {
+  const advice =
+    "Check the path reported above: make it readable by this user, or, when a " +
+    "configuration key such as paths.specsDir names it, point that key at a readable " +
+    "directory, then run the command again.";
+  if (code !== "EPERM") return advice;
+  return (
+    `${advice} On a Windows git worktree, .claude/skills/* are FILE symlinks pointing at ` +
+    "directories and stat answers EPERM for every one of them; if the path is one of " +
+    "those, re-run `qfai init` inside the worktree."
+  );
+}
+
+/**
  * The same attribution {@link buildIncompleteRunIssue} gives `validate`, for a
  * command that has no verdict artifact to degrade into.
  *
@@ -45,9 +68,7 @@ export function describeIncompleteRun(error: unknown, context: string): Error | 
   return new Error(
     `${context}: could not finish — ${detail.syscall} failed with ${detail.code}` +
       `${at}. This run is NOT a clean result; it is no result at all.\n` +
-      "Check the path reported above. On a Windows git worktree, .claude/skills/* are FILE " +
-      "symlinks pointing at directories and stat answers EPERM for every one of them — " +
-      "re-run `qfai init` inside the worktree in that case.",
+      incompleteRunAdvice(detail.code),
     { cause: error },
   );
 }
@@ -104,10 +125,7 @@ export function buildIncompleteRunIssue(error: unknown, context: string): Issue 
       `This run is NOT a clean result; it is no result at all: ${detail}`,
     rule: INCOMPLETE_RUN_RULE,
     ...(typeof errno?.path === "string" ? { file: errno.path } : {}),
-    suggested_action:
-      "Check the path reported above. On a Windows git worktree, .claude/skills/* are FILE " +
-      "symlinks pointing at directories and stat answers EPERM for every one of them — " +
-      "re-run `qfai init` inside the worktree in that case.",
+    suggested_action: incompleteRunAdvice(code),
   };
 }
 
