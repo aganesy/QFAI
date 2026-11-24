@@ -218,33 +218,150 @@ export function jobRuns(job, pathSpec) {
   throw new Error(`unrecognised job condition, refusing to cost it: ${text}`);
 }
 
+/** The entries of a matrix `include` or `exclude` list; throws when it is not a list of mappings. */
+function matrixEntries(name, list) {
+  if (list === undefined) return [];
+  if (!Array.isArray(list) || !list.every(isRecord)) {
+    throw new Error(`unrecognised matrix ${name}, refusing to cost it: ${JSON.stringify(list)}`);
+  }
+  return list;
+}
+
+/** True when every match is, false when one is not, and `undefined` when that cannot be read. */
+function allOf(matches) {
+  if (matches.includes(false)) return false;
+  return matches.includes(undefined) ? undefined : true;
+}
+
+/** True when one match is, false when none is, and `undefined` when that cannot be read. */
+function anyOf(matches) {
+  if (matches.includes(true)) return true;
+  return matches.includes(undefined) ? undefined : false;
+}
+
 /**
- * How many runners a job allocates. A matrix job is billed per leg.
+ * Whether two matrix values are the same: a mapping whatever its key order, a list item by item.
+ * A number or boolean and a string spelled the same may be merged by the runner, so their match is
+ * `undefined` rather than guessed.
+ */
+function sameValue(left, right) {
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+    return allOf(left.map((value, index) => sameValue(value, right[index])));
+  }
+  if (isRecord(left) || isRecord(right)) {
+    if (!isRecord(left) || !isRecord(right)) return false;
+    const keys = Object.keys(left);
+    if (keys.length !== Object.keys(right).length || keys.some((key) => !(key in right))) {
+      return false;
+    }
+    return allOf(keys.map((key) => sameValue(left[key], right[key])));
+  }
+  if (left === right) return true;
+  return String(left) === String(right) ? undefined : false;
+}
+
+/** Whether a matrix value holds a `${{ }}` expression anywhere, whose value the text does not give. */
+function holdsExpression(value) {
+  if (typeof value === "string") return value.includes("${{");
+  if (Array.isArray(value)) return value.some(holdsExpression);
+  return isRecord(value) && Object.values(value).some(holdsExpression);
+}
+
+/**
+ * The legs of a matrix whose axes are all written out, the way GitHub expands it: every
+ * combination of the axes, less each one an `exclude` entry matches, plus one leg for each
+ * `include` entry that extends no remaining combination. Throws where `qfai doctor` names the
+ * workflow as not counted: an `exclude` key that is not an axis, a match that cannot be read, or a
+ * matrix with no leg.
+ */
+function expandMatrix(axes, exclude, include) {
+  const names = Object.keys(axes);
+  const refuse = (why) => {
+    throw new Error(`unrecognised matrix: ${why}, refusing to cost it`);
+  };
+  if (exclude.some((entry) => Object.keys(entry).some((key) => !names.includes(key)))) {
+    refuse("an exclude key is not an axis");
+  }
+  let combinations = names.length === 0 ? [] : [{}];
+  for (const name of names) {
+    combinations = combinations.flatMap((combination) =>
+      axes[name].map((value) => ({ ...combination, [name]: value })),
+    );
+  }
+  const excluded = combinations.map((combination) =>
+    anyOf(
+      exclude.map((entry) =>
+        allOf(Object.entries(entry).map(([key, value]) => sameValue(combination[key], value))),
+      ),
+    ),
+  );
+  if (excluded.includes(undefined)) refuse("an exclude match cannot be read");
+  const kept = combinations.filter((_, index) => excluded[index] === false);
+  const extended = include.map((entry) =>
+    anyOf(
+      kept.map((combination) =>
+        allOf(
+          Object.entries(entry)
+            .filter(([key]) => names.includes(key))
+            .map(([key, value]) => sameValue(combination[key], value)),
+        ),
+      ),
+    ),
+  );
+  if (extended.includes(undefined)) refuse("an include match cannot be read");
+  const legs = kept.length + extended.filter((match) => match === false).length;
+  if (legs === 0) refuse("it has no leg");
+  return legs;
+}
+
+/**
+ * How many runners a job allocates. A matrix job is billed per leg, counted as `qfai doctor`
+ * counts it: the product of the axes, less each `exclude` match, plus each `include` entry that
+ * extends no remaining combination.
  *
  * The one matrix whose width depends on the path is the test lane's layer list, which the
  * template writes as a `fromJSON` over the detection job's output; it is read here rather than
- * evaluated.
+ * evaluated, as one leg per layer the path declares a script for, and only with no `include` or
+ * `exclude`, whose match against legs whose values are not known cannot be read. For the same
+ * reason no value inside a literal axis, an `include` or an `exclude` may be an expression.
  */
 export function instancesOf(job, pathSpec) {
   const strategy = isRecord(job) ? job.strategy : undefined;
   const matrix = isRecord(strategy) ? strategy.matrix : undefined;
   if (!isRecord(matrix)) return 1;
-  let widest = 1;
-  for (const value of Object.values(matrix)) {
-    if (Array.isArray(value)) {
-      widest = Math.max(widest, value.length);
+  const include = matrixEntries("include", matrix.include);
+  const exclude = matrixEntries("exclude", matrix.exclude);
+  const axes = {};
+  let layerAxes = 0;
+  for (const [name, value] of Object.entries(matrix)) {
+    if (name === "include" || name === "exclude") continue;
+    if (Array.isArray(value) && value.length > 0) {
+      axes[name] = value;
       continue;
     }
-    const text = String(value);
+    const text = Array.isArray(value) ? "[]" : String(value);
     if (text.includes("needs.detection.outputs.selected")) {
-      // One leg per layer the path declares a script for. `jobRuns` has already refused the path
-      // where that list is empty, so the axis here is never zero-width.
-      widest = Math.max(widest, pathSpec.testScripts.length);
+      layerAxes += 1;
       continue;
     }
     throw new Error(`unrecognised matrix axis, refusing to cost it: ${text}`);
   }
-  return widest;
+  if ([...Object.values(axes), include, exclude].some(holdsExpression)) {
+    throw new Error("unrecognised matrix value, refusing to cost an expression inside a list");
+  }
+  if (layerAxes === 0) return expandMatrix(axes, exclude, include);
+  if (include.length > 0 || exclude.length > 0) {
+    throw new Error("unrecognised matrix: the layer axis with an include or exclude");
+  }
+  // `jobRuns` has already refused the path where the layer list is empty, so the axis here is
+  // never zero-width.
+  return Object.values(axes).reduce(
+    (legs, axis) => legs * axis.length,
+    pathSpec.testScripts.length ** layerAxes,
+  );
 }
 
 /** The runner class a job declares, as written. */
