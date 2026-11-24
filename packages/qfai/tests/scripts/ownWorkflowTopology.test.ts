@@ -51,7 +51,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
@@ -4973,10 +4973,11 @@ function namedProgram(marker: string): string {
 function runNamedPreflight(
   fixture: NamedFixture,
   env: Record<string, string> = {},
+  nodeArgs: readonly string[] = [],
 ): { status: number | null; stderr: string } {
   const program = path.join(fixture.root, "preflight.mjs");
   writeFileSync(program, namedProgram("PREFLIGHT"));
-  const result = spawnSync(process.execPath, [program], {
+  const result = spawnSync(process.execPath, [...nodeArgs, program], {
     cwd: fixture.root,
     encoding: "utf-8",
     env: {
@@ -5302,6 +5303,63 @@ describe("the optional exact-file diagnostic", () => {
       expect(result.status).toBe(1);
       expect(result.stderr).toContain("the workspace configuration");
       expect(result.stderr).toContain(message);
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0002-0026-15
+  it("reads a workspace configuration that grows after its checks no further than its byte limit", () => {
+    // A preload grows the file right after the preflight resolves its real path, the last check
+    // before the read, and records every byte the preflight then reads from it. A size taken before
+    // that point says nothing about the file the read meets, so only a bound on the read itself
+    // keeps the grown file from being read whole.
+    const fixture = namedFixture();
+    try {
+      const record = path.join(fixture.root, "workspace-bytes-read.txt");
+      const preload = path.join(fixture.root, "grow-workspace.mjs");
+      writeFileSync(
+        preload,
+        [
+          'import fs from "node:fs";',
+          'import { syncBuiltinESMExports } from "node:module";',
+          'const watched = (target) => String(target).endsWith("vitest.workspace.ts");',
+          "const real = { ...fs };",
+          "const handles = new Set();",
+          "let read = 0;",
+          "fs.realpathSync = (target, ...rest) => {",
+          "  const resolved = real.realpathSync(target, ...rest);",
+          '  if (watched(target)) real.appendFileSync(target, `// ${"x".repeat(1024 * 1024)}\\n`);',
+          "  return resolved;",
+          "};",
+          "fs.openSync = (target, ...rest) => {",
+          "  const handle = real.openSync(target, ...rest);",
+          "  if (watched(target)) handles.add(handle);",
+          "  return handle;",
+          "};",
+          "fs.closeSync = (handle) => {",
+          "  handles.delete(handle);",
+          "  return real.closeSync(handle);",
+          "};",
+          "fs.readSync = (handle, ...rest) => {",
+          "  const count = real.readSync(handle, ...rest);",
+          "  if (handles.has(handle)) read += count;",
+          "  return count;",
+          "};",
+          "fs.readFileSync = (target, ...rest) => {",
+          "  const content = real.readFileSync(target, ...rest);",
+          "  if (watched(target) || handles.has(target)) read += content.length;",
+          "  return content;",
+          "};",
+          "syncBuiltinESMExports();",
+          `process.on("exit", () => real.writeFileSync(${JSON.stringify(record)}, String(read)));`,
+          "",
+        ].join("\n"),
+      );
+      const result = runNamedPreflight(fixture, {}, ["--import", pathToFileURL(preload).href]);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("the workspace configuration");
+      expect(Number(readFileSync(record, "utf-8"))).toBeLessThanOrEqual(64 * 1024 + 1);
     } finally {
       rmSync(fixture.root, { recursive: true, force: true });
     }
