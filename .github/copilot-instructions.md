@@ -36,7 +36,7 @@ Key rules to follow:
 - `.agents/rules/graph-exploration.md` — prefer the graph CLIs first: CodeGraph for code structure and Graphify for document concepts;
   ordinary search stays acceptable, and no tool blocks it.
 
-- `.agents/rules/temporary-files.md` — temporary files MUST go under `tmp/`.
+- `.agents/rules/temporary-files.md` — a scratch file goes in the scratch directory the host names for the session, else under `tmp/`.
 - `.agents/rules/temporary-files.local.md` — a test's own `mkdtemp` sandbox is outside that rule.
 - `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.
 - `.agents/rules/root-additions-policy.local.md` — two file shapes that turn up at this root, and where each belongs.
