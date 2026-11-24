@@ -654,6 +654,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   than ten raises its finding: at the token nearest the chain's end whose
   chain below passes ten, with no finding above it. Closes #5325.
 
+- **The change classification rule names the reviewer cards QFAI ships.**
+  Its review-focus line named QA, Architect and Code Reviewer, roles no
+  shipped agent card defines, so no session could start them. It now points at
+  the plan's `review` field and names the four reviewer cards:
+  `requirements-reviewer`, `architecture-reviewer`, `implementation-reviewer`
+  and `product-surface-reviewer`.
+
 - **Migration step 11 names a staging directory it could not remove.** When
   step 11 replaced a shipped skill or step but could not remove the hidden
   `.<id>-replace-*` directory it staged in, the failure was ignored: the

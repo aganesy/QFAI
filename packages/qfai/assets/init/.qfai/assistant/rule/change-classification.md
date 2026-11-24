@@ -8,7 +8,7 @@ To keep PR/design/review/test planning aligned, classify each change along two a
 This classification is used in:
 
 - PR body (Change Classification)
-- Review focus (QA / Architect / Code Reviewer)
+- Review focus (the reviewer cards the plan's `review` field names: `requirements-reviewer`, `architecture-reviewer`, `implementation-reviewer`, `product-surface-reviewer`)
 - Test strategy (which layers to add/update)
 
 ---

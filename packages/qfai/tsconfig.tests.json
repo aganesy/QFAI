@@ -108,6 +108,7 @@
     "vitest.workspace.ts",
     "tests/assets/actionPinBumpOwner.test.ts",
     "tests/assets/agentCardRequiredInputs.test.ts",
+    "tests/assets/changeClassificationReviewCards.test.ts",
     "tests/assets/agentGrillingConvergence.test.ts",
     "tests/assets/agentSelectionReferenceTargets.test.ts",
     "tests/assets/aiReadableMarkdown.test.ts",
