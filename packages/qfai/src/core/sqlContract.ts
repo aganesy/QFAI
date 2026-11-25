@@ -471,9 +471,7 @@ function readQualifiedName(text: string, from: number): { name: string; end: num
 function readNamePart(text: string, from: number): { name: string; end: number } | undefined {
   const first = text[from] ?? "";
   if (first === '"') {
-    let close = text.indexOf('"', from + 1);
-    // A doubled quote is an escaped `"`, not the end of the part.
-    while (close !== -1 && text[close + 1] === '"') close = text.indexOf('"', close + 2);
+    const close = closingQuote(text, from, first);
     if (close === -1) return undefined;
     const value = text.slice(from + 1, close).replace(/""/g, '"');
     if (value.length === 0) return undefined;
@@ -486,6 +484,14 @@ function readNamePart(text: string, from: number): { name: string; end: number }
   const bare = text.slice(from, end);
   if (/^u$/i.test(bare) && text[end] === "&" && text[end + 1] === '"') return undefined;
   return { name: bare.replace(/[A-Z]/g, (letter) => letter.toLowerCase()), end };
+}
+
+function closingQuote(text: string, from: number, quote: string): number {
+  let close = text.indexOf(quote, from + 1);
+  while (close !== -1 && text[close + 1] === quote) {
+    close = text.indexOf(quote, close + 2);
+  }
+  return close;
 }
 
 function skipSpaces(text: string, from: number): number {
@@ -554,8 +560,8 @@ function argumentList(statement: string, nameEnd: number): string {
   let depth = 0;
   for (let index = open; index < statement.length; index += 1) {
     const ch = statement[index];
-    if (ch === "'") {
-      index = statement.indexOf("'", index + 1);
+    if (ch === "'" || ch === '"') {
+      index = closingQuote(statement, index, ch);
       if (index === -1) return "";
       continue;
     }
@@ -633,8 +639,7 @@ function canonicalArgumentType(type: string): string {
   // A space stands in for the modifier: the caller removed the spaces around
   // parentheses, so `timestamp(3) with time zone` arrives as `timestamp(3)with`.
   base = base
-    .replace(/\([^()]*\)/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(/"(?:[^"]|"")*"|(?:\([^()]*\)|\s)+/g, (part) => (part.startsWith('"') ? part : " "))
     .trim();
   if (/^interval (?:year|month|day|hour|minute|second)\b/.test(base)) base = "interval";
   const name = TYPE_ALIASES.get(base) ?? base;
@@ -650,11 +655,10 @@ function canonicalArgumentType(type: string): string {
 function identityArgumentTypes(argumentText: string, kind: string): string {
   const types: string[] = [];
   for (const argument of splitTopLevel(argumentText)) {
-    const words = stripDefault(argument)
-      .toLowerCase()
-      .replace(/\s*([(),[\]])\s*/g, "$1")
-      .split(/\s+/)
-      .filter(Boolean);
+    const normalized = stripDefault(argument).replace(/"(?:[^"]|"")*"|[^"]+/g, (part) =>
+      part.startsWith('"') ? part : part.toLowerCase().replace(/\s*([(),[\]])\s*/g, "$1"),
+    );
+    const words = normalized.match(/(?:"(?:[^"]|"")*"|[^"\s])+/g) ?? [];
     let mode = "in";
     if (words[0] !== undefined && ARGUMENT_MODES.has(words[0])) {
       mode = words.shift() ?? mode;
@@ -674,31 +678,36 @@ function identityArgumentTypes(argumentText: string, kind: string): string {
   return types.join(",");
 }
 
-/** Split on commas outside parentheses and string literals. */
+/** Split on commas outside parentheses, strings and quoted names. */
 function splitTopLevel(text: string): string[] {
   const parts: string[] = [];
   let depth = 0;
-  let inString = false;
-  let current = "";
-  for (const ch of text) {
-    if (ch === "'") inString = !inString;
-    if (!inString && ch === "(") depth += 1;
-    if (!inString && ch === ")") depth -= 1;
-    if (!inString && depth === 0 && ch === ",") {
-      parts.push(current);
-      current = "";
-      continue;
+  let start = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    const ch = text[index];
+    if (ch === "'" || ch === '"') {
+      const close = closingQuote(text, index, ch);
+      if (close === -1) break;
+      index = close;
+    } else if (ch === "(") {
+      depth += 1;
+    } else if (ch === ")") {
+      depth -= 1;
+    } else if (depth === 0 && ch === ",") {
+      parts.push(text.slice(start, index));
+      start = index + 1;
     }
-    current += ch;
   }
-  parts.push(current);
+  parts.push(text.slice(start));
   return parts;
 }
 
 /** An argument without its `DEFAULT <expr>` or `= <expr>` tail. */
 function stripDefault(argument: string): string {
-  const match = /\s+default\s|\s+default$|=/i.exec(argument);
-  return match ? argument.slice(0, match.index) : argument;
+  for (const match of argument.matchAll(/"(?:[^"]|"")*"|\s+default(?:\s|$)|=/gi)) {
+    if (!match[0].startsWith('"')) return argument.slice(0, match.index);
+  }
+  return argument;
 }
 
 /**

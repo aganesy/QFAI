@@ -632,6 +632,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
+- `gh-budget` reports oversized GitHub responses without saving a partial
+  Actions job log.
+
+- Root-heading diagnostics in `check-mdschema` print paths relative to the
+  checked tree when the command is run from another directory.
+
 - Validation launcher mismatch errors identify the checkout problem and explain
   how to install its dependencies and rerun validation through its own launcher.
 
@@ -644,6 +650,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Plain `qfai init` defers the assistant version file when a required asset
   could not be verified.** A blocked copy no longer records a complete
   installation. Init reports why the version file was deferred. Closes #4527.
+
+- `QFAI-DRIFT-002` compares rendered example rows. Changing a sample table in
+  fenced code or an HTML comment leaves the example drift result unchanged.
 
 - **The reviewer remit for `/qfai-triage` names the files triage may change.**
   Its row still said no tracked file changed, so a reviewer following it
@@ -1220,6 +1229,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`, as
   the `implement-tdd` step does. Closes #4965.
 
+- The routine parser skips commas and parentheses inside quoted argument
+  names and preserves quoted type names when checking for duplicate routines.
+
 - **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
   The duplicate check compared each argument type as written, so
   `f(int)` and `f(integer)`, or `f(varchar(10))` and `f(varchar(20))`, went
@@ -1238,14 +1250,17 @@ decisions` headings appeared anywhere in the file, so a record with several
   whose quoted part never closes, and a `U&"…"` name, record no object rather
   than a wrong prefix such as `u`. Closes #5150.
 
-- **The HTML mock contrast check reads the background CSS applies.** It took
-  the first `background:` or `background-color:` it found in an inline style,
-  so a longer property name ending in `background` could stand in for the real
-  one, and an `!important` background lost to a later plain declaration. It now
-  reads the colour and the background from the parsed declarations, whatever
-  the case of their property names, so `QFAI-MOCK-008` measures the pair CSS
-  applies. A colour inside a `background` shorthand with an image, and a
-  three-digit hex colour, are now measured too. Closes #5135.
+- **The HTML mock contrast check reads parsed inline colours.** It used to
+  take the first `background:` or `background-color:` from the inline style.
+  `QFAI-MOCK-008` now measures the colour pair exposed by jsdom, including a
+  colour in a `background` shorthand with an image, three-digit hex colours,
+  and opaque `hsl()` or space-separated `rgb()` colours.
+  Property names are case-insensitive. A later ordinary `background` can still
+  override `background-color: ... !important` in jsdom. Closes #5135.
+
+- `check-mdschema --scope changed` includes new Markdown documents before
+  staging and respects Git's ignore rules. A failed Git file listing widens
+  the check and prints a warning.
 
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
@@ -2487,6 +2502,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `workflow.stopGate` and so ran the project's turn-end checks. The hook now
   runs none and says which file it could not read and that no turn-end check
   ran.
+
+- The turn-end hook clears the saved failure for the current session and agent
+  when the gate is disabled or `tech.md` is missing. If the check becomes
+  available again, a failing command blocks the turn as a fresh failure.
 
 - **The turn-end check tells a failure in another worktree from a repeat.**
   When a continued turn failed with the same output it had blocked on, the

@@ -26,6 +26,7 @@ import {
   graphAnalysisStaging,
   graphRuntimePaths,
   graphEnvironmentKey,
+  type GraphAnalysisEngine,
 } from "./layout.js";
 import { codegraphEnvironment, type GraphProcess } from "./process.js";
 import {
@@ -127,7 +128,7 @@ export async function copyCachedAnalysis(cached: string, staged: string): Promis
 
 export async function completedAnalysisCache(
   root: string,
-  engine: "codegraph" | "graphify" | "graphify-code",
+  engine: GraphAnalysisEngine,
   run: GraphProcess,
   environment: GraphReuseEnvironment = graphReuseEnvironment(),
 ): Promise<{ repository: string; directory: string } | undefined> {
