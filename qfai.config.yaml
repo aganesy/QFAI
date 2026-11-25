@@ -4,7 +4,7 @@ paths:
   outDir: .qfai/report
   skillsDir: .qfai/assistant/skill
   srcDir: packages/qfai/src
-  testsDir: tests
+  testsDir: packages/qfai/tests
 validation:
   failOn: error
   testStrategy:

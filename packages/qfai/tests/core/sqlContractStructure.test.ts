@@ -542,6 +542,40 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(created)).toEqual([]);
   });
 
+  it("keeps punctuation and escaped quotes inside routine argument identifiers", () => {
+    const { statements } = parseSqlContract(
+      `CREATE FUNCTION f("a),""(" "T )""(,x", b int) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE FUNCTION f("T )""(,y", int) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n` +
+        `CREATE FUNCTION f("T )""(,x", int) RETURNS int AS $$ SELECT 3 $$ LANGUAGE sql;\n`,
+    );
+    const created = collectCreatedObjects(statements);
+    expect(created.map((object) => object.signature)).toEqual([
+      '"T )""(,x",integer',
+      '"T )""(,y",integer',
+      '"T )""(,x",integer',
+    ]);
+    expect(findRedefinitions(created)).toEqual([{ kind: "FUNCTION", name: "f", lines: [1, 3] }]);
+  });
+
+  it("distinguishes parentheses inside a type name from its modifiers", () => {
+    const { statements } = parseSqlContract(
+      `CREATE FUNCTION f("custom(x)"[]) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE FUNCTION f("custom"[]) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`,
+    );
+    const created = collectCreatedObjects(statements);
+    expect(created.map((object) => object.signature)).toEqual(['"custom(x)"[]', '"custom"[]']);
+    expect(findRedefinitions(created)).toEqual([]);
+  });
+
+  it("recognizes only unquoted default markers in routine arguments", () => {
+    const { statements } = parseSqlContract(
+      `CREATE FUNCTION f("a=b" "type default value" DEFAULT NULL) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n`,
+    );
+    expect(collectCreatedObjects(statements).map((object) => object.signature)).toEqual([
+      '"type default value"',
+    ]);
+  });
+
   it("stays silent on a file that defines each object once", async () => {
     const issues = await runOn(
       `${HEADER}CREATE TABLE a (x int);\nCREATE TABLE b (y int);\nCREATE INDEX i ON a (x);\n`,
