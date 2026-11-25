@@ -15,6 +15,7 @@ import { describe, expect, it } from "vitest";
 import {
   AUTO_DECIDE_ALLOWED_TOKENS,
   classifyHardRequiredEntries,
+  collectHardRequiredEntries,
   parseAutopilotPolicy,
   splitJoinedEntries,
   type AutopilotPolicyParseResult,
@@ -89,6 +90,29 @@ describe("TC-0015-0021: parseAutopilotPolicy bucket detection", () => {
     expect(result.buckets.askUser).toBe(true);
     expect(result.buckets.hardRequired).toBe(true);
     expect(result.widenedTokens).toEqual([]);
+  });
+
+  it("ignores Markdown markers in YAML frontmatter when reading the policy", () => {
+    const skill = [
+      "---",
+      "name: sample",
+      "description: |",
+      "  Fenced examples in the description begin with:",
+      "  ```markdown",
+      "---",
+      SKILL_FULL_POLICY,
+    ].join("\n");
+
+    expect(parseAutopilotPolicy(skill).buckets).toEqual({
+      autoDecide: true,
+      askUser: true,
+      hardRequired: true,
+    });
+    expect(collectHardRequiredEntries(skill)).toEqual([
+      "companyName",
+      "brand intent",
+      "primarySpecId when absent",
+    ]);
   });
 
   it("does not count a bucket header inside an HTML comment", () => {

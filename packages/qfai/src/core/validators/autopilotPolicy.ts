@@ -28,6 +28,7 @@ import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { agentCardBody } from "../agentFrontmatter.js";
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import { maskNonSpecRegions } from "../specPackParsers.js";
@@ -189,7 +190,10 @@ export function normalizeHardRequiredEntry(bullet: string): string {
  * public surface.
  */
 export function collectHardRequiredEntries(content: string): string[] {
-  return collectBucketEntries(maskNonSpecRegions(content), HARD_REQUIRED_HEADER_WITH_TAIL);
+  return collectBucketEntries(
+    maskNonSpecRegions(agentCardBody(content)),
+    HARD_REQUIRED_HEADER_WITH_TAIL,
+  );
 }
 
 /**
@@ -460,7 +464,7 @@ export function parseAutopilotPolicy(
   content: string,
   skillId?: string,
 ): AutopilotPolicyParseResult {
-  const visible = maskNonSpecRegions(content);
+  const visible = maskNonSpecRegions(agentCardBody(content));
   const headingMatch = SECTION_HEADING_RE.exec(visible);
   if (!headingMatch) {
     return {
