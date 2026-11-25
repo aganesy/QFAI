@@ -629,6 +629,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Markdown table parsing counts consecutive backslashes before a closing pipe.
+  An odd count preserves the pipe as part of the last cell.
+
+- Validation launcher mismatch errors identify the checkout problem and explain
+  how to install its dependencies and rerun validation through its own launcher.
+
+- The shipped merge procedure applies the repository's review requirements
+  to the updated head after a base merge with conflicts only in the registers.
+
+- The verification guide distinguishes the built-in verdict scopes from
+  acceptance-only validation with `qfai validate --profile atdd`.
+
 - **Plain `qfai init` defers the assistant version file when a required asset
   could not be verified.** A blocked copy no longer records a complete
   installation. Init reports why the version file was deferred. Closes #4527.
@@ -846,6 +858,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   writes and `qfai report` checks before it reads the file. Its top-level table
   now lists the key, and the guide says a repository-wide run leaves it out and
   that `qfai report` refuses a file recording another scope. Closes #5348.
+
+- The `validate.json` guide explains the original severity recorded in
+  `issues[].relaxedFrom` by older exploration-mode runs.
 
 - **A directory whose name begins with two dots counts as inside its base
   everywhere.** Several more checks tested whether a path relative to its base
@@ -1719,6 +1734,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   could be closed as `awaiting-info` instead of being routed again. The step
   now applies those two re-routes first and uses the table only when the
   request closes.
+
+- Proposal triage records terminal acceptance as `accepted` and uses
+  `adopted` when a `decide-design` decision accepts implementation in this project.
 
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two

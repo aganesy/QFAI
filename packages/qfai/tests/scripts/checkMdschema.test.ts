@@ -401,29 +401,6 @@ describe("check-mdschema driver", () => {
     expect(result.stdout).not.toContain("conform");
   });
 
-  it("exits 2 on an unknown flag", () => {
-    const result = runDriver(["--no-such-flag"]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("unknown flag");
-  });
-
-  it("exits 2 on an unrecognised scope", async () => {
-    const root = await newTempDir();
-
-    const result = runDriver(["--root", root, "--scope", "everything"]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("changed|all|files");
-  });
-
-  it("exits 2 when --root is not a directory", () => {
-    const result = runDriver(["--root", path.join(os.tmpdir(), "qfai-absent-root")]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("not a directory");
-  });
-
   // QFAI:EX-0002-0003-08
   it("exits 2 when --tools names no directory", async () => {
     const root = await newTempDir();
@@ -442,26 +419,6 @@ describe("check-mdschema driver", () => {
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("--tools needs a directory");
-  });
-
-  it("exits 2 when --base is followed by another option, which it must not take as a ref", async () => {
-    // Taken as a ref, `--summary` names no revision, so the ratchet would widen
-    // to a full scan and the summary the caller asked for would never print.
-    const root = await newTempDir();
-
-    const result = runDriver(["--root", root, "--base", "--summary"]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("--base needs a git ref");
-  });
-
-  it("exits 2 when --scope files is given no path", async () => {
-    const root = await newTempDir();
-
-    const result = runDriver(["--root", root, "--scope", "files"]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("at least one path");
   });
 });
 

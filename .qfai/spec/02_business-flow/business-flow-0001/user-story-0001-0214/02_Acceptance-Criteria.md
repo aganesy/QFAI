@@ -47,4 +47,12 @@ Feature: Close, answer or hand back a request without a change
     Given a request that `triage-decompose` splits
     When the route closes
     Then each child is a follow-up request with its dependencies, and none is routed inside the route
+
+  # AC-0001-0214-08
+  Scenario: Proposal acceptance closes the request or routes it to implementation
+    Given a `decide-design` run whose `discussion-interview` recorded a proposal outcome
+    When `triage-close` reads that record
+    Then it records `accepted` when acceptance settles the request at triage, with no implementation to start in this project
+    And it reports `adopted` with the implementation route only when the record shows explicit user approval to implement in this project or an implementation decision under recorded delegation that covers it
+    And it records `deferred` with a reason when the implementation proposal remains an assumption or open pending authorization
 ```

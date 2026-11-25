@@ -13,7 +13,7 @@ Feature: Validate Gate Integration
   # AC-0001-0150-02
   Scenario: Validate Pipeline Validator Registration Integrity
     Given the current story-tree structure, contract-reference, test-obligation and drift validators
-    When the validate pipeline (`packages/qfai/src/core/validate.ts`) is loaded
+    When the validation pipeline is loaded
     Then each validator's public export and direct pipeline registration hold as one complete outcome, including invocation in its owning profile.
 
   # AC-0001-0150-03
