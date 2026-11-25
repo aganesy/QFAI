@@ -1024,6 +1024,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   under `## Annotations kept` as `(in a literal, left as test data)`, so the
   report says why it remains. Closes #5125.
 
+- The annotation scanner preserves quoted data after Vue slot shorthand and
+  Svelte block syntax in selected test files.
+
 - **`qfai validate` takes only a directory for an old spec-pack layout.** An
   ordinary file in the specs directory whose name matched `spec-*` or
   `_policies`, such as `spec-notes.md`, raised `QFAI-LAYOUT-001` and stopped

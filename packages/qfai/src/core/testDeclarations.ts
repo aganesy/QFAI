@@ -14,8 +14,8 @@ import path from "node:path";
 
 import type { JsMaskOptions } from "./validators/jsSourceMask.js";
 
-/** The extensions whose `#` opens a private field, never a comment. */
-const JS_TS_EXTENSIONS: ReadonlySet<string> = new Set([
+/** Test carrier extensions where a hash belongs to code or template syntax. */
+const NON_HASH_COMMENT_EXTENSIONS: ReadonlySet<string> = new Set([
   "js",
   "jsx",
   "mjs",
@@ -24,6 +24,8 @@ const JS_TS_EXTENSIONS: ReadonlySet<string> = new Set([
   "tsx",
   "mts",
   "cts",
+  "vue",
+  "svelte",
 ]);
 
 /**
@@ -33,12 +35,13 @@ const JS_TS_EXTENSIONS: ReadonlySet<string> = new Set([
  * This scan walks whatever a project puts under its test roots, so `#` opens a
  * comment (Python, Ruby, Gherkin) and triple quotes blank a Python docstring
  * whole; `#[` and a shebang are excluded by the lexer itself. In JavaScript and
- * TypeScript `#` opens a private field, so there it is code: read as a comment,
- * `this.#id = "QFAI:..."` would turn the string after it into a comment.
+ * TypeScript `#` opens a private field. Vue slot shorthand and Svelte block
+ * syntax also use it. Treating it as a comment there would hide the code
+ * after it and turn quoted text into a comment.
  */
 export function declarationMask(file: string): JsMaskOptions {
   const extension = path.extname(file).slice(1).toLowerCase();
-  return { hashComments: !JS_TS_EXTENSIONS.has(extension), tripleQuoted: true };
+  return { hashComments: !NON_HASH_COMMENT_EXTENSIONS.has(extension), tripleQuoted: true };
 }
 
 /**

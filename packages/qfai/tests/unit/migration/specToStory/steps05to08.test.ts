@@ -1108,6 +1108,49 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  it.each([
+    {
+      file: "tests/integration/SlotCarrier.vue",
+      template: [
+        "<template>",
+        "  <SlotSource>",
+        "    <template #default=\"{ label = '{annotation}' }\">{{ label }}</template>",
+        "  </SlotSource>",
+        "</template>",
+      ],
+      literalLine: 6,
+    },
+    {
+      file: "tests/integration/BlockCarrier.svelte",
+      template: ["{#if '{annotation}'}", "  <p>Visible</p>", "{/if}"],
+      literalLine: 4,
+    },
+  ])("keeps quoted template data after # in $file", async ({ file, template, literalLine }) => {
+    const context = await fixture();
+    context.config.validation.traceability.testFileGlobs = ["tests/**/*.vue", "tests/**/*.svelte"];
+    const legacy = ["QFAI", "SPEC-0001", "TC-0001-0001"].join(":");
+    const example = ["QFAI", "EX-0001-0001-02"].join(":");
+    const content = ["<script>", "// " + legacy, "</script>", ...template, ""]
+      .join("\n")
+      .replace("{annotation}", legacy);
+    await put(context.root, file, content);
+
+    const report = capture();
+    expect(await executePlannedStep(step08, context, false, report.io)).toBe(0);
+    expect(await readFile(path.join(context.root, file), "utf8")).toBe(
+      content.replace("// " + legacy, "// " + example),
+    );
+    expect(reportSection(report.output.join(""), "Annotations kept")).toBe(
+      "- " +
+        file +
+        ":" +
+        String(literalLine) +
+        ": " +
+        legacy +
+        " (in a literal, left as test data)",
+    );
+  });
+
   it("keeps every deferral line of a specification file with more of them than one call takes as arguments", async () => {
     const context = await fixture();
     // 500,000 arguments overflow the call stack, so spreading the lines into one push would throw.
