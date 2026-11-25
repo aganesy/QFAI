@@ -12,6 +12,7 @@ const lockfileReads: string[] = [];
 // exist and cannot be read. Matched below the fixture's directory name, so a resolved temp path
 // (a symlinked or short-name temp directory) still matches.
 const failingReads = new Map<string, string>();
+const failingListings = new Map<string, string>();
 const FIXTURE_PREFIX = "qfai-workflow-preconditions-";
 
 function fixtureRelative(file: string): string | undefined {
@@ -24,6 +25,19 @@ vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<typeof fsPromises>("node:fs/promises");
   return {
     ...actual,
+    readdir: (...args: Parameters<typeof actual.readdir>) => {
+      const [directory] = args;
+      const code =
+        typeof directory === "string"
+          ? failingListings.get(fixtureRelative(directory) ?? "")
+          : undefined;
+      if (code !== undefined) {
+        return Promise.reject(
+          Object.assign(new Error(`${code}: controlled listing failure`), { code }),
+        );
+      }
+      return actual.readdir(...args);
+    },
     readFile: (...args: Parameters<typeof actual.readFile>) => {
       const [file] = args;
       if (typeof file === "string" && LOCKFILE_NAMES.has(path.basename(file))) {
@@ -50,6 +64,7 @@ const roots: string[] = [];
 afterEach(async () => {
   lockfileReads.splice(0);
   failingReads.clear();
+  failingListings.clear();
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
@@ -444,5 +459,26 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     const pin = workflowFindings.find((check) => check.id === "workflows.nodePin");
     expect(pin?.message).toContain(".github/workflows/ci.yml pins Node 18");
     expect(pin?.message).not.toContain("old.yml");
+  });
+
+  it.each(["EACCES", "EIO"])("reports a workflow directory listing failure (%s)", async (code) => {
+    // QFAI:AC-0003-0011-08
+    const root = await project({
+      packageJson: { engines: { node: ">=20.19.0" } },
+      files: { ".github/workflows/ci.yml": "steps:\n  - with:\n      node-version: 18\n" },
+    });
+    failingListings.set(".github/workflows", code);
+
+    const findings = await preconditions(root);
+    const unread = findings.filter((check) => check.id === "workflows.preconditionsUnread");
+
+    expect(unread).toHaveLength(1);
+    expect(unread[0]).toMatchObject({
+      severity: "warning",
+      message: expect.stringContaining(".github/workflows"),
+      details: { path: ".github/workflows", code, cause: `${code}: controlled listing failure` },
+    });
+    expect(findings.map((check) => check.id)).toContain("workflows.nodeVersionFile");
+    expect(findings.map((check) => check.id)).not.toContain("workflows.nodePin");
   });
 });
