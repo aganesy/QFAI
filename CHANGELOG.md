@@ -632,6 +632,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
+- Root-heading diagnostics in `check-mdschema` print paths relative to the
+  checked tree when the command is run from another directory.
+
 - Validation launcher mismatch errors identify the checkout problem and explain
   how to install its dependencies and rerun validation through its own launcher.
 
@@ -925,6 +928,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   now lists that directory under `## For a person`, asks for it to be deleted
   before the next commit, and exits 3. Closes #5061.
 
+- A migration step that refuses a later operation prints the `For a person`
+  items it has already collected on standard error with the refusal.
+
 - **The `qfai --help` exit codes name every reason `qfai report` stops.** The
   `report` row gave a missing input file as its only exit 2. It now also names
   a bad or unknown `--flow`, an input recording other flows or, for a
@@ -1026,6 +1032,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   TypeScript files. A legacy token step 8 leaves in a literal is now listed
   under `## Annotations kept` as `(in a literal, left as test data)`, so the
   report says why it remains. Closes #5125.
+
+- The annotation scanner preserves quoted data after Vue slot shorthand and
+  Svelte block syntax in selected test files.
 
 - **`qfai validate` takes only a directory for an old spec-pack layout.** An
   ordinary file in the specs directory whose name matched `spec-*` or
@@ -1215,6 +1224,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`, as
   the `implement-tdd` step does. Closes #4965.
 
+- The routine parser skips commas and parentheses inside quoted argument
+  names and preserves quoted type names when checking for duplicate routines.
+
 - **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
   The duplicate check compared each argument type as written, so
   `f(int)` and `f(integer)`, or `f(varchar(10))` and `f(varchar(20))`, went
@@ -1233,14 +1245,17 @@ decisions` headings appeared anywhere in the file, so a record with several
   whose quoted part never closes, and a `U&"…"` name, record no object rather
   than a wrong prefix such as `u`. Closes #5150.
 
-- **The HTML mock contrast check reads the background CSS applies.** It took
-  the first `background:` or `background-color:` it found in an inline style,
-  so a longer property name ending in `background` could stand in for the real
-  one, and an `!important` background lost to a later plain declaration. It now
-  reads the colour and the background from the parsed declarations, whatever
-  the case of their property names, so `QFAI-MOCK-008` measures the pair CSS
-  applies. A colour inside a `background` shorthand with an image, and a
-  three-digit hex colour, are now measured too. Closes #5135.
+- **The HTML mock contrast check reads parsed inline colours.** It used to
+  take the first `background:` or `background-color:` from the inline style.
+  `QFAI-MOCK-008` now measures the colour pair exposed by jsdom, including a
+  colour in a `background` shorthand with an image, three-digit hex colours,
+  and opaque `hsl()` or space-separated `rgb()` colours.
+  Property names are case-insensitive. A later ordinary `background` can still
+  override `background-color: ... !important` in jsdom. Closes #5135.
+
+- `check-mdschema --scope changed` includes new Markdown documents before
+  staging and respects Git's ignore rules. A failed Git file listing widens
+  the check and prints a warning.
 
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
@@ -1260,6 +1275,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   or junction, the check compared a file outside the project. It now runs the
   write path's guard before reading and exits 1 naming the linked path, or the
   catalogue path when it is a link or not a file. Closes #5048.
+
+- `qfai validate` uses the same component catalogue path check. It reports
+  `QFAI-COMP-004` with the reason when the catalogue path is unreadable or
+  contains a symbolic link or junction.
 
 - **`qfai catalog design` puts both files back on a volume with no inode
   numbers, and names a moved-aside file it cannot remove.** On such a volume a
@@ -2478,6 +2497,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `workflow.stopGate` and so ran the project's turn-end checks. The hook now
   runs none and says which file it could not read and that no turn-end check
   ran.
+
+- The turn-end hook clears the saved failure for the current session and agent
+  when the gate is disabled or `tech.md` is missing. If the check becomes
+  available again, a failing command blocks the turn as a fresh failure.
 
 - **The turn-end check tells a failure in another worktree from a repeat.**
   When a continued turn failed with the same output it had blocked on, the

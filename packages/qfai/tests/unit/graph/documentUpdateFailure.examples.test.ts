@@ -150,7 +150,7 @@ it("activates refreshed inputs together with the graph they were verified agains
   }
 });
 
-// Mutation: packages/qfai/src/core/graph/documents.ts `if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope)))` -> `if (refresh === "staged")` fails "checks unchanged inputs where they stand without copying the active analysis"
+// Mutation: packages/qfai/src/core/graph/documents.ts `if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope, checked)))` -> `if (refresh === "staged")` fails "checks unchanged inputs where they stand without copying the active analysis"
 it("checks unchanged inputs where they stand without copying the active analysis", async () => {
   const fixture = await documentAnalysisFixture();
   try {
