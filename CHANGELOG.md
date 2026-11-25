@@ -632,6 +632,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
+- Root-heading diagnostics in `check-mdschema` print paths relative to the
+  checked tree when the command is run from another directory.
+
 - Validation launcher mismatch errors identify the checkout problem and explain
   how to install its dependencies and rerun validation through its own launcher.
 
