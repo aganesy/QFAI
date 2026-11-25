@@ -495,15 +495,18 @@ describe("web-research skill behaviour", () => {
   });
 
   // QFAI:AC-0001-0183-01
-  it("a high-risk conclusion is blocked until a human reviews the diff and its citations", () => {
+  it("requires an application request and review of a high-risk change", () => {
     const items = bullets(sectionLines(skill, "6. HITL (Human-in-the-Loop) Gates"));
-    const conclusion = items.find((item) => item.startsWith("**A high-risk conclusion**"));
-    expect(conclusion).toContain("is not applied to code until a human has reviewed it");
-    expect(conclusion).toContain("The gate blocks");
-    expect(conclusion).toContain(
-      "the diff the conclusion would produce together with its citations",
+    const output = items.find((item) => item.startsWith("**Research output**"));
+    expect(output).toContain("Finish with a cited research artifact");
+    expect(output).toContain(
+      "Start a separate code change only when the user explicitly requests application",
     );
-    expect(conclusion).toContain("A low-risk conclusion is applied without blocking");
+    expect(items.join(" ")).not.toContain("A low-risk conclusion is applied without blocking");
+    const application = items.find((item) => item.startsWith("**High-risk application**"));
+    expect(application).toContain(
+      "Show the proposed diff and its citations, then obtain human approval before applying the change",
+    );
   });
 
   // QFAI:AC-0001-0180-03
