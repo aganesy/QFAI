@@ -32,7 +32,8 @@
  *   node scripts/pr-threads.mjs defer <pr> <thread-id> <follow-up-issue>
  *
  * Exit codes: 0 answered, 1 the remaining budget is below the reserve, 2 the
- * arguments, `git` or `gh` could not be read, or `defer` was given a thread of
+ * arguments, `git` or `gh` could not be read, GitHub returned invalid JSON or
+ * a comments response other than a list, or `defer` was given a thread of
  * another pull request or repository. A `gh` that fails or cannot be started
  * gives 2 and a line naming the operation it was doing, not a stack trace.
  */
