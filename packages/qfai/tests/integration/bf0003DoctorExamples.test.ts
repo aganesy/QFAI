@@ -333,21 +333,24 @@ async function launcherFindings(
 }
 
 describe("BF-0003 Playwright launcher stage order", () => {
+  // QFAI:EX-0003-0006-01
   // QFAI:AC-0003-0006-01
   it("reports the project-local playwright when every stage could resolve", async () => {
     const root = await newTempDir("stage-primary");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     const localBin = path.join(root, "node_modules", ".bin");
     await seedShim(localBin, "playwright");
+    await seedShim(path.join(root, "scripts"), "playwright");
     const binDir = await newTempDir("stage-primary-bin");
     await seedShim(binDir, "npx");
+    await seedShim(binDir, "playwright");
 
     const { launcher } = await launcherFindings(root, binDir);
     expect(launcher?.severity).toBe("ok");
-    const details = launcher?.details as
-      { resolvedStage?: string; executable?: string } | undefined;
-    expect(details?.resolvedStage).toBe("primary");
-    expect(String(details?.executable ?? "")).toMatch(/playwright(\.cmd)?$/u);
+    expect(launcher?.details).toMatchObject({
+      resolvedStage: "primary",
+      origin: "node_modules/.bin",
+    });
   });
 
   // QFAI:AC-0003-0006-01
@@ -370,11 +373,13 @@ describe("BF-0003 Playwright launcher stage order", () => {
 describe("BF-0003 Playwright npx fallback", () => {
   // QFAI:EX-0003-0006-05
   // QFAI:AC-0003-0006-01
-  it("resolves playwright through npx when no local launcher exists", async () => {
+  it("resolves playwright through npx when the local shim is absent, despite other launchers", async () => {
     const root = await newTempDir("npx");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    await seedShim(path.join(root, "scripts"), "playwright");
     const binDir = await newTempDir("npx-bin");
     await seedShim(binDir, "npx");
+    await seedShim(binDir, "playwright");
     const data = await withPath(binDir, async () => {
       const outPath = path.join(root, ".qfai", "report", "doctor.json");
       await runDoctor({
@@ -387,9 +392,11 @@ describe("BF-0003 Playwright npx fallback", () => {
       return JSON.parse(await readFile(outPath, "utf-8")) as DoctorData;
     });
     const launcher = check(data, "prototyping.playwrightCli");
-    expect((launcher?.details as { resolvedStage?: string } | undefined)?.resolvedStage).toBe(
-      "npx-fallback",
-    );
+    expect(launcher?.details).toMatchObject({
+      resolvedStage: "npx-fallback",
+      origin: "npx --no-install",
+      args: ["--no-install", "playwright", "--version"],
+    });
   });
 });
 

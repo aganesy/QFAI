@@ -1525,7 +1525,6 @@ async function buildPlaywrightLauncherChecks(root: string): Promise<DoctorCheck[
   const probeOrder = getPlaywrightProbeOrder();
   const lookedInRelative = {
     ...resolution.lookedIn,
-    scriptsDir: toRelativePath(root, resolution.lookedIn.scriptsDir),
     localBinDir: toRelativePath(root, resolution.lookedIn.localBinDir),
   };
 
@@ -1538,11 +1537,7 @@ async function buildPlaywrightLauncherChecks(root: string): Promise<DoctorCheck[
   return [buildNotFoundCheck(lookedInRelative, probeOrder)];
 }
 
-type LauncherLookedIn = {
-  scriptsDir: string;
-  localBinDir: string;
-  path: string;
-};
+type LauncherLookedIn = PlaywrightLauncherResolution["lookedIn"];
 
 function buildResolvedChecks(
   root: string,
