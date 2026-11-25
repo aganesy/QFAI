@@ -110,6 +110,28 @@ describe("an example rewritten on the branch", () => {
     );
   });
 
+  // QFAI:EX-0001-0054-31
+  it.each([
+    ["fence", "```md", "```"],
+    ["comment", "<!--", "-->"],
+  ])("ignores a rewritten example row in a %s", async (_kind, open, close) => {
+    const document = (expected: string, sample: string): string =>
+      `${header}| ${example} | AC-0001-0001-01 | an order | ${expected} |\n\n` +
+      `${open}\n${header}| ${example} | AC-0001-0001-01 | sample | ${sample} |\n${close}\n`;
+    await put(examples, document("it is paid", "first sample"));
+    commit("add a non-rendered example table");
+    git("branch", "-f", "main", "HEAD");
+
+    await put(examples, document("it is paid", "second sample"));
+    commit("edit only the non-rendered sample");
+    expect(await warned()).toBe(false);
+    git("branch", "-f", "main", "HEAD");
+
+    await put(examples, document("it is refunded", "second sample"));
+    commit("edit the rendered example");
+    expect(await warned()).toBe(true);
+  });
+
   it("does not warn for a newly appended example", async () => {
     await put(
       examples,

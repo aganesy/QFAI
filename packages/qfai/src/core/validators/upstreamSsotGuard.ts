@@ -15,7 +15,7 @@ import {
   readFileAtBase,
   type BaseComparison,
 } from "../gitChanges.js";
-import { parseAllMarkdownTables } from "../specPackParsers.js";
+import { parseRenderedMarkdownTables } from "../specPackParsers.js";
 import { parseCountedExampleAnnotations, RECORD_ID_SOURCE } from "../storyTree/ids.js";
 import { diffRecordRows, parseRecordTable, type RecordRow } from "../storyTree/tables.js";
 import { buildStoryTreeModel, readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
@@ -284,7 +284,7 @@ async function examplesWithoutTestChange(
 /** Each example row by EX ID, cells trimmed so a re-padded table reads as unchanged. */
 function exampleRows(content: string): Map<string, string> {
   const rows = new Map<string, string>();
-  for (const table of parseAllMarkdownTables(content)) {
+  for (const table of parseRenderedMarkdownTables(content)) {
     const idColumn = table.headers.indexOf("EX-ID");
     if (idColumn === -1) continue;
     for (const cells of table.rows) {
