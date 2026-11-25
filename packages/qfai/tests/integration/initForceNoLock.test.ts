@@ -3,6 +3,7 @@
  * the project edited it, keeps no record of what it wrote, and leaves the
  * project's own files alone.
  */
+import { spawnSync } from "node:child_process";
 import { link, lstat, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -90,6 +91,25 @@ describe("init --force overwrites the regenerated assets", () => {
     expect(await readFile(master, "utf-8")).toBe(
       await readFile(shippedMaster("minimal-implementation.md"), "utf-8"),
     );
+  });
+
+  // QFAI:AC-0001-0022-02
+  it("reports and preserves a FIFO at a forced template destination in apply and preview", async (ctx) => {
+    if (process.platform === "win32") ctx.skip();
+    const dir = await newTempDir();
+    const relative = path.join(".agents", "rules", "minimal-implementation.md");
+    const fifo = path.join(dir, relative);
+    await mkdir(path.dirname(fifo), { recursive: true });
+    const creation = spawnSync("mkfifo", [fifo], { encoding: "utf-8" });
+    if (creation.error) throw creation.error;
+    expect(creation.status, creation.stderr).toBe(0);
+    expect((await lstat(fifo)).isFIFO()).toBe(true);
+
+    for (const dryRun of [true, false]) {
+      const output = await captureStdout(() => runInit({ dir, force: true, dryRun, yes: true }));
+      expect(output).toContain(`${relative} was not written`);
+      expect((await lstat(fifo)).isFIFO()).toBe(true);
+    }
   });
 });
 
