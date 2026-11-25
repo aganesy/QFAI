@@ -22,23 +22,23 @@ afterEach(async () => {
 });
 
 /**
- * Seed `scripts/playwright` (on Windows `scripts/playwright.cmd`) that exits 0
+ * Seed `node_modules/.bin/playwright` (on Windows `node_modules/.bin/playwright.cmd`) that exits 0
  * only when its sole argument is `--help`, so a passing probe proves which
  * arguments it ran with.
  */
-async function seedHelpOnlyWrapper(root: string): Promise<void> {
-  const scriptsDir = path.join(root, "scripts");
-  await mkdir(scriptsDir, { recursive: true });
+async function seedHelpOnlyShim(root: string): Promise<void> {
+  const binDir = path.join(root, "node_modules", ".bin");
+  await mkdir(binDir, { recursive: true });
   if (process.platform === "win32") {
     await writeFile(
-      path.join(scriptsDir, "playwright.cmd"),
+      path.join(binDir, "playwright.cmd"),
       '@echo off\r\nif not "%~2"=="" exit /b 1\r\nif "%~1"=="--help" (exit /b 0) else (exit /b 1)\r\n',
       "utf-8",
     );
   } else {
-    const wrapper = path.join(scriptsDir, "playwright");
-    await writeFile(wrapper, '#!/bin/sh\ntest "$#" -eq 1 && test "$1" = --help\n', "utf-8");
-    await chmod(wrapper, 0o755);
+    const shim = path.join(binDir, "playwright");
+    await writeFile(shim, '#!/bin/sh\ntest "$#" -eq 1 && test "$1" = --help\n', "utf-8");
+    await chmod(shim, 0o755);
   }
 }
 
@@ -46,12 +46,12 @@ describe("Playwright launcher probe display command", () => {
   it("renders the arguments the probe actually ran with", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-probecmd-"));
     tempDirs.push(root);
-    await seedHelpOnlyWrapper(root);
+    await seedHelpOnlyShim(root);
 
     const resolution = await resolvePlaywrightLauncher(root, { timeoutMs: 10_000 });
 
     const first = resolution.attempts[0];
-    expect(first?.origin).toBe("project-wrapper");
+    expect(first?.origin).toBe("node_modules/.bin");
     expect(first?.probe).toMatchObject({ ok: true, exitCode: 0 });
     const executable = first?.executable ?? "";
     const renderedExecutable = /^[A-Za-z0-9._:\\/-]+$/.test(executable)
