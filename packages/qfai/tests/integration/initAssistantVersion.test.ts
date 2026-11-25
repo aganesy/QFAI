@@ -3,16 +3,36 @@
  * `.qfai/assistant/VERSION`: written into a tree that holds only this release's text, kept by a
  * plain run otherwise, and rewritten under `--force`.
  */
+import { constants } from "node:fs";
 import { appendFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { resolveToolVersion } from "../../src/core/version.js";
+import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { graphProcessFixture } from "../helpers/graphProcess.js";
 import { useTempDirPool } from "../helpers/shippedWorkflowFixtures.js";
 import { captureStdout } from "../helpers/stdout.js";
+
+type FsPromises = typeof import("node:fs/promises");
+
+const race = vi.hoisted((): { destination: string | undefined } => ({ destination: undefined }));
+
+vi.mock("node:fs/promises", async () => {
+  const actual = await vi.importActual<FsPromises>("node:fs/promises");
+  return {
+    ...actual,
+    copyFile: async (...args: Parameters<FsPromises["copyFile"]>) => {
+      const [, destination, mode] = args;
+      if (destination === race.destination && mode === constants.COPYFILE_EXCL) {
+        await actual.writeFile(destination, "concurrent edit\n");
+      }
+      return actual.copyFile(...args);
+    },
+  };
+});
 
 const newTempDir = useTempDirPool("qfai-init-version-");
 
@@ -67,6 +87,55 @@ describe("qfai init records the release that wrote the assistant tree", () => {
 
     await init(dir);
     expect(await readFile(versionFile(dir), "utf-8")).toBe(`${running}\n`);
+  });
+
+  // QFAI:AC-0001-0021-01
+  // QFAI:EX-0001-0021-15
+  it("leaves the version absent when a required assistant asset could not be copied", async () => {
+    const dir = await newTempDir();
+    const blocked = path.join(dir, ".qfai", "assistant", "step", "implement-tdd");
+    await mkdir(path.dirname(blocked), { recursive: true });
+    await writeFile(blocked, "project file\n", "utf-8");
+
+    const output = await init(dir);
+
+    expect(await readFile(blocked, "utf-8")).toBe("project file\n");
+    await expectAbsent(versionFile(dir));
+    expect(output).toContain(
+      "Assistant VERSION stays absent when required assets cannot be verified",
+    );
+
+    await rm(blocked);
+    await init(dir);
+    const shippedStep = path.join(
+      getInitAssetsDir(),
+      ".qfai",
+      "assistant",
+      "step",
+      "implement-tdd",
+      "STEP.md",
+    );
+    expect(await readFile(path.join(blocked, "STEP.md"), "utf-8")).toBe(
+      await readFile(shippedStep, "utf-8"),
+    );
+    const running = await resolveToolVersion();
+    expect(await readFile(versionFile(dir), "utf-8")).toBe(`${running}\n`);
+  });
+
+  // QFAI:AC-0001-0021-01
+  // QFAI:EX-0001-0021-15
+  it("leaves the version absent when another writer creates a differing asset on first init", async () => {
+    const dir = await newTempDir();
+    const skill = skillFile(dir);
+    race.destination = skill;
+    try {
+      await init(dir);
+    } finally {
+      race.destination = undefined;
+    }
+
+    expect(await readFile(skill, "utf-8")).toBe("concurrent edit\n");
+    await expectAbsent(versionFile(dir));
   });
 
   // QFAI:AC-0001-0021-01
