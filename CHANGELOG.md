@@ -629,6 +629,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Validation launcher mismatch errors identify the checkout problem and explain
+  how to install its dependencies and rerun validation through its own launcher.
+
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
 
