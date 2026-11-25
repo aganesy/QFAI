@@ -288,6 +288,16 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     // alias to one type and dropping every type modifier.
     ["the alias int for integer", "f(a int)", "f(a integer)"],
     ["the alias int4 for integer", "f(a int4)", "f(a integer)"],
+    ["a qualified integer type", "f(pg_catalog.int4)", "f(integer)"],
+    ["a quoted catalogue alias", 'f(a pg_catalog."varchar"(16))', "f(character varying)"],
+    ["a quoted catalogue schema and an array bound", 'f("pg_catalog" . bool[4])', "f(boolean[])"],
+    ["a quoted integer type", 'f("int4")', "f(integer)"],
+    ["a qualified built-in without an alias", "f(pg_catalog.jsonb)", "f(jsonb)"],
+    ["a qualified object reference type", "f(pg_catalog.regclass)", "f(regclass)"],
+    ["a qualified range type", "f(pg_catalog.int4range)", "f(int4range)"],
+    ["a qualified internal character type", 'f(pg_catalog."char")', 'f("char")'],
+    ["the alias nchar varying for character varying", "f(nchar varying)", "f(varchar)"],
+    ["the alias nchar for character", "f(nchar)", "f(character)"],
     ["the alias int8 for bigint", "f(a int8)", "f(a bigint)"],
     ["the alias bool for boolean", "f(a bool)", "f(a boolean)"],
     ["the alias varchar for character varying", "f(a varchar)", "f(a character varying)"],
@@ -336,6 +346,10 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     ["the element type of a sized SQL-standard array", "f(int ARRAY[3])", "f(text ARRAY[3])"],
     ["integer width", "f(a int)", "f(a bigint)"],
     ["fixed versus varying characters", "f(a char(10))", "f(a varchar(10))"],
+    ["the internal and SQL character types", 'f(pg_catalog."char")', "f(char)"],
+    ["case in a quoted type name", 'f("INT4")', "f(integer)"],
+    ["a different schema", "f(application.int4)", "f(integer)"],
+    ["a quoted user type and a SQL alias", 'f("integer")', "f(integer)"],
     ["floating-point width", "f(a real)", "f(a double precision)"],
     // `float(p)` names real up to 24 bits of precision, so its modifier picks
     // the type rather than modifying it.

@@ -1213,6 +1213,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `float(p)` becomes `real` or `double precision` by its precision. Closes
   #5047.
 
+- Routine argument comparison recognizes qualified and quoted PostgreSQL
+  catalogue names and treats `nchar varying` as `character varying`. The
+  internal `"char"` type remains distinct from SQL `char`.
+
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
   are two tables, not one redefinition. An index created without a name

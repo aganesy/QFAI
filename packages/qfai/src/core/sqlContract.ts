@@ -578,7 +578,7 @@ const ARGUMENT_MODES = new Set(["in", "out", "inout", "variadic"]);
  * contract uses such a type.
  */
 const MULTI_WORD_TYPE_START =
-  /^(?:double precision|(?:character|char|bit) varying|national (?:character|char)\b|(?:time|timestamp)(?:\(\d+\))?\s*with(?:out)? time zone|interval (?:year|month|day|hour|minute|second)\b)/;
+  /^(?:double precision|(?:character|char|nchar|bit) varying|national (?:character|char)\b|(?:time|timestamp)(?:\(\d+\))?\s*with(?:out)? time zone|interval (?:year|month|day|hour|minute|second)\b)/;
 
 /** The SQL-standard array suffix, lower-cased and with no space before `[`. */
 const ARRAY_SUFFIX = /^array(?:\[\d*\])?$/;
@@ -600,9 +600,11 @@ const TYPE_ALIASES = new Map<string, string>([
   ["bool", "boolean"],
   ["varchar", "character varying"],
   ["char varying", "character varying"],
+  ["nchar varying", "character varying"],
   ["national character varying", "character varying"],
   ["national char varying", "character varying"],
   ["char", "character"],
+  ["nchar", "character"],
   ["bpchar", "character"],
   ["national character", "character"],
   ["national char", "character"],
@@ -613,6 +615,129 @@ const TYPE_ALIASES = new Map<string, string>([
   ["timetz", "time with time zone"],
 ]);
 
+/**
+ * Names declared by PostgreSQL 18 in src/include/catalog/pg_type.dat.
+ * The internal char type is handled separately from the SQL grammar alias.
+ * Ceiling: extension types and generated array names are not in this list.
+ */
+const PG_CATALOG_ARGUMENT_TYPES = new Set([
+  "_record",
+  "aclitem",
+  "any",
+  "anyarray",
+  "anycompatible",
+  "anycompatiblearray",
+  "anycompatiblemultirange",
+  "anycompatiblenonarray",
+  "anycompatiblerange",
+  "anyelement",
+  "anyenum",
+  "anymultirange",
+  "anynonarray",
+  "anyrange",
+  "bit",
+  "bool",
+  "box",
+  "bpchar",
+  "bytea",
+  "cid",
+  "cidr",
+  "circle",
+  "cstring",
+  "date",
+  "datemultirange",
+  "daterange",
+  "event_trigger",
+  "fdw_handler",
+  "float4",
+  "float8",
+  "gtsvector",
+  "index_am_handler",
+  "inet",
+  "int2",
+  "int2vector",
+  "int4",
+  "int4multirange",
+  "int4range",
+  "int8",
+  "int8multirange",
+  "int8range",
+  "internal",
+  "interval",
+  "json",
+  "jsonb",
+  "jsonpath",
+  "language_handler",
+  "line",
+  "lseg",
+  "macaddr",
+  "macaddr8",
+  "money",
+  "name",
+  "numeric",
+  "nummultirange",
+  "numrange",
+  "oid",
+  "oidvector",
+  "path",
+  "pg_attribute",
+  "pg_brin_bloom_summary",
+  "pg_brin_minmax_multi_summary",
+  "pg_class",
+  "pg_ddl_command",
+  "pg_dependencies",
+  "pg_lsn",
+  "pg_mcv_list",
+  "pg_ndistinct",
+  "pg_node_tree",
+  "pg_proc",
+  "pg_snapshot",
+  "pg_type",
+  "point",
+  "polygon",
+  "record",
+  "refcursor",
+  "regclass",
+  "regcollation",
+  "regconfig",
+  "regdictionary",
+  "regnamespace",
+  "regoper",
+  "regoperator",
+  "regproc",
+  "regprocedure",
+  "regrole",
+  "regtype",
+  "table_am_handler",
+  "text",
+  "tid",
+  "time",
+  "timestamp",
+  "timestamptz",
+  "timetz",
+  "trigger",
+  "tsm_handler",
+  "tsmultirange",
+  "tsquery",
+  "tsrange",
+  "tstzmultirange",
+  "tstzrange",
+  "tsvector",
+  "txid_snapshot",
+  "unknown",
+  "uuid",
+  "varbit",
+  "varchar",
+  "void",
+  "xid",
+  "xid8",
+  "xml",
+]);
+
+/** A system-qualified type name or a quoted lowercase type name. */
+const PG_CATALOG_TYPE_SPELLING =
+  /^(?:(?:pg_catalog|"pg_catalog")\.(?:"([a-z_][a-z0-9_]*)"|([a-z_][a-z0-9_]*))|"([a-z_][a-z0-9_]*)")$/;
+
 /** An array suffix: SQL-standard `ARRAY`, `ARRAY[n]`, or one or more `[n]`. */
 const ARRAY_TYPE_SUFFIX = /(?: array(?:\[\d*\])?|(?:\[\d*\])+)$/;
 
@@ -622,8 +747,8 @@ const ARRAY_TYPE_SUFFIX = /(?: array(?:\[\d*\])?|(?:\[\d*\])+)$/;
  * PostgreSQL ignores a routine argument's type modifiers (`varchar(10)`,
  * `numeric(10,2)`, an interval's fields) and its array bounds, and resolves
  * each alias (`int`, `int4`, `bool`, `timestamptz`) to one type. `float(p)` is
- * the exception: its precision picks `real` or `double precision`. A
- * schema-qualified or quoted spelling of a built-in type is kept as written.
+ * the exception: its precision picks `real` or `double precision`. Recognized catalogue
+ * names share one spelling. The internal `"char"` stays distinct from SQL `char`.
  */
 function canonicalArgumentType(type: string): string {
   const arraySuffix = ARRAY_TYPE_SUFFIX.exec(type);
@@ -637,6 +762,12 @@ function canonicalArgumentType(type: string): string {
     .replace(/\s+/g, " ")
     .trim();
   if (/^interval (?:year|month|day|hour|minute|second)\b/.test(base)) base = "interval";
+  const spelling = PG_CATALOG_TYPE_SPELLING.exec(base);
+  const catalogueName = spelling?.[1] ?? spelling?.[2] ?? spelling?.[3];
+  if (catalogueName === "char") base = '"char"';
+  else if (catalogueName !== undefined && PG_CATALOG_ARGUMENT_TYPES.has(catalogueName)) {
+    base = catalogueName;
+  }
   const name = TYPE_ALIASES.get(base) ?? base;
   return arraySuffix ? `${name}[]` : name;
 }
@@ -651,8 +782,9 @@ function identityArgumentTypes(argumentText: string, kind: string): string {
   const types: string[] = [];
   for (const argument of splitTopLevel(argumentText)) {
     const words = stripDefault(argument)
-      .toLowerCase()
-      .replace(/\s*([(),[\]])\s*/g, "$1")
+      .replace(/"(?:[^"]|"")*"|[^"]+/g, (part) =>
+        part.startsWith('"') ? part : part.toLowerCase().replace(/\s*([().,[\]])\s*/g, "$1"),
+      )
       .split(/\s+/)
       .filter(Boolean);
     let mode = "in";
