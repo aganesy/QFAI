@@ -381,6 +381,39 @@ describe("a claim that never took anything is released", () => {
 });
 
 describe("a sidecar left by a repair", () => {
+  it("describes the project content retained after a successful forced relink", async () => {
+    await withProject(async (root) => {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+      const linkPath = path.join(root, ".claude", "agents", "implementation-reviewer.md");
+      const content = "# Our own gatekeeper\n";
+      await rm(linkPath, { force: true });
+      await writeFile(linkPath, content, "utf-8");
+      rmSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+        target.startsWith(linkPath + ".qfai-repair-")
+          ? Promise.reject(new Error("simulated cleanup failure"))
+          : actual.rm(target, ...rest),
+      );
+
+      const output = await captureStdout(() =>
+        runInit({ dir: root, force: true, dryRun: false, yes: true }),
+      );
+      const directory = path.dirname(linkPath);
+      const basename = path.basename(linkPath);
+      const holds = (await readdir(directory)).filter((name) =>
+        name.startsWith(basename + ".qfai-repair-"),
+      );
+      expect(holds).toHaveLength(1);
+      const hold = path.join(directory, holds[0] ?? "");
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
+      expect(await readFile(path.join(hold, basename), "utf-8")).toBe(content);
+      expect(output).toContain(`the repair succeeded but the hold could not be deleted (${hold})`);
+      expect(output).toContain(
+        `${hold} holds project content moved aside from ${linkPath} during a forced relink`,
+      );
+      expect(output).not.toContain(`${hold} holds project content an interrupted forced relink`);
+    });
+  });
+
   it("does not turn a cleanup failure into a failed repair", async () => {
     // The symlink is in place, so removing the sidecar is cleanup. Inside the
     // rollback try it ran against a path the new symlink already occupies, so
