@@ -15,6 +15,7 @@ import { describe, expect, it } from "vitest";
 import {
   AUTO_DECIDE_ALLOWED_TOKENS,
   classifyHardRequiredEntries,
+  collectHardRequiredEntries,
   parseAutopilotPolicy,
   splitJoinedEntries,
   type AutopilotPolicyParseResult,
@@ -89,6 +90,59 @@ describe("TC-0015-0021: parseAutopilotPolicy bucket detection", () => {
     expect(result.buckets.askUser).toBe(true);
     expect(result.buckets.hardRequired).toBe(true);
     expect(result.widenedTokens).toEqual([]);
+  });
+
+  it("ignores Markdown markers in YAML frontmatter when reading the policy", () => {
+    const skill = [
+      "---",
+      "name: sample",
+      "description: |",
+      "  Fenced examples in the description begin with:",
+      "  ```markdown",
+      "---",
+      SKILL_FULL_POLICY,
+    ].join("\n");
+
+    expect(parseAutopilotPolicy(skill).buckets).toEqual({
+      autoDecide: true,
+      askUser: true,
+      hardRequired: true,
+    });
+    expect(collectHardRequiredEntries(skill)).toEqual([
+      "companyName",
+      "brand intent",
+      "primarySpecId when absent",
+    ]);
+  });
+
+  it("does not count a bucket header inside an HTML comment", () => {
+    const result = parseAutopilotPolicy(
+      [
+        "## Default Autopilot Policy",
+        "- auto-decide: output formatting",
+        "<!--",
+        "- ask-user: destructive operations",
+        "-->",
+        "- hard-required: brand intent",
+      ].join("\n"),
+    );
+    expect(result.buckets).toEqual({ autoDecide: true, askUser: false, hardRequired: true });
+  });
+
+  it("does not count a bucket inside a block comment that reaches EOF", () => {
+    const result = parseAutopilotPolicy(
+      "## Default Autopilot Policy\n- hard-required: brand intent\n\n<!--\n- ask-user: destructive operations\n",
+    );
+    expect(result.buckets).toEqual({ autoDecide: false, askUser: false, hardRequired: true });
+  });
+
+  it("keeps the policy between literal comment delimiters in code spans", () => {
+    const result = parseAutopilotPolicy(
+      ["A comment opens with `<!--`.", SKILL_FULL_POLICY, "A comment closes with `-->`."].join(
+        "\n\n",
+      ),
+    );
+    expect(result.buckets).toEqual({ autoDecide: true, askUser: true, hardRequired: true });
   });
 
   it("returns hasSection=false when the ## Default Autopilot Policy section is absent", () => {

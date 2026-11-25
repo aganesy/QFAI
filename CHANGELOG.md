@@ -1170,6 +1170,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   category must name an operation after its colon or dash, or inside a closed
   parenthesis. Closes #5046.
 
+- Autopilot policy validation ignores HTML comments when it looks for buckets
+  in the shared baseline and in a skill's own policy.
+
 - **A refused graph processing endpoint names its canonical form, and the
   origin guard holds the endpoint's scheme.** An endpoint in
   `.qfai/graph-processing.json` spelled another way than its canonical URL,
