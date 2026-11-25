@@ -53,6 +53,7 @@ Feature: Get one fixed plan for every kind of request
     And denial, unsafe or changed targets, busy targets or partial deletion keep it unfinished instead of reporting cleaned
     And `run-operation` carries out the operation the user named in one step, writes no tracked file, and moves to a newly decided route when the operation needs a tracked change
     And before a merge `run-operation` merges the base into the branch locally, pushes and waits for the checks, never enabling the host's auto-merge, and resolves a conflict confined to the decision and question registers by that merge alone, editing and renumbering no row
+    And after a base merge whose conflicts are confined to the registers it follows the base repository's review requirements for the pull request's base branch on the updated head
     And `quarantine-flaky` lifts its quarantine only after the recorded real repetitions, whatever the evidence of an ordinary cause
 
   # AC-0001-0220-07

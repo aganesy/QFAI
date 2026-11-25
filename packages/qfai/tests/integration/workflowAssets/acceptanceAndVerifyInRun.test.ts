@@ -42,6 +42,26 @@ async function section(file: string, heading: string): Promise<string> {
 }
 
 describe("qfai-verify in a workflow run", () => {
+  it("distinguishes acceptance-only validation from selectable verification scopes", async () => {
+    const scope = sectionOf(await readShipped(VERIFY_CONTEXT), "## Scope");
+    expect(rowOf(scope, "| `full`")).toContain("--profile verify");
+    expect(rowOf(scope, "| `prototyping`")).toContain("--profile prototyping");
+    expect(scope).not.toMatch(/^\| `atdd`/mu);
+
+    const contract = await section(
+      "skill/qfai-verify/references/verify-output-contract.md",
+      "## Scope",
+    );
+    expect(contract).toContain(
+      "Built-in stages write `verify.json` only for `full` and `prototyping`",
+    );
+    expect(contract).toMatch(/\| `atdd`.*`npx qfai validate --profile atdd`/u);
+    expect(contract).toContain(
+      "The verdict format includes `atdd` for an acceptance-only gate set",
+    );
+    expect(contract).toContain("`npx qfai validate --profile atdd` writes validation results");
+  });
+
   // QFAI:AC-0001-0208-06
   // QFAI:EX-0001-0208-07
   it("runs only the work order's gates and hands over a request with no work order", async () => {

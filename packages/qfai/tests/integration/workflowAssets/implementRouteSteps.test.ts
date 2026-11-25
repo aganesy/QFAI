@@ -193,7 +193,7 @@ describe("the steps the routes add to qfai-implement", () => {
 
     const backport = flat(await stepText("implement-backport"));
     expect(backport).toMatch(
-      /`git cherry-pick -n -x`. It changes the working tree and commits nothing/,
+      /`git cherry-pick -n -x`.*`verify-commit` makes the commit and names each picked commit/,
     );
     expect(backport).toMatch(/do not push, merge, tag or publish/i);
 
