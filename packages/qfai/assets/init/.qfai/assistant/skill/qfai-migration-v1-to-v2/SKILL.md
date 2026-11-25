@@ -87,8 +87,11 @@ keep authors separate from reviewers.
    earlier steps ran, so each step's dry run follows the real run of the step
    before it. For **each** step, run `--dry-run` first, inspect its operations
    and write targets, then run it without `--dry-run`. Read the report each
-   step prints and its exit code. Exit 2 stops before that step writes.
-   Exit 3 means the step completed with items in `## For a person`; keep
+   step prints and its exit code. Exit 2 means the step refused. A preflight
+   refusal writes nothing. During application, earlier operations may have
+   written files. Read the refusal and any `## For a person` items on standard
+   error, then check the current files before rerunning. Exit 3 means the
+   step completed with items in `## For a person`; keep
    them for resolution. Step 1 removes the retired configuration keys
    `validation.traceability.scMustHaveTest` and
    `validation.traceability.unknownContractIdSeverity`, and step 3 replaces

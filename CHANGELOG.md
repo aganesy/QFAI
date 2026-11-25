@@ -859,6 +859,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now lists the key, and the guide says a repository-wide run leaves it out and
   that `qfai report` refuses a file recording another scope. Closes #5348.
 
+- The `validate.json` guide explains the original severity recorded in
+  `issues[].relaxedFrom` by older exploration-mode runs.
+
 - **A directory whose name begins with two dots counts as inside its base
   everywhere.** Several more checks tested whether a path relative to its base
   began with `..`, so a directory such as `..fixtures` or `..archive` read as
@@ -921,6 +924,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   `.qfai/assistant/` unreported, where a later commit could take it. Step 11
   now lists that directory under `## For a person`, asks for it to be deleted
   before the next commit, and exits 3. Closes #5061.
+
+- A migration step that refuses a later operation prints the `For a person`
+  items it has already collected on standard error with the refusal.
 
 - **The `qfai --help` exit codes name every reason `qfai report` stops.** The
   `report` row gave a missing input file as its only exit 2. It now also names
@@ -1170,6 +1176,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   category must name an operation after its colon or dash, or inside a closed
   parenthesis. Closes #5046.
 
+- Autopilot policy validation ignores HTML comments when it looks for buckets
+  in the shared baseline and in a skill's own policy.
+
 - **A refused graph processing endpoint names its canonical form, and the
   origin guard holds the endpoint's scheme.** An endpoint in
   `.qfai/graph-processing.json` spelled another way than its canonical URL,
@@ -1257,6 +1266,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   or junction, the check compared a file outside the project. It now runs the
   write path's guard before reading and exits 1 naming the linked path, or the
   catalogue path when it is a link or not a file. Closes #5048.
+
+- `qfai validate` uses the same component catalogue path check. It reports
+  `QFAI-COMP-004` with the reason when the catalogue path is unreadable or
+  contains a symbolic link or junction.
 
 - **`qfai catalog design` puts both files back on a volume with no inode
   numbers, and names a moved-aside file it cannot remove.** On such a volume a
@@ -1522,6 +1535,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   mdschema did not finish, never reading the run as a pass or a schema
   failure. Closes #5033.
 
+- The document-schema checker also exits 2 when mdschema exceeds its
+  256 MiB output limit. It says the check did not finish and names the limit.
+
 - **`qfai doctor` names a shipped workflow it cannot read in
   `workflows.cost`.** The check skipped every read failure as if the workflow
   were not installed, so an installed workflow that could not be read
@@ -1731,6 +1747,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   could be closed as `awaiting-info` instead of being routed again. The step
   now applies those two re-routes first and uses the table only when the
   request closes.
+
+- Proposal triage records terminal acceptance as `accepted` and uses
+  `adopted` when a `decide-design` decision accepts implementation in this project.
 
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two

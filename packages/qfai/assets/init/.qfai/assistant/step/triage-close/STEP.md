@@ -24,7 +24,7 @@ and what is left for someone else to do.
 | `answered`      | The question was answered                                                                |
 | `duplicate`     | An existing item already covers the request, and is linked                               |
 | `awaiting-info` | The missing facts did not arrive                                                         |
-| `accepted`      | The proposal was accepted                                                                |
+| `accepted`      | Acceptance closes the request without implementation work in this project                |
 | `declined`      | The proposal was declined                                                                |
 | `deferred`      | The proposal was put off, with the reason                                                |
 | `decided`       | The design question was decided and recorded                                             |
@@ -35,11 +35,11 @@ and what is left for someone else to do.
 
 ## Procedure
 
-1. Apply the re-routing cases first: when the answers to a request for
-   information arrived, or a proposal was accepted for building, report
-   `info-received` or `adopted` as Re-routing below says, and pick nothing
-   from the table. Otherwise the request closes here: pick exactly one outcome
-   from the table above.
+1. Apply the re-routing cases first: when the answers to a `request-info`
+   run arrived, or a `decide-design` decision authorizes implementation
+   as described in Re-routing below, report `info-received` or `adopted`
+   and pick nothing from the table. Otherwise the request closes here: pick
+   exactly one outcome from the table above.
    Use `cleaned` only after `triage-owned-cleanup` passed its gate with the
    absence and unchanged-content and index evidence recorded. A denial,
    partial failure or missing check leaves cleanup unfinished, not closed as
@@ -58,9 +58,15 @@ Two routes let this step send the request on instead of closing it:
 - After a request for information, the answers arrived: report the outcome
   `info-received` with a new extraction of the request that includes them, so
   the decision rules route it again.
-- After a decision to accept a proposal: report the outcome `adopted`, naming
+- In `decide-design`, use `adopted` only when
+  `discussion-interview` records explicit user approval to implement
+  the proposal in this project or an implementation decision under recorded
+  delegation that covers it.
+  For an authorized implementation, report the outcome `adopted`, naming
   the route that builds it. The run that route starts writes a record of
   its own; this run's record stays as this step committed it.
+  If an implementation proposal is only an assumption or remains open,
+  record `deferred` with the reason and keep the proposal pending.
 
 Any other route closes here.
 

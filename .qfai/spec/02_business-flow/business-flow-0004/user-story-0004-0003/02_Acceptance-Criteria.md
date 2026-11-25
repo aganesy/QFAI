@@ -43,10 +43,11 @@ Feature: Run any migration step without risk to the project
   # AC-0004-0003-06
   Scenario: A step reports on standard output and exits 3 only when a person must act
     Given a project on the spec-pack layout
-    When a step completes
-    Then it prints its report sections as Markdown on standard output, with none under an empty section
+    When a step reports its outcome
+    Then a completed step prints its report sections as Markdown on standard output, with none under an empty section
     And it writes the report to no file
-    And it exits 3 when its For a person section lists an item, and 0 otherwise
+    And a completed step exits 3 when its For a person section lists an item, and 0 otherwise
+    And a step that refuses an operation during application exits 2 and prints the refusal followed by any For a person items accumulated so far on standard error
 
   # AC-0004-0003-07
   Scenario: A step removes what it consumed and deletes what has no destination
