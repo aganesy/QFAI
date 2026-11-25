@@ -36,11 +36,10 @@ and what is left for someone else to do.
 ## Procedure
 
 1. Apply the re-routing cases first: when the answers to a `request-info`
-   run arrived, or a `decide-design` decision accepts a proposal for
-   implementation in this project, report `info-received` or `adopted`
-   as Re-routing below says, and pick nothing
-   from the table. Otherwise the request closes here: pick exactly one outcome
-   from the table above.
+   run arrived, or a `decide-design` decision authorizes implementation
+   as described in Re-routing below, report `info-received` or `adopted`
+   and pick nothing from the table. Otherwise the request closes here: pick
+   exactly one outcome from the table above.
    Use `cleaned` only after `triage-owned-cleanup` passed its gate with the
    absence and unchanged-content and index evidence recorded. A denial,
    partial failure or missing check leaves cleanup unfinished, not closed as
@@ -59,10 +58,15 @@ Two routes let this step send the request on instead of closing it:
 - After a request for information, the answers arrived: report the outcome
   `info-received` with a new extraction of the request that includes them, so
   the decision rules route it again.
-- In `decide-design`, when the decision recorded by `discussion-interview`
-  accepts the proposal for implementation in this project, report the outcome
-  `adopted`, naming the route that builds it. The run that route starts writes a record of
+- In `decide-design`, use `adopted` only when
+  `discussion-interview` records explicit user approval to implement
+  the proposal in this project or an implementation decision under recorded
+  delegation that covers it.
+  For an authorized implementation, report the outcome `adopted`, naming
+  the route that builds it. The run that route starts writes a record of
   its own; this run's record stays as this step committed it.
+  If an implementation proposal is only an assumption or remains open,
+  record `deferred` with the reason and keep the proposal pending.
 
 Any other route closes here.
 

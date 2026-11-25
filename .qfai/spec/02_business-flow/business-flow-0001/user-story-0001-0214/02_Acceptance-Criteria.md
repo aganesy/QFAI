@@ -50,8 +50,9 @@ Feature: Close, answer or hand back a request without a change
 
   # AC-0001-0214-08
   Scenario: Proposal acceptance closes the request or routes it to implementation
-    Given a `decide-design` run whose `discussion-interview` recorded a decision that accepts a proposal
-    When `triage-close` processes the decision
+    Given a `decide-design` run whose `discussion-interview` recorded a proposal outcome
+    When `triage-close` reads that record
     Then it records `accepted` when acceptance settles the request at triage, with no implementation to start in this project
-    And it reports `adopted` with the implementation route when the recorded decision accepts the proposal for implementation in this project
+    And it reports `adopted` with the implementation route only when the record shows explicit user approval to implement in this project or an implementation decision under recorded delegation that covers it
+    And it records `deferred` with a reason when the implementation proposal remains an assumption or open pending authorization
 ```
