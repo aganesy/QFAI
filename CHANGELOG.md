@@ -632,6 +632,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
+- `gh-budget` reports oversized GitHub responses without saving a partial
+  Actions job log.
+
 - Validation launcher mismatch errors identify the checkout problem and explain
   how to install its dependencies and rerun validation through its own launcher.
 
