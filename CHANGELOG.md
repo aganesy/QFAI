@@ -1250,6 +1250,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   Property names are case-insensitive. A later ordinary `background` can still
   override `background-color: ... !important` in jsdom. Closes #5135.
 
+- `check-mdschema --scope changed` includes new Markdown documents before
+  staging and respects Git's ignore rules. A failed Git file listing widens
+  the check and prints a warning.
+
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
   20,000 files, so a large tree could run out of file descriptors and fail

@@ -25,7 +25,8 @@
  * rather than by weakening the schemas until the current tree happens to pass:
  *
  *   --scope changed  (default) documents whose text this branch changed, judged
- *                    against their own state at the merge base. A document-level
+ *                    against their own state at the merge base. Includes
+ *                    untracked documents that Git does not ignore. A document-level
  *                    ratchet: a new document must conform, an edited document
  *                    that conformed at the merge base must still conform, and an
  *                    edited document that already failed there and still fails
@@ -42,7 +43,7 @@
  *   --scope files    only the paths named on the command line.
  *
  * A degraded base (no merge base, a shallow clone, a failed branch or worktree
- * diff) FAILS OPEN to `all`, because the alternative — silently checking
+ * diff or untracked listing) FAILS OPEN to `all`, because the alternative — silently checking
  * nothing and reporting green — claims a result the run never established.
  *
  * ── What `--scope changed` holds a branch to ──────────────────────────────
@@ -824,18 +825,30 @@ function changedFiles(base, root) {
     ["diff", "--numstat", "-z", "--no-renames", "--ignore-cr-at-eol", "HEAD"],
     { cwd: root, encoding: "utf-8" },
   );
-  // The worktree diff is half the answer, so its failure degrades the whole
+  // The worktree diff supplies all edits to tracked files, so its failure degrades the
   // answer: reading it as "nothing uncommitted" would drop every staged and
   // unstaged edit from the scope and report them clean.
   if (staged.status !== 0) {
     const reason = (staged.stderr ?? "").trim().split("\n")[0] || `git exited ${staged.status}`;
     return { degraded: `cannot diff the worktree against HEAD (${reason})` };
   }
+  const untracked = spawnSync("git", ["ls-files", "--others", "--exclude-standard", "-z"], {
+    cwd: root,
+    encoding: "utf-8",
+  });
+  if (untracked.status !== 0) {
+    const reason =
+      (untracked.stderr ?? "").trim().split("\n")[0] ||
+      untracked.error?.message ||
+      `git exited ${untracked.status}`;
+    return { degraded: `cannot list untracked files (${reason})` };
+  }
   const files = `${diff.stdout}\0${staged.stdout}`
     .split("\0")
     .map((record) => numstatPath(record))
     .filter((file) => file !== null);
-  return { files: [...new Set(files)] };
+  const untrackedPaths = untracked.stdout.split("\0").filter((file) => file !== "");
+  return { files: [...new Set(files.concat(untrackedPaths))] };
 }
 
 /**
