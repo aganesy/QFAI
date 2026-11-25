@@ -704,6 +704,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `<outDir>/preflight/`, the error still said nothing was written. A check that
   fails at that point now says "No summary was written." Closes #5626.
 
+- **Backports resolve the mainline parent of a selected merge commit.** The
+  procedure checks the original source branch history and the requested change
+  before passing the parent number to Git. It stops when the scope or parent
+  is ambiguous. Closes #4827.
+
 - **The `tech.md` placeholder check counts only the template's own slots and
   quotes what it flags.** `QFAI-ASSETS-003` treated any `<...>` in the
   contract-layer `tech.md` as an unfilled slot, so a generic path such as
