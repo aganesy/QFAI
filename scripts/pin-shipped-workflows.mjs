@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /* global console */
 import { createHash, randomUUID } from "node:crypto";
-import { readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import ts from "typescript";
 
-import { SHIPPED_DIR, SHIPPED_WORKFLOWS } from "./shipped-workflow-cost.mjs";
+import { SHIPPED_DIR } from "./shipped-workflow-cost.mjs";
 
 const require = createRequire(import.meta.url);
 const { parse: parseYaml } = require("../packages/qfai/node_modules/yaml");
@@ -95,11 +95,15 @@ function checkStep(changes, source, pin, key, step) {
 
 function computeChanges(root, source) {
   const files = pinRows(source, "ALLOWED_WORKFLOW_FILES", true);
+  const templates = path.join(root, ...SHIPPED_DIR.split("/"));
+  const names = readdirSync(templates)
+    .filter((name) => /\.ya?ml$/.test(name))
+    .sort();
   if (
-    JSON.stringify(files.map(({ key }) => key).sort()) !==
-    JSON.stringify([...SHIPPED_WORKFLOWS].sort())
+    names.length === 0 ||
+    JSON.stringify(files.map(({ key }) => key).sort()) !== JSON.stringify(names)
   ) {
-    throw new Error(HELPER + ": shipped workflow file pins changed");
+    throw new Error(HELPER + ": shipped workflow file pins differ from the template directory");
   }
   const workflowPins = shapePins(source, "ALLOWED_WORKFLOW_SHAPE");
   const jobPins = shapePins(source, "ALLOWED_JOB_SHAPE");
@@ -108,7 +112,7 @@ function computeChanges(root, source) {
   let stepIndex = 0;
 
   for (const file of files) {
-    const bytes = readFileSync(path.join(root, ...SHIPPED_DIR.split("/"), file.key));
+    const bytes = readFileSync(path.join(templates, file.key));
     const workflow = parseYaml(bytes.toString("utf8"));
     if (!isRecord(workflow) || !isRecord(workflow.jobs)) {
       throw new Error(file.key + ": expected a workflow with jobs");

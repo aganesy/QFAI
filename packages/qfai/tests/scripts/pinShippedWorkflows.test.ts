@@ -141,6 +141,17 @@ it("leaves all pins unchanged when a step's non-body shape changes", async () =>
   expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
 });
 
+it("leaves all pins unchanged when the template directory contains an unpinned workflow", async () => {
+  const root = await fixture();
+  await writeFile(path.join(root, ...TEMPLATES, "qfai-docs.yml"), workflow(UPDATED_BODY));
+  await writeFile(path.join(root, ...TEMPLATES, "extra.yaml"), workflow(INITIAL_BODY));
+
+  const result = run(root);
+  expect(result.status).toBe(1);
+  expect(result.output).toContain("shipped workflow file pins differ");
+  expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
+});
+
 it("leaves the current shipped template pins unchanged", async () => {
   const root = await fixture();
   const repo = path.resolve(path.dirname(SCRIPT), "..");
