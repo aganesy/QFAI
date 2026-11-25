@@ -16,7 +16,7 @@
  * The SCHEMAS are deliberately not relocatable: `--root` moves the documents,
  * never the contract they are checked against.
  */
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncOptions } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
 import type * as NodeFs from "node:fs";
 import { link, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -109,6 +109,22 @@ vi.mock("node:fs", async (importOriginal) => {
         unsafeReads.paths.push(actual.realpathSync(args[0]));
       }
       return actual.readFileSync(...args);
+    },
+  };
+});
+
+const gitListingFault = vi.hoisted(() => ({ enabled: false }));
+
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:child_process")>();
+  return {
+    ...actual,
+    spawnSync(command: string, args?: string[] | SpawnSyncOptions, options?: SpawnSyncOptions) {
+      if (!Array.isArray(args)) return actual.spawnSync(command, args);
+      if (gitListingFault.enabled && command === "git" && args[0] === "ls-files") {
+        return actual.spawnSync(command, ["ls-files", "--qfai-invalid-option"], options);
+      }
+      return actual.spawnSync(command, args, options);
     },
   };
 });
@@ -813,7 +829,7 @@ describe("the ratchet in --scope changed", () => {
       await writeFlow(root, pack, body);
     }
     git(root, "add", "-A");
-    git(root, "commit", "-qm", "head");
+    git(root, "commit", "--allow-empty", "-qm", "head");
     return root;
   }
 
@@ -893,6 +909,20 @@ describe("the ratchet in --scope changed", () => {
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
 
     expect(result.status).toBe(1);
+  });
+
+  // QFAI:EX-0001-0011-38
+  it("checks untracked documents but excludes documents Git ignores", async () => {
+    const tracked = { "business-flow-0001": CONFORMING_FLOW };
+    const root = await twoCommits(tracked, tracked);
+    await writeFlow(root, "business-flow-0003", NON_CONFORMING_FLOW);
+    const ignored = await writeFlow(root, "business-flow-0004", NON_CONFORMING_FLOW);
+    await writeFile(path.join(root, ".git", "info", "exclude"), `/${ignored}\n`, "utf8");
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+    expect(result.status, result.stderr).toBe(1);
+    expect(result.stderr).toContain("business-flow-0003");
+    expect(result.stdout + result.stderr).not.toContain("business-flow-0004");
   });
 
   // QFAI:EX-0001-0011-29
@@ -1023,6 +1053,31 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stderr).not.toContain("cannot diff against main");
     expect(result.stderr).toContain("checking every document instead (fail open)");
     expect(result.stderr).toContain("business-flow-0001");
+  });
+
+  // QFAI:EX-0001-0011-39
+  it("checks the whole tree when the untracked file listing fails", async () => {
+    const tracked = { "business-flow-0001": NON_CONFORMING_FLOW };
+    const root = await twoCommits(tracked, tracked);
+    const argv = process.argv;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const stderr = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const stdout = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      gitListingFault.enabled = true;
+      process.argv = ["node", SCRIPT, "--root", root, "--scope", "changed", "--base", "main"];
+      expect(main()).toBe(1);
+      const warning = warn.mock.calls.flat().join("\n");
+      expect(warning).toContain("cannot list untracked files");
+      expect(warning).toContain("checking every document instead");
+      expect(stderr.mock.calls.flat().join("\n")).toContain("business-flow-0001");
+    } finally {
+      gitListingFault.enabled = false;
+      process.argv = argv;
+      warn.mockRestore();
+      stderr.mockRestore();
+      stdout.mockRestore();
+    }
   });
 
   // QFAI:EX-0001-0011-32

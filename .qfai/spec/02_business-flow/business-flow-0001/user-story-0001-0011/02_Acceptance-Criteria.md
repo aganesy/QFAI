@@ -58,12 +58,13 @@ Feature: Story-tree layout described by mdschema
 
   # AC-0001-0011-08
   Scenario: The changed scope holds a branch to what it changed, measured at the merge base
-    Given a branch whose story-tree documents differ from the merge base with its base branch
+    Given a Git working tree and a base branch for comparison, with tracked or untracked story-tree documents
     When the document lane runs under `--scope changed`
     Then a tracked document the branch added or whose text it changed is checked, a change of indentation included, and a document whose only change is its line endings is not
     And a checked document that fails is the branch's failure when it was absent or conformed at the merge base, when its root heading matched there and no longer does, or when it carries the opt-out marker, and is otherwise reported as pre-existing without failing the run
     And a document whose path holds a character outside ASCII is in the scope like any other
-    And a branch or worktree diff that cannot be taken widens the run to every document with a warning naming the diff that failed, rather than checking nothing
+    And an untracked story-tree document is checked before staging if Git does not ignore it
+    And a branch diff, worktree diff, or untracked-file listing that fails widens the run to every document with a warning naming the failed Git operation
 
   # AC-0001-0011-09
   Scenario: The Markdown schema checker explains invalid command arguments

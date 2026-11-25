@@ -1239,6 +1239,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   applies. A colour inside a `background` shorthand with an image, and a
   three-digit hex colour, are now measured too. Closes #5135.
 
+- `check-mdschema --scope changed` includes new Markdown documents before
+  staging and respects Git's ignore rules. A failed Git file listing widens
+  the check and prints a warning.
+
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
   20,000 files, so a large tree could run out of file descriptors and fail
