@@ -487,6 +487,9 @@ describe("a question answered without a change", () => {
 describe("a request routed again from the close", () => {
   // QFAI:AC-0001-0214-03
   // QFAI:EX-0001-0214-04
+  // QFAI:AC-0001-0214-08
+  // QFAI:EX-0001-0214-12
+  // QFAI:EX-0001-0214-13
   it("applies the info-received and adopted re-routes before it picks a closure outcome", async () => {
     const close = await step("triage-close");
     const phases = sectionOf(close, "## Procedure").split(/(?=^\d+\.)/m);
@@ -496,9 +499,18 @@ describe("a request routed again from the close", () => {
     );
     const table = sectionOf(close, "## Outcomes");
     expect(table).not.toMatch(/`info-received`|`adopted`/);
+    expect(flat(table)).toContain(
+      "`accepted` | Acceptance closes the request without implementation work in this project",
+    );
     const rerouting = flat(sectionOf(close, "## Re-routing"));
     expect(rerouting).toMatch(/report the outcome\s+`info-received`/);
-    expect(rerouting).toMatch(/report the outcome `adopted`/);
+    expect(rerouting).toContain(
+      "In `decide-design`, when the decision recorded by `discussion-interview` accepts the proposal for implementation in this project, report the outcome `adopted`, naming the route that builds it.",
+    );
+    const plan = (await loadBuiltInPlans()).find((each) => each.route === "decide-design");
+    const closeBranch = plan?.branchPoints?.find((point) => point.step === "triage-close");
+    const adopted = closeBranch?.outcomes.find((outcome) => outcome.outcome === "adopted");
+    expect(adopted?.routes).toContain("add-feature");
   });
 });
 
