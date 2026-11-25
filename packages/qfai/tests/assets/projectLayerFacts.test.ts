@@ -124,7 +124,12 @@ function isTagCreation(command: string): boolean {
   let hasListModifier = false;
 
   for (let index = 0; index < args.length; index++) {
-    const arg = args[index] ?? "";
+    const word = args[index] ?? "";
+    const arg = word.replace(
+      /"((?:[^"\\]|\\.)*)"|'([^']*)'|\\(.)/g,
+      (_, doubleQuoted: string | undefined, singleQuoted: string | undefined, escaped: string) =>
+        doubleQuoted?.replace(/\\(["\\$`])/g, "$1") ?? singleQuoted ?? escaped,
+    );
     if (arg === "--") {
       hasOperand ||= index + 1 < args.length;
       break;
@@ -135,7 +140,10 @@ function isTagCreation(command: string): boolean {
 
     const listModifier = TAG_LIST_MODIFIERS.has(flag);
     hasListModifier ||= listModifier;
-    if ((listModifier || VALUE_TAKING_TAG_FLAGS.has(flag)) && value === undefined) index++;
+    const takesSeparateValue =
+      (/^--/.test(flag) && VALUE_TAKING_TAG_FLAGS.has(flag) && value === undefined) ||
+      /^-[aesf]*[mFu]$/.test(arg);
+    if ((listModifier && value === undefined) || takesSeparateValue) index++;
     if (!arg.startsWith("-")) hasOperand = true;
   }
 
@@ -314,14 +322,16 @@ describe("the project layer describes the repository it is in", () => {
       "git tag --merged <SHA>",
       "git tag --no-merged=<SHA>",
       "git tag --sort=version:refname",
-      "git tag --format=%(refname)",
+      'git tag --format="%(refname)"',
     ];
     const creations = [
       "git tag vX.Y.Z <SHA>",
       "git tag --sort version:refname vX.Y.Z <SHA>",
-      "git tag --format=%(refname) vX.Y.Z",
+      'git tag --format="%(refname)" vX.Y.Z',
       'git tag -m "See --contains usage" vX.Y.Z <SHA>',
       "git tag -m --contains vX.Y.Z <SHA>",
+      "git tag -am --contains vX.Y.Z",
+      'git tag "--message" --contains vX.Y.Z',
     ];
     const guide = ["```sh", ...listings, ...creations, "```"].join("\n");
     expect(tagCreations(guide)).toEqual(creations);
