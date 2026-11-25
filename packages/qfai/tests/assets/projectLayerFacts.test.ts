@@ -147,16 +147,22 @@ function isTagCreation(command: string): boolean {
     if (!arg.startsWith("-")) hasOperand = true;
   }
 
-  return hasOperand || (args.length > 0 && !hasListModifier);
+  // A continued command may name the tag on its next physical line.
+  return hasOperand || (args.length > 0 && (!hasListModifier || command.endsWith("\\")));
 }
 
 function splitShellCommands(line: string): string[] {
   const parts: string[] = [];
   // The capture group identifies quoted or escaped text to leave in the command.
-  const tokens = /("(?:[^"\\]|\\.)*"|'[^']*'|\\.)|&&|\|\||;|\|/g;
+  const tokens = /("(?:[^"\\]|\\.)*"|'[^']*'|\\.)|(^|\s)#|#|&&|\|\||;|\|/g;
   let start = 0;
   for (const token of line.matchAll(tokens)) {
     if (token[1] !== undefined) continue;
+    if (token[2] !== undefined || (token[0] === "#" && token.index === start)) {
+      parts.push(line.slice(start, token.index));
+      return parts;
+    }
+    if (token[0] === "#") continue;
     parts.push(line.slice(start, token.index));
     start = token.index + token[0].length;
   }
@@ -173,9 +179,10 @@ function tagCreations(markdown: string): string[] {
   const spans = Array.from(markdown.matchAll(/`([^`\n]+)`/g), (m) => m[1] ?? "");
   return [...markdown.split(/\r?\n/), ...spans]
     .flatMap(splitShellCommands)
-    .map((part) => part.trim().replace(/\\$/, "").trim())
+    .map((part) => part.trim())
     .filter((part) => /^git\s+tag(?:\s|$)/.test(part))
-    .filter(isTagCreation);
+    .filter(isTagCreation)
+    .map((part) => part.replace(/\\$/, "").trim());
 }
 
 /**
@@ -353,6 +360,12 @@ describe("the project layer describes the repository it is in", () => {
     ];
     const guide = ["```sh", ...listings, ...creations, "```"].join("\n");
     expect(tagCreations(guide)).toEqual(creations);
+    expect(tagCreations("git tag vX.Y.Z # --contains; git tag --format=unused")).toEqual([
+      "git tag vX.Y.Z",
+    ]);
+    expect(tagCreations('git tag --format="%(refname)" \\\n  vX.Y.Z')).toEqual([
+      'git tag --format="%(refname)"',
+    ]);
   });
 
   // Pasted as separate lines, the block tagged even when the ancestry check
