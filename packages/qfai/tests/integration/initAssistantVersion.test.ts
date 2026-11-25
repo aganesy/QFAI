@@ -5,6 +5,7 @@
  */
 import { constants } from "node:fs";
 import { appendFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import type * as fsPromises from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
@@ -16,7 +17,7 @@ import { graphProcessFixture } from "../helpers/graphProcess.js";
 import { useTempDirPool } from "../helpers/shippedWorkflowFixtures.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-type FsPromises = typeof import("node:fs/promises");
+type FsPromises = typeof fsPromises;
 
 const race = vi.hoisted((): { destination: string | undefined } => ({ destination: undefined }));
 
