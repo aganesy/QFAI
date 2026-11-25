@@ -14,6 +14,7 @@ import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promis
 import os from "node:os";
 import path from "node:path";
 
+import { validateProject } from "../../src/core/validate.js";
 import {
   classifyAgainstDeclaration,
   classifyToolLocation,
@@ -524,21 +525,25 @@ describe("locateToolAgainstProject", () => {
   });
 
   // QFAI:EX-0001-0039-14
-  it("reports a project whose node_modules links to another checkout's", async (ctx) => {
+  it.for([
+    { layout: "project root", child: false },
+    { layout: "child project", child: true },
+  ])("keeps the $layout as the target after a launcher mismatch", async ({ child }, ctx) => {
     // The worktree case: `other/node_modules/qfai` is the workspace link to the
     // running package, and the project's `node_modules` is a link to it.
     await withTempDir(async (dir) => {
       const packageDir = String(await resolveToolPackageDir());
       const otherModules = path.join(dir, "other", "node_modules");
-      const root = path.join(dir, "project");
+      const declaringDir = path.join(dir, "workspace");
+      const root = child ? path.join(declaringDir, "packages", "app") : declaringDir;
       await mkdir(otherModules, { recursive: true });
       await mkdir(root, { recursive: true });
       const linked =
         (await tryLink(packageDir, path.join(otherModules, "qfai"))) &&
-        (await tryLink(otherModules, path.join(root, "node_modules")));
+        (await tryLink(otherModules, path.join(declaringDir, "node_modules")));
       if (!linked) ctx.skip();
       await writeFile(
-        path.join(root, "package.json"),
+        path.join(declaringDir, "package.json"),
         JSON.stringify({ name: "p", devDependencies: { qfai: "workspace:*" } }),
         "utf-8",
       );
@@ -546,6 +551,25 @@ describe("locateToolAgainstProject", () => {
       const located = await locateToolAgainstProject(root);
       expect(located?.outside).toBe(true);
       expect(located?.declaredElsewhere).toBe(true);
+
+      const { issues } = await validateProject(root, undefined, { profile: "sdd" });
+      const mismatch = issues.find((item) => item.code === "QFAI-TOOL-002");
+      expect(mismatch?.severity).toBe("error");
+      expect(mismatch?.message).toContain("Validation launcher mismatch in this checkout.");
+      expect(mismatch?.message).toContain("npx uses a fetched or cached copy");
+      expect(mismatch?.suggested_action).toContain("Run the project's dependency install command");
+      expect(mismatch?.suggested_action).toContain("documented build and install steps");
+      expect(mismatch?.suggested_action).toContain("Original validation target: " + root);
+      expect(mismatch?.suggested_action).toContain("Keep the original validation options");
+      for (const launcher of [
+        "./node_modules/.bin/qfai",
+        ".\\node_modules\\.bin\\qfai.cmd",
+        "yarn exec qfai",
+      ]) {
+        expect(mismatch?.suggested_action).toContain(
+          launcher + " validate --root <absolute-project-root>",
+        );
+      }
     });
   });
 
