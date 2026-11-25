@@ -17,6 +17,7 @@
  * never the contract they are checked against.
  */
 import { spawnSync, type SpawnSyncOptions } from "node:child_process";
+import type * as NodeChildProcess from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
 import type * as NodeFs from "node:fs";
 import { link, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -116,7 +117,7 @@ vi.mock("node:fs", async (importOriginal) => {
 const gitListingFault = vi.hoisted(() => ({ enabled: false }));
 
 vi.mock("node:child_process", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:child_process")>();
+  const actual = await importOriginal<typeof NodeChildProcess>();
   return {
     ...actual,
     spawnSync(command: string, args?: string[] | SpawnSyncOptions, options?: SpawnSyncOptions) {
