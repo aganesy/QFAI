@@ -190,7 +190,7 @@ Typical minimum:
 - typecheck
 - tests
 - pack/verify (if distributed)
-- In CI, use default/full validation (`npx qfai validate --fail-on error`); `--phase refinement` is local-only.
+- In CI, run full validation with `npx qfai validate --fail-on error`.
 - Waivers are for `warning` / `info` findings only. Waivers targeting `error` findings are treated as configuration errors and must fail.
 
 ---

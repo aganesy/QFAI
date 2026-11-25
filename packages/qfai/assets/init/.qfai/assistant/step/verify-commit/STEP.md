@@ -67,7 +67,14 @@ covering that action, target and scope. Commit authority alone covers none of th
    `### Test obligations a scope leaves pending` says, does not stop the
    commit. The gate stays `FAIL` in the report. Any other error of that gate
    still stops the commit.
-2. Stage exactly the authorized tracked deliverables the run wrote, with
+2. Before staging for an ordinary commit, compare the entire index with the
+   authorized deliverable paths. Read NUL-separated paths with
+   `git diff --cached --name-only --no-renames --no-relative --ignore-submodules=none -z --`
+   so renames, paths outside the current directory and submodule changes are
+   included. If the index cannot be read, report the failure and stop before
+   staging. If unrelated staged paths exist, report them and
+   stop before changing the index or creating a commit.
+   Stage exactly the authorized tracked deliverables the run wrote, with
    `git add <those paths>`. Never `git add -A`, `git add .` or `git add -f`,
    and never a file git ignores, such as `.qfai/report/*`. A file that was
    already modified before the run and then written by it is committed whole;
@@ -79,9 +86,13 @@ covering that action, target and scope. Commit authority alone covers none of th
    `git show --remerge-diff` of that commit in the stage report. A check that
    fails after the commit undoes it with `git reset --merge ORIG_HEAD`, which is
    allowed before a push, and the run stops.
-3. Otherwise, commit with a message in the project's convention that says what changed
-   and why.
+3. Otherwise, repeat the index comparison immediately before committing.
+   If the index cannot be read, report the failure and stop before committing.
+   If unrelated staged paths appeared, report them, preserve the index and
+   stop before committing. Commit with a message in the project's convention
+   that says what changed and why.
 4. Where a commit hook refuses the commit, fix the cause and commit again.
+   Repeat the index comparison before every ordinary commit retry.
    Never skip the hook. When the fix changes code or tests, rerun the verify
    gates first, and the code review too when behaviour changed.
 
