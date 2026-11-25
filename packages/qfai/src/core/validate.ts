@@ -484,8 +484,14 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
           "from the directory that declares qfai (`npm ci`, `pnpm install` or `yarn install`, as applicable). " +
           "If this is a source workspace and the local QFAI entry has not been built, " +
           "complete the workspace's documented build and install steps. From the declaring directory, rerun with " +
-          "`./node_modules/.bin/qfai validate` (PowerShell: `.\\node_modules\\.bin\\qfai.cmd validate`), " +
-          "or use `yarn exec qfai validate` with Yarn Plug'n'Play. " +
+          "`./node_modules/.bin/qfai validate --root <absolute-project-root>`" +
+          " (PowerShell: `.\\node_modules\\.bin\\qfai.cmd validate --root <absolute-project-root>`), " +
+          "or use `yarn exec qfai validate --root <absolute-project-root>` with Yarn Plug'n'Play. " +
+          "Original validation target: " +
+          path.resolve(root) +
+          ". " +
+          "Substitute that directory for <absolute-project-root> and quote it for your shell. " +
+          "Keep the original validation options, including the profile and any flow selection. " +
           "If a global install is intended, remove the qfai dependency declaration from " +
           "this project — a declaration that disagrees with the running copy is the " +
           "state this finding reports.",
