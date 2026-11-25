@@ -665,6 +665,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   error a validator fault gives, written to `validate.json`, and the command
   fails under every `--fail-on` except `never`. Closes #5360.
 
+- **The workflow guide gives a supported validation command.** It removes the
+  obsolete local refinement flag and retains the full CI command. Closes #4760.
+
 - **The test-layer rule and the gate failure protocol read the validation
   result the current run wrote.** Both told the reader to inspect the fixed
   `.qfai/report/validate.json`, which is only the default path and holds
@@ -684,6 +687,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now uses `{/* mermaid-lint:ignore */}` on the line above the fence instead.
   Closes #5341.
 
+- **The prototyping doctor probes the project Playwright shim first.** It uses
+  `npx --no-install playwright --version` if the shim is unavailable or fails.
+  The reported order matches the two probes. Closes #4773.
+
 - **A plain `qfai report` of an unfinished run also says it is not a clean
   result.** The notice that the report is not a clean result was documented
   only for `qfai report --run-validate`. It is printed whenever the report
@@ -691,10 +698,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   from an earlier `qfai validate`, and this is now the documented behaviour.
   Closes #5361.
 
+- **Verification preserves unrelated staged files.** An ordinary verification
+  commit checks the entire index before staging its deliverables. If other
+  staged paths exist, the step reports them and stops. Closes #4810.
+
 - **`qfai sdd preflight` no longer says "Nothing was written" after creating
   directories.** When its output-directory check failed after it had created
   `<outDir>/preflight/`, the error still said nothing was written. A check that
   fails at that point now says "No summary was written." Closes #5626.
+
+- **Backports resolve the mainline parent of a selected merge commit.** The
+  procedure checks the original source branch history and the requested change
+  before passing the parent number to Git. It stops when the scope or parent
+  is ambiguous. Closes #4827.
 
 - **The `tech.md` placeholder check counts only the template's own slots and
   quotes what it flags.** `QFAI-ASSETS-003` treated any `<...>` in the
@@ -703,6 +719,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a count per section. Only the template's `<example: ...>` and
   `<optional example: ...>` slots and bare `TODO` / `TBD` values count now, and
   the message quotes the first unfilled value of each section. Closes #5461.
+
+- **Web research ends with a cited artifact.** Applying a finding to code
+  requires an explicit implementation request. High-risk changes also
+  require review of the proposed diff and citations. Closes #4938.
 
 - **A constraint row that names a contract by its file name is refused.** The
   `constraint.md` schema refused `CLI-0010` in a constraint row but read
