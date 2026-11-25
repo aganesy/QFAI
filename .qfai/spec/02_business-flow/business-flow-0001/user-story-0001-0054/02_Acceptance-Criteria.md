@@ -28,9 +28,9 @@ Feature: Append-only decision and question registers
 
   # AC-0001-0054-08
   Scenario: An example rewritten with no test change is reported
-    Given the story tree, a base that holds `decisions.md`, and an EX row of a `03_Example.md` whose text changed since the base
+    Given the story tree, a base that holds `decisions.md`, and a `03_Example.md` changed since the base
     When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
-    Then a warning names the EX ID and its `03_Example.md` unless a non-E2E test file selected by the configured test globs and annotating that EX also changed since the base
+    Then a warning names each rendered EX whose cells changed and its `03_Example.md` unless a non-E2E test file selected by the configured test globs and annotating that EX also changed since the base
     And an EX row whose cells are unchanged raises no such warning
     And rows inside fenced code or HTML comments do not count as examples for this warning
   # AC-0001-0054-09
