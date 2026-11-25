@@ -649,6 +649,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file that calls it, directly or through another routine, raises the warning.
   Closes #5180.
 
+- **`qfai init` reports graph CLI entrypoint readiness separately from
+  runtime installation.** If a project-edited entrypoint needs manual
+  recovery, the summary marks it as not ready and preserves the edited file.
+  Closes #4530.
+
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read
   the filesystem while finishing its result, for the coverage notice, the error
