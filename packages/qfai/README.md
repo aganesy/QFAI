@@ -59,11 +59,16 @@ To let the script run, approve it:
 
 ```bash
 npm approve-scripts          # npm 11.16 or later: adds it to `allowScripts`
-pnpm approve-builds          # pnpm 11.0.0 or later: writes to `allowBuilds` by default
-                             # pnpm 10: writes to `onlyBuiltDependencies`
+pnpm approve-builds          # pnpm 10.1.0 or later
 ```
 
-With pnpm 10.26.0 or later, you can set `allowBuilds` directly. To keep the
+For approvals saved to `pnpm-workspace.yaml`, pnpm 10.26.0 began updating an
+existing `allowBuilds` map. pnpm 10.31.0 began creating that map if neither
+`onlyBuiltDependencies` nor `ignoredBuiltDependencies` was configured. In
+pnpm 10, approvals otherwise go to `onlyBuiltDependencies`. pnpm 11.0.0
+began writing approvals to `allowBuilds` by default.
+
+You can set `allowBuilds` directly on pnpm 10.26.0 or later. To keep the
 script from running and let the install finish, decline it in `pnpm-workspace.yaml`:
 
 ```yaml
