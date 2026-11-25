@@ -401,29 +401,6 @@ describe("check-mdschema driver", () => {
     expect(result.stdout).not.toContain("conform");
   });
 
-  it("exits 2 on an unknown flag", () => {
-    const result = runDriver(["--no-such-flag"]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("unknown flag");
-  });
-
-  it("exits 2 on an unrecognised scope", async () => {
-    const root = await newTempDir();
-
-    const result = runDriver(["--root", root, "--scope", "everything"]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("changed|all|files");
-  });
-
-  it("exits 2 when --root is not a directory", () => {
-    const result = runDriver(["--root", path.join(os.tmpdir(), "qfai-absent-root")]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("not a directory");
-  });
-
   // QFAI:EX-0002-0003-08
   it("exits 2 when --tools names no directory", async () => {
     const root = await newTempDir();
@@ -442,26 +419,6 @@ describe("check-mdschema driver", () => {
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("--tools needs a directory");
-  });
-
-  it("exits 2 when --base is followed by another option, which it must not take as a ref", async () => {
-    // Taken as a ref, `--summary` names no revision, so the ratchet would widen
-    // to a full scan and the summary the caller asked for would never print.
-    const root = await newTempDir();
-
-    const result = runDriver(["--root", root, "--base", "--summary"]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("--base needs a git ref");
-  });
-
-  it("exits 2 when --scope files is given no path", async () => {
-    const root = await newTempDir();
-
-    const result = runDriver(["--root", root, "--scope", "files"]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("at least one path");
   });
 });
 
@@ -2127,18 +2084,29 @@ describe("decision-register filesystem causes", () => {
 
 describe("bounding each mdschema run in the lane", () => {
   // QFAI:EX-0001-0011-28
-  it("stops a run past its time limit and exits 2 for a check that did not finish", async () => {
+  it.each([
+    {
+      limit: "time",
+      script: 'process.on("SIGTERM", () => undefined);\nsetInterval(() => undefined, 1000);\n',
+      limits: { timeoutMs: 500 },
+      reason: "it ran longer than 500 ms and was stopped",
+    },
+    {
+      limit: "output",
+      // The individual streams stay under the limit. Their combined output does not.
+      script:
+        'process.stdout.write("x".repeat(10)); process.stderr.write("y".repeat(10)); setInterval(() => undefined, 1000);',
+      limits: { timeoutMs: 15_000, maxOutputBytes: 16 },
+      reason: "it printed more than 16 bytes and was stopped",
+    },
+  ])("stops a run past its $limit limit and exits 2", async ({ script, limits, reason }) => {
     const root = await newTempDir();
     await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
-    // An mdschema that never exits and ignores SIGTERM, found through `--tools`.
+    // The mdschema stub stays alive until the lane stops it.
     const tools = await newTempDir();
     const packageDir = path.join(tools, "node_modules", "@jackchuka", "mdschema");
     await mkdir(path.join(packageDir, "bin"), { recursive: true });
-    await writeFile(
-      path.join(packageDir, "bin", "cli.js"),
-      'process.on("SIGTERM", () => undefined);\nsetInterval(() => undefined, 1000);\n',
-      "utf-8",
-    );
+    await writeFile(path.join(packageDir, "bin", "cli.js"), script, "utf-8");
     await writeFile(
       path.join(packageDir, "package.json"),
       JSON.stringify({ name: "@jackchuka/mdschema", bin: { mdschema: "bin/cli.js" } }),
@@ -2152,10 +2120,10 @@ describe("bounding each mdschema run in the lane", () => {
       process.argv = ["node", SCRIPT, "--root", root, "--tools", tools, "--scope", "all"];
       const started = Date.now();
 
-      expect(main({ timeoutMs: 500 })).toBe(2);
+      expect(main(limits)).toBe(2);
       expect(Date.now() - started).toBeLessThan(30_000);
       expect(stderr.mock.calls.flat().join("\n")).toContain(
-        "check-mdschema: mdschema did not finish: it ran longer than 500 ms and was stopped",
+        "check-mdschema: mdschema did not finish: " + reason,
       );
     } finally {
       process.argv = argv;

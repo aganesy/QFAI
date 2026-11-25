@@ -12,6 +12,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
+import type { Issue, ValidationResult } from "../../src/core/types.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
@@ -22,8 +23,8 @@ const ASSISTANT_ROOTS = [
   path.join(repoRoot, ".qfai", "assistant"),
 ];
 
-function topLevelKeys(text: string): string[] {
-  const start = text.indexOf("## Top level");
+function tableKeys(text: string, heading = "## Top level"): string[] {
+  const start = text.indexOf(heading);
   const end = text.indexOf("\n## ", start + 1);
   return text
     .slice(start, end)
@@ -38,7 +39,7 @@ describe.each(ASSISTANT_ROOTS)("validate.json guide under %s", (assistantRoot) =
   it("lists profileValidatorsRan as a top-level key", async () => {
     const text = await readFile(path.join(assistantRoot, GUIDE), "utf8");
 
-    expect(topLevelKeys(text)).toContain("profileValidatorsRan");
+    expect(tableKeys(text)).toContain("profileValidatorsRan");
   });
 
   it("says what true, false and an absent value mean", async () => {
@@ -58,7 +59,7 @@ describe.each(ASSISTANT_ROOTS)("validate.json guide under %s", (assistantRoot) =
   it("lists waivers, timings and familyTimings with the empty waiver object", async () => {
     const text = await readFile(path.join(assistantRoot, GUIDE), "utf8");
 
-    expect(topLevelKeys(text)).toEqual(
+    expect(tableKeys(text)).toEqual(
       expect.arrayContaining(["waivers", "timings", "familyTimings"]),
     );
     expect(text).toContain(
@@ -72,10 +73,19 @@ describe.each(ASSISTANT_ROOTS)("validate.json guide under %s", (assistantRoot) =
   // key and its absent state on a repository-wide run.
   it("lists flowIds and says a repository-wide run leaves it out", async () => {
     const text = await readFile(path.join(assistantRoot, GUIDE), "utf8");
+    const flowIds = "flowIds" satisfies keyof ValidationResult;
 
-    expect(topLevelKeys(text)).toContain("flowIds");
+    expect(tableKeys(text)).toContain(flowIds);
     expect(text).toMatch(/^`flowIds` is written only by a `--flow` run/m);
+    expect(text).toContain("sorted, each named once");
     expect(text).toMatch(/A repository-wide run leaves it\s+out\./);
+  });
+
+  it("lists the original severity on older relaxed findings", async () => {
+    const text = await readFile(path.join(assistantRoot, GUIDE), "utf8");
+    const relaxedFrom = "relaxedFrom" satisfies keyof Issue;
+
+    expect(tableKeys(text, "## `issues[]`")).toContain(relaxedFrom);
   });
 
   // A waiver on an `error` finding is refused with `QFAI-WAIVER-002`, so the
