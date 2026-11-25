@@ -48,7 +48,7 @@ export async function copyTemplateTree(
   options: CopyOptions,
 ): Promise<CopyResult> {
   const files = await collectTemplateFiles(sourceRoot);
-  return copyFiles(files, sourceRoot, destRoot, options);
+  return copyListedTemplateFiles(files, sourceRoot, destRoot, options);
 }
 
 export async function copyTemplatePaths(
@@ -64,11 +64,12 @@ export async function copyTemplatePaths(
     allFiles.push(...files);
   }
 
-  return copyFiles(allFiles, sourceRoot, destRoot, options);
+  return copyListedTemplateFiles(allFiles, sourceRoot, destRoot, options);
 }
 
-async function copyFiles(
-  files: string[],
+/** Copies a previously enumerated list of source files under the template root. */
+export async function copyListedTemplateFiles(
+  files: readonly string[],
   sourceRoot: string,
   destRoot: string,
   options: CopyOptions,

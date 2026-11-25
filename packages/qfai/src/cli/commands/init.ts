@@ -21,6 +21,7 @@ import { promisify } from "node:util";
 import {
   blockedAncestor,
   collectTemplateFiles,
+  copyListedTemplateFiles,
   copyTemplatePaths,
   copyTemplateTree,
 } from "../../core/fs/templateCopy.js";
@@ -344,9 +345,7 @@ export async function runInit(
   if (!options.dryRun) {
     await requireSymlinkCreation(symlinkRuntime);
   }
-  await requireReadableShippedAssets(assistantAssets);
-  // Asked before any copy: a tree this run creates is wholly this release's.
-  const assistantTreeIsNew = (await safeLstat(path.join(destRoot, ASSISTANT_DIR))) === undefined;
+  const requiredAssistantFiles = await listReadableShippedAssets(assistantAssets);
 
   // A shipped workflow is written only where no file of that name exists, and
   // never through a `.github` or `.github/workflows` that is a symlink: `copyFile`
@@ -459,7 +458,7 @@ export async function runInit(
         kept: [] as string[],
       }
     : await seedStoryTree(destRoot, qfaiAssets, options.dryRun);
-  const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, [...STANDARD_ASSET_PATHS], {
+  const skillsResult = await copyListedTemplateFiles(requiredAssistantFiles, qfaiAssets, destQfai, {
     force: options.force,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
@@ -467,7 +466,7 @@ export async function runInit(
   const versionResult = await writeAssistantVersion(destRoot, {
     force: options.force,
     dryRun: options.dryRun,
-    wholeTreeIsThisRelease: assistantTreeIsNew || skillsResult.kept.length === 0,
+    wholeTreeIsThisRelease: skillsResult.kept.length === 0 && skillsResult.refused.length === 0,
   });
   reportRefusedWrites(
     [
@@ -654,9 +653,8 @@ export async function runInit(
  * Records the release that wrote the assistant tree in `.qfai/assistant/VERSION`.
  *
  * `--force` rewrites it, since the run rewrites every shipped assistant file. Without `--force` it
- * is written only where it is absent and the whole tree holds this release's text: the tree is new
- * or the run kept no shipped file that differs. After a run that kept an older file, the file
- * would name a release that wrote only part of the tree, so it is reported as kept instead. An
+ * is written only where it is absent and the run installed or verified every required assistant
+ * asset. When some assets could not be verified, the version file is reported as kept. An
  * existing file that records another version is kept the same way, and one that already records
  * this release is skipped as identical. Nothing is written through a linked or non-directory
  * parent, or over an entry that is not a regular file.
@@ -688,6 +686,9 @@ async function writeAssistantVersion(
     }
     if (!options.force) return keep(target);
   } else if (!options.force && !options.wholeTreeIsThisRelease) {
+    info(
+      "Assistant VERSION stays absent when required assets cannot be verified. Review the refused files and use qfai init --verbose to list skipped files.",
+    );
     return keep(target);
   }
   if (!options.dryRun) {
@@ -738,10 +739,11 @@ function keptAssistantNote(
  * Stops the run before any copy when a shipped assistant layer is missing, empty
  * or unreadable, so a damaged install never leaves a project half initialised.
  */
-async function requireReadableShippedAssets(assistantAssets: string): Promise<void> {
+async function listReadableShippedAssets(assistantAssets: string): Promise<string[]> {
   const damaged = new Error(
     `qfai init cannot read the shipped assistant assets in ${JSON.stringify(assistantAssets)}. Reinstall QFAI or restore its complete readable package assets, then rerun; nothing was copied.`,
   );
+  const requiredFiles: string[] = [];
   for (const relative of STANDARD_ASSET_PATHS) {
     let files: string[];
     try {
@@ -755,7 +757,9 @@ async function requireReadableShippedAssets(assistantAssets: string): Promise<vo
       throw new Error(damaged.message, { cause });
     }
     if (files.length === 0) throw damaged;
+    requiredFiles.push(...files);
   }
+  return requiredFiles;
 }
 
 /**

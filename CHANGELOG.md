@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Plain `qfai init` defers the assistant version file when a required asset
+  could not be verified.** A blocked copy no longer records a complete
+  installation. Init reports why the version file was deferred. Closes #4527.
+
 - **The reviewer remit for `/qfai-triage` names the files triage may change.**
   Its row still said no tracked file changed, so a reviewer following it
   flagged the run's deliberation record, the `open-questions.md` rows that
@@ -644,6 +648,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now remembered by name, and a later `SELECT`, `CALL` or `PERFORM` in the same
   file that calls it, directly or through another routine, raises the warning.
   Closes #5180.
+
+- **`qfai init` reports graph CLI entrypoint readiness separately from
+  runtime installation.** If a project-edited entrypoint needs manual
+  recovery, the summary marks it as not ready and preserves the edited file.
+  Closes #4530.
 
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read
