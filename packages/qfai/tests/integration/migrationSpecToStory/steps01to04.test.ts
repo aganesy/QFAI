@@ -866,6 +866,48 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-40
+  it("keeps every non-goal in a large story block", async () => {
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      const itemCount = 200_000;
+      const items = Array.from({ length: itemCount }, (_, index) => `  - Skip item ${index + 1}.`);
+      await put(
+        root,
+        ".qfai/spec/spec-0001/02_User-stories.md",
+        [
+          "# Stories",
+          "",
+          "## US-0001-0001: Order",
+          "",
+          "- Goal: As a buyer, I want an order, so that I get a receipt.",
+          "- Non-goals: Shipping.",
+          ...items,
+          "",
+        ].join("\n"),
+      );
+      await put(
+        root,
+        "tmp/qfai-migration/plan.yaml",
+        "flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\nrules: []\n",
+      );
+
+      await run(step04, await context(root));
+      const story = await readFile(
+        path.join(
+          root,
+          ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md",
+        ),
+        "utf8",
+      );
+      const nonGoals = story.split("## Non-goals\n\n")[1]?.trimEnd().split("\n") ?? [];
+      expect(nonGoals).toHaveLength(itemCount + 1);
+      expect(nonGoals[0]).toBe("- Shipping.");
+      expect(nonGoals[1]).toBe("- Skip item 1.");
+      expect(nonGoals.at(-1)).toBe(`- Skip item ${itemCount}.`);
+    });
+  });
+
   // QFAI:EX-0004-0007-14
   // QFAI:EX-0004-0007-16
   it("keeps plus-marked non-goals apart and sends a story with a subheading to a person", async () => {
