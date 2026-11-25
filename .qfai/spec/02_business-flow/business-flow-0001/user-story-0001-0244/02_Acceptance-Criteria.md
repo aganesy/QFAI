@@ -46,4 +46,12 @@ Feature: Keep an agent's turn going while a turn-end check fails
     Given a qfai.config.yaml that cannot be read or parsed, or whose top level is not a set of keys, such as an empty file
     When the agent ends a turn
     Then the hook runs no command and tells the user which file it could not read
+
+  # AC-0001-0244-08
+  Scenario: A disabled or unavailable gate clears the saved failure
+    Given the turn-end hook blocked a failing command for a session and agent
+    When that session's next stop has the gate off or the project's tech.md is missing
+    Then the hook lets the turn end silently and clears that session and agent's saved failure
+    And the same failure blocks again when the check becomes available
+    And other sessions and agents keep their own saved failures
 ```
