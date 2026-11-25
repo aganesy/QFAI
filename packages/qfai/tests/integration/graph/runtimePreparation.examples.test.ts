@@ -223,6 +223,7 @@ it("prepares graph tools when an older adopter reruns init", async () => {
     );
     expect(output).toContain("Graph tools");
     expect(output).toContain("CodeGraph: installed");
+    expect(output).toContain("Managed graph CLI entrypoint: ready");
     await expect(access(graphRuntimePaths(root).codegraph)).resolves.toBeUndefined();
     await expect(access(graphRuntimePaths(root).python)).resolves.toBeUndefined();
   } finally {

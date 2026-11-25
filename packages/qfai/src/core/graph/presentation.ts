@@ -29,6 +29,9 @@ export function renderGraphPreparation(preparation: GraphPreparation): string {
     "Tools",
     `  CodeGraph: ${preparation.tools?.codegraph ?? preparation.runtime}`,
     `  Graphify: ${preparation.tools?.graphify ?? preparation.runtime}`,
+    ...(preparation.managedCli === undefined
+      ? []
+      : [`  Managed graph CLI entrypoint: ${preparation.managedCli}`]),
     "Analysis",
     `  ${preparation.code}`,
     `  ${preparation.documents}`,
