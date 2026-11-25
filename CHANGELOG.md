@@ -1507,6 +1507,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   mdschema did not finish, never reading the run as a pass or a schema
   failure. Closes #5033.
 
+- The document-schema checker also exits 2 when mdschema exceeds its
+  256 MiB output limit. It says the check did not finish and names the limit.
+
 - **`qfai doctor` names a shipped workflow it cannot read in
   `workflows.cost`.** The check skipped every read failure as if the workflow
   were not installed, so an installed workflow that could not be read
