@@ -16,6 +16,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { waitForCatalogueWriteHold } from "../helpers/catalogWriteHold.js";
+
 type FsPromises = typeof fsPromises;
 
 const fault = vi.hoisted(
@@ -170,7 +172,7 @@ describe("one run at a time scans and writes the catalogue", () => {
     const hold = holdBeforeRename();
     const err = collectStderr();
     const first = runCatalogComponents({ root, loadTypescript });
-    await hold.held;
+    await waitForCatalogueWriteHold(hold.held, first, err);
     await addComponent(root, "Beta", "b.tsx");
     const second = await runCatalogComponents({ root, loadTypescript });
     hold.resume();
@@ -212,7 +214,7 @@ describe("one run at a time scans and writes the catalogue", () => {
     const hold = holdBeforeRename();
     const err = collectStderr();
     const running = runCatalogComponents({ root, loadTypescript });
-    await hold.held;
+    await waitForCatalogueWriteHold(hold.held, running, err);
     const lock = otherRecord(process.pid);
     await writeFile(lockFile(root), lock, "utf-8");
     hold.resume();
