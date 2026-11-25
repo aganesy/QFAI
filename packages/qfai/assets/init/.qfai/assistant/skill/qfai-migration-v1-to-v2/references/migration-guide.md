@@ -142,8 +142,11 @@ Steps 2 through 12 also contain
 `## Annotations kept`; step 11 contains `## Reminder hooks`; step 12 contains
 `## Files scanned`. Empty sections say
 `none`. Exit 0 means the step is
-complete. Exit 2 means it refused before writing; read the message and fix the
-input or order. Exit 3 means the step completed but reports content that needs a
+complete. Exit 2 means the step refused. A preflight refusal writes nothing.
+If a refusal occurs while applying operations, earlier operations may have
+already written files. Read the refusal and any `## For a person` items on
+standard error. Check the current files and address the cause before rerunning.
+Exit 3 means the step completed but reports content that needs a
 person. An unexpected failure can be retried after the cause is fixed. A
 completed step is safe to run again and changes no file.
 When every one of steps 1 to 10 prints

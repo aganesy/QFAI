@@ -928,6 +928,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   now lists that directory under `## For a person`, asks for it to be deleted
   before the next commit, and exits 3. Closes #5061.
 
+- A migration step that refuses a later operation prints the `For a person`
+  items it has already collected on standard error with the refusal.
+
 - **The `qfai --help` exit codes name every reason `qfai report` stops.** The
   `report` row gave a missing input file as its only exit 2. It now also names
   a bad or unknown `--flow`, an input recording other flows or, for a
@@ -1029,6 +1032,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   TypeScript files. A legacy token step 8 leaves in a literal is now listed
   under `## Annotations kept` as `(in a literal, left as test data)`, so the
   report says why it remains. Closes #5125.
+
+- The annotation scanner preserves quoted data after Vue slot shorthand and
+  Svelte block syntax in selected test files.
 
 - **`qfai validate` takes only a directory for an old spec-pack layout.** An
   ordinary file in the specs directory whose name matched `spec-*` or
@@ -1217,6 +1223,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   implementation found no file. It now cites
   `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`, as
   the `implement-tdd` step does. Closes #4965.
+
+- The routine parser skips commas and parentheses inside quoted argument
+  names and preserves quoted type names when checking for duplicate routines.
 
 - **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
   The duplicate check compared each argument type as written, so
@@ -2485,6 +2494,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `workflow.stopGate` and so ran the project's turn-end checks. The hook now
   runs none and says which file it could not read and that no turn-end check
   ran.
+
+- The turn-end hook clears the saved failure for the current session and agent
+  when the gate is disabled or `tech.md` is missing. If the check becomes
+  available again, a failing command blocks the turn as a fresh failure.
 
 - **The turn-end check tells a failure in another worktree from a repeat.**
   When a continued turn failed with the same output it had blocked on, the
