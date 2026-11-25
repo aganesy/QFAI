@@ -4,7 +4,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import process from "node:process";
+import { URL, fileURLToPath } from "node:url";
 
 import ts from "typescript";
 
