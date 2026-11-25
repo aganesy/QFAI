@@ -662,6 +662,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   error a validator fault gives, written to `validate.json`, and the command
   fails under every `--fail-on` except `never`. Closes #5360.
 
+- **The workflow guide gives a supported validation command.** It removes the
+  obsolete local refinement flag and retains the full CI command. Closes #4760.
+
 - **The test-layer rule and the gate failure protocol read the validation
   result the current run wrote.** Both told the reader to inspect the fixed
   `.qfai/report/validate.json`, which is only the default path and holds
