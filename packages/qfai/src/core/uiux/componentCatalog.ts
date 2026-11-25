@@ -13,12 +13,15 @@
  * check reads it, so qfai carries no JSX parser of its own.
  */
 
-import { readFile } from "node:fs/promises";
+import { constants, type BigIntStats } from "node:fs";
+import { lstat, open } from "node:fs/promises";
 import path from "node:path";
 
 import { parse, stringify } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
+import { hasErrnoCode, isEnoent } from "../fs/errno.js";
+import { describeError, findUnsafeHostFileComponent } from "../init/fsGuards.js";
 import {
   loadTs,
   selectSurfaceFiles,
@@ -30,6 +33,12 @@ import { readSafe } from "../validators/utils.js";
 
 /** Where the catalogue is written and read, relative to the project root. */
 export const COMPONENT_CATALOG_PATH = path.join(".qfai", "catalog", "components.yaml");
+
+const CATALOG_OPTIONAL_FLAGS: Partial<Record<"O_NOFOLLOW" | "O_NONBLOCK", number>> = constants;
+const CATALOG_READ_FLAGS =
+  constants.O_RDONLY |
+  (CATALOG_OPTIONAL_FLAGS.O_NOFOLLOW ?? 0) |
+  (CATALOG_OPTIONAL_FLAGS.O_NONBLOCK ?? 0);
 
 /** The raw elements a listed component can stand in for, named by its `@pattern`. */
 export const REPLACEABLE_ELEMENTS = ["button", "input", "select"] as const;
@@ -109,6 +118,7 @@ export type ComponentScan =
 export type CatalogRead =
   | { state: "absent" }
   | { state: "invalid" }
+  | { state: "unreadable"; reason: string }
   | { state: "read"; text: string; components: CatalogComponent[] };
 
 const HEADER = [
@@ -175,17 +185,66 @@ export function renderCatalog(components: readonly CatalogComponent[]): string {
   return HEADER + stringify({ components: entries }, { lineWidth: 0 });
 }
 
+/** The catalogue path and its identity, after refusing links and entries that are not regular files. */
+export async function inspectComponentCatalogPath(
+  root: string,
+): Promise<{ file: string; entry?: BigIntStats }> {
+  const segments = COMPONENT_CATALOG_PATH.split(path.sep);
+  const shown = segments.join("/");
+  const unsafe = await findUnsafeHostFileComponent(root, segments);
+  if (unsafe) {
+    const reason = unsafe.symlink ? "a symbolic link" : "not a directory";
+    throw new Error(unsafe.relativePath + " is " + reason + ".");
+  }
+
+  const file = path.join(root, COMPONENT_CATALOG_PATH);
+  let existing;
+  try {
+    existing = await lstat(file, { bigint: true });
+  } catch (error: unknown) {
+    if (isEnoent(error)) return { file };
+    throw new Error(shown + " could not be inspected: " + describeError(error), { cause: error });
+  }
+  if (!existing.isFile()) throw new Error(shown + " is not a file.");
+  return { file, entry: existing };
+}
+
 /** The committed catalogue, if there is one and it holds a list of components. */
 export async function readCatalog(root: string): Promise<CatalogRead> {
+  const checked = await inspectComponentCatalogPath(root).catch((error: unknown) => ({
+    reason: describeError(error),
+  }));
+  if ("reason" in checked) return { state: "unreadable", reason: checked.reason };
+  if (!checked.entry) return { state: "absent" };
+
   let text: string;
   try {
-    text = await readFile(path.join(root, COMPONENT_CATALOG_PATH), "utf-8");
-  } catch (error: unknown) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return { state: "absent" };
+    const handle = await open(checked.file, CATALOG_READ_FLAGS);
+    try {
+      const held = await handle.stat({ bigint: true });
+      // Recheck the parents and named leaf before reading from this handle.
+      // Ceiling: Node cannot pin the parent directory walk and open in one operation.
+      const current = await inspectComponentCatalogPath(root);
+      if (
+        !held.isFile() ||
+        held.dev !== checked.entry.dev ||
+        held.ino !== checked.entry.ino ||
+        current.entry?.dev !== held.dev ||
+        current.entry.ino !== held.ino
+      ) {
+        return {
+          state: "unreadable",
+          reason: "The component catalogue path changed during the read.",
+        };
+      }
+      text = await handle.readFile("utf-8");
+    } finally {
+      await handle.close();
     }
-    throw error;
+  } catch (error: unknown) {
+    return { state: "unreadable", reason: hasErrnoCode(error) ? error.code : describeError(error) };
   }
+
   let parsed: unknown;
   try {
     parsed = parse(text);

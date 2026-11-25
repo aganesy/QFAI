@@ -10,14 +10,12 @@ import path from "node:path";
 import { type QfaiConfig, loadConfig } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { type OwnerLockOptions, withOwnerLock } from "../../core/fs/ownerLock.js";
-import {
-  findUnsafeHostFileComponent,
-  findUnsafeWrapperComponent,
-} from "../../core/init/fsGuards.js";
+import { findUnsafeWrapperComponent } from "../../core/init/fsGuards.js";
 import { error, info } from "../../core/logger.js";
 import {
   COMPONENT_CATALOG_PATH,
   type ComponentScan,
+  inspectComponentCatalogPath,
   readCatalog,
   renderCatalog,
   sameCatalogText,
@@ -64,14 +62,13 @@ export async function runCatalogComponents(options: CatalogComponentsOptions): P
     return EXIT_CODES.findings;
   }
   const text = renderCatalog(scan.components);
-  const unreadable = await unsafeCatalogPath(root);
-  if (unreadable !== null) {
+  const committed = await readCatalog(root);
+  if (committed.state === "unreadable") {
     error(
-      `qfai catalog components: could not read ${target}, so nothing was compared: ${unreadable}`,
+      `qfai catalog components: could not read ${target}, so nothing was compared: ${committed.reason}`,
     );
     return EXIT_CODES.findings;
   }
-  const committed = await readCatalog(root);
   if (committed.state === "read" && sameCatalogText(committed.text, text)) {
     info(`${target} is up to date: ${scan.components.length} component(s).`);
     return EXIT_CODES.ok;
@@ -186,14 +183,11 @@ async function scanAndWrite(
  * catalogue. Returns the failure's message, or null.
  */
 async function writeCatalog(root: string, text: string): Promise<string | null> {
-  const segments = COMPONENT_CATALOG_PATH.split(path.sep);
-  const file = path.join(root, ...segments);
   let temporary: string | null = null;
   try {
-    await assertInsideProject(root, segments);
+    const { file } = await inspectComponentCatalogPath(root);
     await mkdir(path.dirname(file), { recursive: true });
-    await assertInsideProject(root, segments);
-    await assertFileOrAbsent(file, segments);
+    await inspectComponentCatalogPath(root);
     temporary = path.join(path.dirname(file), `.${path.basename(file)}.${randomUUID()}.tmp`);
     const handle = await open(temporary, "wx");
     try {
@@ -218,51 +212,6 @@ async function writeCatalog(root: string, text: string): Promise<string | null> 
 
 function messageOf(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
-}
-
-/**
- * Why the committed catalogue cannot be read inside the project, by the guard the write uses: a
- * linked or non-directory entry on its path, or a catalogue path that is a link, not a file or
- * cannot be inspected.
- * Null when it can be read, or is absent.
- */
-async function unsafeCatalogPath(root: string): Promise<string | null> {
-  const segments = COMPONENT_CATALOG_PATH.split(path.sep);
-  try {
-    await assertInsideProject(root, segments);
-    await assertFileOrAbsent(path.join(root, ...segments), segments);
-    return null;
-  } catch (caught) {
-    return messageOf(caught);
-  }
-}
-
-/**
- * Throws when an entry is at the catalogue path and it is not a file, or when its metadata cannot
- * be read: only a catalogue that is not there counts as absent.
- */
-async function assertFileOrAbsent(file: string, segments: readonly string[]): Promise<void> {
-  let existing: Stats;
-  try {
-    existing = await lstat(file);
-  } catch (caught) {
-    if (isEnoent(caught)) return;
-    throw new Error(`${segments.join("/")} could not be inspected: ${messageOf(caught)}`, {
-      cause: caught,
-    });
-  }
-  if (!existing.isFile()) {
-    throw new Error(`${segments.join("/")} is not a file.`);
-  }
-}
-
-/** Throws when a component of the catalogue path would lead a write outside the project. */
-async function assertInsideProject(root: string, segments: readonly string[]): Promise<void> {
-  const unsafe = await findUnsafeHostFileComponent(root, segments);
-  if (unsafe === undefined) return;
-  throw new Error(
-    `${unsafe.relativePath} is ${unsafe.symlink ? "a symbolic link" : "not a directory"}.`,
-  );
 }
 
 export type CatalogDesignOptions = {

@@ -1249,6 +1249,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   write path's guard before reading and exits 1 naming the linked path, or the
   catalogue path when it is a link or not a file. Closes #5048.
 
+- `qfai validate` uses the same component catalogue path check. It reports
+  `QFAI-COMP-004` with the reason when the catalogue path is unreadable or
+  contains a symbolic link or junction.
+
 - **`qfai catalog design` puts both files back on a volume with no inode
   numbers, and names a moved-aside file it cannot remove.** On such a volume a
   failed write left the new token file and a hidden moved-aside file behind;
