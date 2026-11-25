@@ -134,8 +134,8 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
     }
 
     // Inline dimensions and colours, read from parsed declarations so that `min-width` is never
-    // taken for `width`, nor a longer name ending in `background` for the background, and an
-    // `!important` declaration wins as it does in CSS. jsdom drops a declaration whose property
+    // taken for `width`, nor a longer name ending in `background` for the background.
+    // jsdom drops a declaration whose property
     // name is not lower-case, while CSS property names are case-insensitive, so the attribute is
     // lower-cased and parsed on one detached element. Only pixel lengths and colours are read
     // from it, and lower-casing changes neither. The detached element also gives every element,
@@ -153,6 +153,8 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
     }
 
     // Color pairs. A `background` shorthand sets `background-color`, so one read covers both.
+    // Ceiling: jsdom lets a later ordinary `background` override an earlier `!important`
+    // `background-color`. Contrast uses the background colour exposed by jsdom in that case.
     const color = declarationProbe.style.getPropertyValue("color");
     const backgroundColor = declarationProbe.style.getPropertyValue("background-color");
     if (color && backgroundColor) {

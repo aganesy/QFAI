@@ -1,7 +1,7 @@
 /**
  * The colour pair of an element is read from the declarations its inline style holds, so a
- * longer property name ending in `background` is never taken for the background, and the
- * declaration CSS applies wins over an earlier or later one it overrides.
+ * longer property name ending in `background` is never taken for the background. The parser
+ * uses jsdom's declaration priority, including its documented shorthand limitation.
  */
 
 import { describe, expect, it } from "vitest";
@@ -22,6 +22,12 @@ describe("HTML mock colour pairs", () => {
     const html =
       '<p style="color: #000000; background: #ffffff !important; background: #000000">t</p>';
     expect(await backgroundsOf(html)).toEqual(["rgb(255, 255, 255)"]);
+  });
+
+  it("inherits the jsdom limit for a shorthand after an important longhand", async () => {
+    const html =
+      '<p style="color: #000; background-color: #fff !important; background: #111">t</p>';
+    expect(await backgroundsOf(html)).toEqual(["rgb(17, 17, 17)"]);
   });
 
   it("reads the colour and the background whatever the case of their property names", async () => {
