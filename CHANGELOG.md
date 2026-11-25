@@ -632,6 +632,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
+- `gh-budget` reports oversized GitHub responses without saving a partial
+  Actions job log.
+
 - Root-heading diagnostics in `check-mdschema` print paths relative to the
   checked tree when the command is run from another directory.
 
