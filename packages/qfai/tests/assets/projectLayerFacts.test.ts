@@ -265,6 +265,21 @@ describe("the project layer describes the repository it is in", () => {
     expect(namesItsCommit(`git tag vX.Y.Z ${"a".repeat(40)}`)).toBe(true);
   });
 
+  it("ignores listing options when identifying tag creation commands", () => {
+    const listings = [
+      "git tag -n",
+      "git tag -n3",
+      "git tag --contains <SHA>",
+      "git tag --points-at=<SHA>",
+      "git tag --merged <SHA>",
+      "git tag --no-merged=<SHA>",
+      "git tag --sort=version:refname",
+      "git tag --format=%(refname)",
+    ];
+    const guide = ["```sh", ...listings, "git tag vX.Y.Z <SHA>", "```"].join("\n");
+    expect(tagCreations(guide)).toEqual(["git tag vX.Y.Z <SHA>"]);
+  });
+
   // Pasted as separate lines, the block tagged even when the ancestry check
   // failed, because a failing line does not stop the next one. Chained with
   // `&&`, the tag is created only after every check before it passed.
