@@ -919,6 +919,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   now lists that directory under `## For a person`, asks for it to be deleted
   before the next commit, and exits 3. Closes #5061.
 
+- A migration step that refuses a later operation prints the `For a person`
+  items it has already collected on standard error with the refusal.
+
 - **The `qfai --help` exit codes name every reason `qfai report` stops.** The
   `report` row gave a missing input file as its only exit 2. It now also names
   a bad or unknown `--flow`, an input recording other flows or, for a
