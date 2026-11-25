@@ -754,6 +754,35 @@ describe("uiux validators", () => {
     expect(codes).toContain("QFAI-MOCK-009");
   });
 
+  // QFAI:EX-0001-0039-71
+  it.each([
+    ["hsl()", "hsl(0, 0%, 75%)", "hsl(0, 0%, 80%)"],
+    ["space-separated rgb()", "rgb(191 191 191)", "rgb(204 204 204)"],
+  ])(
+    "warns about low HTML mock contrast written in %s",
+    async (_format, foreground, background) => {
+      const root = await newTempDir();
+      const specsDir = path.join(root, ".qfai", "specs");
+      await mkdir(specsDir, { recursive: true });
+      await writeFile(
+        path.join(specsDir, "contrast-mock.md"),
+        [
+          "## HTML+CSS Visual Mock: Sample",
+          "",
+          "<!-- Screen Mock: Sample -->",
+          `<p style="color: ${foreground}; background-color: ${background}">Sample</p>`,
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateHtmlMock(root, "web", defaultConfig);
+      const contrast = issues.filter((item) => item.code === "QFAI-MOCK-008");
+      expect(contrast).toHaveLength(1);
+      expect(contrast[0]).toMatchObject({ severity: "warning" });
+    },
+  );
+
   it("validates adjacent css fences in screen mock sections", async () => {
     const root = await newTempDir();
     const specsDir = path.join(root, ".qfai", "specs");
