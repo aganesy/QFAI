@@ -226,8 +226,11 @@ points agents there.
 
 ## Workflow routes and payloads
 
-`npx qfai workflow` chooses each run's route from a catalog of 39 routes. The
-five route ids of earlier 2.0.0 builds are retired. A run record written under
+`npx qfai workflow` chooses each run's route from the current route catalog.
+The `qfai workflow` entry in the
+[QFAI contract index](https://github.com/aganesy/QFAI/blob/main/.qfai/spec/03_contract/contracts.md#contract-index)
+gives the catalog's location.
+The five route ids of earlier 2.0.0 builds are retired. A run record written under
 one is read under its successor, and the record itself is never rewritten.
 
 | Retired id       | Read as                                                                    |

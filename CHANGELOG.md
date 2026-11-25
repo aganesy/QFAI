@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Plain `qfai init` defers the assistant version file when a required asset
+  could not be verified.** A blocked copy no longer records a complete
+  installation. Init reports why the version file was deferred. Closes #4527.
+
 - **The reviewer remit for `/qfai-triage` names the files triage may change.**
   Its row still said no tracked file changed, so a reviewer following it
   flagged the run's deliberation record, the `open-questions.md` rows that
@@ -645,6 +649,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file that calls it, directly or through another routine, raises the warning.
   Closes #5180.
 
+- **`qfai init` reports graph CLI entrypoint readiness separately from
+  runtime installation.** If a project-edited entrypoint needs manual
+  recovery, the summary marks it as not ready and preserves the edited file.
+  Closes #4530.
+
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read
   the filesystem while finishing its result, for the coverage notice, the error
@@ -652,6 +661,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `run-log:`. That fault is now reported as the `QFAI-SCAN-002` incomplete-run
   error a validator fault gives, written to `validate.json`, and the command
   fails under every `--fail-on` except `never`. Closes #5360.
+
+- **The workflow guide gives a supported validation command.** It removes the
+  obsolete local refinement flag and retains the full CI command. Closes #4760.
 
 - **The test-layer rule and the gate failure protocol read the validation
   result the current run wrote.** Both told the reader to inspect the fixed
