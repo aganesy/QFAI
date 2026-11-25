@@ -277,6 +277,10 @@ async function readState(file: string | null): Promise<BlockState | null> {
   }
 }
 
+async function clearSavedFailure(file: string | null): Promise<void> {
+  if (file !== null) await rm(file, { force: true });
+}
+
 /** The project root with links resolved, so two spellings of one worktree count as one. */
 async function canonicalRoot(root: string): Promise<string> {
   try {
@@ -301,26 +305,32 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
   // the default applies to an omission, never to a file that could not be read or parsed. No
   // check ran, so a failure blocked on earlier no longer stands.
   if (!isRecord(loaded.document)) {
-    if (file !== null) await rm(file, { force: true });
+    await clearSavedFailure(file);
     return `${JSON.stringify({
       systemMessage: `QFAI turn-end check: ${found.configPath} could not be read as configuration, so no turn-end check ran. Run qfai validate to see why.`,
     })}\n`;
   }
-  if (readStopGate(loaded.document) !== true) return "";
+  if (readStopGate(loaded.document) !== true) {
+    await clearSavedFailure(file);
+    return "";
+  }
   const techPath = path.join(resolvePath(found.root, loaded.config, "contractsDir"), "tech.md");
   let techText: string;
   try {
     techText = await readFile(techPath, "utf8");
   } catch (error) {
     // A project without tech.md lists no check; any other read error is reported by the caller.
-    if (isRecord(error) && error.code === "ENOENT") return "";
+    if (isRecord(error) && error.code === "ENOENT") {
+      await clearSavedFailure(file);
+      return "";
+    }
     throw error;
   }
   const { checks, ambiguous } = readTurnEndChecks(techText);
   if (ambiguous.length > 0) {
     // Which command a repeated label means cannot be told, so none runs and the turn ends; a
     // failure blocked on earlier no longer stands.
-    if (file !== null) await rm(file, { force: true });
+    await clearSavedFailure(file);
     return `${JSON.stringify({
       systemMessage: `QFAI turn-end check: ${ambiguous.join(", ")} ${ambiguous.length === 1 ? "is" : "are"} listed more than once under Standard commands in ${techPath}, so no turn-end check ran. Keep one item for each label.`,
     })}\n`;
@@ -351,7 +361,7 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
         ? continued
         : continued && (last?.digest === digest || blocks > MAX_CONTINUED_BLOCKS);
     if (release) {
-      if (file !== null) await rm(file, { force: true });
+      await clearSavedFailure(file);
       return `${JSON.stringify({
         systemMessage: `QFAI turn-end check: ${check.label} still fails, and the turn ended anyway. Run ${check.command} in ${found.root} to see the failure.`,
       })}\n`;
@@ -366,6 +376,6 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
     ].join("\n\n");
     return `${JSON.stringify({ decision: "block", reason })}\n`;
   }
-  if (file !== null) await rm(file, { force: true });
+  await clearSavedFailure(file);
   return "";
 }
