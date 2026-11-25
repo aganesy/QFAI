@@ -153,6 +153,7 @@ which includes `htmlMockLoadMs` and `sharedMarkdownReadMs`.
 | ------------------ | -------------------------------- | -------------------------------------------------------------------- |
 | `code`             | `string`                         | the finding code — **copy this into a waiver's `rule:`**             |
 | `severity`         | `"info" \| "warning" \| "error"` |                                                                      |
+| `relaxedFrom`      | `"info" \| "warning" \| "error"` | severity before an older exploration-mode downgrade                  |
 | `category`         | `string`                         | `canonical` for a contract violation, `change` for an advisory       |
 | `message`          | `string`                         | human-readable, not stable across versions                           |
 | `suggested_action` | `string?`                        | the remedy, when the rule has one                                    |
@@ -163,6 +164,9 @@ which includes `htmlMockLoadMs` and `sharedMarkdownReadMs`.
 | `suppressed`       | `boolean?`                       | true when a waiver suppressed it; it stays in the array              |
 | `job`              | `string?`                        | the CI job, for findings ingested from a lane                        |
 | `loc`              | object?                          | line / column, where the producer reported one                       |
+
+An older finding with `relaxedFrom: "error"` and `severity: "warning"` was
+lowered from error to warning by exploration mode.
 
 Only `code`, `severity`, `category` and `message` are always present. Everything
 else is optional and a consumer must treat it as such — a finding with no

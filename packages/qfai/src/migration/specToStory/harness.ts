@@ -484,6 +484,13 @@ function groupedReportSection(items: readonly string[], identifiers: readonly st
   return `## For a person\n${printed.length === 0 ? "none\n" : printed.join("\n")}`;
 }
 
+function renderReportSection(section: ReportSection, plan: StepPlan): string {
+  const items = sectionItems(section, plan);
+  return section === "For a person" && plan.forAPersonIdentifiers !== undefined
+    ? groupedReportSection(items, plan.forAPersonIdentifiers)
+    : reportSection(section, items);
+}
+
 function renderReport(
   step: MigrationStep,
   plan: StepPlan,
@@ -491,12 +498,7 @@ function renderReport(
 ): string {
   let report = reportSection("Operations", operations.flatMap(operationLines));
   for (const section of step.sections ?? []) {
-    const items = sectionItems(section, plan);
-    report += `\n${
-      section === "For a person" && plan.forAPersonIdentifiers !== undefined
-        ? groupedReportSection(items, plan.forAPersonIdentifiers)
-        : reportSection(section, items)
-    }`;
+    report += `\n${renderReportSection(section, plan)}`;
   }
   return report;
 }
@@ -597,8 +599,13 @@ export async function executePlannedStep(
     try {
       await applyOperations(operations, context);
     } catch (error) {
-      if (!(error instanceof MigrationRefusal)) throw error;
+      if (!(error instanceof MigrationRefusal || error instanceof MigrationInputError)) {
+        throw error;
+      }
       io.stderr.write(`${errorMessage(error)}\n`);
+      if ((plan.forAPerson?.length ?? 0) > 0) {
+        io.stderr.write(`\n${renderReportSection("For a person", plan)}`);
+      }
       return 2;
     }
   }
