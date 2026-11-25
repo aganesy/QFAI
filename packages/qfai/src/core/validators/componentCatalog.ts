@@ -43,18 +43,30 @@ export async function validateComponentCatalog(
   options: UiPlainTextOptions = {},
 ): Promise<Issue[]> {
   const catalog = await readCatalog(root);
+  const catalogueIssues: Issue[] = [];
+  if (catalog.state === "invalid") {
+    catalogueIssues.push(
+      catalogueReadFinding(
+        "The component catalogue is not a `components:` list of entries with a `name` and a `file`.",
+      ),
+    );
+  }
+  if (catalog.state === "unreadable") {
+    catalogueIssues.push(
+      catalogueReadFinding(
+        "Could not read the component catalogue: " + catalog.reason,
+        "Fix the reported catalogue path issue. " + REGENERATE,
+      ),
+    );
+  }
   const listed = catalog.state === "read" ? catalog.components : [];
   const installed = isCatalogueInstalled(config, catalog);
-  if (catalog.state !== "read" && !installed) {
-    return catalog.state === "invalid" ? [invalidCatalogFinding()] : [];
-  }
+  if (catalog.state !== "read" && !installed) return catalogueIssues;
   // Ceiling: the surface files are parsed here a second time beside the plain-text check in the
   // same run; sharing one parse per file between the two checks lifts it.
   const scan = await scanComponents(root, config, options);
   const widgets = installed ? widgetMarkupFindings(scan, listed) : [];
-  if (catalog.state !== "read") {
-    return [...(catalog.state === "invalid" ? [invalidCatalogFinding()] : []), ...widgets];
-  }
+  if (catalog.state !== "read") return [...catalogueIssues, ...widgets];
   // A shared component is one another surface file imports by name. Ceiling: without the
   // project's `typescript` the source cannot be read, so only tagged entries are asked for a
   // source and the raw-element and freshness warnings are not given; the plain-text check in the
@@ -117,16 +129,16 @@ export function isCatalogueInstalled(config: QfaiConfig, catalog: CatalogRead): 
   return catalog.state === "read" && catalog.components.some(isProcured);
 }
 
-function invalidCatalogFinding(): Issue {
+function catalogueReadFinding(message: string, action = REGENERATE): Issue {
   return issue(
     "QFAI-COMP-004",
-    "The component catalogue is not a `components:` list of entries with a `name` and a `file`.",
+    message,
     "warning",
     CATALOG_FILE,
     RULE,
     undefined,
     "canonical",
-    REGENERATE,
+    action,
   );
 }
 
