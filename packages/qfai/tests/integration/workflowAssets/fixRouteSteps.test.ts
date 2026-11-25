@@ -257,6 +257,17 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(procedure).toMatch(/`verify-commit` makes the commit/);
   });
 
+  it("resolves the mainline parent and backport scope before picking a merge", async () => {
+    const procedure = await section("implement-backport", "## Procedure");
+    expect(procedure).toContain("Resolve and record the pick list before branching");
+    expect(procedure).toContain("source branch into which the change originally landed");
+    expect(procedure).toContain("git log --first-parent <source-ref>");
+    expect(procedure).toContain("A merge on that first-parent history uses parent 1.");
+    expect(procedure).toContain("git cherry-pick -n -x -m <mainline-parent-number> <merge-commit>");
+    expect(procedure).toContain("explicitly identified constituent commits");
+    expect(procedure).toContain("stop before branching and report the missing evidence");
+  });
+
   it("works the diagnosis's matched example first, and skips an example under a test exception", async () => {
     const text = await section("implement-tdd", "## Select the examples");
     expect(text).toMatch(
