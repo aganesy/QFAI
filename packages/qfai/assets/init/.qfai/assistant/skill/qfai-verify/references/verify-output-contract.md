@@ -97,7 +97,7 @@ claims that the profile already ran; its check must perform the required scan
 and profile. A whole-repository scope still requires full validation. Write the
 one that matches the stage you were invoked for:
 
-| `scope`       | Written by                                                          | validate profile                                |
+| `scope`       | Gate set covered                                                    | validate profile                                |
 | ------------- | ------------------------------------------------------------------- | ----------------------------------------------- |
 | `prototyping` | a run checking the prototyping profile alone                        | `npx qfai validate --profile prototyping`       |
 | `atdd`        | checking acceptance-test obligations only                           | `npx qfai validate --profile atdd`              |
@@ -105,6 +105,12 @@ one that matches the stage you were invoked for:
 
 There is no `implement` value: the enum is closed at these three, and a run after
 `/qfai-implement` is recorded as `full`.
+
+Built-in stages write `verify.json` only for `full` and `prototyping`.
+`verify-context` selects the scope, and `verify-repo-gate` writes the verdict.
+The verdict format includes `atdd` for an acceptance-only gate set.
+`npx qfai validate --profile atdd` writes validation results. The implementation
+steps that use this command record its result in their stage evidence.
 
 ## Example and rules
 
