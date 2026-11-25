@@ -629,6 +629,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Markdown table parsing counts consecutive backslashes before a closing pipe.
+  An odd count preserves the pipe as part of the last cell.
+
 - Validation launcher mismatch errors identify the checkout problem and explain
   how to install its dependencies and rerun validation through its own launcher.
 

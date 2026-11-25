@@ -42,6 +42,12 @@ describe("splitMarkdownRow", () => {
     expect(splitMarkdownRow("| x | text\\||")).toEqual(["x", "text|"]);
     expect(splitMarkdownRow("| x | text\\| |")).toEqual(["x", "text|"]);
   });
+
+  it("counts the consecutive backslashes before the final pipe", () => {
+    expect(splitMarkdownRow(String.raw`| x | path\|`)).toEqual(["x", "path|"]);
+    expect(splitMarkdownRow(String.raw`| x | path\\|`)).toEqual(["x", String.raw`path\\`]);
+    expect(splitMarkdownRow(String.raw`| x | path\\\||`)).toEqual(["x", String.raw`path\\|`]);
+  });
 });
 
 // escapeTableCell and splitMarkdownRow must agree on what a cell can contain.
