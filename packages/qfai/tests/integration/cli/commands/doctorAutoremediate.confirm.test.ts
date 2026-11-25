@@ -87,8 +87,18 @@ function promptAnswering(keys: string, shown: string[] = []): InstallConfirmer {
   return (packages) => {
     const input = new PassThrough();
     const output = new PassThrough();
-    output.on("data", (chunk: Buffer) => shown.push(chunk.toString()));
-    output.once("data", () => input.write(keys));
+    let answerScheduled = false;
+    output.on("data", (chunk: Buffer) => {
+      shown.push(chunk.toString());
+      // Readline can write redraw escapes before the prompt. Wait for the
+      // answer marker, then let the current terminal write finish before typing.
+      if (!answerScheduled && shown.join("").includes("[y/N] ")) {
+        answerScheduled = true;
+        queueMicrotask(() => {
+          input.write(keys);
+        });
+      }
+    });
     return askBeforeInstall(packages, { input, output, terminal: true });
   };
 }
