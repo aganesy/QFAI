@@ -717,6 +717,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `<optional example: ...>` slots and bare `TODO` / `TBD` values count now, and
   the message quotes the first unfilled value of each section. Closes #5461.
 
+- **Web research ends with a cited artifact.** Applying a finding to code
+  requires an explicit implementation request. High-risk changes also
+  require review of the proposed diff and citations. Closes #4938.
+
 - **A constraint row that names a contract by its file name is refused.** The
   `constraint.md` schema refused `CLI-0010` in a constraint row but read
   `cli-0010` as plain words, so a row citing a contract by its file name passed

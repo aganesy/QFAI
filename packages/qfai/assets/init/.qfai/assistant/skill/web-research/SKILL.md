@@ -200,12 +200,13 @@ The session log is part of the research report, not a file of its own.
 
 Risk-based gating strategy:
 
-- **Low-risk queries**: Auto-approve. No human gate required.
+- **Low-risk queries**: Auto-approve at the research risk gate.
 - **High-risk queries** (e.g., medical, legal, financial): Gate before cite stage.
   Human must confirm source selection and extracted claims.
-- **A high-risk conclusion** is not applied to code until a human has reviewed it.
-  The gate blocks and shows the diff the conclusion would produce together with its citations.
-  A low-risk conclusion is applied without blocking.
+- **Research output**: Finish with a cited research artifact. Start a separate
+  code change only when the user explicitly requests application.
+- **High-risk application**: Show the proposed diff and its citations, then
+  obtain human approval before applying the change.
 - `--yolo` flag is **ignored** for security gates (see Section 3.3).
 
 Risk classification is determined by query topic analysis and domain sensitivity rules.
