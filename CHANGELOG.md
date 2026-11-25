@@ -1242,16 +1242,13 @@ decisions` headings appeared anywhere in the file, so a record with several
   whose quoted part never closes, and a `U&"…"` name, record no object rather
   than a wrong prefix such as `u`. Closes #5150.
 
-- **The HTML mock contrast check reads the background CSS applies.** It took
-  the first `background:` or `background-color:` it found in an inline style,
-  so a longer property name ending in `background` could stand in for the real
-  one, and an `!important` background lost to a later plain declaration. It now
-  reads the colour and the background from the parsed declarations, whatever
-  the case of their property names, so `QFAI-MOCK-008` measures the pair CSS
-  applies. The check also measures colours in a `background` shorthand with
-  an image, three-digit hex colours, and opaque `hsl()` or space-separated
-  `rgb()` colours.
-  Closes #5135.
+- **The HTML mock contrast check reads parsed inline colours.** It used to
+  take the first `background:` or `background-color:` from the inline style.
+  `QFAI-MOCK-008` now measures the colour pair exposed by jsdom, including a
+  colour in a `background` shorthand with an image, three-digit hex colours,
+  and opaque `hsl()` or space-separated `rgb()` colours.
+  Property names are case-insensitive. A later ordinary `background` can still
+  override `background-color: ... !important` in jsdom. Closes #5135.
 
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
