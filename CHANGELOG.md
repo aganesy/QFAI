@@ -629,6 +629,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Markdown table parsing counts consecutive backslashes before a closing pipe.
+  An odd count preserves the pipe as part of the last cell.
+
+- Validation launcher mismatch errors identify the checkout problem and explain
+  how to install its dependencies and rerun validation through its own launcher.
+
+- The shipped merge procedure applies the repository's review requirements
+  to the updated head after a base merge with conflicts only in the registers.
+
+- The verification guide distinguishes the built-in verdict scopes from
+  acceptance-only validation with `qfai validate --profile atdd`.
+
 - **Plain `qfai init` defers the assistant version file when a required asset
   could not be verified.** A blocked copy no longer records a complete
   installation. Init reports why the version file was deferred. Closes #4527.
@@ -716,6 +728,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a count per section. Only the template's `<example: ...>` and
   `<optional example: ...>` slots and bare `TODO` / `TBD` values count now, and
   the message quotes the first unfilled value of each section. Closes #5461.
+
+- **Web research ends with a cited artifact.** Applying a finding to code
+  requires an explicit implementation request. High-risk changes also
+  require review of the proposed diff and citations. Closes #4938.
 
 - **A constraint row that names a contract by its file name is refused.** The
   `constraint.md` schema refused `CLI-0010` in a constraint row but read
@@ -1715,6 +1731,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   could be closed as `awaiting-info` instead of being routed again. The step
   now applies those two re-routes first and uses the table only when the
   request closes.
+
+- Proposal triage records terminal acceptance as `accepted` and uses
+  `adopted` when a `decide-design` decision accepts implementation in this project.
 
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two
