@@ -14,6 +14,7 @@ import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promis
 import os from "node:os";
 import path from "node:path";
 
+import { validateProject } from "../../src/core/validate.js";
 import {
   classifyAgainstDeclaration,
   classifyToolLocation,
@@ -546,6 +547,17 @@ describe("locateToolAgainstProject", () => {
       const located = await locateToolAgainstProject(root);
       expect(located?.outside).toBe(true);
       expect(located?.declaredElsewhere).toBe(true);
+
+      const { issues } = await validateProject(root, undefined, { profile: "sdd" });
+      const mismatch = issues.find((item) => item.code === "QFAI-TOOL-002");
+      expect(mismatch?.severity).toBe("error");
+      expect(mismatch?.message).toContain("Validation launcher mismatch in this checkout.");
+      expect(mismatch?.message).toContain("npx uses a fetched or cached copy");
+      expect(mismatch?.suggested_action).toContain("Run the project's dependency install command");
+      expect(mismatch?.suggested_action).toContain("documented build and install steps");
+      expect(mismatch?.suggested_action).toContain("./node_modules/.bin/qfai validate");
+      expect(mismatch?.suggested_action).toContain(".\\node_modules\\.bin\\qfai.cmd validate");
+      expect(mismatch?.suggested_action).toContain("yarn exec qfai validate");
     });
   });
 

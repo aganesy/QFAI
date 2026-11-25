@@ -469,21 +469,23 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
     return [
       issue(
         "QFAI-TOOL-002",
-        `This project declares qfai as a dependency, but the copy that is running is a ` +
-          `different one at ${located.packageDir}. It was resolved from outside the ` +
-          `directory the declaration points to, so this project's lockfile does not decide ` +
-          `which version gated the run. The copy is either the qfai of another checkout ` +
-          `(another branch or lockfile) or a qfai@latest that npx fetched silently. Another ` +
-          `checkout's copy is reached through a parent directory's node_modules, or through ` +
-          `a node_modules that is a link to that checkout's.`,
+        `Validation launcher mismatch in this checkout. The project declares qfai as a dependency. ` +
+          `The running copy at ${located.packageDir} was resolved outside the declaring ` +
+          `directory, so the project's lockfile did not select the validator. This can ` +
+          `happen when npx uses a fetched or cached copy, or when a parent or linked ` +
+          `node_modules leads to another checkout.`,
         severity,
         undefined,
         "toolProvenance.resolvedAgainstDeclaration",
         [located.packageDir],
         "canonical",
         "If this working tree's node_modules is a link to another checkout's, remove the " +
-          "link itself, not what it points to. Then run `npm ci` / `pnpm install` in this " +
-          "working tree and run again. " +
+          "link itself, not what it points to. Run the project's dependency install command " +
+          "from the directory that declares qfai (`npm ci`, `pnpm install` or `yarn install`, as applicable). " +
+          "If this is a source workspace and the local QFAI entry has not been built, " +
+          "complete the workspace's documented build and install steps. From the declaring directory, rerun with " +
+          "`./node_modules/.bin/qfai validate` (PowerShell: `.\\node_modules\\.bin\\qfai.cmd validate`), " +
+          "or use `yarn exec qfai validate` with Yarn Plug'n'Play. " +
           "If a global install is intended, remove the qfai dependency declaration from " +
           "this project — a declaration that disagrees with the running copy is the " +
           "state this finding reports.",
