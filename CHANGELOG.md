@@ -683,6 +683,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   from an earlier `qfai validate`, and this is now the documented behaviour.
   Closes #5361.
 
+- **Verification preserves unrelated staged files.** An ordinary verification
+  commit checks the entire index before staging its deliverables. If other
+  staged paths exist, the step reports them and stops. Closes #4810.
+
 - **`qfai sdd preflight` no longer says "Nothing was written" after creating
   directories.** When its output-directory check failed after it had created
   `<outDir>/preflight/`, the error still said nothing was written. A check that
