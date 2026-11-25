@@ -64,4 +64,10 @@ Feature: Story-tree layout described by mdschema
     And a checked document that fails is the branch's failure when it was absent or conformed at the merge base, when its root heading matched there and no longer does, or when it carries the opt-out marker, and is otherwise reported as pre-existing without failing the run
     And a document whose path holds a character outside ASCII is in the scope like any other
     And a branch or worktree diff that cannot be taken widens the run to every document with a warning naming the diff that failed, rather than checking nothing
+
+  # AC-0001-0011-09
+  Scenario: The Markdown schema checker explains invalid command arguments
+    Given the shipped Markdown schema checker
+    When it receives an unknown flag, an unsupported `--scope` value, a `--root` path that does not name a directory, `--scope files` without a path, or `--base` with no value
+    Then it exits 2 and writes the corresponding usage error to stderr
 ```
