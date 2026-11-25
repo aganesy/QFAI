@@ -401,6 +401,41 @@ describe("a raw element a listed component replaces is a warning", () => {
 
 // QFAI:AC-0001-0307-06
 describe("a stale catalogue is a warning, and no catalogue asks nothing", () => {
+  // QFAI:EX-0001-0307-10
+  it("reports a linked catalogue as unreadable during validation", async () => {
+    const files = { "src/a.tsx": component("Alpha", ["@source x@1"]) };
+    const root = await projectWith(files);
+    const outside = await projectWith(files);
+    expect((await cli(["catalog", "components", "--root", outside])).code).toBe(0);
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await symlink(
+      path.join(outside, ".qfai", "catalog"),
+      path.join(root, ".qfai", "catalog"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+
+    const findings = await comp(root);
+    expect(findings.map(({ code, severity, file }) => [code, severity, file])).toEqual([
+      ["QFAI-COMP-004", "warning", CATALOG],
+    ]);
+    expect(findings[0]?.message).toContain("Could not read");
+    expect(findings[0]?.message).toContain(".qfai/catalog is a symbolic link.");
+    expect(findings[0]?.suggested_action).toContain("Fix the reported catalogue path issue.");
+    expect(findings[0]?.suggested_action).toContain("qfai catalog components");
+  });
+
+  // QFAI:EX-0001-0307-10
+  it("reports a directory in place of the catalogue as unreadable", async () => {
+    const root = await projectWith({ "src/a.tsx": component("Alpha", []) });
+    await mkdir(path.join(root, ...CATALOG.split("/")), { recursive: true });
+
+    const findings = await comp(root);
+    expect(findings.map(({ code, severity, file }) => [code, severity, file])).toEqual([
+      ["QFAI-COMP-004", "warning", CATALOG],
+    ]);
+    expect(findings[0]?.message).toContain(CATALOG + " is not a file.");
+  });
+
   // QFAI:EX-0001-0307-11
   it("warns in the four UI profiles only, and not at all without a catalogue", async () => {
     const root = await projectWith({ "src/a.tsx": component("Alpha", ["@source x@1"]) });

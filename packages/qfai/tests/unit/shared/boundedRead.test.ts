@@ -54,6 +54,22 @@ describe("sameObject", () => {
     }
   });
 
+  it("keeps BigInt inode and fallback timestamp comparisons exact", () => {
+    const inspected = {
+      dev: 3n,
+      ino: 0n,
+      size: 128n,
+      mode: 0o100644n,
+      mtimeNs: 1_700_000_000_000_000_000n,
+      ctimeNs: 1_700_000_000_000_000_000n,
+      birthtimeNs: 1_699_000_000_000_000_000n,
+    };
+    expect(sameObject(inspected, { ...inspected })).toBe(true);
+    expect(sameObject(inspected, { ...inspected, mtimeNs: inspected.mtimeNs + 1n })).toBe(false);
+    const identified = { ...inspected, ino: 9_007_199_254_740_992n };
+    expect(sameObject(identified, { ...identified, ino: identified.ino + 1n })).toBe(false);
+  });
+
   it("falls back when only one of the two reports an inode", () => {
     // One side with an inode and one without cannot be compared by inode at
     // all, and a device that reported one a moment ago is not more trustworthy

@@ -25,7 +25,7 @@
  * record, an unreadable-file finding, a name left un-pruned — because a reader that throws in a
  * diagnostic path converts a hostile tree into a crash.
  */
-import type { Stats } from "node:fs";
+import type { BigIntStats, Stats } from "node:fs";
 import { constants as fsConstants } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
 import { lstat, open } from "node:fs/promises";
@@ -48,6 +48,11 @@ export type ObjectIdentity = Pick<
   "dev" | "ino" | "size" | "mode" | "mtimeMs" | "ctimeMs" | "birthtimeMs"
 >;
 
+type BigIntObjectIdentity = Pick<
+  BigIntStats,
+  "dev" | "ino" | "size" | "mode" | "mtimeNs" | "ctimeNs" | "birthtimeNs"
+>;
+
 /**
  * Whether the opened descriptor is the object the path was inspected as.
  *
@@ -62,12 +67,23 @@ export type ObjectIdentity = Pick<
  * this call already holds the floor that does not depend on identity: the
  * descriptor is a regular file within the ceiling, whatever the path now names.
  */
-export function sameObject(inspected: ObjectIdentity, opened: ObjectIdentity): boolean {
+export function sameObject(
+  inspected: ObjectIdentity | BigIntObjectIdentity,
+  opened: ObjectIdentity | BigIntObjectIdentity,
+): boolean {
   if (inspected.dev !== opened.dev) return false;
-  if (inspected.ino !== 0 && opened.ino !== 0) return inspected.ino === opened.ino;
+  if (inspected.ino && opened.ino) return inspected.ino === opened.ino;
+  if (inspected.size !== opened.size || inspected.mode !== opened.mode) return false;
+  if ("mtimeNs" in inspected && "mtimeNs" in opened) {
+    return (
+      inspected.mtimeNs === opened.mtimeNs &&
+      inspected.ctimeNs === opened.ctimeNs &&
+      inspected.birthtimeNs === opened.birthtimeNs
+    );
+  }
   return (
-    inspected.size === opened.size &&
-    inspected.mode === opened.mode &&
+    "mtimeMs" in inspected &&
+    "mtimeMs" in opened &&
     inspected.mtimeMs === opened.mtimeMs &&
     inspected.ctimeMs === opened.ctimeMs &&
     inspected.birthtimeMs === opened.birthtimeMs
