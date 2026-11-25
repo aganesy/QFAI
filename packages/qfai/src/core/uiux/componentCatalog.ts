@@ -19,6 +19,7 @@ import path from "node:path";
 
 import { parse, stringify } from "yaml";
 
+import { sameObject } from "../../shared/boundedRead.js";
 import type { QfaiConfig } from "../config.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { describeError, findUnsafeHostFileComponent } from "../init/fsGuards.js";
@@ -227,10 +228,9 @@ export async function readCatalog(root: string): Promise<CatalogRead> {
       const current = await inspectComponentCatalogPath(root);
       if (
         !held.isFile() ||
-        held.dev !== checked.entry.dev ||
-        held.ino !== checked.entry.ino ||
-        current.entry?.dev !== held.dev ||
-        current.entry.ino !== held.ino
+        !sameObject(checked.entry, held) ||
+        !current.entry ||
+        !sameObject(current.entry, held)
       ) {
         return {
           state: "unreadable",
