@@ -13,7 +13,7 @@
 - Test annotations require executed behavior and an observable assertion. A placeholder or annotation alone is not coverage, except an acceptance test `qfai atdd scaffold` wrote: it passes with an empty body and raises no finding until the `write-acceptance-tests` route writes its assertions.
 - Independent reviewers report PASS or REVISE against current evidence. Authors do not certify their own work.
 - The package ships its own source and assets; this repository does not install itself as a dependency.
-- Sources: `.qfai/assistant/rule/test-layers.md`, `.qfai/assistant/rule/review-convergence.md`, `.agents/rules/minimal-implementation.md`, and `scripts/check-not-a-dependency.mjs`.
+- Sources: `.qfai/assistant/rule/test-layers.md`, `.qfai/assistant/rule/review-convergence.md`, and `.agents/rules/minimal-implementation.md`.
 
 ## Decision priorities
 

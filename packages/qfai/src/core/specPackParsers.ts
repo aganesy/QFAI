@@ -617,14 +617,17 @@ export function isTableSeparator(line: string): boolean {
 }
 
 /**
- * Strip the outer delimiters of a row. A trailing `|` that a backslash
- * precedes is the escaped literal ending the last cell, not a delimiter, so it
- * stays for the decoder.
+ * Strip the outer delimiters of a row. An odd run of backslashes makes
+ * the first trailing pipe part of the last cell.
  */
 function trimEdgePipes(value: string): string {
-  let inner = value.replace(/^\|+/, "");
-  while (inner.endsWith("|") && !inner.endsWith("\\|")) {
-    inner = inner.slice(0, -1);
-  }
-  return inner;
+  const inner = value.replace(/^\|+/, "");
+  let delimiterStart = inner.length;
+  while (inner[delimiterStart - 1] === "|") delimiterStart -= 1;
+  if (delimiterStart === inner.length) return inner;
+
+  let backslashStart = delimiterStart;
+  while (inner[backslashStart - 1] === "\\") backslashStart -= 1;
+  const escapedPipeLength = (delimiterStart - backslashStart) % 2;
+  return inner.slice(0, delimiterStart + escapedPipeLength);
 }

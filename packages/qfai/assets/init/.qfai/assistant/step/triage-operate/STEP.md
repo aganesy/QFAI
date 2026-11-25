@@ -49,8 +49,10 @@ operation. This step runs it and reports what happened.
    shows only in `decisions.md`, its pages or `open-questions.md` is resolved
    the same way: the union merge completes it. Edit no register row except to
    delete again a question row the union merge kept although one side deleted
-   it, committing that deletion before the push. Renumber no ID, and ask for no
-   new review of that merge. A conflict in any other file
+   it, committing that deletion before the push. Renumber no ID. The union
+   merge adds no review requirement of its own. Read the base repository's
+   review requirements from the pull request's base branch and apply them
+   to the updated head before merging the pull request. A conflict in any other file
    stops the operation as a tracked change it needs.
 5. Run the operation, and observe its result: the merge commit, the deploy
    status, the closed item.
