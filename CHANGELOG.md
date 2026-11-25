@@ -1075,6 +1075,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   between the two, or a failed put-back, left that content there, and nothing
   reported it after the one note printed at the time. A later `qfai init` now
   names each such directory beside a wrapper it writes, and leaves it in place.
+  The note also describes retained project content when cleanup fails after
+  the link has been written.
   Closes #5317.
 
 - **The README skill list names every skill `qfai init` installs.** It left
