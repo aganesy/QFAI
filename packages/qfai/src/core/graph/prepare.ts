@@ -31,6 +31,7 @@ export const GRAPHIFY_PYTHON_MINIMUM = "3.10";
 
 export interface GraphPreparation {
   runtime: "installed" | "not-ready";
+  managedCli?: "ready" | "not-ready";
   tools?: {
     codegraph: "installed" | "not-ready";
     graphify: "installed" | "not-ready";
