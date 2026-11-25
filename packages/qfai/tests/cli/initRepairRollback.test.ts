@@ -408,7 +408,7 @@ describe("a sidecar left by a repair", () => {
       expect(await readFile(path.join(hold, basename), "utf-8")).toBe(content);
       expect(output).toContain(`the repair succeeded but the hold could not be deleted (${hold})`);
       expect(output).toContain(
-        `${hold} holds project content moved aside from ${linkPath} during a forced relink`,
+        `${hold} holds project content moved aside from ${linkPath} during link repair`,
       );
       expect(output).not.toContain(`${hold} holds project content an interrupted forced relink`);
     });
