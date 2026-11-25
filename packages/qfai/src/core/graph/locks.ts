@@ -1,6 +1,6 @@
 import path from "node:path";
 import { withOwnerLock } from "../fs/ownerLock.js";
-import { graphEnvironmentKey, GRAPH_LOCK_FILE } from "./layout.js";
+import { GRAPH_LOCK_FILE } from "./layout.js";
 import {
   graphStateDirectory,
   GraphLocalStateError,
@@ -9,9 +9,9 @@ import {
 } from "./localFiles.js";
 
 export async function withGraphLock<T>(root: string, action: () => Promise<T>): Promise<T> {
-  const directory = await graphStateDirectory(root);
+  const lockFile = path.join(await graphStateDirectory(root), GRAPH_LOCK_FILE);
   return withOwnerLock(
-    path.join(directory, GRAPH_LOCK_FILE),
+    lockFile,
     {
       kind: "graph-lock",
       maxBytes: GRAPH_STATE_BYTES,
@@ -21,7 +21,7 @@ export async function withGraphLock<T>(root: string, action: () => Promise<T>): 
           `Project graph analysis lock ${active ? "is contended" : "requires manual recovery"}.`,
           active
             ? "Retry after the active worktree graph operation (a graph query, analysis preparation or qfai init) finishes; retain its lock."
-            : `Retain and inspect .qfai/tools/state/${graphEnvironmentKey()}/analysis.lock; remove only a confirmed abandoned worktree lock before retrying.`,
+            : `Retain and inspect ${path.relative(root, lockFile).split(path.sep).join("/")}; remove only a confirmed abandoned worktree lock before retrying.`,
           { cause },
         ),
       changed: () =>
