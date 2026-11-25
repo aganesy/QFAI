@@ -39,11 +39,28 @@ export async function prepareCodeAnalysis(
   run: GraphProcess,
   environment?: GraphReuseEnvironment,
 ): Promise<CodePreparation> {
+  return prepareCodeAnalysisWithFreshnessCheck(root, run, true, environment);
+}
+
+/** Prepares a replacement after the caller checked the active analysis under the same graph lock. */
+export async function prepareNotCurrentCodeAnalysisLocked(
+  root: string,
+  run: GraphProcess,
+): Promise<CodePreparation> {
+  return prepareCodeAnalysisWithFreshnessCheck(root, run, false);
+}
+
+async function prepareCodeAnalysisWithFreshnessCheck(
+  root: string,
+  run: GraphProcess,
+  checkCurrent: boolean,
+  environment?: GraphReuseEnvironment,
+): Promise<CodePreparation> {
   const current = graphAnalysisRoot(root, "codegraph");
   const staged = graphAnalysisStaging(current, "preparing", "codegraph", randomUUID());
   let created = false;
   try {
-    if (await inspectCurrentCodeAnalysis(root, run))
+    if (checkCurrent && (await inspectCurrentCodeAnalysis(root, run)))
       return { status: "prepared", source: "current" };
     if ((await restoreCompletedCodeAnalysis(root, run, environment)) === "restored")
       return { status: "prepared", source: "restored" };
