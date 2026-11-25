@@ -121,7 +121,12 @@ vi.mock("node:child_process", async (importOriginal) => {
     ...actual,
     spawnSync(command: string, args?: string[] | SpawnSyncOptions, options?: SpawnSyncOptions) {
       if (!Array.isArray(args)) return actual.spawnSync(command, args);
-      if (gitListingFault.enabled && command === "git" && args[0] === "ls-files") {
+      if (
+        gitListingFault.enabled &&
+        command === "git" &&
+        args[0] === "ls-files" &&
+        args[1] === "--others"
+      ) {
         return actual.spawnSync(command, ["ls-files", "--qfai-invalid-option"], options);
       }
       return actual.spawnSync(command, args, options);
