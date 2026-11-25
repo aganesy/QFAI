@@ -461,6 +461,8 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(pin?.message).not.toContain("old.yml");
   });
 
+  // QFAI:EX-0003-0011-47
+  // QFAI:BR-CLI-0008-0037
   it.each(["EACCES", "EIO"])("reports a workflow directory listing failure (%s)", async (code) => {
     // QFAI:AC-0003-0011-08
     const root = await project({
@@ -475,10 +477,19 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(unread).toHaveLength(1);
     expect(unread[0]).toMatchObject({
       severity: "warning",
-      message: expect.stringContaining(".github/workflows"),
+      message: expect.stringContaining(".github/workflows cannot be listed"),
       details: { path: ".github/workflows", code, cause: `${code}: controlled listing failure` },
     });
     expect(findings.map((check) => check.id)).toContain("workflows.nodeVersionFile");
     expect(findings.map((check) => check.id)).not.toContain("workflows.nodePin");
+  });
+
+  // QFAI:EX-0003-0011-47
+  it("does not report an unreadable path when the workflows directory is absent", async () => {
+    // QFAI:AC-0003-0011-08
+    const root = await project({ packageJson: { engines: { node: ">=20.19.0" } } });
+
+    expect(await finding(root, "workflows.preconditionsUnread")).toBeUndefined();
+    expect(await finding(root, "workflows.nodePin")).toBeUndefined();
   });
 });
