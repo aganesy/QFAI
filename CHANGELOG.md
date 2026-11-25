@@ -629,6 +629,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Markdown table parsing counts consecutive backslashes before a closing pipe.
+  An odd count preserves the pipe as part of the last cell.
+
 - **Plain `qfai init` defers the assistant version file when a required asset
   could not be verified.** A blocked copy no longer records a complete
   installation. Init reports why the version file was deferred. Closes #4527.
