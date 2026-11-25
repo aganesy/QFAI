@@ -20,7 +20,7 @@ QFAI Toolkit is a monorepo that distributes the CLI and the validation engine as
   list publishes with the CLI.
 - `.agents/rules/`: the rule masters every assistant follows.
 - `scripts/`: the lint and guard scripts the quality gate runs.
-- `packages/qfai/tests/`: package tests, including this repository's integration and asset guards.
+- [`packages/qfai/tests/`](../../packages/qfai/tests/) contains the package tests and support files.
 - `tmp/`: scratch directory (not a deliverable)
 
 ## Layout of packages/qfai
@@ -42,8 +42,6 @@ packages/qfai/
   assets/
     init/         # init templates
   tests/
-    cli/          # CLI tests
-    core/         # core validation tests
 ```
 
 ## Execution Flow
