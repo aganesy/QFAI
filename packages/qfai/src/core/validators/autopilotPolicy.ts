@@ -30,6 +30,7 @@ import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
+import { maskNonSpecRegions } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
@@ -188,7 +189,7 @@ export function normalizeHardRequiredEntry(bullet: string): string {
  * public surface.
  */
 export function collectHardRequiredEntries(content: string): string[] {
-  return collectBucketEntries(content, HARD_REQUIRED_HEADER_WITH_TAIL);
+  return collectBucketEntries(maskNonSpecRegions(content), HARD_REQUIRED_HEADER_WITH_TAIL);
 }
 
 /**
@@ -227,8 +228,7 @@ function collectBucketEntries(content: string, headerWithTail: RegExp): string[]
   const entries: string[] = [];
   let inBucket = false;
   let bucketIndent = 0;
-  const visible = content.replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\r\n]/g, ""));
-  for (const line of visible.split(/\r?\n/)) {
+  for (const line of content.split(/\r?\n/)) {
     if (!inBucket) {
       const header = headerWithTail.exec(line);
       if (header !== null) {
@@ -460,7 +460,8 @@ export function parseAutopilotPolicy(
   content: string,
   skillId?: string,
 ): AutopilotPolicyParseResult {
-  const headingMatch = SECTION_HEADING_RE.exec(content);
+  const visible = maskNonSpecRegions(content);
+  const headingMatch = SECTION_HEADING_RE.exec(visible);
   if (!headingMatch) {
     return {
       hasSection: false,
@@ -474,7 +475,7 @@ export function parseAutopilotPolicy(
   // Find the next `## ` heading after this section.
   const nextHeadingRe = /^##\s+/m;
   nextHeadingRe.lastIndex = 0;
-  const rest = content.slice(startIdx);
+  const rest = visible.slice(startIdx);
   const next = nextHeadingRe.exec(rest);
   const block = next ? rest.slice(0, next.index) : rest;
 
@@ -483,7 +484,9 @@ export function parseAutopilotPolicy(
   const hardRequired = BUCKET_HEADERS.hardRequired.test(block);
 
   const widenedTokens = autoDecide ? findWidenedAutoDecideTokens(block) : [];
-  const hardRequiredEntries = hardRequired ? collectHardRequiredEntries(block) : [];
+  const hardRequiredEntries = hardRequired
+    ? collectBucketEntries(block, HARD_REQUIRED_HEADER_WITH_TAIL)
+    : [];
   const { unknown } = classifyHardRequiredEntries(hardRequiredEntries, skillId);
 
   return {
@@ -562,9 +565,10 @@ function findWidenedAutoDecideTokens(block: string): string[] {
  * public surface.
  */
 export function missingBaselineBuckets(content: string): string[] | null {
-  const heading = BASELINE_HEADING_RE.exec(content);
+  const visible = maskNonSpecRegions(content);
+  const heading = BASELINE_HEADING_RE.exec(visible);
   if (heading === null) return null;
-  const rest = content.slice(heading.index + heading[0].length);
+  const rest = visible.slice(heading.index + heading[0].length);
   const next = /^##\s+/m.exec(rest);
   const block = next ? rest.slice(0, next.index) : rest;
   return ["auto-decide", "ask-user", "hard-required"].filter(
