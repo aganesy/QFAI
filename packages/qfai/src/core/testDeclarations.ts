@@ -41,7 +41,11 @@ const NON_HASH_COMMENT_EXTENSIONS: ReadonlySet<string> = new Set([
  */
 export function declarationMask(file: string): JsMaskOptions {
   const extension = path.extname(file).slice(1).toLowerCase();
-  return { hashComments: !NON_HASH_COMMENT_EXTENSIONS.has(extension), tripleQuoted: true };
+  return {
+    hashComments: !NON_HASH_COMMENT_EXTENSIONS.has(extension),
+    tripleQuoted: true,
+    svelteBlocks: extension === "svelte",
+  };
 }
 
 /**

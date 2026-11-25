@@ -1125,6 +1125,22 @@ describe("migration steps 5 to 8", () => {
       template: ["{#if '{annotation}'}", "  <p>Visible</p>", "{/if}"],
       literalLine: 4,
     },
+    {
+      file: "tests/integration/RegexBlockCarrier.svelte",
+      template: ["{#if /[//]/.test('/') && '{annotation}'}", "  <p>Visible</p>", "{/if}"],
+      literalLine: 4,
+    },
+    {
+      file: "tests/integration/RegexElseCarrier.svelte",
+      template: [
+        "{#if false}",
+        "  <p>Hidden</p>",
+        "{:else if /[//]/.test('/') && '{annotation}'}",
+        "  <p>Visible</p>",
+        "{/if}",
+      ],
+      literalLine: 6,
+    },
   ])("keeps quoted template data after # in $file", async ({ file, template, literalLine }) => {
     const context = await fixture();
     context.config.validation.traceability.testFileGlobs = ["tests/**/*.vue", "tests/**/*.svelte"];

@@ -41,6 +41,9 @@ const WORD = /[A-Za-z0-9_$]/;
 /** Whitespace, matched one character at a time. */
 const SPACE = /\s/;
 
+/** A Svelte block tag whose keyword introduces an expression. */
+const SVELTE_EXPRESSION_PREFIX = /\{(?:#(?:if|each|key|await)|:else\s+if)(?=\s)/y;
+
 /**
  * Keywords a `/` may directly follow while still opening a regex literal.
  *
@@ -608,6 +611,8 @@ export type JsMaskOptions = {
    * a value ends before each of them, so the shared set never opened one there.
    */
   readonly regexAfterWords?: ReadonlySet<string>;
+  /** Recognize Svelte block tags that introduce an expression. */
+  readonly svelteBlocks?: boolean;
 
   /**
    * Read an ordinary quoted string as crossing lines. Default `false`.
@@ -659,6 +664,7 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
   const equalsBlockComments = options.equalsBlockComments ?? false;
   const dollarSlashyStrings = options.dollarSlashyStrings ?? false;
   const rawTripleQuoted = options.rawTripleQuoted ?? false;
+  const svelteBlocks = options.svelteBlocks ?? false;
   const regexAfterWords = options.regexAfterWords ?? REGEX_AFTER_KEYWORD;
   const multilineQuoted = options.multilineQuoted ?? false;
   const multilineSlashy = options.multilineSlashy ?? false;
@@ -690,6 +696,15 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
     }
     const ch = source[i] ?? "";
     const next = source[i + 1] ?? "";
+    if (svelteBlocks && ch === "{" && (next === "#" || next === ":")) {
+      SVELTE_EXPRESSION_PREFIX.lastIndex = i;
+      if (SVELTE_EXPRESSION_PREFIX.test(source)) {
+        i = SVELTE_EXPRESSION_PREFIX.lastIndex;
+        endsExpression = false;
+        lastWord = "";
+        continue;
+      }
+    }
     if (equalsBlockComments && ch === "=" && endOfEqualsBlockComment(source, i) !== -1) {
       const end = endOfEqualsBlockComment(source, i);
       i = blankComments ? blank(out, i, end) : end;
