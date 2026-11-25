@@ -629,6 +629,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The shipped merge procedure applies the repository's review requirements
+  to the updated head after a base merge with conflicts only in the registers.
+
 - The verification guide distinguishes the built-in verdict scopes from
   acceptance-only validation with `qfai validate --profile atdd`.
 
