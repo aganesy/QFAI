@@ -510,6 +510,60 @@ describe("the document schema entries of the story tree", () => {
     expect(mermaid.stdout).toMatch(/\d+ diagram\(s\) parsed/);
   }, 240_000);
 
+  // QFAI:AC-0001-0011-09
+  // QFAI:EX-0001-0011-33
+  it("exits 2 on an unknown flag", () => {
+    const result = lane("check-mdschema.mjs", ["--no-such-flag"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("unknown flag");
+  });
+
+  // QFAI:AC-0001-0011-09
+  // QFAI:EX-0001-0011-34
+  it("exits 2 on an unrecognised scope", async () => {
+    const root = await newRoot();
+
+    const result = lane("check-mdschema.mjs", ["--root", root, "--scope", "everything"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("changed|all|files");
+  });
+
+  // QFAI:AC-0001-0011-09
+  // QFAI:EX-0001-0011-35
+  it("exits 2 when --root is not a directory", async () => {
+    const root = await newRoot();
+    const result = lane("check-mdschema.mjs", ["--root", path.join(root, "absent")]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("not a directory");
+  });
+
+  // QFAI:AC-0001-0011-09
+  // QFAI:EX-0001-0011-37
+  it("exits 2 when --base is followed by another option, which it must not take as a ref", async () => {
+    // Taken as a ref, `--summary` names no revision, so the ratchet would widen
+    // to a full scan and the summary the caller asked for would never print.
+    const root = await newRoot();
+
+    const result = lane("check-mdschema.mjs", ["--root", root, "--base", "--summary"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--base needs a git ref");
+  });
+
+  // QFAI:AC-0001-0011-09
+  // QFAI:EX-0001-0011-36
+  it("exits 2 when --scope files is given no path", async () => {
+    const root = await newRoot();
+
+    const result = lane("check-mdschema.mjs", ["--root", root, "--scope", "files"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("at least one path");
+  });
+
   // QFAI:AC-0001-0011-08
   it("holds a branch under --scope changed to what it changed since the merge base", async () => {
     const root = await newRoot();
