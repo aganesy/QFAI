@@ -79,6 +79,30 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(gate).toMatch(/nothing was pushed, and no pull request or merge was made/i);
   });
 
+  // QFAI:EX-0001-0225-25
+  it("protects unrelated staged paths before an ordinary verification commit", async () => {
+    const procedure = await section("verify-commit", "## Procedure");
+    const guard = procedure.indexOf("Before staging for an ordinary commit");
+    const stage = procedure.indexOf("Stage exactly the authorized tracked deliverables");
+    expect(guard).toBeGreaterThanOrEqual(0);
+    expect(stage).toBeGreaterThan(guard);
+    const preflight = procedure.slice(guard, stage);
+    expect(preflight).toContain(
+      "git diff --cached --name-only --no-renames --no-relative --ignore-submodules=none -z --",
+    );
+    expect(preflight).toContain(
+      "If unrelated staged paths exist, report them and stop before changing the index or creating a commit.",
+    );
+    expect(procedure).toContain("repeat the index comparison immediately before committing");
+    expect(procedure).toContain(
+      "If the index cannot be read, report the failure and stop before committing.",
+    );
+    expect(procedure).toContain(
+      "unrelated staged paths appeared, report them, preserve the index and stop before committing.",
+    );
+    expect(procedure).toContain("Repeat the index comparison before every ordinary commit retry.");
+  });
+
   // QFAI:EX-0001-0225-08
   it("makes no commit when a verify gate failed", async () => {
     const procedure = await section("verify-commit", "## Procedure");
@@ -255,6 +279,17 @@ describe("a fix route from the diagnosis to the commit", () => {
     const procedure = await section("implement-backport", "## Procedure");
     expect(procedure).toMatch(/`git cherry-pick -n -x`/);
     expect(procedure).toMatch(/`verify-commit` makes the commit/);
+  });
+
+  it("resolves the mainline parent and backport scope before picking a merge", async () => {
+    const procedure = await section("implement-backport", "## Procedure");
+    expect(procedure).toContain("Resolve and record the pick list before branching");
+    expect(procedure).toContain("source branch into which the change originally landed");
+    expect(procedure).toContain("git log --first-parent <source-ref>");
+    expect(procedure).toContain("A merge on that first-parent history uses parent 1.");
+    expect(procedure).toContain("git cherry-pick -n -x -m <mainline-parent-number> <merge-commit>");
+    expect(procedure).toContain("explicitly identified constituent commits");
+    expect(procedure).toContain("stop before branching and report the missing evidence");
   });
 
   it("works the diagnosis's matched example first, and skips an example under a test exception", async () => {
