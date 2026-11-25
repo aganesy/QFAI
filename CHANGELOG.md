@@ -925,6 +925,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   now lists that directory under `## For a person`, asks for it to be deleted
   before the next commit, and exits 3. Closes #5061.
 
+- A migration step that refuses a later operation prints the `For a person`
+  items it has already collected on standard error with the refusal.
+
 - **The `qfai --help` exit codes name every reason `qfai report` stops.** The
   `report` row gave a missing input file as its only exit 2. It now also names
   a bad or unknown `--flow`, an input recording other flows or, for a
@@ -1026,6 +1029,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   TypeScript files. A legacy token step 8 leaves in a literal is now listed
   under `## Annotations kept` as `(in a literal, left as test data)`, so the
   report says why it remains. Closes #5125.
+
+- The annotation scanner preserves quoted data after Vue slot shorthand and
+  Svelte block syntax in selected test files.
 
 - **`qfai validate` takes only a directory for an old spec-pack layout.** An
   ordinary file in the specs directory whose name matched `spec-*` or
@@ -1170,6 +1176,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   category must name an operation after its colon or dash, or inside a closed
   parenthesis. Closes #5046.
 
+- Autopilot policy validation ignores HTML comments when it looks for buckets
+  in the shared baseline and in a skill's own policy.
+
 - **A refused graph processing endpoint names its canonical form, and the
   origin guard holds the endpoint's scheme.** An endpoint in
   `.qfai/graph-processing.json` spelled another way than its canonical URL,
@@ -1211,6 +1220,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   implementation found no file. It now cites
   `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`, as
   the `implement-tdd` step does. Closes #4965.
+
+- The routine parser skips commas and parentheses inside quoted argument
+  names and preserves quoted type names when checking for duplicate routines.
 
 - **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
   The duplicate check compared each argument type as written, so
@@ -1257,6 +1269,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   or junction, the check compared a file outside the project. It now runs the
   write path's guard before reading and exits 1 naming the linked path, or the
   catalogue path when it is a link or not a file. Closes #5048.
+
+- `qfai validate` uses the same component catalogue path check. It reports
+  `QFAI-COMP-004` with the reason when the catalogue path is unreadable or
+  contains a symbolic link or junction.
 
 - **`qfai catalog design` puts both files back on a volume with no inode
   numbers, and names a moved-aside file it cannot remove.** On such a volume a
@@ -1521,6 +1537,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   seconds, the limit `qfai validate` already applied, and exits 2 saying that
   mdschema did not finish, never reading the run as a pass or a schema
   failure. Closes #5033.
+
+- The document-schema checker also exits 2 when mdschema exceeds its
+  256 MiB output limit. It says the check did not finish and names the limit.
 
 - **`qfai doctor` names a shipped workflow it cannot read in
   `workflows.cost`.** The check skipped every read failure as if the workflow

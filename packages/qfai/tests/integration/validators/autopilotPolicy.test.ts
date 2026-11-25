@@ -81,8 +81,11 @@ describe("autopilot policy in the story-tree assistant layout", () => {
     ]);
   });
 
-  it("names the bucket the baseline has lost", async () => {
-    await writeBaseline(".qfai/assistant", BASELINE.replace(/^\| `ask-user`.*\n/m, ""));
+  it.each(["absent", "commented"])("names a bucket that is %s in the baseline", async (state) => {
+    const baseline = BASELINE.replace(/^\| `ask-user`.*\n/m, (row) =>
+      state === "absent" ? "" : "<!--\n" + row + "-->\n",
+    );
+    await writeBaseline(".qfai/assistant", baseline);
     await writeSkill(".qfai/assistant/skill", "qfai-atdd", "# Skill\n");
 
     const [finding] = await validateAutopilotPolicy(root);
