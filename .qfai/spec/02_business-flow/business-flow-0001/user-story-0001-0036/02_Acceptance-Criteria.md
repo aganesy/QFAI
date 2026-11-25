@@ -3,12 +3,12 @@
 ## Criteria
 
 ```gherkin
-Feature: assistantPaths.ts SSOT module
+Feature: Shared assistant-path module
   # AC-0001-0036-01
-  Scenario: Assistant-tree paths come only from assistantPaths.ts
+  Scenario: Assistant-tree paths come from the shared module
     Given every assistant-tree path string the init path uses
-    When `packages/qfai/src`, apart from `packages/qfai/src/migration`, is searched with `grep -E '"\.qfai/assistant/(constitution|manifest|catalog|process)'`
-    Then there are 0 matches, which guarantees structurally that paths are built only through the exports of `assistantPaths.ts`
-    And the migration code in `packages/qfai/src/migration` is left out of the search, because it reads the retired layers on purpose
+    When the QFAI package source outside the migration code is searched with `grep -E '"\.qfai/assistant/(constitution|manifest|catalog|process)'`
+    Then there are 0 matches, which guarantees structurally that paths are built only through the exports of the shared assistant-path module
+    And the search excludes migration code, because it reads the retired layers on purpose
     And a search with the pattern `'"\.qfai/assistant/(rule|skill|agent|prompt)/'`, which names the tree's directories, has the same result
 ```

@@ -9,7 +9,7 @@ Feature: Story-tree layout described by mdschema
     Given the mdschema manifest and the `qfai-sdd` templates
     When each Markdown file of the story tree is matched against them
     Then each of the fifteen fixed files, every optional decision page and the Markdown CLI contract matches exactly one manifest entry, paired with one template
-    And `documentsWithoutOneEntry` in `check-mdschema.mjs` reports no file
+    And the manifest coverage check reports no file with missing or multiple entries
 
   # AC-0001-0011-02
   Scenario: The sample story tree passes both document lints
