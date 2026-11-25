@@ -645,6 +645,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   could not be verified.** A blocked copy no longer records a complete
   installation. Init reports why the version file was deferred. Closes #4527.
 
+- `QFAI-DRIFT-002` compares rendered example rows. Changing a sample table in
+  fenced code or an HTML comment leaves the example drift result unchanged.
+
 - **The reviewer remit for `/qfai-triage` names the files triage may change.**
   Its row still said no tracked file changed, so a reviewer following it
   flagged the run's deliberation record, the `open-questions.md` rows that

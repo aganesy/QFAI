@@ -32,6 +32,7 @@ Feature: Append-only decision and question registers
     When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
     Then a warning names the EX ID and its `03_Example.md` unless a non-E2E test file selected by the configured test globs and annotating that EX also changed since the base
     And an EX row whose cells are unchanged raises no such warning
+    And rows inside fenced code or HTML comments do not count as examples for this warning
   # AC-0001-0054-09
   Scenario: Drift compares the complete head and base registers
     Given head and base decision registers whose pages may differ
