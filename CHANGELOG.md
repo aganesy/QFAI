@@ -1098,6 +1098,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   template file's path is now refused and left as it is, on a dry run too.
   Closes #5257.
 
+- **`qfai init --force` reports a directory in a template file's place.**
+  The directory is listed as refused and its contents are preserved. The copy
+  continues with the other template files. A dry run reports the same refusal.
+
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
   no `id` was reported under an ID made up from its file name, which
