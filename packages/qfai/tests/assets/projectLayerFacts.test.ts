@@ -142,7 +142,7 @@ function isTagCreation(command: string): boolean {
     hasListModifier ||= listModifier;
     const takesSeparateValue =
       (/^--/.test(flag) && VALUE_TAKING_TAG_FLAGS.has(flag) && value === undefined) ||
-      /^-[aesf]*[mFu]$/.test(arg);
+      /^-[aesfi]*[mFu]$/.test(arg);
     if ((listModifier && value === undefined) || takesSeparateValue) index++;
     if (!arg.startsWith("-")) hasOperand = true;
   }
@@ -331,6 +331,7 @@ describe("the project layer describes the repository it is in", () => {
       'git tag -m "See --contains usage" vX.Y.Z <SHA>',
       "git tag -m --contains vX.Y.Z <SHA>",
       "git tag -am --contains vX.Y.Z",
+      "git tag -iam --contains vX.Y.Z",
       'git tag "--message" --contains vX.Y.Z',
     ];
     const guide = ["```sh", ...listings, ...creations, "```"].join("\n");
