@@ -28,7 +28,6 @@ const CONFIG_PATH_RENAMES = [
   ["specsDir", ".qfai/specs", ".qfai/spec"],
   ["contractsDir", ".qfai/contracts", ".qfai/spec/03_contract"],
   ["skillsDir", ".qfai/assistant/skills", ".qfai/assistant/skill"],
-  ["promptsDir", ".qfai/assistant/prompts", ".qfai/assistant/prompt"],
 ] as const;
 
 type ConfigPathKey = (typeof CONFIG_PATH_RENAMES)[number][0];

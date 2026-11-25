@@ -9,7 +9,8 @@ Feature: Move the QFAI directories to their singular names
     Given a project on the spec-pack layout whose qfai.config.yaml holds the default paths
     And an assistant directory whose singular destination already holds an entry of the same name
     When step 1 runs
-    Then every directory in the rename map is at its new path and the config paths name the new paths
+    Then every directory in the rename map is at its new path and the supported default config paths name the new paths
+    And an existing paths.promptsDir value remains as supplied while the legacy default prompt directory moves
     And the colliding entry is deleted, listed under Operations
 
   # AC-0004-0004-02

@@ -430,6 +430,7 @@ describe("BF-0004 migration examples", () => {
     );
     await put(context.root, ".qfai/specs/spec-0001/01_Spec.md", "legacy spec");
     await put(context.root, ".qfai/contracts/api/order.yaml", "legacy contract");
+    await put(context.root, ".qfai/assistant/prompts/example.md", "legacy prompt");
     const result = await run(step01, context);
     expect(result.code).toBe(0);
     expect(result.output).toContain(".qfai/specs/spec-0001");
@@ -437,7 +438,8 @@ describe("BF-0004 migration examples", () => {
     expect(await read(context.root, ".qfai/spec/03_contract/api/order.yaml")).toBe(
       "legacy contract",
     );
-    for (const source of [".qfai/specs", ".qfai/contracts"]) {
+    expect(await read(context.root, ".qfai/assistant/prompt/example.md")).toBe("legacy prompt");
+    for (const source of [".qfai/specs", ".qfai/contracts", ".qfai/assistant/prompts"]) {
       await expect(readdir(path.join(context.root, source))).rejects.toMatchObject({
         code: "ENOENT",
       });
@@ -448,7 +450,7 @@ describe("BF-0004 migration examples", () => {
     expect(paths.specsDir).toBe(".qfai/spec");
     expect(paths.contractsDir).toBe(".qfai/spec/03_contract");
     expect(paths.skillsDir).toBe(".qfai/assistant/skill");
-    expect(paths.promptsDir).toBe(".qfai/assistant/prompt");
+    expect(paths.promptsDir).toBe(spellings[3]);
   });
 
   // QFAI:EX-0004-0004-04
