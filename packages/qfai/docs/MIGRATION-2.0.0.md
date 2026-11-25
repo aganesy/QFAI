@@ -166,8 +166,11 @@ leaves it as it is, so bring it up to date first:
    upgraded package and replaces the older skill copies with this release's.
 3. Then run `/qfai-migration-v1-to-v2` again.
 
-Exit 0 completes a step. Exit 2 refuses before writing; fix the stated input
-or order. Exit 3 completes the step but leaves items in `## For a person`.
+Exit 0 completes a step. Exit 2 reports a refusal. A preflight refusal writes
+nothing. A refusal while applying changes can leave earlier operations applied.
+Read the refusal and any `## For a person` items on standard error. Check the
+current files and address the cause before rerunning. Exit 3 completes the step
+and lists items in `## For a person`.
 Resolve those items before declaring migration complete. Completed steps are
 safe to rerun and should make no further changes. The scripts make no network
 calls, but can write configured paths outside `.qfai/`, test annotations,

@@ -23,6 +23,7 @@ import { defaultConfig, loadConfig } from "../../../../src/core/config.js";
 import { isRecord } from "../../../../src/core/workflow/parse.js";
 import {
   executePlannedStep,
+  MigrationInputError,
   runStep,
   type MigrationContext,
   type MigrationStep,
@@ -258,16 +259,28 @@ describe("migration harness", () => {
     });
   });
 
-  it("refuses a move whose destination an earlier move of the same run created", async () => {
+  // QFAI:EX-0004-0003-52
+  it("keeps notes from a completed operation when a later move is refused", async () => {
     const ctx = await context();
     await put(ctx.root, ".qfai/old/sub/a.md", "moved");
     await put(ctx.root, ".qfai/other.md", "other");
+    const forAPerson: string[] = [];
     const step: MigrationStep = {
       number: 1,
       writeSet: ["qfai"],
       plan: () =>
         Promise.resolve({
+          forAPerson,
           operations: [
+            {
+              kind: "delegate",
+              target: ".qfai/leftover",
+              description: "Record a leftover directory",
+              apply: () => {
+                forAPerson.push(".qfai/leftover: inspect the retained directory");
+                return Promise.resolve();
+              },
+            },
             { kind: "move", source: ".qfai/old", target: ".qfai/new" },
             { kind: "move", source: ".qfai/other.md", target: ".qfai/new/sub/a.md" },
           ],
@@ -275,9 +288,40 @@ describe("migration harness", () => {
     };
     const captured = capture();
     expect(await executePlannedStep(step, ctx, false, captured.io)).toBe(2);
-    expect(captured.error.join("")).toContain("Migration destination exists: .qfai/new/sub/a.md");
+    expect(captured.error.join("")).toBe(
+      "Migration destination exists: .qfai/new/sub/a.md\n\n" +
+        "## For a person\n- .qfai/leftover: inspect the retained directory\n",
+    );
+    expect(captured.output.join("")).toBe("");
     expect(await readFile(path.join(ctx.root, ".qfai/new/sub/a.md"), "utf8")).toBe("moved");
     expect(await readFile(path.join(ctx.root, ".qfai/other.md"), "utf8")).toBe("other");
+  });
+
+  // QFAI:EX-0004-0003-52
+  it("keeps notes when a delegated operation explicitly refuses", async () => {
+    const ctx = await context();
+    const captured = capture();
+    const step: MigrationStep = {
+      number: 1,
+      writeSet: ["qfai"],
+      plan: () =>
+        Promise.resolve({
+          forAPerson: [".qfai/leftover: inspect the retained directory"],
+          operations: [
+            {
+              kind: "delegate",
+              target: ".qfai/target.md",
+              description: "Apply a migration change",
+              apply: () => Promise.reject(new MigrationInputError("The target changed")),
+            },
+          ],
+        }),
+    };
+    expect(await executePlannedStep(step, ctx, false, captured.io)).toBe(2);
+    expect(captured.error.join("")).toBe(
+      "The target changed\n\n## For a person\n- .qfai/leftover: inspect the retained directory\n",
+    );
+    expect(captured.output.join("")).toBe("");
   });
 
   it("refuses steps 3 to 8 until step 2 has merged its sources and retired packs", async () => {

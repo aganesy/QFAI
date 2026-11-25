@@ -24,7 +24,7 @@ Feature: Story-tree layout described by mdschema
     Then each violation of a document's schema is one `QFAI-DOCSCHEMA-001` error naming the document, the line and the column
     And a document carrying the opt-out marker is reported rather than skipped, by `qfai validate` and by the document lane alike
     And a check that could not run is one `QFAI-DOCSCHEMA-002` error rather than a pass
-    And the document-schema checker run from the command line exits 2 for an mdschema run it stopped at its time limit, rather than passing or failing the document
+    And the document-schema checker run from the command line exits 2 for an mdschema run it stops at its time or output limit, reporting that the check did not finish and naming the limit
 
   # AC-0001-0011-04
   Scenario: A table-only section holds its template's table and nothing else

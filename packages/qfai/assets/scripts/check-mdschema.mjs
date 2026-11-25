@@ -858,28 +858,33 @@ function changedFiles(base, root) {
  * @param {string} schemaPath Absolute path to the schema.
  * @param {string[]} files Tree-relative document paths.
  * @param {string} root The tree they are relative to.
- * @param {number} timeoutMs A run still going after this long is killed and
- *   reported as `stopped`, never read as a result.
+ * @param {{ timeoutMs: number, maxOutputBytes: number }} limits A run past
+ *   either limit is killed and reported as stopped.
  * @returns {{ ok: boolean, output: string, spawnFailed: boolean, stopped?: boolean }}
  */
-function runMdschema(mdschema, schemaPath, files, root, timeoutMs) {
+function runMdschema(mdschema, schemaPath, files, root, { timeoutMs, maxOutputBytes }) {
   const result = spawnSync(mdschema.command, mdschemaArgs(mdschema, schemaPath, files), {
     cwd: root,
     encoding: "utf-8",
-    // `checkDocuments` reads output of any length, so the lane reads far more
-    // than the 1 MiB default rather than calling a long report a failed run.
-    maxBuffer: MDSCHEMA_MAX_OUTPUT,
+    maxBuffer: maxOutputBytes,
     timeout: timeoutMs,
     // A synchronous run cannot send a second signal, and `spawnSync` waits for
     // the process to exit, so one that caught SIGTERM would hold the lane anyway.
     killSignal: "SIGKILL",
   });
-  if (result.error !== undefined && "code" in result.error && result.error.code === "ETIMEDOUT") {
+  const code = result.error && "code" in result.error ? result.error.code : undefined;
+  let stoppedReason;
+  if (code === "ETIMEDOUT") {
+    stoppedReason = "it ran longer than " + timeoutMs + " ms";
+  } else if (code === "ENOBUFS") {
+    stoppedReason = "it printed more than " + maxOutputBytes + " bytes";
+  }
+  if (stoppedReason !== undefined) {
     return {
       ok: false,
       spawnFailed: false,
       stopped: true,
-      output: `it ran longer than ${timeoutMs} ms and was stopped`,
+      output: stoppedReason + " and was stopped",
     };
   }
   return mdschemaResult(result, schemaPath);
@@ -1069,12 +1074,12 @@ function fileAtRev(rev, file, root) {
  *
  * @returns {{ ok: boolean, output: string, stopped?: boolean } | null}
  */
-function checkText(mdschema, schemaPath, file, text, timeoutMs) {
+function checkText(mdschema, schemaPath, file, text, limits) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-base-"));
   try {
     const target = path.join(dir, path.basename(file));
     writeFileSync(target, text, "utf-8");
-    const result = runMdschema(mdschema, schemaPath, [target], dir, timeoutMs);
+    const result = runMdschema(mdschema, schemaPath, [target], dir, limits);
     if (result.stopped) return result;
     return result.spawnFailed ? null : { ok: result.ok, output: result.output };
   } catch {
@@ -1091,7 +1096,7 @@ function checkText(mdschema, schemaPath, file, text, timeoutMs) {
  * Fails closed at every step it cannot answer: a base text that will not run
  * is this branch's obligation, because the alternative is excusing a document
  * on the strength of a question nobody managed to ask. A base run stopped at
- * its time limit comes back as that run, which answers nothing either way.
+ * its time or output limit comes back as that run, which answers nothing either way.
  *
  * @returns {boolean | { output: string, stopped?: boolean }}
  */
@@ -1101,7 +1106,7 @@ function ownsViolations(context, file) {
     // Added by this branch, so this is the first run that could report it.
     return true;
   }
-  const verdict = checkText(context.mdschema, context.schemaPath, file, before, context.timeoutMs);
+  const verdict = checkText(context.mdschema, context.schemaPath, file, before, context.limits);
   if (verdict?.stopped) return verdict;
   return verdict === null ? true : verdict.ok;
 }
@@ -1124,7 +1129,7 @@ function splitByOwnership(context, files) {
       context.schemaPath,
       [file],
       context.root,
-      context.timeoutMs,
+      context.limits,
     );
     if (single.spawnFailed || single.stopped) {
       return { notRun: notRunReason(single) };
@@ -2070,20 +2075,23 @@ function parseArgs(argv) {
  * held before the run is restored when it returns or throws, so a later run or
  * `checkDocuments` call in the same process reports what it asked for.
  *
- * @param {{ timeoutMs: number }} [limits] How long one mdschema run may take
- *   before it is stopped and the lane exits 2 for a check that did not finish.
+ * @param {{ timeoutMs: number, maxOutputBytes?: number }} [limits] Bounds for
+ *   each mdschema run. Crossing either limit stops the run and exits 2.
  * @returns {number}
  */
 export function main(limits = MDSCHEMA_LIMITS) {
   const before = showPatterns;
   try {
-    return runLane(limits.timeoutMs);
+    return runLane({
+      timeoutMs: limits.timeoutMs,
+      maxOutputBytes: limits.maxOutputBytes ?? MDSCHEMA_MAX_OUTPUT,
+    });
   } finally {
     showPatterns = before;
   }
 }
 
-function runLane(timeoutMs) {
+function runLane(limits) {
   const options = parseArgs(process.argv.slice(2));
   if (typeof options === "number") {
     return options;
@@ -2286,7 +2294,7 @@ function runLane(timeoutMs) {
       continue;
     }
 
-    const result = runMdschema(mdschema, schemaPath, gradable, root, timeoutMs);
+    const result = runMdschema(mdschema, schemaPath, gradable, root, limits);
     if (result.spawnFailed || result.stopped) {
       console.error(`check-mdschema: ${notRunReason(result)}`);
       return 2;
@@ -2301,7 +2309,7 @@ function runLane(timeoutMs) {
       continue;
     }
 
-    const split = splitByOwnership({ mdschema, schemaPath, root, baseRev, timeoutMs }, gradable);
+    const split = splitByOwnership({ mdschema, schemaPath, root, baseRev, limits }, gradable);
     if ("notRun" in split) {
       console.error(`check-mdschema: over a single document, ${split.notRun}`);
       return 2;
