@@ -1504,7 +1504,7 @@ describe("qfai-maintain", () => {
       "first confirm that the combined diff in the stage report passed the added-line check, then stage the resolved paths and conclude the merge in progress with `git commit` and a message that names the base and gives each renumber as old → new with the renamed record's subject or path.",
     );
     expect(commit).not.toContain("--no-edit");
-    expect(commit).toContain("3. Otherwise, commit with a message in the project's convention");
+    expect(commit).toContain("Commit with a message in the project's convention");
     expect(flat(sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Writes"))).toContain(
       "In the `resolve-conflicts` route, also each renumber the merge holds, as old → new.",
     );

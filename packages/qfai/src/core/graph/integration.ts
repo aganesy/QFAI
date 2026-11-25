@@ -24,6 +24,7 @@ export async function prepareGraphIntegration(
     const entries = await installGraphEntrypoints(root);
     return {
       ...preparation,
+      managedCli: entries.conflicts.length === 0 ? "ready" : "not-ready",
       files: [...ignore.files, ...entries.files],
       conflicts: [...ignore.conflicts, ...entries.conflicts],
     };

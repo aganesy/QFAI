@@ -86,11 +86,16 @@ it("preserves malformed MCP settings and adopter-edited CLI entrypoints with man
     await writeFile(common, "{ malformed unrelated MCP settings");
     const malformed = await prepareGraphIntegration(root, fixture.run);
     expect(malformed.conflicts).toEqual([]);
+    expect(renderGraphPreparation(malformed)).toContain("Managed graph CLI entrypoint: ready");
     expect(await readFile(common, "utf8")).toBe("{ malformed unrelated MCP settings");
     const cli = path.join(root, ".qfai", "tools", "graph-cli.mjs");
     const edited = '// Adopter CLI entrypoint\nprocess.stdout.write("adopter");\n';
     await writeFile(cli, edited);
     const result = await prepareGraphIntegration(root, fixture.run);
+    const summary = renderGraphPreparation(result);
+    expect(summary).toContain("CodeGraph: installed");
+    expect(summary).toContain("Graphify: installed");
+    expect(summary).toContain("Managed graph CLI entrypoint: not-ready");
     expect(await readFile(cli, "utf8")).toBe(edited);
     expect(result.conflicts.join("\n")).toContain("Review .qfai/tools");
     expect(result.conflicts.join("\n")).toContain("Retain edited");

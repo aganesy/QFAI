@@ -7,15 +7,14 @@ import path from "node:path";
  *
  * Probe order:
  *   1. `playwright` — project-local `node_modules/.bin/playwright`
- *      (Windows shims: `.cmd` / `.bat` / `.ps1`), then PATH.
- *   2. `npx --no-install playwright --version` — fallback when a partial
- *      node_modules tree is present but no direct shim exists.
+ *      (Windows shims: `.cmd` / `.bat` / `.ps1`).
+ *   2. `npx --no-install playwright --version` — fallback if the local
+ *      shim is missing or does not run.
  */
 
 export type PlaywrightLauncherStage = "primary" | "npx-fallback";
 
-export type PlaywrightLauncherOrigin =
-  "project-wrapper" | "node_modules/.bin" | "PATH" | "npx --no-install";
+export type PlaywrightLauncherOrigin = "node_modules/.bin" | "npx --no-install";
 
 export type PlaywrightLauncherCandidate = {
   stage: PlaywrightLauncherStage;
@@ -44,7 +43,6 @@ export type PlaywrightLauncherAttempt = PlaywrightLauncherCandidate & {
 export type PlaywrightLauncherResolution = {
   status: "resolved" | "not_found" | "not_runnable";
   lookedIn: {
-    scriptsDir: string;
     localBinDir: string;
     path: string;
   };
@@ -57,16 +55,9 @@ type ResolveOptions = {
 };
 
 const PRIMARY_NAME = "playwright";
-const PROJECT_WRAPPER_CANDIDATES_PRIMARY = [
-  "playwright",
-  "playwright.cmd",
-  "playwright.bat",
-  "playwright.ps1",
-] as const;
-
 /** Canonical probe order used by doctor for documentation / observability. */
 export function getProbeOrder(): string[] {
-  return ["playwright", "npx fallback"];
+  return ["node_modules/.bin/playwright", "npx --no-install playwright --version"];
 }
 
 export async function resolvePlaywrightLauncher(
@@ -74,14 +65,12 @@ export async function resolvePlaywrightLauncher(
   options: ResolveOptions = {},
 ): Promise<PlaywrightLauncherResolution> {
   const timeoutMs = options.timeoutMs ?? 5_000;
-  const scriptsDir = path.join(root, "scripts");
   const localBinDir = path.join(root, "node_modules", ".bin");
   const lookedIn = {
-    scriptsDir,
     localBinDir,
     path: process.env.PATH ?? "",
   };
-  const candidates = await collectCandidates(root);
+  const candidates = await collectCandidates(localBinDir);
   const attempts: PlaywrightLauncherAttempt[] = [];
 
   if (candidates.length === 0) {
@@ -118,32 +107,8 @@ export async function resolvePlaywrightLauncher(
   };
 }
 
-async function collectCandidates(root: string): Promise<PlaywrightLauncherCandidate[]> {
-  const scriptsDir = path.join(root, "scripts");
-  const localBinDir = path.join(root, "node_modules", ".bin");
-  return [
-    ...(await collectPrimaryCandidates(scriptsDir, localBinDir)),
-    ...(await collectNpxCandidates()),
-  ];
-}
-
-async function collectPrimaryCandidates(
-  scriptsDir: string,
-  localBinDir: string,
-): Promise<PlaywrightLauncherCandidate[]> {
+async function collectCandidates(localBinDir: string): Promise<PlaywrightLauncherCandidate[]> {
   const candidates: PlaywrightLauncherCandidate[] = [];
-  for (const fileName of PROJECT_WRAPPER_CANDIDATES_PRIMARY) {
-    const wrapperPath = path.join(scriptsDir, fileName);
-    if (await exists(wrapperPath)) {
-      candidates.push({
-        stage: "primary",
-        origin: "project-wrapper",
-        executable: wrapperPath,
-        args: [],
-        path: wrapperPath,
-      });
-    }
-  }
   const localPrimary = await findCommandInDir(localBinDir, PRIMARY_NAME);
   if (localPrimary) {
     candidates.push({
@@ -154,16 +119,7 @@ async function collectPrimaryCandidates(
       path: localPrimary,
     });
   }
-  for (const pathCandidate of await findCommandsInPath(PRIMARY_NAME)) {
-    candidates.push({
-      stage: "primary",
-      origin: "PATH",
-      executable: pathCandidate,
-      args: [],
-      path: pathCandidate,
-    });
-  }
-  return candidates;
+  return [...candidates, ...(await collectNpxCandidates())];
 }
 
 async function collectNpxCandidates(): Promise<PlaywrightLauncherCandidate[]> {
@@ -227,7 +183,7 @@ function spawnProbe(
   });
 }
 
-// Every branch runs from the inspected root: a project wrapper reads files
+// Every branch runs from the inspected root: a local shim reads files
 // relative to it, and `npx` resolves packages from its working directory.
 function spawnProbeChild(
   candidate: PlaywrightLauncherCandidate,
