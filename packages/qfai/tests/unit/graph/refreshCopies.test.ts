@@ -91,6 +91,7 @@ it("makes one refresh copy when a document query finds the analysis not current 
 });
 
 // QFAI:EX-0001-0236-20 BR-CLI-0021-0026
+// Mutation: packages/qfai/src/core/graph/codePreparation.ts `if (checkCurrent && (await inspectCurrentCodeAnalysis(root, run)))` -> `if (await inspectCurrentCodeAnalysis(root, run))` fails "makes one refresh copy when a code query finds the analysis not current and prepares it"
 it("makes one refresh copy when a code query finds the analysis not current and prepares it", async () => {
   const fixture = await codeAnalysisFixture();
   try {
