@@ -135,7 +135,7 @@ function namesItsCommit(command: string): boolean {
 }
 
 function releaseTaggingStatements(guide: string): string[] {
-  const statements = [...guide.matchAll(/^\s*```sh\r?\n([\s\S]*?)^\s*```/gm)]
+  const statements = [...guide.matchAll(/^\s*```(?:sh|bash|shell)[ \t]*\r?\n([\s\S]*?)^\s*```/gm)]
     .map(([, body]) => (body ?? "").replace(/&&[ \t]*\r?\n\s*/g, "&& "))
     .flatMap((body) => body.split(/\r?\n/))
     .map((line) => line.trim());
@@ -302,7 +302,7 @@ describe("the project layer describes the repository it is in", () => {
     );
   });
 
-  it.each(["sh", "bash", "shell"])(
+  it.each(["sh", "bash", "shell", "bash  "])(
     "reads ordered release tag statements from %s fences",
     (shell) => {
       const check = "git merge-base --is-ancestor <SHA> origin/main";
@@ -311,6 +311,11 @@ describe("the project layer describes the repository it is in", () => {
       expect(releaseTaggingStatements(guide)).toEqual([check + " && " + tag]);
     },
   );
+
+  it("ignores tag examples in fences for other languages", () => {
+    const guide = "```powershell\ngit tag vX.Y.Z <SHA>\n```";
+    expect(releaseTaggingStatements(guide)).toEqual([]);
+  });
 
   // npm installs into the nearest directory holding a `package.json`. The smoke
   // check made a fixed `tmp/` directory inside the checkout and initialised no
