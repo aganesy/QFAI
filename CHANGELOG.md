@@ -629,6 +629,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The verification guide distinguishes the built-in verdict scopes from
+  acceptance-only validation with `qfai validate --profile atdd`.
+
 - **Plain `qfai init` defers the assistant version file when a required asset
   could not be verified.** A blocked copy no longer records a complete
   installation. Init reports why the version file was deferred. Closes #4527.

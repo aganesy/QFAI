@@ -81,6 +81,10 @@ the two must match:
 | `full`        | Any whole-repository run, and every run inside a workflow run | `--profile verify`      |
 | `prototyping` | A run checking the prototyping profile alone                  | `--profile prototyping` |
 
+These are the two scopes this step can select. For acceptance-only validation,
+use `npx qfai validate --profile atdd`. That command writes validation results,
+while `verify-repo-gate` writes the built-in verification verdict.
+
 A `full`-profile run is `full` whatever stage triggered it. A prototyping-scoped run covers the prototyping
 profile alone: BF, AC and EX test coverage belongs to the later acceptance or
 full run and is never fabricated to pass this earlier gate. The closed scope
