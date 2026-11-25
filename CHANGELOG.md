@@ -1209,9 +1209,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`, as
   the `implement-tdd` step does. Closes #4965.
 
-- Routine argument comparison preserves punctuation, spaces and doubled quotes
-  inside quoted PostgreSQL argument names and types. A comma or parenthesis
-  within a quoted name leaves the argument list intact.
+- The routine parser skips commas and parentheses inside quoted argument
+  names and preserves quoted type names when checking for duplicate routines.
 
 - **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
   The duplicate check compared each argument type as written, so
