@@ -366,8 +366,12 @@ describe("a question answered without a change", () => {
       /A conflict the host shows only in `decisions\.md`, its pages or `open-questions\.md` is resolved the same way: the union merge completes it/,
     );
     expect(procedure).toMatch(
-      /Edit no register row except to delete again a question row the union merge kept although one side deleted it, committing that deletion before the push. Renumber no ID, and ask for no new review of that merge/,
+      /Edit no register row except to delete again a question row the union merge kept although one side deleted it, committing that deletion before the push. Renumber no ID/,
     );
+    expect(procedure).toContain(
+      "The union merge adds no review requirement of its own. Read the base repository's review requirements from the pull request's base branch and apply them to the updated head before merging the pull request.",
+    );
+    expect(procedure).not.toContain("ask for no new review of that merge");
     expect(procedure).toMatch(
       /A conflict in any other file stops the operation as a tracked change it needs/,
     );
@@ -487,6 +491,10 @@ describe("a question answered without a change", () => {
 describe("a request routed again from the close", () => {
   // QFAI:AC-0001-0214-03
   // QFAI:EX-0001-0214-04
+  // QFAI:AC-0001-0214-08
+  // QFAI:EX-0001-0214-12
+  // QFAI:EX-0001-0214-13
+  // QFAI:EX-0001-0214-14
   it("applies the info-received and adopted re-routes before it picks a closure outcome", async () => {
     const close = await step("triage-close");
     const phases = sectionOf(close, "## Procedure").split(/(?=^\d+\.)/m);
@@ -496,9 +504,22 @@ describe("a request routed again from the close", () => {
     );
     const table = sectionOf(close, "## Outcomes");
     expect(table).not.toMatch(/`info-received`|`adopted`/);
+    expect(flat(table)).toContain(
+      "`accepted` | Acceptance closes the request without implementation work in this project",
+    );
     const rerouting = flat(sectionOf(close, "## Re-routing"));
     expect(rerouting).toMatch(/report the outcome\s+`info-received`/);
-    expect(rerouting).toMatch(/report the outcome `adopted`/);
+    expect(rerouting).toContain(
+      "In `decide-design`, use `adopted` only when `discussion-interview` records explicit user approval to implement the proposal in this project or an implementation decision under recorded delegation that covers it.",
+    );
+    expect(rerouting).toContain(
+      "If an implementation proposal is only an assumption or remains open, record `deferred` with the reason and keep the proposal pending.",
+    );
+    const plan = (await loadBuiltInPlans()).find((each) => each.route === "decide-design");
+    const closeBranch = plan?.branchPoints?.find((point) => point.step === "triage-close");
+    const adopted = closeBranch?.outcomes.find((outcome) => outcome.outcome === "adopted");
+    expect(adopted?.routes).toContain("add-feature");
+    expect(closeBranch?.outcomes.map((outcome) => outcome.outcome)).not.toContain("accepted");
   });
 });
 

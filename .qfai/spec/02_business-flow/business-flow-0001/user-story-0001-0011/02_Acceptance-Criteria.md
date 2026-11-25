@@ -9,7 +9,7 @@ Feature: Story-tree layout described by mdschema
     Given the mdschema manifest and the `qfai-sdd` templates
     When each Markdown file of the story tree is matched against them
     Then each of the fifteen fixed files, every optional decision page and the Markdown CLI contract matches exactly one manifest entry, paired with one template
-    And `documentsWithoutOneEntry` in `check-mdschema.mjs` reports no file
+    And the manifest coverage check reports no file with missing or multiple entries
 
   # AC-0001-0011-02
   Scenario: The sample story tree passes both document lints
@@ -64,4 +64,10 @@ Feature: Story-tree layout described by mdschema
     And a checked document that fails is the branch's failure when it was absent or conformed at the merge base, when its root heading matched there and no longer does, or when it carries the opt-out marker, and is otherwise reported as pre-existing without failing the run
     And a document whose path holds a character outside ASCII is in the scope like any other
     And a branch or worktree diff that cannot be taken widens the run to every document with a warning naming the diff that failed, rather than checking nothing
+
+  # AC-0001-0011-09
+  Scenario: The Markdown schema checker explains invalid command arguments
+    Given the shipped Markdown schema checker
+    When it receives an unknown flag, an unsupported `--scope` value, a `--root` path that does not name a directory, `--scope files` without a path, or `--base` with no value
+    Then it exits 2 and writes the corresponding usage error to stderr
 ```
