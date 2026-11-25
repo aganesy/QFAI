@@ -599,7 +599,9 @@ export async function executePlannedStep(
     try {
       await applyOperations(operations, context);
     } catch (error) {
-      if (!(error instanceof MigrationRefusal)) throw error;
+      if (!(error instanceof MigrationRefusal || error instanceof MigrationInputError)) {
+        throw error;
+      }
       io.stderr.write(`${errorMessage(error)}\n`);
       if ((plan.forAPerson?.length ?? 0) > 0) {
         io.stderr.write(`\n${renderReportSection("For a person", plan)}`);
