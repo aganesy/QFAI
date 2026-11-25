@@ -77,6 +77,7 @@ const {
   writeCacheEntry,
   describeReading,
   formatRows,
+  ghApi,
   readingFrom,
   repoSlug,
   run,
@@ -113,6 +114,50 @@ describe("the origin remote names the repository", () => {
 
   it("answers nothing for a remote that is not on GitHub", () => {
     expect(repoSlug("https://gitlab.com/owner/repo.git")).toBeUndefined();
+  });
+});
+
+describe("receiving a GitHub response", () => {
+  it("rejects a truncated job log even when stdout contains a successful response prefix", () => {
+    const apiPath = "repos/owner/repo/actions/jobs/123/logs";
+    const execute = vi.fn(() => {
+      throw Object.assign(new Error("GitHub CLI output exceeded maxBuffer"), {
+        code: "ENOBUFS",
+        stdout: response(HEADERS, "partial job log"),
+      });
+    });
+
+    expect(ghApi(apiPath, execute)).toEqual({
+      error: `The GitHub response is too large. The limit is ${String(MAX_RESPONSE_BYTES)} bytes.`,
+      reading: { remaining: 2785, limit: 5000, reset: 1789723893, resource: "core" },
+    });
+    expect(execute).toHaveBeenCalledWith("gh", ["api", "-i", apiPath], {
+      encoding: "utf-8",
+      maxBuffer: MAX_RESPONSE_BYTES,
+    });
+  });
+
+  it("discards an incomplete rate-limit header when the response overflows", () => {
+    const execute = () => {
+      throw Object.assign(new Error("GitHub CLI output exceeded maxBuffer"), {
+        code: "ENOBUFS",
+        stdout: HEADERS.join("\r\n"),
+      });
+    };
+
+    expect(ghApi("repos/owner/repo/actions/jobs/123/logs", execute)).toEqual({
+      error: `The GitHub response is too large. The limit is ${String(MAX_RESPONSE_BYTES)} bytes.`,
+      reading: undefined,
+    });
+  });
+
+  it("preserves the HTTP response returned with an ordinary nonzero exit", () => {
+    const text = "HTTP/2.0 404 Not Found\n\n";
+    const execute = () => {
+      throw Object.assign(new Error("Not Found"), { stdout: text });
+    };
+
+    expect(ghApi("repos/owner/repo/actions/jobs/404/logs", execute)).toEqual({ text });
   });
 });
 
