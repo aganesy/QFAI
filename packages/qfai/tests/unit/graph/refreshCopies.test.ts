@@ -119,7 +119,14 @@ it("makes one refresh copy when a code query finds the analysis not current and 
         path.basename(call.args[2] ?? "").startsWith(".refreshing-codegraph-"),
     );
     expect(refreshChecks).toHaveLength(1);
-    expect(fixture.calls.filter(({ args }) => args[0] === "--liftoff-only")).toHaveLength(1);
+    const replacementAttempts = fixture.calls.filter(
+      ({ args }) =>
+        args[0] === "--liftoff-only" &&
+        args.length === 4 &&
+        path.basename(args[1] ?? "") === "codegraph-native.mjs" &&
+        path.basename(args[3] ?? "").startsWith(".preparing-codegraph-"),
+    );
+    expect(replacementAttempts).toHaveLength(1);
     expect(await readFile(activeSource, "utf8")).toBe(priorSource);
   } finally {
     await fixture.dispose();
