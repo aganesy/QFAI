@@ -108,13 +108,67 @@ const NON_CREATING_TAG_FLAGS = new Set([
   "--points-at",
   "--merged",
   "--no-merged",
+  "--with",
+  "--without",
 ]);
 
 /** The tag creation options whose next word is their value. */
-const VALUE_TAKING_TAG_FLAGS = new Set(["-m", "--message", "-F", "--file", "-u", "--local-user"]);
+const VALUE_TAKING_TAG_FLAGS = new Set([
+  "--message",
+  "--file",
+  "--local-user",
+  "--trailer",
+  "--cleanup",
+]);
 
 /** Sorting and formatting do not switch a command with a tag operand into list mode. */
 const TAG_LIST_MODIFIERS = new Set(["--sort", "--format"]);
+
+// Include switches that do not consume a word when checking for ambiguous prefixes.
+const LONG_TAG_FLAGS = [
+  ...[...NON_CREATING_TAG_FLAGS].filter((flag) => flag.startsWith("--")),
+  ...VALUE_TAKING_TAG_FLAGS,
+  ...TAG_LIST_MODIFIERS,
+  "--annotate",
+  "--edit",
+  "--sign",
+  "--no-sign",
+  "--force",
+  "--create-reflog",
+  "--no-create-reflog",
+  "--column",
+  "--no-column",
+  "--color",
+  "--no-color",
+  "--omit-empty",
+  "--ignore-case",
+  "--help",
+];
+
+function canonicalLongTagFlag(flag: string): string {
+  if (!flag.startsWith("--") || LONG_TAG_FLAGS.includes(flag)) return flag;
+  const matches = LONG_TAG_FLAGS.filter((option) => option.startsWith(flag));
+  return matches.length === 1 ? (matches[0] ?? flag) : flag;
+}
+
+function shortTagOption(arg: string): "mode" | "value" | undefined {
+  // The first option that uses a value owns the rest of its word.
+  const option = /^-[aesfi]*([dlvnmFu])(.*)$/.exec(arg);
+  if (option === null) return undefined;
+  switch (option[1]) {
+    case "m":
+    case "F":
+    case "u":
+      return option[2] === "" ? "value" : undefined;
+    case "n":
+      return /^\d*$/.test(option[2] ?? "") ? "mode" : undefined;
+    case "d":
+    case "l":
+    case "v":
+      return "mode";
+  }
+  return undefined;
+}
 
 function isTagCreation(command: string): boolean {
   // Keep quoted words together so flag-like text in a tag message stays a value.
@@ -135,14 +189,15 @@ function isTagCreation(command: string): boolean {
       break;
     }
 
-    const [flag = "", value] = arg.split("=", 2);
-    if (NON_CREATING_TAG_FLAGS.has(flag) || /^-n\d+$/.test(flag)) return false;
+    const [name = "", value] = arg.split("=", 2);
+    const flag = canonicalLongTagFlag(name);
+    const shortOption = shortTagOption(arg);
+    if (NON_CREATING_TAG_FLAGS.has(flag) || shortOption === "mode") return false;
 
     const listModifier = TAG_LIST_MODIFIERS.has(flag);
     hasListModifier ||= listModifier;
     const takesSeparateValue =
-      (/^--/.test(flag) && VALUE_TAKING_TAG_FLAGS.has(flag) && value === undefined) ||
-      /^-[aesfi]*[mFu]$/.test(arg);
+      (VALUE_TAKING_TAG_FLAGS.has(flag) && value === undefined) || shortOption === "value";
     if ((listModifier && value === undefined) || takesSeparateValue) index++;
     if (!arg.startsWith("-")) hasOperand = true;
   }
@@ -377,6 +432,12 @@ describe("the project layer describes the repository it is in", () => {
     expect(tagCreations('git tag --format="%(refname)" \\\n  vX.Y.Z')).toEqual([
       'git tag --format="%(refname)"',
     ]);
+  });
+
+  it("only expands an unambiguous long tag option", () => {
+    expect(canonicalLongTagFlag("--mess")).toBe("--message");
+    expect(canonicalLongTagFlag("--me")).toBe("--me");
+    expect(canonicalLongTagFlag("--l")).toBe("--l");
   });
 
   // Pasted as separate lines, the block tagged even when the ancestry check
