@@ -24,6 +24,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import fg from "fast-glob";
+import MarkdownIt from "markdown-it";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
@@ -202,9 +203,20 @@ function namesItsCommit(command: string): boolean {
   );
 }
 
+const releaseMarkdown = new MarkdownIt("commonmark");
+
+function releaseShellBlocks(guide: string): string[] {
+  return releaseMarkdown
+    .parse(guide, {})
+    .filter(
+      ({ type, info }) => type === "fence" && /^(?:sh|bash|shell)(?:[ \t]|$)/.test(info.trim()),
+    )
+    .map(({ content }) => content);
+}
+
 function releaseTaggingStatements(guide: string): string[] {
-  const statements = [...guide.matchAll(/^\s*```(?:sh|bash|shell)[ \t]*\r?\n([\s\S]*?)^\s*```/gm)]
-    .map(([, body]) => (body ?? "").replace(/&&[ \t]*\r?\n\s*/g, "&& "))
+  const statements = releaseShellBlocks(guide)
+    .map((body) => body.replace(/&&[ \t]*\r?\n\s*/g, "&& "))
     .flatMap((body) => body.split(/\r?\n/))
     .map((line) => line.trim());
   return statements.filter((statement) => tagCreations(statement).length > 0);
