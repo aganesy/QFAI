@@ -210,6 +210,12 @@ function releaseTaggingStatements(guide: string): string[] {
   return statements.filter((statement) => tagCreations(statement).length > 0);
 }
 
+function releaseBuildBlock(guide: string): string | undefined {
+  return [...guide.matchAll(/^\s*```sh\n([\s\S]*?)^\s*```/gm)]
+    .map(([, body]) => body ?? "")
+    .find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
+}
+
 describe("the project layer describes the repository it is in", () => {
   it("names no repository path that does not exist", async () => {
     const missing: string[] = [];
@@ -464,12 +470,29 @@ describe("the project layer describes the repository it is in", () => {
     expect(guide, "the guide runs the build check with bare node").not.toMatch(
       /^\s*node (?:\.\/)?scripts\/check-build-warnings\.mjs/m,
     );
-    const block = [...guide.matchAll(/^\s*```sh\n([\s\S]*?)^\s*```/gm)]
-      .map(([, body]) => body ?? "")
-      .find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
+    const block = releaseBuildBlock(guide);
     expect(block, "no shell block runs corepack pnpm ci:gate:build").toBeDefined();
     expect(block, "the block runs verify:pack a second time").not.toMatch(/^\s*pnpm verify:pack$/m);
   });
+
+  it.each([
+    ["sh", "\n"],
+    ["bash", "\n"],
+    ["shell", "\n"],
+    ["sh", "\r\n"],
+    ["bash", "\r\n"],
+    ["shell", "\r\n"],
+  ])(
+    "finds the build command and its neighboring lines in a %s fence with %j",
+    (shell, newline) => {
+      const build = "corepack pnpm ci:gate:build";
+      const duplicate = "pnpm verify:pack";
+      const guide = ["```" + shell, build, duplicate, "```"].join(newline);
+      const block = releaseBuildBlock(guide);
+      expect(block).toContain(build);
+      expect(block).toMatch(/^\s*pnpm verify:pack$/m);
+    },
+  );
 
   // The host command lists under `.instruction/03_ai-agents/` were copied from
   // another project: `generate:graphql`, `apply:backend`, `test:e2e` and `seed`
