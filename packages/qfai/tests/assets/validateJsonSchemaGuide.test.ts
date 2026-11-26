@@ -13,6 +13,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 import type { Issue, ValidationResult } from "../../src/core/types.js";
+import { rowOf, sectionOf } from "../helpers/shippedAssistant.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
@@ -23,8 +24,8 @@ const ASSISTANT_ROOTS = [
   path.join(repoRoot, ".qfai", "assistant"),
 ];
 
-function tableKeys(text: string, heading = "## Top level"): string[] {
-  const start = text.indexOf(heading);
+function tableKeys(text: string): string[] {
+  const start = text.indexOf("## Top level");
   const end = text.indexOf("\n## ", start + 1);
   return text
     .slice(start, end)
@@ -81,11 +82,17 @@ describe.each(ASSISTANT_ROOTS)("validate.json guide under %s", (assistantRoot) =
     expect(text).toMatch(/A repository-wide run leaves it\s+out\./);
   });
 
-  it("lists the original severity on older relaxed findings", async () => {
+  it("marks the original severity optional and shows an older error downgraded to a warning", async () => {
     const text = await readFile(path.join(assistantRoot, GUIDE), "utf8");
     const relaxedFrom = "relaxedFrom" satisfies keyof Issue;
-
-    expect(tableKeys(text, "## `issues[]`")).toContain(relaxedFrom);
+    const issues = sectionOf(text, "## `issues[]`");
+    const row = rowOf(issues, `\`${relaxedFrom}\``);
+    expect(row).toMatch(
+      /^\|\s*`relaxedFrom`\s*\|.*\|\s*optional severity before an older exploration-mode downgrade\s*\|\s*$/,
+    );
+    expect(issues).toMatch(
+      /`relaxedFrom: "error"` and `severity: "warning"` was\s+lowered from error to warning by exploration mode/,
+    );
   });
 
   // A waiver on an `error` finding is refused with `QFAI-WAIVER-002`, so the
