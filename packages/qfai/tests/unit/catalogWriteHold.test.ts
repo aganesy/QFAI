@@ -10,9 +10,18 @@ it("reports the exit code and diagnostic when a catalogue writer exits before th
     waitForCatalogueWriteHold(setImmediate(), Promise.resolve(1), [
       "Could not write the catalogue.\n",
     ]),
-  ).rejects.toThrow(
-    "Catalogue writer exited with code 1 before reaching the held rename.\nCould not write the catalogue.",
-  );
+  ).rejects.toMatchObject({
+    message:
+      "Catalogue writer exited with code 1 before reaching the held rename.\nCould not write the catalogue.",
+  });
+});
+
+it("reports early writer success without an empty stderr line", async () => {
+  await expect(
+    waitForCatalogueWriteHold(setImmediate(), Promise.resolve(0), []),
+  ).rejects.toMatchObject({
+    message: "Catalogue writer exited with code 0 before reaching the held rename.",
+  });
 });
 
 it("preserves an unexpected catalogue writer rejection before the held rename", async () => {
