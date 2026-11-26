@@ -110,7 +110,7 @@ export function tableName(raw: string): TableName {
  * quoted identifier is matched so that a `$tag$`, `'` or `--` inside it opens
  * nothing; it is kept, not blanked, because it may be the table a key names.
  * A string is matched by its opening quote alone and read on by
- * {@link stringLiteralEnd}, because where it ends depends on what precedes it.
+ * {@link readSqlQuotedToken}, because where it ends depends on what precedes it.
  */
 const SQL_NOISE = String.raw`--[^\n]*|\/\*[\s\S]*?\*\/|'|${QUOTED_IDENTIFIER}|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`;
 

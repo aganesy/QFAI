@@ -219,6 +219,7 @@ describe("reading a contract's own DDL", () => {
     expect(references.size).toBe(0);
   });
 
+  // QFAI:EX-0001-0039-75
   it("reads the real REFERENCES after a continued escape string", () => {
     const sql = [
       "CREATE TABLE t (note TEXT DEFAULT E'prefix'",
