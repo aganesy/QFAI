@@ -98,12 +98,12 @@ except these:
 - the run's deliberation record and the `open-questions.md` rows the run
   wrote, which `triage-close` commits locally and does not push;
 - the approval row, if any, that `qfai-run` records in `decisions.md` before
-  `triage-handoff` runs.
-
-`triage-operate` may bring in changes through an authorized base merge. In
-`run-operation`, if the union merge restores an open-question row that one
-side deleted, delete that row again and commit the deletion on its own before
-pushing. Keep all other register rows and IDs as merged.
+  `triage-handoff` runs;
+- changes `triage-operate` brings in through an authorized base merge;
+- in `run-operation`, the separate commit `triage-operate` makes when a
+  union merge restores an open-question row that one side deleted. Delete
+  that row again and commit only that deletion before pushing. Keep all
+  other register rows and IDs as merged.
 
 A private security intake allows none of these: when `triage-security-intake`
 ran, any tracked file the stage changed fails the review, its deliberation

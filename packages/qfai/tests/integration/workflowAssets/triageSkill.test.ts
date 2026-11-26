@@ -322,15 +322,21 @@ describe("a question answered without a change", () => {
     );
   });
 
-  // QFAI:EX-0001-0220-52
   it("limits the skill's register cleanup exception to the named operation", async () => {
     const skill = await readShipped(SKILL);
-    const gate = flat(sectionOf(skill, "### Reviewer Gate"));
-    expect(gate).toMatch(/`triage-operate`.*authorized base merge/);
-    expect(gate).toMatch(
-      /In `run-operation`, if the union merge restores an open-question row that one side deleted, delete that row again and commit the deletion on its own before pushing/,
+    const gate = sectionOf(skill, "### Reviewer Gate");
+    const exceptions = flat(
+      gate
+        .split(/\r?\n[ \t]*\r?\n/)
+        .find((paragraph) => paragraph.startsWith("- the run's deliberation record")) ?? "",
     );
-    expect(gate).toContain("Keep all other register rows and IDs as merged.");
+    expect(exceptions).toContain(
+      "- changes `triage-operate` brings in through an authorized base merge;",
+    );
+    expect(exceptions).toMatch(
+      /- in `run-operation`, the separate commit `triage-operate` makes when a union merge restores an open-question row that one side deleted\. Delete that row again and commit only that deletion before pushing/,
+    );
+    expect(exceptions).toContain("Keep all other register rows and IDs as merged.");
     expect(flat(sectionOf(skill, "## Completion"))).toMatch(
       /Apart from an authorized base merge.*in `run-operation`, the separate deletion of a restored question row/,
     );
