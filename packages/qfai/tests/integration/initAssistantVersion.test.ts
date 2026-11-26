@@ -152,6 +152,7 @@ describe("qfai init records the release that wrote the assistant tree", () => {
   });
 
   // QFAI:AC-0001-0021-01
+  // QFAI:EX-0001-0021-16
   it("keeps a competing version marker created just before plain init opens it", async () => {
     const dir = await newTempDir();
     const marker = versionFile(dir);
