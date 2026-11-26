@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { tmpdir } from "node:os";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { getInitAssetsDir } from "../../../../src/shared/assets.js";
@@ -19,10 +19,12 @@ import {
   validateTechArchitecture,
 } from "../../../../src/core/validators/storyTreeStructure.js";
 import { step03 } from "../../../../src/migration/specToStory/step03MoveCatalog.js";
-import { newPolicyDraft } from "../../../../src/migration/specToStory/policyDocuments.js";
+import * as policyDocuments from "../../../../src/migration/specToStory/policyDocuments.js";
+import { routeStructureCatalog } from "../../../../src/migration/specToStory/structureCatalog.js";
 import { addTechCommands } from "../../../../src/migration/specToStory/techDocument.js";
 
 const roots: string[] = [];
+const LARGE_REPORT_COUNT = 200_000;
 
 afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
@@ -341,6 +343,113 @@ describe("migration catalog move", () => {
     expect(notes.at(-1)).toContain(`rewrite TC-${rowCount} of "## Constraints" in ${source}`);
   });
 
+  // QFAI:EX-0004-0006-11
+  it.each([
+    {
+      section: "Key packages / entrypoints",
+      table: "",
+      item: (index: number) => `- CLI: service-${index} -> story`,
+      note: "the entrypoint service-",
+    },
+    {
+      section: "Architecture",
+      table: "| Layer | Responsibility | Depends on |\n| --- | --- | --- |\n",
+      item: (index: number) => `| service-${index} | Lives in src/service.ts | - |`,
+      note: "rewrite the layer service-",
+    },
+  ])(
+    "keeps every manual note in a large $section section in order",
+    async ({ section, table, item, note }) => {
+      const context = await fixture();
+      const rows = Array.from({ length: LARGE_REPORT_COUNT }, (_, index) => item(index));
+      await put(
+        context.root,
+        ".qfai/assistant/catalog/structure.md",
+        `# Structure\n\n## ${section}\n\n${table}${rows.join("\n")}\n`,
+      );
+
+      const plan = await step03.plan(context);
+      const notes = plan.forAPerson?.filter((entry) => entry.includes(note)) ?? [];
+      expect(notes).toHaveLength(LARGE_REPORT_COUNT);
+      expect(notes.findIndex((entry, index) => !entry.includes(`${note}${index} of `))).toBe(-1);
+    },
+  );
+
+  // QFAI:EX-0004-0006-14
+  it("keeps every manual note from a large contract index in order", async () => {
+    const context = await fixture();
+    const note = "rewrite the row for missing-";
+    const rows = Array.from(
+      { length: LARGE_REPORT_COUNT },
+      (_, index) => `| missing-${index}.yaml | Purpose |`,
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/05_Contracts.md",
+      `# Contracts\n\n## Contract Index\n\n| File | Purpose |\n| --- | --- |\n${rows.join("\n")}\n`,
+    );
+
+    const plan = await step03.plan(context);
+    const notes = plan.forAPerson?.filter((entry) => entry.includes(note)) ?? [];
+    expect(notes).toHaveLength(LARGE_REPORT_COUNT);
+    expect(notes.findIndex((entry, index) => !entry.includes(`${note}${index}.yaml,`))).toBe(-1);
+  });
+
+  // QFAI:EX-0004-0006-11
+  it("keeps every known Skeleton line from a large entrypoint section in order", () => {
+    const commands = new Map<string, string>();
+    const entries: string[] = [];
+    for (let index = 0; index < LARGE_REPORT_COUNT; index += 1) {
+      commands.set(`service-${index}`, `run service-${index}`);
+      entries.push(`- CLI: service-${index} -> story`);
+    }
+
+    const techTarget = ".qfai/spec/03_contract/tech.md";
+    const plan = routeStructureCatalog({
+      source: ".qfai/assistant/catalog/structure.md",
+      preamble: "",
+      sections: [{ heading: "Key packages / entrypoints", body: entries.join("\n") }],
+      commands,
+      tech: () => policyDocuments.newPolicyDraft(techTarget),
+      techTarget,
+    });
+    expect(plan.forAPerson).toEqual([]);
+    expect(plan.skeletonLines).toHaveLength(LARGE_REPORT_COUNT);
+    expect(
+      plan.skeletonLines.findIndex(
+        (line, index) => line !== `- Skeleton: \`service-${index}\` -> \`run service-${index}\``,
+      ),
+    ).toBe(-1);
+  });
+
+  // QFAI:EX-0004-0006-33
+  it("keeps a large batch of renumbered identifiers separate and in order", async () => {
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/07_Constraints.md",
+      "# Old constraints\n\n## Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Runs on Linux | Adopters |\n",
+    );
+    const identifiers = Array.from(
+      { length: LARGE_REPORT_COUNT },
+      (_, index) => `TC-${LARGE_REPORT_COUNT + index} is now TC-${index + 1}`,
+    );
+    // Isolate accumulation from the constraint draft's duplicate search.
+    const renumber = vi
+      .spyOn(policyDocuments, "renumberConstraints")
+      .mockReturnValueOnce(identifiers);
+    try {
+      const plan = await step03.plan(context);
+      expect(renumber).toHaveBeenCalledTimes(1);
+      for (const notes of [plan.forAPerson ?? [], plan.forAPersonIdentifiers ?? []]) {
+        expect(notes).toHaveLength(LARGE_REPORT_COUNT);
+        expect(notes.findIndex((note, index) => note !== identifiers[index])).toBe(-1);
+      }
+    } finally {
+      renumber.mockRestore();
+    }
+  });
+
   // QFAI:EX-0004-0006-27
   it("drops the Impact column and sends a constraint that is not in plain words to a person", async () => {
     const context = await fixture();
@@ -522,7 +631,7 @@ describe("migration catalog move", () => {
   // QFAI:EX-0004-0006-37
   it("merges a large batch of Skeleton commands in order without repeatedly scanning the list", () => {
     const heading = "Standard commands (copy-paste)";
-    const draft = newPolicyDraft(".qfai/spec/03_contract/tech.md");
+    const draft = policyDocuments.newPolicyDraft(".qfai/spec/03_contract/tech.md");
     const repeated = "- Skeleton: `existing` -> `pnpm smoke`";
     const original = ["- Test: `pnpm test`", repeated, repeated];
     const batch = Array.from(

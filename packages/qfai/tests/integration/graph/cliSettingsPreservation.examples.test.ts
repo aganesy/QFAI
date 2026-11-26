@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -30,9 +31,25 @@ it("prepares a portable CLI without changing unrelated Codex and MCP settings", 
     expect(parsed.mcp_servers).toMatchObject({
       other: { command: "other" },
     });
-    const cli = await readFile(path.join(root, ".qfai", "tools", "graph-cli.mjs"), "utf8");
-    expect(cli).toContain("runInstalledGraphCli");
-    expect(cli).not.toContain("startGraphManager");
+    const cli = path.join(root, ".qfai", "tools", "graph-cli.mjs");
+    const source = await readFile(cli, "utf8");
+    expect(source).toContain("runInstalledGraphCli");
+    expect(source).not.toContain("startGraphManager");
+    for (const cwd of [root, path.dirname(file)]) {
+      const inside = spawnSync(process.execPath, [cli], { cwd, encoding: "utf8", timeout: 10000 });
+      expect(inside).toMatchObject({ status: 2, stderr: "" });
+      expect(inside.stdout).toContain("Invalid graph command arguments.");
+    }
+    const outside = spawnSync(process.execPath, [cli], {
+      cwd: path.dirname(root),
+      encoding: "utf8",
+      timeout: 10000,
+    });
+    expect(outside).toMatchObject({
+      status: 2,
+      stdout: "",
+      stderr: "Graph project mismatch. Run qfai init in this worktree.\n",
+    });
     expect((await prepareGraphIntegration(root, fixture.run)).files).toEqual([]);
     expect(await readFile(file, "utf8")).toBe(original);
     expect(await readFile(common, "utf8")).toBe(commonText);
