@@ -297,7 +297,6 @@ describe("migration harness", () => {
     expect(await readFile(path.join(ctx.root, ".qfai/other.md"), "utf8")).toBe("other");
   });
 
-  // QFAI:EX-0004-0003-52
   it("keeps notes when a delegated operation explicitly refuses", async () => {
     const ctx = await context();
     const captured = capture();
