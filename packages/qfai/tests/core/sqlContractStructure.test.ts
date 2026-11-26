@@ -576,6 +576,21 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     ]);
   });
 
+  it.each([
+    ["an untagged dollar quote with a closing parenthesis", "$$)$$"],
+    ["a tagged dollar quote with a comma", "$value$,$value$"],
+    ["an escape string with an escaped quote, comma and parenthesis", String.raw`E'it\'s, )'`],
+  ])("keeps later routine arguments after %s in a default", (_label, defaultValue) => {
+    const { statements, errors } = parseSqlContract(
+      `CREATE FUNCTION f(a text DEFAULT ${defaultValue}, b int DEFAULT 0) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE OR REPLACE FUNCTION f(a text DEFAULT '', b integer DEFAULT 0) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`,
+    );
+    expect(errors).toEqual([]);
+    const created = collectCreatedObjects(statements);
+    expect(created.map((object) => object.signature)).toEqual(["text,integer", "text,integer"]);
+    expect(findRedefinitions(created)).toEqual([{ kind: "FUNCTION", name: "f", lines: [1, 2] }]);
+  });
+
   it("stays silent on a file that defines each object once", async () => {
     const issues = await runOn(
       `${HEADER}CREATE TABLE a (x int);\nCREATE TABLE b (y int);\nCREATE INDEX i ON a (x);\n`,
