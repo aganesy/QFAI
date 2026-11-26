@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
 import { runInit } from "../helpers/legacyInit.js";
+import { seedPlaywrightNpxShim } from "../helpers/playwrightNpxShim.js";
 import { run } from "../../src/cli/main.js";
 import { captureStdout } from "../helpers/stdout.js";
 
@@ -658,6 +659,30 @@ describe("doctor", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it.runIf(process.platform === "win32")(
+    "passes the Playwright fallback arguments to npx.cmd",
+    async () => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+      const originalPath = process.env.PATH;
+      try {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const binDir = path.join(root, "fixture bin");
+        await seedPlaywrightNpxShim(binDir);
+        process.env.PATH = binDir;
+
+        const parsed = await readDoctorData(root, { profile: "prototyping" });
+        expect(findCheck(parsed.checks, "prototyping.playwrightCli")).toMatchObject({
+          severity: "ok",
+          details: { resolvedStage: "npx-fallback" },
+        });
+      } finally {
+        if (originalPath === undefined) delete process.env.PATH;
+        else process.env.PATH = originalPath;
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("reports root DESIGN.md readiness blockers before runtime execution", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
