@@ -404,8 +404,12 @@ describe("turn-end hook", () => {
     const prior = JSON.stringify({ digest: "legacy failure", blocks: 3 });
     await writeFile(legacy, prior, "utf8");
 
-    const output = parsed(await hook({ session_id: "review", stop_hook_active: true }));
+    const event = { session_id: "review", stop_hook_active: true };
+    const output = parsed(await hook(event));
     expect(output.decision).toBe("block");
+    const repeated = parsed(await hook(event));
+    expect(repeated.decision).toBeUndefined();
+    expect(repeated.systemMessage).toContain("ended anyway");
     await expect(readFile(legacy, "utf8")).resolves.toBe(prior);
   });
 
