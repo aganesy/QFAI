@@ -55,6 +55,12 @@ describe("AC-0001-0236-06", () => {
       const ignore = `${GRAPH_IGNORE_MARKER}\n# Adopter tracks generated output\n`;
       const ignoreFile = path.join(project.root, ".gitignore");
       await writeFile(ignoreFile, ignore);
+      const visible = await ensureGraphGitignore(project.root, runGraphProcess);
+      expect(visible.conflicts.join(" ")).toContain("Git still sees");
+      expect(visible.conflicts.join(" ")).toContain(
+        "Review .gitignore and explicitly exclude .qfai/tools/",
+      );
+      expect(visible.conflicts.join(" ")).not.toContain("Git already tracks generated output");
       await mkdir(path.join(project.root, ".qfai", "tools", "adopter"), { recursive: true });
       await writeFile(
         path.join(project.root, ".qfai", "tools", "adopter", "graph.json"),
@@ -95,9 +101,22 @@ describe("AC-0001-0236-06", () => {
               : project.fixture.run(command, args, options),
         ),
       );
-      expect(output).toContain(
-        "Retain your Git choices. Review .gitignore and explicitly exclude .qfai/tools/",
+      expect(output).toContain("Git already tracks generated output under .qfai/tools/.");
+      expect(output).toContain("git ls-files -- .qfai/tools/");
+      expect(output).toContain("git rm --cached -- <path>");
+      expect(output).toContain("This keeps the files in your working tree.");
+      expect(output).not.toContain("Git still sees");
+      expect(await readFile(ignoreFile, "utf8")).toBe(`${ignore}/.qfai/tools/\n`);
+      expect(
+        await readFile(path.join(project.root, ".qfai", "tools", "adopter", "graph.json"), "utf8"),
+      ).toBe("Tracked by adopter");
+      const stillTracked = await runGraphProcess(
+        "git",
+        ["ls-files", "--", ".qfai/tools/adopter/graph.json"],
+        { cwd: project.root },
       );
+      expect(stillTracked.exitCode).toBe(0);
+      expect(stillTracked.stdout.trim()).toBe(".qfai/tools/adopter/graph.json");
       expect(output).toContain("Managed graph CLI entrypoint: ready");
 
       for (const name of ["qfai-tests.yml", "qfai-validate.yml", "qfai-docs.yml"]) {
