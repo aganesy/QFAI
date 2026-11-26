@@ -84,4 +84,16 @@ describe("a refused argument prints the command's usage, not the whole help", ()
       expect(stdout).toContain("Options:");
     }
   });
+
+  // QFAI:AC-0001-0315-01 QFAI:EX-0001-0315-03
+  it.each([
+    { argv: ["validate", "--bogus", "--help"], reason: "unknown option: --bogus" },
+    { argv: ["validate", "--format", "-h"], reason: "--format requires a value" },
+  ])("prints full help and preserves the refusal for $argv", async ({ argv, reason }) => {
+    const { stdout, stderr, exitCode } = await captureRun(argv);
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain(reason);
+    expect(stdout).toContain("Commands:");
+    expect(stdout).toContain("Options:");
+  });
 });
