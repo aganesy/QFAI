@@ -451,6 +451,27 @@ describe("story-tree test obligations", () => {
     ).toEqual(counted ? [id] : []);
   });
 
+  // QFAI:EX-0001-0056-14
+  it.each([
+    [
+      "Fixture.vue",
+      ["<template>", "  <SlotSource #default=\"{ label = '{literal}' }\" />", "</template>"],
+    ],
+    ["Fixture.svelte", ["{#if '{literal}'}", "  <p>Visible</p>", "{/if}"]],
+  ] as const)("counts only the script annotation in %s", (file, template) => {
+    const scriptId = "EX-0001-0001-01";
+    const templateId = "EX-0001-0001-02";
+    const content = [
+      ...template.map((line) => line.replace("{literal}", ["QFAI", templateId].join(":"))),
+      "<script>",
+      `// ${["QFAI", scriptId].join(":")}`,
+      "it('pays', () => {});",
+      "</script>",
+    ].join("\n");
+
+    expect(storyTreeIds.parseCountedExampleAnnotations(content, file)).toEqual([scriptId]);
+  });
+
   it("rejects an EX annotation in E2E and keeps its test obligation open", () => {
     const findings = validateStoryTreeObligationsModel(
       model(),
