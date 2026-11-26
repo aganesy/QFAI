@@ -640,6 +640,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
 
+- `gh-budget` also discards a partial job log when a signal stops GitHub CLI.
+  It keeps the rate-limit reading if the headers arrived in full.
+
 - Plain `qfai init` preserves an assistant `VERSION` marker another writer creates
   during initialization.
 
@@ -648,6 +651,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Validation launcher mismatch errors identify the checkout problem and explain
   how to install its dependencies and rerun validation through its own launcher.
+  The recovery names `pnpm bootstrap` for QFAI source worktrees and explains
+  how to replace an original `--root` while retaining the other options.
 
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
@@ -899,6 +904,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - The `validate.json` guide explains the original severity recorded in
   `issues[].relaxedFrom` by older exploration-mode runs.
+  The field is optional.
 
 - **A directory whose name begins with two dots counts as inside its base
   everywhere.** Several more checks tested whether a path relative to its base
@@ -1277,6 +1283,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - The routine parser skips commas and parentheses inside quoted argument
   names and preserves quoted type names when checking for duplicate routines.
 
+- Dollar-quoted and directly `E`- or `e`-prefixed defaults in SQL routines
+  preserve the argument types that follow them. The duplicate check ignores
+  punctuation inside these defaults when comparing the argument types.
+
 - **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
   The duplicate check compared each argument type as written, so
   `f(int)` and `f(integer)`, or `f(varchar(10))` and `f(varchar(20))`, went
@@ -1286,6 +1296,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `character varying`, `timestamptz` and the other built-in aliases);
   `float(p)` becomes `real` or `double precision` by its precision. Closes
   #5047.
+
+- Qualified SQL routine argument types compare the schema and type identifiers
+  separately. Equivalent ordinary double-quoted and bare spellings match. Case and
+  punctuation that distinguish quoted identifiers are preserved.
 
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
@@ -1306,6 +1320,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - `check-mdschema --scope changed` includes new Markdown documents before
   staging and respects Git's ignore rules. A failed Git file listing widens
   the check and prints a warning.
+
+- The changed-scope schema check requests only untracked Markdown paths from
+  Git, regardless of extension case. Unrelated untracked files no longer fill
+  the captured Git output and trigger a full-tree check.
 
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
@@ -1809,6 +1827,9 @@ decisions` headings appeared anywhere in the file, so a record with several
 
 - Proposal triage records terminal acceptance as `accepted` and uses
   `adopted` when a `decide-design` decision accepts implementation in this project.
+  This requires explicit approval to implement or a recorded delegation that
+  covers the implementation decision. An implementation proposal that is still
+  open or only assumed stays pending as `deferred`.
 
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two
@@ -2551,6 +2572,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - The turn-end hook clears the saved failure for the current session and agent
   when the gate is disabled or `tech.md` is missing. If the check becomes
   available again, a failing command blocks the turn as a fresh failure.
+
+- The turn-end hook also clears that session and agent's saved failure when
+  it finds no `qfai.config.yaml`. The stop stays silent, and the same failing
+  command can block again after the configuration returns.
 
 - **The turn-end check tells a failure in another worktree from a repeat.**
   When a continued turn failed with the same output it had blocked on, the
