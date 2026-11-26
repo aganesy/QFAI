@@ -134,13 +134,20 @@ async function textFilesUnder(dir: string): Promise<string[]> {
 /** Every path citing `file`, including invalid suffixes and excluding fragments. */
 function citationsOf(text: string, file: string): string[] {
   const pathPart = "[^\\s`\"'()<>#\\[\\]]*";
-  const pattern = new RegExp(`${pathPart}${file.replaceAll(".", "\\.")}${pathPart}`, "g");
-  return [...text.matchAll(pattern)].map((match) => {
-    const cited = match[0];
+  const codeSpan = "(?<!`)(?<ticks>`+)(?!`)(?<code>[^\\r\\n]*?)(?<!`)\\k<ticks>(?!`)";
+  const barePath = `(?<bare>${pathPart}${file.replaceAll(".", "\\.")}${pathPart})`;
+  const pattern = new RegExp(`${codeSpan}|${barePath}`, "g");
+  return [...text.matchAll(pattern)].flatMap((match) => {
+    const code = match.groups?.code;
+    if (code !== undefined) {
+      const cited = code.split("#", 1)[0]?.trim() ?? "";
+      return cited.includes(file) ? [cited] : [];
+    }
+    const cited = match.groups?.bare ?? "";
     const left = text[match.index - 1] ?? "";
     const right = text[match.index + cited.length];
     // A period in prose is punctuation. A period inside a citation is part of its path.
-    return /[\x60"'(<]/.test(left) || right === "#" ? cited : cited.replace(/[.,;:!?]+$/, "");
+    return [/[\x60"'(<]/.test(left) || right === "#" ? cited : cited.replace(/[.,;:!?]+$/, "")];
   });
 }
 
@@ -152,6 +159,7 @@ it("keeps complete SDD citation paths while separating fragments and prose punct
     `Read \`${canonical}#where-each-answer-goes\`.`,
     `Invalid \`${canonical}.bak#where-each-answer-goes\`.`,
     `Invalid \`${canonical}.\`.`,
+    `Invalid \`\`${canonical} (copy)#where-each-answer-goes\`\`.`,
   ].join("\n");
 
   expect(citationsOf(text, file)).toEqual([
@@ -159,6 +167,7 @@ it("keeps complete SDD citation paths while separating fragments and prose punct
     canonical,
     `${canonical}.bak`,
     `${canonical}.`,
+    `${canonical} (copy)`,
   ]);
 });
 
