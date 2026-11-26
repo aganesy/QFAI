@@ -13,8 +13,8 @@ Feature: JSON diagnosis output
   # AC-0003-0005-02
   Scenario: `--out` writes the diagnosis to a file
     Given the doctor checks complete
-    When `qfai doctor --format json --out /tmp/doctor.json` runs
-    Then the diagnosis is written to `/tmp/doctor.json`
+    When `qfai doctor --out <file>` runs
+    Then the diagnosis is written to `<file>`
     And a relative output path resolves against the checked project root
     And a dry run still writes an explicitly requested diagnosis while leaving the planned repairs unapplied
 ```

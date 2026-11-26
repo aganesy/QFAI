@@ -209,7 +209,7 @@ describe("`qfai doctor` CLI contract surface", () => {
 
     expect(statement).toContain("only the changes that pass would make");
     expect(statement).toContain("would remove -> <run id>");
-    expect(statement).toContain("writes no repair paths");
+    expect(statement).toContain("does not apply the planned repairs");
     expect(statement).toContain("an explicitly requested `--out` report is still written");
   });
 

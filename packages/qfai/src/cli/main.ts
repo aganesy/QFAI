@@ -529,7 +529,7 @@ Options:
   --yes           init: reserved flag (no behavioural difference today because init is non-interactive; auto-Yes once prompts are introduced)
   --yes           doctor --autoremediate: skip the interactive confirmation (no effect elsewhere)
   --dry-run       init: preview changes without writing
-                  doctor: preview repairs and still write a diagnosis requested with --out
+                  doctor: preview repairs. If a diagnosis is produced, --out still writes it
   --verbose       init: expand the run report's skipped-path list (counts only by default)
   --format <text|github>       validate: output format
   --format <md|json>           report: output format

@@ -12,7 +12,7 @@ import { mkdir, mkdtemp, readFile, rm, symlink, utimes, writeFile } from "node:f
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
 import { createDoctorData } from "../../../../src/core/doctor.js";
@@ -105,28 +105,52 @@ describe("doctor --clean prunes stale validate run logs", () => {
   });
 
   // QFAI:EX-0003-0005-05
-  it("--dry-run keeps the stale run and writes the requested diagnosis", async () => {
-    const root = await newTempDir("dry-run");
-    await writeFile(path.join(root, "qfai.config.yaml"), "report:\n  keepLatestRuns: 0\n", "utf-8");
-    const stale = await seedRunLog(root, "run-20260401120000001", 30);
+  it.each([
+    { flag: "--clean", options: { clean: true }, message: "would remove -> run-20260401120000001" },
+    {
+      flag: "--autoremediate",
+      options: { autoremediate: true },
+      message: "would prune run logs=1",
+    },
+  ])(
+    "$flag --dry-run keeps the stale run and writes the diagnosis",
+    async ({ options, message }) => {
+      const root = await newTempDir("dry-run");
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "report:\n  keepLatestRuns: 1\n",
+        "utf-8",
+      );
+      const stale = await seedRunLog(root, "run-20260401120000001", 30);
+      await seedRunLog(root, "run-20260811120000002", 0);
 
-    const reportPath = path.join(root, "doctor.json");
-    const stdout = await captureStdout(async () => {
-      const exit = await runDoctor({
-        root,
-        rootExplicit: true,
-        format: "json",
-        outPath: reportPath,
-        clean: true,
-        dryRun: true,
-      });
-      expect(exit).toBe(0);
-    });
+      const reportPath = path.join(root, "doctor.json");
+      vi.stubEnv("CI", "");
+      vi.stubEnv("GITHUB_ACTIONS", "");
+      const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      try {
+        const stdout = await captureStdout(async () => {
+          const exit = await runDoctor({
+            root,
+            rootExplicit: true,
+            format: "json",
+            outPath: reportPath,
+            dryRun: true,
+            ...options,
+          });
+          expect(exit).toBe(0);
+        });
 
-    expect(stdout.trim()).toBe(`doctor: wrote ${reportPath}`);
-    expect(JSON.parse(await readFile(reportPath, "utf-8"))).toHaveProperty("summary");
-    expect(await readFile(path.join(stale, "run.json"), "utf-8")).toBe("{}\n");
-  });
+        expect(stdout.trim()).toBe(`doctor: wrote ${reportPath}`);
+        expect(JSON.parse(await readFile(reportPath, "utf-8"))).toHaveProperty("summary");
+        expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(message);
+        expect(await readFile(path.join(stale, "run.json"), "utf-8")).toBe("{}\n");
+      } finally {
+        stderr.mockRestore();
+        vi.unstubAllEnvs();
+      }
+    },
+  );
 
   it("refuses to prune while the config carries issues", async () => {
     const root = await newTempDir("bad-config");
