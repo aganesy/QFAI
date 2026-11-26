@@ -835,7 +835,12 @@ function changedFiles(base, root) {
   const untracked = spawnSync(
     "git",
     ["ls-files", "--others", "--exclude-standard", "-z", "--", ":(glob,icase)**/*.md"],
-    { cwd: root, encoding: "utf-8" },
+    {
+      cwd: root,
+      encoding: "utf-8",
+      // The pattern is fixed here, so a caller's literal mode must not disable it.
+      env: { ...process.env, GIT_LITERAL_PATHSPECS: "0" },
+    },
   );
   if (untracked.status !== 0) {
     const reason =

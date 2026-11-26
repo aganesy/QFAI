@@ -934,26 +934,31 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stdout + result.stderr).not.toContain("business-flow-0004");
   });
 
-  it("captures only non-ignored untracked Markdown candidates from Git", async () => {
-    const tracked = { "business-flow-0001": CONFORMING_FLOW };
-    const root = await twoCommits(tracked, tracked);
-    const candidate = await writeFlow(root, "business-flow-0003", CONFORMING_FLOW);
-    await writeFile(path.join(root, "notes.MD"), "ignored by document scope\n", "utf8");
-    await writeFile(path.join(root, "unrelated.txt"), "not Markdown\n", "utf8");
-    await writeFile(path.join(root, "ignored.md"), "ignored by Git\n", "utf8");
-    await writeFile(path.join(root, ".git", "info", "exclude"), "/ignored.md\n", "utf8");
+  it.each(["0", "1"])(
+    "captures only untracked Markdown with Git literal mode %s",
+    async (literal) => {
+      const tracked = { "business-flow-0001": CONFORMING_FLOW };
+      const root = await twoCommits(tracked, tracked);
+      const candidate = await writeFlow(root, "business-flow-0003", CONFORMING_FLOW);
+      await writeFile(path.join(root, "notes.MD"), "ignored by document scope\n", "utf8");
+      await writeFile(path.join(root, "unrelated.txt"), "not Markdown\n", "utf8");
+      await writeFile(path.join(root, "ignored.md"), "ignored by Git\n", "utf8");
+      await writeFile(path.join(root, ".git", "info", "exclude"), "/ignored.md\n", "utf8");
 
-    const argv = process.argv;
-    try {
-      gitListingOutput.paths = [];
-      process.argv = ["node", SCRIPT, "--root", root, "--scope", "changed", "--base", "main"];
-      expect(main()).toBe(0);
-      expect(gitListingOutput.paths).toEqual([candidate, "notes.MD"]);
-    } finally {
-      gitListingOutput.paths = null;
-      process.argv = argv;
-    }
-  });
+      const argv = process.argv;
+      try {
+        vi.stubEnv("GIT_LITERAL_PATHSPECS", literal);
+        gitListingOutput.paths = [];
+        process.argv = ["node", SCRIPT, "--root", root, "--scope", "changed", "--base", "main"];
+        expect(main()).toBe(0);
+        expect(gitListingOutput.paths).toEqual([candidate, "notes.MD"]);
+      } finally {
+        vi.unstubAllEnvs();
+        gitListingOutput.paths = null;
+        process.argv = argv;
+      }
+    },
+  );
 
   // QFAI:EX-0001-0011-29
   it("still fails for what the branch owes when it also edits a legacy document", async () => {
