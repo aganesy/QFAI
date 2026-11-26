@@ -261,13 +261,13 @@ describe("reading a contract's own DDL", () => {
   );
 
   // QFAI:EX-0001-0052-16
-  it("masks the rest of an unclosed outer block comment", () => {
+  it.each(["\n", "\r\n", "\r"])("masks the rest of an unclosed comment with %j", (separator) => {
     const ddl = "CREATE TABLE orders (id integer);";
-    const sql = ddl + " /* Outer /* Inner */ REFERENCES phantom(id)";
-    const masked = blankSqlNoise(sql);
+    const comment = ["/* Outer", "   /* Inner */", "   REFERENCES phantom(id)"];
+    const sql = [ddl, ...comment].join(separator);
+    const expected = [ddl, ...comment.map((line) => " ".repeat(line.length))].join(separator);
 
-    expect(masked).toHaveLength(sql.length);
-    expect(masked.trimEnd()).toBe(ddl);
+    expect(blankSqlNoise(sql)).toBe(expected);
     expect(readTableEdges(sql).references.size).toBe(0);
   });
 
