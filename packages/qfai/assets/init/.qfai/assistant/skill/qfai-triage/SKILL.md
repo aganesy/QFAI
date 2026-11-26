@@ -100,6 +100,11 @@ except these:
 - the approval row, if any, that `qfai-run` records in `decisions.md` before
   `triage-handoff` runs.
 
+`triage-operate` may bring in changes through an authorized base merge. In
+`run-operation`, if the union merge restores an open-question row that one
+side deleted, delete that row again and commit the deletion on its own before
+pushing. Keep all other register rows and IDs as merged.
+
 A private security intake allows none of these: when `triage-security-intake`
 ran, any tracked file the stage changed fails the review, its deliberation
 record included.
@@ -112,11 +117,11 @@ are unchanged.
 Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`.
 **Smallest applicable smoke check** (this skill's override):
 `git status --porcelain --untracked-files=no` lists no file the stage did not
-find changed when it started, and the commits the stage made touch only the
-run's deliberation record, the `open-questions.md` rows the run wrote and the
-`decisions.md` approval row the Reviewer Gate allows. After a private security
-intake, the stage made no commit, and its report stays private, as
-`triage-security-intake` says.
+find changed when it started. Apart from an authorized base merge, the stage
+commits only the records the Reviewer Gate allows and, in `run-operation`,
+the separate deletion of a restored question row.
+After a private security intake, the stage made no commit, and its report
+stays private, as `triage-security-intake` says.
 
 The report states the outcome `triage-close` recorded and lists each follow-up
 request. It never says a tracked change is done. `cleaned` says only that the
@@ -134,7 +139,7 @@ list any remaining actions instead.
 
 project_memory:
 
-- Triage changes no tracked file except the run's deliberation record and `open-questions.md` rows, which `triage-close` commits locally, and the approval row `qfai-run` records in `decisions.md` before `triage-handoff`.
+- Triage follows the Reviewer Gate's tracked-write limits. `triage-operate` may bring in changes through an authorized base merge. Only in `run-operation` may it commit the separate deletion of a restored question row.
 - Only `triage-owned-cleanup` and `triage-operate` execute an operation.
 - Other work it finds is a follow-up request.
 - A follow-up is recorded, never routed inside the run that found it.
