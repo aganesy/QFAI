@@ -14,6 +14,11 @@ version: 1.0.0
 
 ## Setup
 
+The root links QFAI through the pnpm workspace dependency `"qfai": "workspace:*"`.
+npm cannot install this workspace dependency, and `scripts/check-not-a-dependency.mjs`
+refuses a Yarn install. Start a checkout without dependencies with the frozen
+install in the bootstrap sequence below.
+
 On Windows, run the lint lanes from Git Bash. `ci:lint` and
 `ci:gate:lint` invoke Bash, so Node.js and the pinned pnpm must be available
 in that shell. Running those lanes from PowerShell also requires Git for
@@ -39,9 +44,10 @@ export PATH="$(cygpath -u "$LOCALAPPDATA")/qfai-pnpm:$PATH"
 
 These PATH changes apply to the current shells. Add the shim directory to your
 user PATH and reopen terminals to reuse it. Corepack writes the shims to that
-directory, without changing the Node.js installation directory. The lint helper
-already creates temporary shims when Bash can find Corepack; that fallback
-does not supply pnpm to other root scripts.
+directory, without changing the Node.js installation directory. The
+[lint helper](../../scripts/run-lint-checks.sh) creates temporary shims when
+Bash can find Corepack. Add a pnpm shim to PATH for other root scripts that
+start a pnpm subprocess.
 
 Run from this repository's root:
 
@@ -66,7 +72,9 @@ symlink or junction at root `node_modules` or
 directory with another checkout: an install can repoint its launcher.
 Run bootstrap separately in each fresh clone or worktree.
 `npx qfai` then resolves the build of the checkout that owns its
-`node_modules`.
+`node_modules`. Without the local launcher, `npx qfai` can run the published
+copy, including in CI. Use the compiled CLI directly for checks that need the
+checkout's build.
 
 On Windows, a worktree can contain a file symlink to a directory that the OS
 cannot follow. Plain `qfai init` can repair this damage on its owned, same-target
@@ -74,6 +82,17 @@ directory wrappers. This repository's canonical `.qfai/assistant/` mirror is
 managed separately by [the mirror script](../../scripts/link-assistant-tree.mjs).
 The mirror script checks followability and repairs owned, same-target directory
 links separately. Wrapper repair does not establish that the mirror is usable.
+
+With `core.symlinks` disabled on Windows, a linked rule may open as a one-line
+path. Read the target under `packages/qfai/assets/init/root/.agents/rules/`.
+
+In local observations, Claude Code desktop sessions under `.claude/worktrees/`
+ran the main checkout's `.claude/settings.json` hooks. A main checkout behind
+`origin/main` can send stale reminders after the worktree installs its own
+dependencies. If this occurs, fast-forward the main checkout to `origin/main`.
+
+The two association-gate cases in `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`
+need Node.js and Bash on PATH. A case stops and names the unavailable tool.
 
 ## Build and Quality Gates
 
