@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import process from "node:process";
 import { pathToFileURL } from "node:url";
 
 // The helper comes from the setup action's checkout and runs before the target's
@@ -40,7 +41,7 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     process.stdout.write(`${nodeEngineFloor(readEngineRange(file))}\n`);
   } catch (cause) {
     if (!(cause instanceof Error)) throw cause;
-    console.error(`Cannot resolve the Node.js floor. ${cause.message}`);
+    process.stderr.write(`Cannot resolve the Node.js floor. ${cause.message}\n`);
     process.exitCode = 1;
   }
 }
