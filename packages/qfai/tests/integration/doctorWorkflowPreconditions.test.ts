@@ -1,3 +1,4 @@
+import { constants } from "node:fs";
 import type * as fsPromises from "node:fs/promises";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -25,6 +26,21 @@ vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<typeof fsPromises>("node:fs/promises");
   return {
     ...actual,
+    access: (...args: Parameters<typeof actual.access>) => {
+      const [file, mode] = args;
+      const code =
+        typeof file === "string" &&
+        mode === constants.R_OK &&
+        LOCKFILE_NAMES.has(path.basename(file))
+          ? failingReads.get(fixtureRelative(file) ?? "")
+          : undefined;
+      if (code !== undefined) {
+        return Promise.reject(
+          Object.assign(new Error(`${code}: controlled read-access failure`), { code }),
+        );
+      }
+      return actual.access(...args);
+    },
     readdir: (...args: Parameters<typeof actual.readdir>) => {
       const [directory] = args;
       const code =
@@ -203,6 +219,33 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     const check = await finding(root, "workflows.lockfiles");
 
     expect(check?.message).toContain("pnpm-lock.yaml and yarn.lock and package-lock.json");
+    expect(lockfileReads).toEqual([]);
+  });
+
+  // QFAI:EX-0003-0011-48
+  it("counts a regular lockfile whose contents cannot be read", async () => {
+    const root = await project({
+      packageJson: { name: "demo" },
+      files: { "pnpm-lock.yaml": "lockfileVersion: 9\n", "package-lock.json": "{}" },
+    });
+    failingReads.set("pnpm-lock.yaml", "EACCES");
+
+    const checks = await preconditions(root);
+
+    expect(checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "workflows.packageManager",
+          severity: "warning",
+          message: expect.stringContaining("pnpm-lock.yaml"),
+        }),
+        expect.objectContaining({
+          id: "workflows.lockfiles",
+          severity: "warning",
+          message: expect.stringContaining("install with pnpm"),
+        }),
+      ]),
+    );
     expect(lockfileReads).toEqual([]);
   });
 
