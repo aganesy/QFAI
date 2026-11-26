@@ -19,6 +19,8 @@ import {
   validateTechArchitecture,
 } from "../../../../src/core/validators/storyTreeStructure.js";
 import { step03 } from "../../../../src/migration/specToStory/step03MoveCatalog.js";
+import { newPolicyDraft } from "../../../../src/migration/specToStory/policyDocuments.js";
+import { addTechCommands } from "../../../../src/migration/specToStory/techDocument.js";
 
 const roots: string[] = [];
 
@@ -518,6 +520,39 @@ describe("migration catalog move", () => {
   });
 
   // QFAI:EX-0004-0006-29
+  it("merges a large batch of Skeleton commands in order without repeatedly scanning the list", () => {
+    const heading = "Standard commands (copy-paste)";
+    const draft = newPolicyDraft(".qfai/spec/03_contract/tech.md");
+    const repeated = "- Skeleton: `existing` -> `pnpm smoke`";
+    const original = ["- Test: `pnpm test`", repeated, repeated];
+    const batch = Array.from(
+      { length: 20_000 },
+      (_, index) => `- Skeleton: \`entry-${index + 1}\` -> \`run entry-${index + 1}\``,
+    );
+    const expected = [...original, ...batch];
+    const readBudget = (original.length + batch.length) * 3;
+    let indexedReads = 0;
+    let measuring = true;
+    const commands = new Proxy(original, {
+      get(target, property, receiver) {
+        if (measuring && typeof property === "string" && /^(?:0|[1-9]\d*)$/.test(property)) {
+          indexedReads += 1;
+          if (indexedReads > readBudget)
+            throw new Error("Skeleton merge exceeded its list-read budget");
+        }
+        const value: unknown = Reflect.get(target, property, receiver);
+        return value;
+      },
+    });
+    draft.lists.set(heading, commands);
+
+    addTechCommands(draft, [repeated, ...batch, repeated, ...batch.slice(-2)]);
+    measuring = false;
+
+    expect(indexedReads).toBeLessThanOrEqual(readBudget);
+    expect(draft.lists.get(heading)).toEqual(expected);
+  });
+
   it("says a layer's row was dropped for holding a path when another layer depends on it", async () => {
     const context = await fixture();
     await put(
