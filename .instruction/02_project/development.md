@@ -46,8 +46,7 @@ These PATH changes apply to the current shells. Add the shim directory to your
 user PATH and reopen terminals to reuse it. Corepack writes the shims to that
 directory, without changing the Node.js installation directory. The
 [lint helper](../../scripts/run-lint-checks.sh) creates temporary shims when
-Bash can find Corepack. Add a pnpm shim to PATH for other root scripts that
-start a pnpm subprocess.
+Bash can find Corepack.
 
 Run from this repository's root:
 
@@ -86,10 +85,11 @@ links separately. Wrapper repair does not establish that the mirror is usable.
 With `core.symlinks` disabled on Windows, a linked rule may open as a one-line
 path. Read the target under `packages/qfai/assets/init/root/.agents/rules/`.
 
-In local observations, Claude Code desktop sessions under `.claude/worktrees/`
-ran the main checkout's `.claude/settings.json` hooks. A main checkout behind
-`origin/main` can send stale reminders after the worktree installs its own
-dependencies. If this occurs, fast-forward the main checkout to `origin/main`.
+On Windows, Claude Code desktop sessions under `.claude/worktrees/` have been
+observed running the main checkout's `.claude/settings.json` hooks. A main
+checkout behind `origin/main` can send stale reminders after the worktree
+installs its own dependencies. If this occurs, fast-forward the main checkout
+to `origin/main`.
 
 The two association-gate cases in `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`
 need Node.js and Bash on PATH. A case stops and names the unavailable tool.
