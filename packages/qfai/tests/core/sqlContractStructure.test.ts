@@ -103,9 +103,14 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     ]);
   });
 
-  it.each(["\n", "\r\n"])("keeps an E string's continuation across %j", (lineEnding) => {
+  // QFAI:EX-0001-0039-75
+  it.each([
+    ["\n", ""],
+    ["\r\n", ""],
+    ["\n", " -- comment with ) and ;"],
+  ])("keeps an E string's continuation across %j after %j", (lineEnding, comment) => {
     const sql = [
-      "CREATE FUNCTION f(a text DEFAULT E'prefix'",
+      "CREATE FUNCTION f(a text DEFAULT E'prefix'" + comment,
       String.raw`  'it\'s, );', b integer DEFAULT 0) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;`,
       "SELECT 2;",
     ].join(lineEnding);

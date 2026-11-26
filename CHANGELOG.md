@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **DB SQL validation reads continued PostgreSQL escape strings.** Later
+  quoted segments inherit escape handling after a newline, preserving
+  statement and argument boundaries and ignoring references inside the string.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
