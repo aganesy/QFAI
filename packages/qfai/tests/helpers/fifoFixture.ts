@@ -16,9 +16,7 @@ export async function createFifoFixture(file: string): Promise<BigIntStats | und
       `mkfifo failed (${String(result.signal ?? result.status)})\n${result.stderr}`.trimEnd(),
     );
   }
-  const entry = await lstat(file, { bigint: true }).catch((error: unknown) => {
-    if (isEnoent(error)) return undefined;
-    throw error;
-  });
-  return entry?.isFIFO() === true ? entry : undefined;
+  const entry = await lstat(file, { bigint: true });
+  if (!entry.isFIFO()) throw new Error(`mkfifo did not create a FIFO at ${file}.`);
+  return entry;
 }

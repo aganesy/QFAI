@@ -94,6 +94,7 @@ describe("init --force overwrites the regenerated assets", () => {
   });
 
   // QFAI:AC-0001-0022-02
+  // QFAI:EX-0001-0022-04
   it("reports and preserves a FIFO at a forced template destination in apply and preview", async (ctx) => {
     const dir = await newTempDir();
     const relative = path.join(".agents", "rules", "minimal-implementation.md");
