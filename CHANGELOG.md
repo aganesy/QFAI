@@ -1785,8 +1785,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   now applies those two re-routes first and uses the table only when the
   request closes.
 
-- Proposal triage records terminal acceptance as `accepted` and uses
-  `adopted` when a `decide-design` decision accepts implementation in this project.
+- Proposal triage records terminal acceptance as `accepted`. In `decide-design`,
+  `adopted` requires explicit approval to implement in this project or a
+  recorded delegation that covers the implementation decision. An implementation
+  proposal that is still open or only assumed stays pending as `deferred`.
 
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two

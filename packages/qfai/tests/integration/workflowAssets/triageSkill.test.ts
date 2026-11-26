@@ -504,22 +504,22 @@ describe("a request routed again from the close", () => {
     );
     const table = sectionOf(close, "## Outcomes");
     expect(table).not.toMatch(/`info-received`|`adopted`/);
-    expect(flat(table)).toContain(
-      "`accepted` | Acceptance closes the request without implementation work in this project",
+    expect(rowOf(table, "`accepted`")).toMatch(
+      /^\|\s*`accepted`\s*\|.*closes the request without implementation work/,
     );
+    expect(rowOf(table, "`deferred`")).toMatch(/^\|\s*`deferred`\s*\|.*with the reason/);
     const rerouting = flat(sectionOf(close, "## Re-routing"));
     expect(rerouting).toMatch(/report the outcome\s+`info-received`/);
-    expect(rerouting).toContain(
-      "In `decide-design`, use `adopted` only when `discussion-interview` records explicit user approval to implement the proposal in this project or an implementation decision under recorded delegation that covers it.",
+    expect(rerouting).toMatch(
+      /`decide-design`[^.]*`adopted` only when `discussion-interview` records[^.]*explicit user approval to implement[^.]*in this project or an implementation decision under recorded delegation that covers it/,
     );
-    expect(rerouting).toContain(
-      "If an implementation proposal is only an assumption or remains open, record `deferred` with the reason and keep the proposal pending.",
+    expect(rerouting).toMatch(
+      /assumption or remains open[^.]*record `deferred` with the reason[^.]*keep the proposal pending/,
     );
     const plan = (await loadBuiltInPlans()).find((each) => each.route === "decide-design");
     const closeBranch = plan?.branchPoints?.find((point) => point.step === "triage-close");
-    const adopted = closeBranch?.outcomes.find((outcome) => outcome.outcome === "adopted");
-    expect(adopted?.routes).toContain("add-feature");
-    expect(closeBranch?.outcomes.map((outcome) => outcome.outcome)).not.toContain("accepted");
+    expect(closeBranch?.outcomes.map((outcome) => outcome.outcome)).toEqual(["adopted"]);
+    expect(closeBranch?.outcomes[0]?.routes).toContain("add-feature");
   });
 });
 

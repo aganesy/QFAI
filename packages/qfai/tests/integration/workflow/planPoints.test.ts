@@ -295,10 +295,12 @@ it("bump-dependency moves to apply-settled when implement-dep-bump reports a fin
 });
 
 // QFAI:EX-0001-0215-09
-it("decide-design moves an adopted proposal to prototype-feature when triage-close names it", async () => {
-  expect(destinations(await planned("decide-design"), "triage-close", "adopted")).toContain(
-    "prototype-feature",
-  );
+it("decide-design places the implementation decision before the adopted prototype route", async () => {
+  const plan = await planned("decide-design");
+  expect(plan.decisionPoints).toContain("discussion-interview");
+  const steps = stepOrder(plan);
+  expect(steps.indexOf("discussion-interview")).toBeLessThan(steps.indexOf("triage-close"));
+  expect(destinations(plan, "triage-close", "adopted")).toContain("prototype-feature");
 });
 
 // QFAI:EX-0001-0215-10
