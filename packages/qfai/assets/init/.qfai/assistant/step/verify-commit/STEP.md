@@ -67,10 +67,13 @@ covering that action, target and scope. Commit authority alone covers none of th
    `### Test obligations a scope leaves pending` says, does not stop the
    commit. The gate stays `FAIL` in the report. Any other error of that gate
    still stops the commit.
-2. Before staging for an ordinary commit, compare the entire index with the
-   authorized deliverable paths. Read NUL-separated paths with
+2. Before staging for an ordinary commit, identify the Git repository root
+   even when the run starts below it. Express the authorized deliverable paths
+   relative to that root. Run the index comparisons and staging from the
+   repository root. Compare the entire index with the authorized deliverable
+   paths. Read NUL-separated paths with
    `git diff --cached --name-only --no-renames --no-relative --ignore-submodules=none -z --`
-   so renames, paths outside the current directory and submodule changes are
+   so renames, paths outside the starting subdirectory and submodule changes are
    included. If the index cannot be read, report the failure and stop before
    staging. If unrelated staged paths exist, report them and
    stop before changing the index or creating a commit.

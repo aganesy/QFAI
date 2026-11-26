@@ -24,14 +24,15 @@ to.
    When one fails, stop and report which.
 2. Resolve and record the pick list before branching. When explicitly
    identified constituent commits cover the requested change, list only
-   those commits in application order. For a selected merge commit, verify the source branch
+   those commits in application order. Check the diff of each selected ordinary
+   commit against the requested backport scope. For a selected merge commit, verify the source branch
    into which the change originally landed. Use `git log --first-parent <source-ref>`
    on that branch's verified ref or historical tip. A merge on that
    first-parent history uses parent 1. Check that the diff from the
    identified parent to the merge falls within the request, and record the
    parent SHA and 1-based number. If the source branch, parent or requested
    change cannot be verified, stop before branching and report the missing
-   evidence. If the diff includes unrelated work, stop before branching
+   evidence. If any selected diff includes unrelated work, stop before branching
    and report the unrelated changes.
 3. Branch from the release branch and apply each ordinary commit with
    `git cherry-pick -n -x`. Apply a selected merge with
