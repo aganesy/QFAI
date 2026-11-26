@@ -629,6 +629,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
@@ -1112,6 +1114,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   waits for a reader that may never come. A FIFO, a socket or a device at a
   template file's path is now refused and left as it is, on a dry run too.
   Closes #5257.
+
+- **`qfai init --force` reports a directory in a template file's place.**
+  The directory is listed as refused and its contents are preserved. The copy
+  continues with the other template files. A dry run reports the same refusal.
 
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
