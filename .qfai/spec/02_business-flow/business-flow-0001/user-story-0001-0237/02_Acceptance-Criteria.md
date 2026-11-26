@@ -22,6 +22,7 @@ Feature: Prepare project-local graph CLIs through init
     Given a compatible completed installation
     When I rerun init
     Then verified tools are reused and missing managed components are repaired
+    And a Git ignore warning leaves the managed graph CLI entrypoint reported ready when it is intact
 
   # AC-0001-0237-04
   Scenario: Keep usable preparation after failure
