@@ -440,10 +440,10 @@ describe("migration catalog move", () => {
     try {
       const plan = await step03.plan(context);
       expect(renumber).toHaveBeenCalledTimes(1);
-      expect(plan.forAPerson).toEqual([]);
-      const notes = plan.forAPersonIdentifiers ?? [];
-      expect(notes).toHaveLength(LARGE_REPORT_COUNT);
-      expect(notes.findIndex((note, index) => note !== identifiers[index])).toBe(-1);
+      for (const notes of [plan.forAPerson ?? [], plan.forAPersonIdentifiers ?? []]) {
+        expect(notes).toHaveLength(LARGE_REPORT_COUNT);
+        expect(notes.findIndex((note, index) => note !== identifiers[index])).toBe(-1);
+      }
     } finally {
       renumber.mockRestore();
     }
