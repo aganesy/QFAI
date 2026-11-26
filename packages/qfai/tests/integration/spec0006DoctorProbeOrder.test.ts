@@ -39,8 +39,9 @@ afterEach(async () => {
 });
 
 /**
- * Seed a project-local node_modules/.bin/playwright launcher that exits 0
- * for `--version` invocations. Windows: write the .cmd shim used by npm.
+ * Seed a project-local Playwright launcher that prints a version and succeeds
+ * with any arguments, including the local probe's `--help`.
+ * On Windows, write the .cmd shim used by npm.
  */
 async function seedLocalPlaywright(root: string): Promise<void> {
   const binDir = path.join(root, "node_modules", ".bin");

@@ -14,6 +14,7 @@ import { runInit } from "../helpers/legacyInit.js";
 import { createDoctorData } from "../../src/core/doctor.js";
 import type { DoctorData } from "../../src/core/doctor.js";
 import { quietUnrelatedWarnings, useAdopterTreePool } from "../helpers/doctorFixtures.js";
+import { seedPlaywrightNpxShim } from "../helpers/playwrightNpxShim.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 const isWin = process.platform === "win32";
@@ -378,7 +379,7 @@ describe("BF-0003 Playwright npx fallback", () => {
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     await seedShim(path.join(root, "scripts"), "playwright");
     const binDir = await newTempDir("npx-bin");
-    await seedShim(binDir, "npx");
+    await seedPlaywrightNpxShim(binDir);
     await seedShim(binDir, "playwright");
     const data = await withPath(binDir, async () => {
       const outPath = path.join(root, ".qfai", "report", "doctor.json");
@@ -392,6 +393,7 @@ describe("BF-0003 Playwright npx fallback", () => {
       return JSON.parse(await readFile(outPath, "utf-8")) as DoctorData;
     });
     const launcher = check(data, "prototyping.playwrightCli");
+    expect(launcher?.severity).toBe("ok");
     expect(launcher?.details).toMatchObject({
       resolvedStage: "npx-fallback",
       origin: "npx --no-install",
