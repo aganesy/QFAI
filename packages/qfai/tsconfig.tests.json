@@ -732,6 +732,7 @@
     "tests/integration/grillingRuleReferences.test.ts",
     "tests/integration/noDiscussionSidecarMentions.test.ts",
     "tests/scripts/syncInitToRoot.test.ts",
+    "tests/scripts/syncShippedWorkflowToolchain.test.ts",
     "tests/core/waiversReadErrors.test.ts",
     "tests/unit/outputCapture.test.ts",
     "tests/core/replaceFileTempCleanup.test.ts",
