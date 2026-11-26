@@ -22,7 +22,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { defaultConfig, loadConfig } from "../../src/core/config.js";
+import { defaultConfig, loadConfig, resolvePath } from "../../src/core/config.js";
 import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -171,8 +171,8 @@ describe("init assets root mirror", () => {
   // Self-validation uses the package's source and test directories.
   it("points repository self-validation at the package source and tests", async () => {
     const { config } = await loadConfig(repoRoot);
-    const sourceDir = path.resolve(repoRoot, config.paths.srcDir);
-    const testDir = path.resolve(repoRoot, config.paths.testsDir);
+    const sourceDir = resolvePath(repoRoot, config, "srcDir");
+    const testDir = resolvePath(repoRoot, config, "testsDir");
     expect(sourceDir).toBe(path.join(repoRoot, "packages", "qfai", "src"));
     expect(testDir).toBe(path.join(repoRoot, "packages", "qfai", "tests"));
     const [sourceEntries, testEntries] = await Promise.all([readdir(sourceDir), readdir(testDir)]);
