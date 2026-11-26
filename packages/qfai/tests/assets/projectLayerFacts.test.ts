@@ -252,7 +252,8 @@ function namesItsCommit(command: string): boolean {
   const beforeLast = words[words.length - 2] ?? "";
   return (
     /^(?:<SHA>|[0-9a-f]{40})$/.test(last) &&
-    !VALUE_TAKING_TAG_FLAGS.has(beforeLast) &&
+    !VALUE_TAKING_TAG_FLAGS.has(canonicalLongTagFlag(beforeLast)) &&
+    shortTagOption(beforeLast) !== "value" &&
     !words.some((word) => /^(?:HEAD|@)(?:[~^].*)?$/.test(word))
   );
 }
@@ -380,6 +381,8 @@ describe("the project layer describes the repository it is in", () => {
       "Then run `git tag vX.Y.Z` to tag it.",
       "```sh\ngit fetch origin main && git tag vX.Y.Z\n```",
       "```sh\ngit tag vX.Y.Z -m <SHA>\n```",
+      "```sh\ngit tag vX.Y.Z -am <SHA>\n```",
+      "```sh\ngit tag vX.Y.Z --mess <SHA>\n```",
     ];
     for (const sample of tagsHead) {
       const creates = tagCreations(sample);
