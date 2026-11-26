@@ -89,12 +89,16 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(guard).toBeGreaterThanOrEqual(0);
     expect(stage).toBeGreaterThan(guard);
     const preflight = procedure.slice(guard, stage);
-    expect(preflight).toContain(
-      "identify the Git repository root even when the run starts below it.",
-    );
-    expect(preflight).toContain(
+    const checkIndex = preflight.indexOf(
       "git diff --cached --name-only --no-renames --no-relative --ignore-submodules=none -z --",
     );
+    expect(checkIndex).toBeGreaterThan(0);
+    const pathSetup = preflight.slice(0, checkIndex);
+    expect(pathSetup).toContain(
+      "identify the Git repository root even when the run starts below it.",
+    );
+    expect(pathSetup).toContain("Express the authorized deliverable paths relative to that root.");
+    expect(pathSetup).toContain("Run the index comparisons and staging from the repository root.");
     expect(preflight).toContain(
       "If the index cannot be read, report the failure and stop before staging.",
     );
