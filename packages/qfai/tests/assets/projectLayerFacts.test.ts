@@ -111,12 +111,38 @@ const NON_CREATING_TAG_FLAGS = new Set([
 ]);
 
 /** The tag creation options whose next word is their value. */
-const VALUE_TAKING_TAG_FLAGS = new Set(["-m", "--message", "-F", "--file", "-u", "--local-user"]);
+const VALUE_TAKING_TAG_FLAGS = new Set([
+  "--message",
+  "--file",
+  "--local-user",
+  "--trailer",
+  "--cleanup",
+]);
 
 /** Sorting and formatting do not switch a command with a tag operand into list mode. */
 const TAG_LIST_MODIFIERS = new Set(["--sort", "--format"]);
 
-function readTagCommand(command: string): { creates: boolean; operands: string[] } {
+const TAG_SWITCHES = new Set([
+  "--annotate",
+  "--sign",
+  "--no-sign",
+  "--force",
+  "--edit",
+  "--ignore-case",
+  "--color",
+  "--no-color",
+  "--omit-empty",
+  "--column",
+  "--no-column",
+  "--create-reflog",
+  "--no-create-reflog",
+]);
+
+function readTagCommand(command: string): {
+  creates: boolean;
+  operands: string[];
+  optionsKnown: boolean;
+} {
   // Keep quoted words together so flag-like text in a tag message stays a value.
   const words = command.match(/(?:[^\s"'\\]|"(?:[^"\\]|\\.)*"|'[^']*'|\\.)+/g);
   const args = (words?.slice(2) ?? []).map((word) =>
@@ -128,6 +154,7 @@ function readTagCommand(command: string): { creates: boolean; operands: string[]
   );
   let operands: string[] = [];
   let hasListModifier = false;
+  let optionsKnown = true;
 
   for (let index = 0; index < args.length; index++) {
     const arg = args[index] ?? "";
@@ -135,25 +162,37 @@ function readTagCommand(command: string): { creates: boolean; operands: string[]
       operands = operands.concat(args.slice(index + 1));
       break;
     }
+    if (!arg.startsWith("-")) {
+      operands.push(arg);
+      continue;
+    }
 
     const [flag = "", value] = arg.split("=", 2);
     if (NON_CREATING_TAG_FLAGS.has(flag) || /^-n\d+$/.test(flag)) {
-      return { creates: false, operands: [] };
+      return { creates: false, operands: [], optionsKnown };
     }
 
     const listModifier = TAG_LIST_MODIFIERS.has(flag);
     hasListModifier ||= listModifier;
+    const longWithValue = listModifier || VALUE_TAKING_TAG_FLAGS.has(flag);
     const takesSeparateValue =
-      (/^--/.test(flag) && VALUE_TAKING_TAG_FLAGS.has(flag) && value === undefined) ||
-      /^-[aesfi]*[mFu]$/.test(arg);
-    if ((listModifier && value === undefined) || takesSeparateValue) index++;
-    if (!arg.startsWith("-")) operands.push(arg);
+      (longWithValue && value === undefined) || /^-[aesfi]*[mFu]$/.test(arg);
+    if (takesSeparateValue) {
+      index++;
+      if (index === args.length) optionsKnown = false;
+    } else if (
+      !longWithValue &&
+      !TAG_SWITCHES.has(flag) &&
+      !/^-[aesfi]*(?:[mFu].+|[aesfi])$/.test(arg)
+    ) {
+      optionsKnown = false;
+    }
   }
 
   // A continued command may name the tag on its next physical line.
   const creates =
     operands.length > 0 || (args.length > 0 && (!hasListModifier || command.endsWith("\\")));
-  return { creates, operands };
+  return { creates, operands, optionsKnown };
 }
 
 function splitShellCommands(line: string): string[] {
@@ -195,8 +234,13 @@ function tagCreations(markdown: string): string[] {
  * `<SHA>` placeholder or a full 40-hex SHA there.
  */
 function namesItsCommit(command: string): boolean {
-  const { creates, operands } = readTagCommand(command);
-  return creates && operands.length === 2 && /^(?:<SHA>|[0-9a-f]{40})$/.test(operands[1] ?? "");
+  const { creates, operands, optionsKnown } = readTagCommand(command);
+  return (
+    creates &&
+    optionsKnown &&
+    operands.length === 2 &&
+    /^(?:<SHA>|[0-9a-f]{40})$/.test(operands[1] ?? "")
+  );
 }
 
 function releaseTaggingStatements(guide: string): string[] {
@@ -346,6 +390,11 @@ describe("the project layer describes the repository it is in", () => {
     expect(namesItsCommit("git tag vX.Y.Z @")).toBe(false);
     expect(namesItsCommit('git tag -m "See HEAD for details" vX.Y.Z')).toBe(false);
     expect(namesItsCommit("git tag vX.Y.Z -m <SHA>")).toBe(false);
+    expect(namesItsCommit("git tag vX.Y.Z --mess <SHA> --force")).toBe(false);
+    expect(namesItsCommit("git tag vX.Y.Z <SHA> --message")).toBe(false);
+    expect(
+      namesItsCommit('git tag -m Release --trailer "Change-Id: X" --cleanup verbatim vX.Y.Z <SHA>'),
+    ).toBe(true);
   });
 
   it("ignores listing options when identifying tag creation commands", () => {
