@@ -119,6 +119,38 @@ it("reuses compatible local runtimes when installation is offline", async () => 
 });
 
 // QFAI:EX-0001-0237-11
+it("restores a missing managed graph CLI and keeps project files during repeated init", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-cli-restore-"));
+  const cli = path.join(root, ".qfai", "tools", "graph-cli.mjs");
+  const settings = path.join(root, ".mcp.json");
+  const notes = path.join(root, "project-notes.md");
+  const originalSettings = '{"mcpServers":{"adopter":{"command":"keep-me"}}}\n';
+  const originalNotes = "Keep project notes.\n";
+  const fixture = graphProcessFixture();
+  const init = () =>
+    captureStdout(() =>
+      runInit({ dir: root, force: false, dryRun: false, yes: false }, {}, fixture.run),
+    );
+
+  try {
+    await writeFile(settings, originalSettings);
+    await writeFile(notes, originalNotes);
+    await init();
+    const originalCli = await readFile(cli);
+    await rm(cli);
+    await expect(access(cli)).rejects.toMatchObject({ code: "ENOENT" });
+
+    await init();
+
+    expect(await readFile(cli)).toEqual(originalCli);
+    expect(await readFile(settings, "utf8")).toBe(originalSettings);
+    expect(await readFile(notes, "utf8")).toBe(originalNotes);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0237-30
 // Mutation: packages/qfai/src/core/graph/prepare.ts `if (codegraphReady) {` -> `if (false) {` fails "repairs only a missing runtime component and retains unrelated settings"
 it("repairs only a missing runtime component and retains unrelated settings", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-partial-"));
@@ -132,9 +164,9 @@ it("repairs only a missing runtime component and retains unrelated settings", as
     await writeFile(settings, original);
     await rm(paths.python);
     fixture.calls.length = 0;
-    await expect(prepareGraphRuntimes(root, fixture.run)).resolves.toMatchObject({
-      runtime: "installed",
-    });
+    await captureStdout(() =>
+      runInit({ dir: root, force: false, dryRun: false, yes: false }, {}, fixture.run),
+    );
     await expect(access(paths.python)).resolves.toBeUndefined();
     expect(await readFile(paths.codegraph)).toEqual(codegraphBytes);
     expect(await readFile(settings, "utf8")).toBe(original);
