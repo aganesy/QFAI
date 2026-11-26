@@ -63,10 +63,10 @@ Two routes let this step send the request on instead of closing it:
   the proposal in this project or an implementation decision under recorded
   delegation that covers it.
   For an authorized implementation, report the outcome `adopted`, naming
-  the route that builds it. The run that route starts writes a record of
-  its own; this run's record stays as this step committed it.
-  If an implementation proposal is only an assumption or remains open,
-  record `deferred` with the reason and keep the proposal pending.
+  the route that builds it. The run that route starts writes a record of its
+  own; this run's record stays as this step committed it.
+  If an implementation proposal is only an assumption or remains open, record
+  `deferred` with the reason and keep the proposal pending.
 
 Any other route closes here.
 
