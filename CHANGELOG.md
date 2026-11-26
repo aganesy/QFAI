@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **DB SQL validation accepts punctuation after routine `DEFAULT`.** It
+  detects redefinitions with defaults such as `DEFAULT(NULL)` and preserves
+  qualified input types such as `app.default`.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to

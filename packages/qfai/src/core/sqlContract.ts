@@ -723,10 +723,24 @@ function splitTopLevel(text: string): string[] {
   return parts;
 }
 
+const ARGUMENT_DEFAULT_TOKEN = new RegExp(
+  '"(?:[^"]|"")*"|' + IDENTIFIER_START_CLASS + IDENTIFIER_CHAR_CLASS + "*|\\S",
+  "g",
+);
+
 /** An argument without its `DEFAULT <expr>` or `= <expr>` tail. */
 function stripDefault(argument: string): string {
-  for (const match of argument.matchAll(/"(?:[^"]|"")*"|\s+default(?:\s|$)|=/gi)) {
-    if (!match[0].startsWith('"')) return argument.slice(0, match.index);
+  let previousToken = "";
+  for (const match of argument.matchAll(ARGUMENT_DEFAULT_TOKEN)) {
+    const token = match[0];
+    // A dot makes even a keyword spelling part of a qualified type name.
+    if (
+      token === "=" ||
+      (previousToken !== "" && previousToken !== "." && token.toLowerCase() === "default")
+    ) {
+      return argument.slice(0, match.index);
+    }
+    previousToken = token;
   }
   return argument;
 }

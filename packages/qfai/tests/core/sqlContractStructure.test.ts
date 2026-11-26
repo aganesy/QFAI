@@ -595,6 +595,7 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(redefinitions.map((issue) => issue.severity)).toEqual(["error"]);
   });
 
+  // QFAI:EX-0001-0039-76
   it.each(["DEFAULT(NULL)", "DEFAULT'text'", "DEFAULT E'text'"])(
     "recognizes %s as a clause after a qualified type named default",
     async (defaultClause) => {
