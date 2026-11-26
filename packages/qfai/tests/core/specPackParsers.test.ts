@@ -4,6 +4,7 @@ import {
   escapeTableCell,
   maskNonSpecRegions,
   parseAllMarkdownTables,
+  parseRenderedMarkdownTables,
   splitMarkdownRow,
 } from "../../src/core/specPackParsers.js";
 
@@ -83,6 +84,80 @@ describe("escapeTableCell ↔ splitMarkdownRow round-trip identity", () => {
 
   it("CRLF and CR line breaks collapse to a single space", () => {
     expect(roundTrip("line1\r\nline2", "line1\rline2")).toEqual(["line1 line2", "line1 line2"]);
+  });
+});
+
+describe("parseRenderedMarkdownTables", () => {
+  const header = "| Label | Expected |";
+  const separator = "| --- | --- |";
+
+  it("ignores a fenced table inside an ordered list and keeps the surrounding tables", () => {
+    const text = [
+      header,
+      separator,
+      "| Before | visible |",
+      "",
+      "123. Sample:",
+      "     ```md",
+      "     " + header,
+      "     " + separator,
+      "     | Inside | hidden |",
+      "     ```",
+      "",
+      header,
+      separator,
+      "| After | visible |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      { headers: ["Label", "Expected"], rows: [["Before", "visible"]] },
+      { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+    ]);
+  });
+
+  it("keeps visible cells between incomplete comment delimiters in separate rows", () => {
+    const text = [
+      header,
+      separator,
+      "| Starts with <!-- | first |",
+      "| Changes | visible |",
+      "| Ends with --> | last |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      {
+        headers: ["Label", "Expected"],
+        rows: [
+          ["Starts with <!--", "first"],
+          ["Changes", "visible"],
+          ["Ends with -->", "last"],
+        ],
+      },
+    ]);
+  });
+
+  it("omits tables in ordinary fences and HTML comment blocks", () => {
+    const text = [
+      "~~~md",
+      header,
+      separator,
+      "| Fenced | hidden |",
+      "~~~",
+      "",
+      "<!--",
+      header,
+      separator,
+      "| Commented | hidden |",
+      "-->",
+      "",
+      header,
+      separator,
+      "| After | visible |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+    ]);
   });
 });
 
