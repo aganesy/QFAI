@@ -101,7 +101,7 @@ const INDENTED_CODE_LINE = /^(?: {4}|\t)/;
 
 /** A list item marker, which makes the indentation below it continuation. */
 const LIST_ITEM_LINE = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]/;
-const LIST_ITEM_MARKER_AT = /(?:[-*+]|\d{1,9}[.)])(?=[ \t])/y;
+const LIST_ITEM_MARKER_AT = /(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$)/y;
 
 /** Measure indentation in columns so tabs use CommonMark's four-column stops. */
 function markdownIndent(
@@ -114,6 +114,44 @@ function markdownIndent(
     offset += 1;
   }
   return { offset, columns };
+}
+
+/** Locate block markup within the current list item and any new markers on this line. */
+function listContentLine(
+  line: string,
+  indentation: { offset: number; columns: number },
+  listIndents: number[],
+  paragraphOpen: boolean,
+): { container: number; contentOffset: number | undefined } {
+  const hadList = listIndents.length > 0;
+  if (indentation.offset < line.length) {
+    while ((listIndents.at(-1) ?? 0) > indentation.columns) listIndents.pop();
+  }
+  let container = listIndents.at(-1) ?? 0;
+  if (indentation.columns - container > 3) return { container, contentOffset: undefined };
+
+  let { offset, columns } = indentation;
+  for (;;) {
+    LIST_ITEM_MARKER_AT.lastIndex = offset;
+    const marker = LIST_ITEM_MARKER_AT.exec(line)?.[0];
+    if (!marker) return { container, contentOffset: offset };
+
+    const markerEnd = columns + marker.length;
+    const padding = markdownIndent(line, offset + marker.length, markerEnd);
+    const empty = padding.offset === line.length;
+    if (empty && paragraphOpen && !hadList && offset === indentation.offset) {
+      // An empty first line cannot start a list by interrupting a paragraph.
+      return { container, contentOffset: undefined };
+    }
+    if (empty || padding.columns - markerEnd > 4) {
+      container = markerEnd + 1;
+      listIndents.push(container);
+      return { container, contentOffset: undefined };
+    }
+    ({ offset, columns } = padding);
+    container = columns;
+    listIndents.push(container);
+  }
 }
 
 /**
@@ -302,27 +340,43 @@ function paragraphClosers(lines: readonly string[]): boolean[] {
 /** A table row cannot carry an inline comment into the next row. */
 function tableRowLines(lines: readonly string[]): Set<number> {
   const rows = new Set<number>();
-  for (let index = 0; index + 1 < lines.length; index += 1) {
-    const header = lines[index] ?? "";
-    const delimiter = lines[index + 1] ?? "";
-    if (!looksLikeTableRow(header) || !isTableSeparator(delimiter)) {
+  const listIndents: number[] = [];
+  let paragraphOpen = false;
+  let headerAt = -1;
+  let headerContainer: number | undefined;
+  let tableContainer: number | undefined;
+  for (const [index, line] of lines.entries()) {
+    const { container, contentOffset } = listContentLine(
+      line,
+      markdownIndent(line),
+      listIndents,
+      paragraphOpen,
+    );
+    paragraphOpen = line.trim().length > 0 && !endsParagraph(line);
+    if (contentOffset === undefined || !looksLikeTableRow(line)) {
+      headerAt = -1;
+      tableContainer = undefined;
       continue;
     }
-    const delimiterCells = splitMarkdownRow(delimiter);
-    if (
-      delimiterCells.some((cell) => cell.length === 0) ||
-      splitMarkdownRow(header).length !== delimiterCells.length
-    ) {
-      continue;
-    }
-    rows.add(index);
-    rows.add(index + 1);
-    index += 2;
-    while (looksLikeTableRow(lines[index] ?? "")) {
+    if (tableContainer === container) {
       rows.add(index);
-      index += 1;
+      continue;
     }
-    index -= 1;
+    tableContainer = undefined;
+    if (headerAt === index - 1 && headerContainer === container && isTableSeparator(line)) {
+      const delimiterCells = splitMarkdownRow(line);
+      if (
+        delimiterCells.every((cell) => cell.length > 0) &&
+        splitMarkdownRow(lines[headerAt] ?? "").length === delimiterCells.length
+      ) {
+        rows.add(headerAt);
+        rows.add(index);
+        tableContainer = container;
+        continue;
+      }
+    }
+    headerAt = index;
+    headerContainer = container;
   }
   return rows;
 }
@@ -428,10 +482,12 @@ export function maskNonSpecRegions(text: string): string {
       return "";
     }
 
-    if (!blank) {
-      while ((listIndents.at(-1) ?? 0) > indentation.columns) listIndents.pop();
-    }
-    let container = listIndents.at(-1) ?? 0;
+    const { container, contentOffset } = listContentLine(
+      line,
+      indentation,
+      listIndents,
+      paragraphOpen,
+    );
     if (inIndentedCode) {
       // A blank line does not end the block — an indented sample may contain
       // one — but the first non-blank line at a shallower indent does.
@@ -446,36 +502,14 @@ export function maskNonSpecRegions(text: string): string {
       return "";
     }
 
-    let fenceText = "";
-    if (indentation.columns - container <= 3) {
-      let { offset, columns } = indentation;
-      for (;;) {
-        LIST_ITEM_MARKER_AT.lastIndex = offset;
-        const marker = LIST_ITEM_MARKER_AT.exec(line)?.[0];
-        if (!marker) {
-          fenceText = line.slice(offset);
-          break;
-        }
-        const markerEnd = columns + marker.length;
-        const padding = markdownIndent(line, offset + marker.length, markerEnd);
-        if (padding.columns - markerEnd > 4) {
-          container = markerEnd + 1;
-          listIndents.push(container);
-          break;
-        }
-        ({ offset, columns } = padding);
-        container = columns;
-        listIndents.push(container);
-      }
-    }
     prevBlank = blank;
 
     // The fence opener is read before the comment scan, because a `<!--` in
     // an info string labels the sample rather than opening a comment. Only
     // when a comment is already open does the scan come first: a fence marker
     // inside one is comment text.
-    if (!inComment) {
-      const opener = FENCE_LINE.exec(fenceText)?.[1];
+    if (!inComment && contentOffset !== undefined) {
+      const opener = FENCE_LINE.exec(line.slice(contentOffset))?.[1];
       if (opener) {
         open = { marker: opener.charAt(0), length: opener.length, container };
         return "";

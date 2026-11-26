@@ -96,6 +96,7 @@ describe("parseRenderedMarkdownTables", () => {
     ["123. Sample:\n     ```md", "     ```", "     "],
     ["123. ```md", "", "     "],
     ["- - ~~~md", "    ~~~", "    "],
+    ["123.\n     ~~~md", "     ~~~", "     "],
   ])("ignores a fenced table inside list content starting with %j", (opener, closer, indent) => {
     const text = [
       header,
@@ -120,14 +121,21 @@ describe("parseRenderedMarkdownTables", () => {
   });
 
   // QFAI:EX-0001-0039-77
-  it("keeps visible cells between incomplete comment delimiters in separate rows", () => {
-    const text = [
-      header,
-      separator,
-      "| Starts with <!-- | first |",
-      "| Changes | visible |",
-      "| Ends with --> | last |",
-    ].join("\n");
+  it.each([
+    ["", ""],
+    ["123. Visible table:\n\n", "     "],
+  ])("keeps cells between incomplete comments on separate rows after %j", (prefix, indent) => {
+    const text =
+      prefix +
+      [
+        header,
+        separator,
+        "| Starts with <!-- | first |",
+        "| Changes | visible |",
+        "| Ends with --> | last |",
+      ]
+        .map((row) => indent + row)
+        .join("\n");
 
     expect(parseRenderedMarkdownTables(text)).toEqual([
       {
@@ -167,23 +175,29 @@ describe("parseRenderedMarkdownTables", () => {
   });
 
   // QFAI:EX-0001-0039-77
-  it("keeps a malformed table inside its multiline inline comment", () => {
-    const text = [
-      "Before <!--",
-      header,
-      "| --- |",
-      "| Hidden | example |",
-      "--> after",
-      "",
-      header,
-      separator,
-      "| After | visible |",
-    ].join("\n");
+  it.each([
+    ["unequal columns", "", "| --- |"],
+    ["four-column root indentation", "    ", separator],
+  ])(
+    "keeps a table candidate with %s inside its multiline inline comment",
+    (_case, indent, delimiter) => {
+      const text = [
+        "Before <!--",
+        indent + header,
+        indent + delimiter,
+        indent + "| Hidden | example |",
+        "--> after",
+        "",
+        header,
+        separator,
+        "| After | visible |",
+      ].join("\n");
 
-    expect(parseRenderedMarkdownTables(text)).toEqual([
-      { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
-    ]);
-  });
+      expect(parseRenderedMarkdownTables(text)).toEqual([
+        { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+      ]);
+    },
+  );
 });
 
 describe("maskNonSpecRegions", () => {
