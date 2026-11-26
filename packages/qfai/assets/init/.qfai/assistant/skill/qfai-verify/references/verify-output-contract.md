@@ -107,7 +107,8 @@ There is no `implement` value: the enum is closed at these three, and a run afte
 `/qfai-implement` is recorded as `full`.
 
 Built-in stages write `verify.json` only for `full` and `prototyping`.
-`verify-context` selects the scope, and `verify-repo-gate` writes the verdict.
+`verify-context` selects the scope when `qfai-verify` is invoked by name.
+A route runs its verify gates at `full` scope. `verify-repo-gate` writes the verdict.
 The verdict format includes `atdd` for an acceptance-only gate set.
 `npx qfai validate --profile atdd` writes validation results. The implementation
 steps that use this command record its result in their stage evidence.
