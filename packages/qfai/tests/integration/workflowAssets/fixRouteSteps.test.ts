@@ -281,7 +281,7 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(procedure).toMatch(/`verify-commit` makes the commit/);
   });
 
-  it("resolves the mainline parent and backport scope before picking a merge", async () => {
+  it("checks ordinary and merge backport diffs before branching", async () => {
     const procedure = await section("implement-backport", "## Procedure");
     const branch = procedure.indexOf("3. Branch from the release branch");
     expect(branch).toBeGreaterThan(0);
