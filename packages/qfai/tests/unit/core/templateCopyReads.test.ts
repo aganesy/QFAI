@@ -9,7 +9,6 @@
  * permission: `chmod 000` does not stop a root user or a Windows process reading the file.
  */
 
-import { spawnSync } from "node:child_process";
 import { lstat, mkdir, mkdtemp, readFile, rm as rmFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -18,6 +17,7 @@ import type * as fsPromises from "node:fs/promises";
 import type * as boundedRead from "../../../src/shared/boundedRead.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createFifoFixture } from "../../helpers/fifoFixture.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
 
 type FsPromises = typeof fsPromises;
@@ -168,41 +168,28 @@ describe("a directory where a template file goes", () => {
 });
 
 describe("a FIFO where a template file goes", () => {
-  /** Replaces the installed `doc.md` with a FIFO, or skips the case where this process sees none. */
-  async function plantFifo(destFile: string, skip: () => void): Promise<void> {
-    if (process.platform === "win32") skip();
-    await rmFile(destFile);
-    // Git Bash ships `mkfifo`, but its FIFO lives in the MSYS layer and `lstat` here sees nothing,
-    // so the fixture is checked rather than the tool's exit status.
-    spawnSync("mkfifo", [destFile]);
-    const planted = await lstat(destFile).then(
-      (entry) => entry.isFIFO(),
-      () => false,
-    );
-    if (!planted) skip();
-  }
-
   // QFAI:EX-0001-0022-04
-  it("is refused by a forced copy, which neither opens nor removes it", async (ctx) => {
-    const { source, dest, destFile } = await trees("a\n", "a\n");
-    await plantFifo(destFile, () => ctx.skip());
+  it.for([
+    { mode: "copy", dryRun: false },
+    { mode: "dry run", dryRun: true },
+  ])(
+    "refuses the destination and preserves the FIFO in a forced $mode",
+    async ({ dryRun }, ctx) => {
+      const { source, dest, destFile } = await trees("a\n", "a\n");
+      await rmFile(destFile);
+      const original = await createFifoFixture(destFile);
+      if (original === undefined) {
+        ctx.skip("No usable FIFO fixture on this host.");
+        return;
+      }
 
-    const result = await copyTemplateTree(source, dest, { force: true, dryRun: false });
+      const result = await copyTemplateTree(source, dest, { force: true, dryRun });
 
-    expect(result.refused).toEqual([path.join(dest, "doc.md")]);
-    expect(result.copied).toEqual([]);
-    expect((await lstat(destFile)).isFIFO()).toBe(true);
-  });
-
-  // QFAI:EX-0001-0022-04
-  it("is refused by a forced dry run too", async (ctx) => {
-    const { source, dest, destFile } = await trees("a\n", "a\n");
-    await plantFifo(destFile, () => ctx.skip());
-
-    const result = await copyTemplateTree(source, dest, { force: true, dryRun: true });
-
-    expect(result.refused).toEqual([path.join(dest, "doc.md")]);
-    expect(result.copied).toEqual([]);
-    expect((await lstat(destFile)).isFIFO()).toBe(true);
-  });
+      expect(result.refused).toEqual([destFile]);
+      expect(result.copied).toEqual([]);
+      const current = await lstat(destFile, { bigint: true });
+      expect(current.isFIFO()).toBe(true);
+      expect([current.dev, current.ino]).toEqual([original.dev, original.ino]);
+    },
+  );
 });
