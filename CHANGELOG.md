@@ -1077,6 +1077,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   between the two, or a failed put-back, left that content there, and nothing
   reported it after the one note printed at the time. A later `qfai init` now
   names each such directory beside a wrapper it writes, and leaves it in place.
+  The note also describes retained project content when cleanup fails after
+  the link has been written.
   Closes #5317.
 
 - **The README skill list names every skill `qfai init` installs.** It left
@@ -1112,6 +1114,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   waits for a reader that may never come. A FIFO, a socket or a device at a
   template file's path is now refused and left as it is, on a dry run too.
   Closes #5257.
+
+- **`qfai init --force` reports a directory in a template file's place.**
+  The directory is listed as refused and its contents are preserved. The copy
+  continues with the other template files. A dry run reports the same refusal.
 
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried

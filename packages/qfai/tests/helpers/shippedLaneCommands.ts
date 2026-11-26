@@ -1249,7 +1249,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "698f93291a942562a5449dd4cead0cfa0e6111f13b7bd7b6b0de6af098b20cfa"],
+  ["qfai-docs.yml", "6673822acf4a8df019fc81c00a3930477aded85ebf08f097d338874e1993a94a"],
   ["qfai-tests.yml", "ac9de437cefe45e68b5b29cea455f81a3d767cb5ab8aab0a005551fb6a81053b"],
   ["qfai-validate.yml", "b7edb0a89723c10822fba833a659a502eb8a3297559f97610d355f51e823b468"],
 ]);
@@ -2125,7 +2125,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body 2b158e79aad529228eb30165f5a496b4677daf6fb8bd609bb4ac9661449e8c79>"}',
+    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body c677adddd538ac97404c2de34092628fb1d21e7a67eee3d54d718cd9a555cbd0>"}',
   ],
   [
     "qfai-docs.yml#docs",
