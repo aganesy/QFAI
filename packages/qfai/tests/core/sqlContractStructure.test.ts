@@ -108,7 +108,6 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     expect(statements).toHaveLength(3);
   });
 
-  // QFAI:EX-0001-0039-78
   it.each(["\n", "\r\n", "\r"])("counts a %j newline escaped inside an E string", (separator) => {
     const { statements, errors } = parseSqlContract(
       `SELECT E'a\\${separator}b';${separator}SELECT 2;`,
@@ -130,7 +129,7 @@ describe("the statement splitter knows SQL's quoting rules", () => {
         "-- QFAI-CONTRACT-ID: DB-0001",
         "-- Create the same table after the comments and literal bodies.",
         "CREATE TABLE orders (id integer);",
-        "SELECT E'first",
+        "SELECT E'first\\",
         "second';",
         "SELECT $$third",
         "fourth$$;",
@@ -142,7 +141,7 @@ describe("the statement splitter knows SQL's quoting rules", () => {
 
       expect(errors).toEqual([]);
       expect(statements.map(({ line }) => line)).toEqual([3, 4, 6, 10]);
-      expect(statements[1]?.text).toBe(`SELECT E'first${separator}second'`);
+      expect(statements[1]?.text).toBe(`SELECT E'first\\${separator}second'`);
       expect(statements[2]?.text).toBe(`SELECT $$third${separator}fourth$$`);
       const findings = await runOn(sql + separator + "SELECT );");
       expect(
