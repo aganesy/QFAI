@@ -1149,6 +1149,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   The directory is listed as refused and its contents are preserved. The copy
   continues with the other template files. A dry run reports the same refusal.
 
+- The template refusal warning names the two places to inspect. A directory
+  or special entry can occupy the destination, and a link or non-directory
+  can block a parent path.
+
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
   no `id` was reported under an ID made up from its file name, which
