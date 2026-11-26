@@ -43,19 +43,23 @@ operation. This step runs it and reports what happened.
    repository (`git fetch <remote> <base>`) and record the commit it fetched
    (`git rev-parse FETCH_HEAD`); a local remote-tracking ref alone may be
    stale. Merge that recorded commit into the pull request's branch locally,
-   push, and wait for the checks that push starts. Just before the merge, fetch
-   the base again: when it no longer points to the recorded commit, record the
-   new commit and merge it in the same way first; only then merge. A conflict the host
+   push, and wait for the checks that push starts. A conflict the host
    shows only in `decisions.md`, its pages or `open-questions.md` is resolved
    the same way: the union merge completes it. Edit no register row except to
    delete again a question row the union merge kept although one side deleted
    it, committing that deletion before the push. Renumber no ID. The union
-   merge adds no review requirement of its own. Read the base repository's
+   merge adds no review requirement of its own. A conflict in any other file
+   stops the operation as a tracked change it needs. Read the base repository's
    review requirements from the pull request's base branch and apply them
-   to the updated head before merging the pull request. A conflict in any other file
-   stops the operation as a tracked change it needs.
-5. Run the operation, and observe its result: the merge commit, the deploy
-   status, the closed item.
+   to the updated head after its checks pass.
+5. For a pull request merge, fetch the base again just before the final merge.
+   If the fetched base commit differs from the recorded commit, record the
+   new commit and repeat the base refresh, checks and updated-head review
+   for the new commit. Fetch the base again after each repeat. When the
+   fetched base matches the recorded commit and checks and review requirements
+   hold for the updated head, merge the pull request using the method the base
+   repository requires. Carry out any other named operation. Observe the
+   result, such as the merge commit, deploy status or closed item.
 6. After a merge, check the merged result: the target branch holds the merge
    commit, and, when the user asked to see them pass or the project's policy
    requires it, the checks the project runs on that branch pass. A failure
