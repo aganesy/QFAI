@@ -202,6 +202,14 @@ function namesItsCommit(command: string): boolean {
   );
 }
 
+function releaseTaggingStatements(guide: string): string[] {
+  const statements = [...guide.matchAll(/^\s*```(?:sh|bash|shell)[ \t]*\r?\n([\s\S]*?)^\s*```/gm)]
+    .map(([, body]) => (body ?? "").replace(/&&[ \t]*\r?\n\s*/g, "&& "))
+    .flatMap((body) => body.split(/\r?\n/))
+    .map((line) => line.trim());
+  return statements.filter((statement) => tagCreations(statement).length > 0);
+}
+
 describe("the project layer describes the repository it is in", () => {
   it("names no repository path that does not exist", async () => {
     const missing: string[] = [];
@@ -373,11 +381,7 @@ describe("the project layer describes the repository it is in", () => {
   // `&&`, the tag is created only after every check before it passed.
   it("creates the release tag only after its checks pass", async () => {
     const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
-    const statements = [...guide.matchAll(/^\s*```sh\r?\n([\s\S]*?)^\s*```/gm)]
-      .map(([, body]) => (body ?? "").replace(/&&[ \t]*\r?\n\s*/g, "&& "))
-      .flatMap((body) => body.split(/\r?\n/))
-      .map((line) => line.trim());
-    const tagging = statements.filter((statement) => tagCreations(statement).length > 0);
+    const tagging = releaseTaggingStatements(guide);
 
     expect(tagging.length, "the release guide shows one tag command in a shell block").toBe(1);
     const steps = (tagging[0] ?? "").split("&&").map((step) => step.trim());
@@ -399,6 +403,21 @@ describe("the project layer describes the repository it is in", () => {
     expect(guide, "the guide says to stop when there is no merge commit").toMatch(
       /prints nothing or `null`[^.]*\bstop here\b/,
     );
+  });
+
+  it.each(["sh", "bash", "shell", "bash  "])(
+    "reads ordered release tag statements from %s fences",
+    (shell) => {
+      const check = "git merge-base --is-ancestor <SHA> origin/main";
+      const tag = "git tag vX.Y.Z <SHA>";
+      const guide = ["```" + shell, check + " &&", "  " + tag, "```"].join("\n");
+      expect(releaseTaggingStatements(guide)).toEqual([check + " && " + tag]);
+    },
+  );
+
+  it("ignores tag examples in fences for other languages", () => {
+    const guide = "```powershell\ngit tag vX.Y.Z <SHA>\n```";
+    expect(releaseTaggingStatements(guide)).toEqual([]);
   });
 
   // npm installs into the nearest directory holding a `package.json`. The smoke
