@@ -781,10 +781,8 @@ describe("uiux validators", () => {
       const compute = vi.spyOn(contrastRatio, "computeContrastRatio");
       try {
         const issues = await validateHtmlMock(root, "web", defaultConfig);
-        expect(compute).toHaveBeenCalledTimes(1);
-        const [calculation] = compute.mock.results;
-        expect(calculation).toMatchObject({ type: "return", value: expect.any(Number) });
-        if (contrastKind === "high") expect(calculation?.value).toBeCloseTo(21);
+        const expectedRatio = contrastKind === "high" ? expect.closeTo(21) : expect.any(Number);
+        expect(compute).toHaveReturnedWith(expectedRatio);
         const contrast = issues.filter((item) => item.code === "QFAI-MOCK-008");
         expect(contrast.map((item) => item.severity)).toEqual(expectedSeverities);
       } finally {
