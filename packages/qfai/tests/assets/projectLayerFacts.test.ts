@@ -420,6 +420,20 @@ describe("the project layer describes the repository it is in", () => {
     expect(releaseTaggingStatements(guide)).toEqual([]);
   });
 
+  it.each(["~~~", "````"])("reads shell statements in %s fences", (fence) => {
+    const check = "git merge-base --is-ancestor <SHA> origin/main";
+    const tag = "git tag vX.Y.Z <SHA>";
+    const guide = [fence + "sh", check + " &&", "  " + tag, fence].join("\n");
+    expect(releaseTaggingStatements(guide)).toEqual([check + " && " + tag]);
+  });
+
+  it("ignores literal shell examples until the enclosing Markdown fence closes", () => {
+    const example = "git tag illustrative HEAD";
+    const tag = "git tag vX.Y.Z <SHA>";
+    const guide = ["````markdown", "```sh", example, "```", "~~~~", "`````", "~~~sh", tag, "~~~~"];
+    expect(releaseTaggingStatements(guide.join("\n"))).toEqual([tag]);
+  });
+
   // npm installs into the nearest directory holding a `package.json`. The smoke
   // check made a fixed `tmp/` directory inside the checkout and initialised no
   // package there, so the install landed in the repository root, and a second
