@@ -389,6 +389,19 @@ describe("a question answered without a change", () => {
     expect(freshness).toContain(
       "When the fetched base matches the recorded commit and checks and review requirements hold for the updated head",
     );
+    expect(procedure.slice(review, finalFetch)).toContain(
+      "Record the head commit whose checks and review passed.",
+    );
+    const mergeRequest = procedure.slice(
+      finalMerge,
+      procedure.indexOf("Carry out any other named operation.", finalMerge),
+    );
+    expect(mergeRequest).toContain(
+      "Make the forge merge conditional on that reviewed head commit.",
+    );
+    expect(mergeRequest).toContain(
+      "If the head changes, repeat the base refresh, checks and review for the new head before attempting the conditional merge again.",
+    );
     expect(procedure).not.toContain("only then merge");
     expect(procedure).not.toContain("ask for no new review of that merge");
     expect(procedure).toMatch(
