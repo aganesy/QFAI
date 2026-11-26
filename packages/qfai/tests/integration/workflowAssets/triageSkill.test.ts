@@ -505,16 +505,18 @@ describe("a request routed again from the close", () => {
     const table = sectionOf(close, "## Outcomes");
     expect(table).not.toMatch(/`info-received`|`adopted`/);
     expect(rowOf(table, "`accepted`")).toMatch(
-      /^\|\s*`accepted`\s*\|.*closes the request without implementation work/,
+      /^\|\s*`accepted`\s*\|.*closes the request without implementation work in this project/,
     );
     expect(rowOf(table, "`deferred`")).toMatch(/^\|\s*`deferred`\s*\|.*with the reason/);
     const rerouting = flat(sectionOf(close, "## Re-routing"));
     expect(rerouting).toMatch(/report the outcome\s+`info-received`/);
-    expect(rerouting).toMatch(
-      /`decide-design`[^.]*`adopted` only when `discussion-interview` records[^.]*explicit user approval to implement[^.]*in this project or an implementation decision under recorded delegation that covers it/,
+    expect(rerouting).toContain(
+      "- In `decide-design`, use `adopted` only when `discussion-interview` records explicit user approval to implement " +
+        "the proposal in this project or an implementation decision under recorded delegation that covers it",
     );
-    expect(rerouting).toMatch(
-      /assumption or remains open[^.]*record `deferred` with the reason[^.]*keep the proposal pending/,
+    expect(rerouting).toContain(
+      "If an implementation proposal is only an assumption or remains open, " +
+        "record `deferred` with the reason and keep the proposal pending",
     );
     const plan = (await loadBuiltInPlans()).find((each) => each.route === "decide-design");
     const closeBranch = plan?.branchPoints?.find((point) => point.step === "triage-close");

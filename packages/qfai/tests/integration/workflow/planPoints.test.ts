@@ -299,7 +299,9 @@ it("decide-design places the implementation decision before the adopted prototyp
   const plan = await planned("decide-design");
   expect(plan.decisionPoints).toContain("discussion-interview");
   const steps = stepOrder(plan);
-  expect(steps.indexOf("discussion-interview")).toBeLessThan(steps.indexOf("triage-close"));
+  const interviewIndex = steps.indexOf("discussion-interview");
+  expect(interviewIndex).toBeGreaterThanOrEqual(0);
+  expect(interviewIndex).toBeLessThan(steps.indexOf("triage-close"));
   expect(destinations(plan, "triage-close", "adopted")).toContain("prototype-feature");
 });
 
