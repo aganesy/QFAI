@@ -298,11 +298,14 @@ async function canonicalRoot(root: string): Promise<string> {
  */
 export async function runTurnEndHook(input: unknown, options: TurnEndOptions): Promise<string> {
   const event = isRecord(input) ? input : {};
-  const found = await findConfigRoot(stringField(event, "cwd") ?? options.processDir);
-  if (!found.found) return "";
-  const loaded = await loadConfig(found.root);
   const session = stringField(event, "session_id");
   const file = session === undefined ? null : stateFile(options.stateDir, session, agentKey(event));
+  const found = await findConfigRoot(stringField(event, "cwd") ?? options.processDir);
+  if (!found.found) {
+    await clearSavedFailure(file);
+    return "";
+  }
+  const loaded = await loadConfig(found.root);
   // Only a file that reads as keys, the form loadConfig accepts, can omit `workflow.stopGate`;
   // the default applies to an omission, never to a file that could not be read or parsed. No
   // check ran, so a failure blocked on earlier no longer stands.

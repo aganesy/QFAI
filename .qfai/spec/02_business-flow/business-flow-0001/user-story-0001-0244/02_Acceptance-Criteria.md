@@ -53,7 +53,7 @@ Feature: Keep an agent's turn going while a turn-end check fails
   # AC-0001-0244-08
   Scenario: A disabled or unavailable gate clears the saved failure
     Given the turn-end hook blocked a failing command for a session and agent
-    When that session's next stop has the gate off or the project's tech.md is missing
+    When that session's next stop has the gate off, the project's tech.md is missing, or no QFAI configuration is found
     Then the hook lets the turn end silently and clears that session and agent's saved failure
     And the same failure blocks again when the check becomes available
     And other sessions and agents keep their own saved failures
