@@ -648,9 +648,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Validation launcher mismatch errors identify the checkout problem and explain
   how to install its dependencies and rerun validation through its own launcher.
+  The recovery names `pnpm bootstrap` for QFAI source worktrees and explains
+  how to replace an original `--root` while retaining the other options.
 
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
+
+- The shipped merge procedure places the final merge after updated-head review.
+  If the final fetch sees a different base commit, it repeats the update,
+  checks and review before fetching again.
 
 - The verification guide distinguishes the built-in verdict scopes from
   acceptance-only validation with `qfai validate --profile atdd`.
@@ -895,6 +901,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - The `validate.json` guide explains the original severity recorded in
   `issues[].relaxedFrom` by older exploration-mode runs.
+  The field is optional.
 
 - **A directory whose name begins with two dots counts as inside its base
   everywhere.** Several more checks tested whether a path relative to its base
@@ -1269,6 +1276,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - The routine parser skips commas and parentheses inside quoted argument
   names and preserves quoted type names when checking for duplicate routines.
 
+- Dollar-quoted and directly `E`- or `e`-prefixed defaults in SQL routines
+  preserve the argument types that follow them. The duplicate check ignores
+  punctuation inside these defaults when comparing the argument types.
+
 - **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
   The duplicate check compared each argument type as written, so
   `f(int)` and `f(integer)`, or `f(varchar(10))` and `f(varchar(20))`, went
@@ -1278,6 +1289,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `character varying`, `timestamptz` and the other built-in aliases);
   `float(p)` becomes `real` or `double precision` by its precision. Closes
   #5047.
+
+- Qualified SQL routine argument types compare the schema and type identifiers
+  separately. Equivalent ordinary double-quoted and bare spellings match. Case and
+  punctuation that distinguish quoted identifiers are preserved.
 
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
@@ -1801,6 +1816,9 @@ decisions` headings appeared anywhere in the file, so a record with several
 
 - Proposal triage records terminal acceptance as `accepted` and uses
   `adopted` when a `decide-design` decision accepts implementation in this project.
+  This requires explicit approval to implement or a recorded delegation that
+  covers the implementation decision. An implementation proposal that is still
+  open or only assumed stays pending as `deferred`.
 
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two
