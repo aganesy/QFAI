@@ -732,6 +732,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   commit checks the entire index before staging its deliverables. If other
   staged paths exist, the step reports them and stops. Closes #4810.
 
+- **Verification uses the repository root for index checks and staging.**
+  A run started in a subdirectory compares authorized deliverables and staged
+  entries using the same paths relative to the Git root.
+
 - **`qfai sdd preflight` no longer says "Nothing was written" after creating
   directories.** When its output-directory check failed after it had created
   `<outDir>/preflight/`, the error still said nothing was written. A check that
