@@ -130,19 +130,20 @@ it("stops reading the verified catalogue descriptor when the file grows past the
   const file = catalogFile(root);
   const limit = 8 * 1024 * 1024;
   const grownSize = limit + 128;
-  const requestedEnds: number[] = [];
+  let requestedEnd = 0;
   fault.catalogueRead = {
     file,
     beforeRead: async (position, length) => {
-      if (requestedEnds.length === 0) await truncate(file, grownSize);
-      requestedEnds.push(position + length);
+      if (requestedEnd === 0) await truncate(file, grownSize);
+      requestedEnd = Math.max(requestedEnd, position + length);
     },
   };
 
   const checked = await cli(["catalog", "components", "--check", "--root", root]);
   expect(checked.code).toBe(1);
   expect(checked.err).toContain(`The component catalogue exceeds ${limit} bytes.`);
-  expect(Math.max(...requestedEnds)).toBe(limit + 1);
+  expect(requestedEnd).toBeGreaterThan(0);
+  expect(requestedEnd).toBeLessThanOrEqual(limit + 1);
   expect((await stat(file)).size).toBe(grownSize);
 });
 

@@ -19,7 +19,7 @@ import path from "node:path";
 
 import { parse, stringify } from "yaml";
 
-import { sameObject } from "../../shared/boundedRead.js";
+import { readHandleWithin, sameObject } from "../../shared/boundedRead.js";
 import type { QfaiConfig } from "../config.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { describeError, findUnsafeHostFileComponent } from "../init/fsGuards.js";
@@ -35,6 +35,7 @@ import { readSafe } from "../validators/utils.js";
 /** Where the catalogue is written and read, relative to the project root. */
 export const COMPONENT_CATALOG_PATH = path.join(".qfai", "catalog", "components.yaml");
 
+const MAX_CATALOG_BYTES = 8 * 1024 * 1024;
 const CATALOG_OPTIONAL_FLAGS: Partial<Record<"O_NOFOLLOW" | "O_NONBLOCK", number>> = constants;
 const CATALOG_READ_FLAGS =
   constants.O_RDONLY |
@@ -237,7 +238,17 @@ export async function readCatalog(root: string): Promise<CatalogRead> {
           reason: "The component catalogue path changed during the read.",
         };
       }
-      text = await handle.readFile("utf-8");
+      const bytes =
+        held.size > BigInt(MAX_CATALOG_BYTES)
+          ? undefined
+          : await readHandleWithin(handle, MAX_CATALOG_BYTES);
+      if (bytes === undefined) {
+        return {
+          state: "unreadable",
+          reason: `The component catalogue exceeds ${MAX_CATALOG_BYTES} bytes.`,
+        };
+      }
+      text = bytes.toString("utf8");
     } finally {
       await handle.close();
     }
