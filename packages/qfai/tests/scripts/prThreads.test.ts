@@ -579,22 +579,24 @@ describe("a call to gh that fails", () => {
     expect(printed).toBe(false);
   });
 
-  it("stops deferral before writes when a follow-up comment line is malformed", () => {
-    calls.threadAnswer = JSON.stringify({
-      data: {
-        node: {
-          id: "T1",
-          isResolved: false,
-          path: "src/a.ts",
-          line: 7,
-          pullRequest: { number: 12, repository: { nameWithOwner: "aganesy/QFAI" } },
-          comments: {
-            nodes: [{ url: "https://x/c/1", author: { login: "reviewer" }, body: "Cover it." }],
-          },
-          latest: { nodes: [] },
+  const openDeferralThreadAnswer = JSON.stringify({
+    data: {
+      node: {
+        id: "T1",
+        isResolved: false,
+        path: "src/a.ts",
+        line: 7,
+        pullRequest: { number: 12, repository: { nameWithOwner: "aganesy/QFAI" } },
+        comments: {
+          nodes: [{ url: "https://x/c/1", author: { login: "reviewer" }, body: "Cover it." }],
         },
+        latest: { nodes: [] },
       },
-    });
+    },
+  });
+
+  it("stops deferral before writes when a follow-up comment line is malformed", () => {
+    calls.threadAnswer = openDeferralThreadAnswer;
     calls.issueAnswer = `${JSON.stringify("A valid older comment.")}\n{`;
 
     const { code, text } = errorOutput(["defer", "12", "T1", "40"]);
@@ -603,22 +605,44 @@ describe("a call to gh that fails", () => {
     expect(calls.list.filter(([command]) => command === "gh")).toHaveLength(2);
   });
 
+  const recordIssueComment = "repos/aganesy/QFAI/issues/40/comments -f body=";
+  const replyToThread = "addPullRequestReviewThreadReply";
+  const resolveThread = "resolveReviewThread";
+
+  it.each([
+    {
+      operation: "recording the finding of review thread T1 in issue 40",
+      malformedArgument: "<!-- qfai-deferred-thread:T1 -->",
+      attemptedWrites: [recordIssueComment],
+    },
+    {
+      operation: "replying to review thread T1",
+      malformedArgument: replyToThread,
+      attemptedWrites: [recordIssueComment, replyToThread],
+    },
+    {
+      operation: "resolving review thread T1",
+      malformedArgument: resolveThread,
+      attemptedWrites: [recordIssueComment, replyToThread, resolveThread],
+    },
+  ])("stops deferral after invalid JSON while $operation", (testCase) => {
+    calls.threadAnswer = openDeferralThreadAnswer;
+    calls.issueAnswer = "";
+    calls.malformedGh = testCase.malformedArgument;
+
+    const { code, text, printed } = errorOutput(["defer", "12", "T1", "40"]);
+
+    expect(code).toBe(2);
+    expect(text).toBe(`GitHub returned invalid JSON while ${testCase.operation}.`);
+    expect(printed).toBe(false);
+    const ghCalls = calls.list.filter(([command]) => command === "gh");
+    expect(ghCalls.slice(2).map((call) => call.join(" "))).toEqual(
+      testCase.attemptedWrites.map((write) => expect.stringContaining(write)),
+    );
+  });
+
   it("names the step of a deferral that failed", () => {
-    calls.threadAnswer = JSON.stringify({
-      data: {
-        node: {
-          id: "T1",
-          isResolved: false,
-          path: "src/a.ts",
-          line: 7,
-          pullRequest: { number: 12, repository: { nameWithOwner: "aganesy/QFAI" } },
-          comments: {
-            nodes: [{ url: "https://x/c/1", author: { login: "reviewer" }, body: "Cover it." }],
-          },
-          latest: { nodes: [] },
-        },
-      },
-    });
+    calls.threadAnswer = openDeferralThreadAnswer;
     calls.issueAnswer = "";
     calls.failGh = (args): Error | undefined =>
       args.some((arg) => arg.includes("addPullRequestReviewThreadReply")) ? exited() : undefined;
