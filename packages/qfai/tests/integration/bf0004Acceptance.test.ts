@@ -986,6 +986,62 @@ describe("BF-0004 acceptance criteria", () => {
     }
   });
 
+  // QFAI:EX-0004-0003-52
+  it("reports an apply-time move refusal and pending items through the public migration step", async () => {
+    const root = await project();
+    prepareThrough(root, 2);
+    const ruleDir = path.join(root, ".qfai", "assistant", "rule");
+    const overlayDir = path.join(root, ".qfai", "assistant", "constitution");
+    await mkdir(overlayDir, { recursive: true });
+    for (const name of ["aa-applied", "ab-refused", "zz-pending"]) {
+      await writeFile(path.join(ruleDir, name + ".md"), "# Rule\n");
+      await writeFile(path.join(overlayDir, name + ".local.md"), name + "\n");
+    }
+    await writeFile(path.join(ruleDir, "zz-pending.local.md"), "Existing pending overlay\n");
+
+    // Make the second target appear only after preflight and the first real move.
+    const preload = path.join(root, "migration-occupy-overlay-target.cjs");
+    await writeFile(
+      preload,
+      [
+        'const fsp = require("node:fs/promises");',
+        'const path = require("node:path");',
+        "const rename = fsp.rename;",
+        "fsp.rename = async (source, target) => {",
+        "  await rename(source, target);",
+        '  if (path.basename(target) === "aa-applied.local.md") {',
+        '    await fsp.writeFile(path.join(path.dirname(target), "ab-refused.local.md"), "Occupied after preflight");',
+        "  }",
+        "};",
+        'require("node:module").syncBuiltinESMExports();',
+        "",
+      ].join("\n"),
+    );
+
+    const result = step(root, 3, [], ["--require", preload]);
+    expect(result.status, result.stderr).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toMatch(
+      /^Migration destination exists: \.qfai\/assistant\/rule\/ab-refused\.local\.md\r?\n\r?\n## For a person\r?\n/,
+    );
+    expect(section(result.stderr, "For a person").join("\n")).toContain(
+      ".qfai/assistant/constitution/zz-pending.local.md: .qfai/assistant/rule/zz-pending.local.md already exists",
+    );
+    expect(await readFile(path.join(ruleDir, "aa-applied.local.md"), "utf8")).toBe("aa-applied\n");
+    await expect(lstat(path.join(overlayDir, "aa-applied.local.md"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    expect(await readFile(path.join(overlayDir, "ab-refused.local.md"), "utf8")).toBe(
+      "ab-refused\n",
+    );
+    expect(await readFile(path.join(ruleDir, "ab-refused.local.md"), "utf8")).toBe(
+      "Occupied after preflight",
+    );
+    expect(await readFile(path.join(overlayDir, "zz-pending.local.md"), "utf8")).toBe(
+      "zz-pending\n",
+    );
+  });
+
   // QFAI:AC-0004-0003-07
   // QFAI:EX-0004-0003-22
   it("removes consumed old packs and the old policy directory", async () => {

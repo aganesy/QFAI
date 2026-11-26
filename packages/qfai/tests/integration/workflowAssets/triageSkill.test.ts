@@ -360,17 +360,36 @@ describe("a question answered without a change", () => {
       /Merge that recorded commit into the pull request's branch locally, push, and wait for the checks that push starts/,
     );
     expect(procedure).toMatch(
-      /Just before the merge, fetch the base again: when it no longer points to the recorded commit, record the new commit and merge it in the same way first; only then merge/,
-    );
-    expect(procedure).toMatch(
       /A conflict the host shows only in `decisions\.md`, its pages or `open-questions\.md` is resolved the same way: the union merge completes it/,
     );
     expect(procedure).toMatch(
       /Edit no register row except to delete again a question row the union merge kept although one side deleted it, committing that deletion before the push. Renumber no ID/,
     );
-    expect(procedure).toContain(
-      "The union merge adds no review requirement of its own. Read the base repository's review requirements from the pull request's base branch and apply them to the updated head before merging the pull request.",
+    expect(procedure).toContain("The union merge adds no review requirement of its own.");
+    const waitForChecks = procedure.indexOf("wait for the checks that push starts");
+    const review = procedure.indexOf(
+      "Read the base repository's review requirements from the pull request's base branch and apply them to the updated head",
     );
+    const finalFetch = procedure.indexOf("fetch the base again just before the final merge");
+    const finalMerge = procedure.indexOf(
+      "merge the pull request using the method the base repository requires",
+    );
+    expect(waitForChecks).toBeGreaterThan(0);
+    expect(review).toBeGreaterThan(waitForChecks);
+    expect(finalFetch).toBeGreaterThan(review);
+    expect(finalMerge).toBeGreaterThan(finalFetch);
+    const freshness = procedure.slice(finalFetch, finalMerge);
+    expect(freshness).toContain(
+      "If the fetched base commit differs from the recorded commit, record the new commit",
+    );
+    expect(freshness).toContain(
+      "repeat the base refresh, checks and updated-head review for the new commit",
+    );
+    expect(freshness).toContain("Fetch the base again after each repeat.");
+    expect(freshness).toContain(
+      "When the fetched base matches the recorded commit and checks and review requirements hold for the updated head",
+    );
+    expect(procedure).not.toContain("only then merge");
     expect(procedure).not.toContain("ask for no new review of that merge");
     expect(procedure).toMatch(
       /A conflict in any other file stops the operation as a tracked change it needs/,
@@ -504,22 +523,24 @@ describe("a request routed again from the close", () => {
     );
     const table = sectionOf(close, "## Outcomes");
     expect(table).not.toMatch(/`info-received`|`adopted`/);
-    expect(flat(table)).toContain(
-      "`accepted` | Acceptance closes the request without implementation work in this project",
+    expect(rowOf(table, "`accepted`")).toMatch(
+      /^\|\s*`accepted`\s*\|.*closes the request without implementation work in this project/,
     );
+    expect(rowOf(table, "`deferred`")).toMatch(/^\|\s*`deferred`\s*\|.*with the reason/);
     const rerouting = flat(sectionOf(close, "## Re-routing"));
     expect(rerouting).toMatch(/report the outcome\s+`info-received`/);
     expect(rerouting).toContain(
-      "In `decide-design`, use `adopted` only when `discussion-interview` records explicit user approval to implement the proposal in this project or an implementation decision under recorded delegation that covers it.",
+      "- In `decide-design`, use `adopted` only when `discussion-interview` records explicit user approval to implement " +
+        "the proposal in this project or an implementation decision under recorded delegation that covers it",
     );
     expect(rerouting).toContain(
-      "If an implementation proposal is only an assumption or remains open, record `deferred` with the reason and keep the proposal pending.",
+      "If an implementation proposal is only an assumption or remains open, " +
+        "record `deferred` with the reason and keep the proposal pending",
     );
     const plan = (await loadBuiltInPlans()).find((each) => each.route === "decide-design");
     const closeBranch = plan?.branchPoints?.find((point) => point.step === "triage-close");
-    const adopted = closeBranch?.outcomes.find((outcome) => outcome.outcome === "adopted");
-    expect(adopted?.routes).toContain("add-feature");
-    expect(closeBranch?.outcomes.map((outcome) => outcome.outcome)).not.toContain("accepted");
+    expect(closeBranch?.outcomes.map((outcome) => outcome.outcome)).toEqual(["adopted"]);
+    expect(closeBranch?.outcomes[0]?.routes).toContain("add-feature");
   });
 });
 
