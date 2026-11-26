@@ -568,12 +568,15 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
       '"app.custom_type"',
       "other.custom_type",
     ];
-    const sql = types
-      .map(
-        (type) =>
-          `CREATE OR REPLACE FUNCTION f(a ${type}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n`,
-      )
-      .join("");
+    const sql =
+      types
+        .map(
+          (type) =>
+            `CREATE OR REPLACE FUNCTION f(a ${type}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n`,
+        )
+        .join("") +
+      `CREATE OR REPLACE FUNCTION g(a app . default DEFAULT NULL) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+      `CREATE OR REPLACE FUNCTION g(a "app"."default" DEFAULT NULL) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`;
     const { statements, errors } = parseSqlContract(sql);
     expect(errors).toEqual([]);
     const created = collectCreatedObjects(statements);
@@ -585,12 +588,17 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
       'app."custom,type"',
       '"app.custom_type"',
       "other.custom_type",
+      "app.default",
+      "app.default",
     ]);
-    expect(findRedefinitions(created)).toEqual([{ kind: "FUNCTION", name: "f", lines: [1, 2, 3] }]);
+    expect(findRedefinitions(created)).toEqual([
+      { kind: "FUNCTION", name: "f", lines: [1, 2, 3] },
+      { kind: "FUNCTION", name: "g", lines: [8, 9] },
+    ]);
     const issues = await runOn(HEADER + sql);
     expect(
       issues.filter((issue) => issue.code === "QFAI-DB-002").map((issue) => issue.severity),
-    ).toEqual(["error"]);
+    ).toEqual(["error", "error"]);
   });
 
   it("distinguishes parentheses inside a type name from its modifiers", () => {

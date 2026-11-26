@@ -735,8 +735,11 @@ function splitTopLevel(text: string): string[] {
 
 /** An argument without its `DEFAULT <expr>` or `= <expr>` tail. */
 function stripDefault(argument: string): string {
-  for (const match of argument.matchAll(/"(?:[^"]|"")*"|\s+default(?:\s|$)|=/gi)) {
-    if (!match[0].startsWith('"')) return argument.slice(0, match.index);
+  for (const match of argument.matchAll(/"(?:[^"]|"")*"|\s+default(?=\s|$)|=/gi)) {
+    if (match[0].startsWith('"')) continue;
+    const declaration = argument.slice(0, match.index);
+    // A reserved word after a qualification dot is an identifier in PostgreSQL.
+    if (match[0] === "=" || !declaration.trimEnd().endsWith(".")) return declaration;
   }
   return argument;
 }
