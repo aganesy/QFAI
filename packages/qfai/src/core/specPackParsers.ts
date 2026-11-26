@@ -466,6 +466,8 @@ export function maskNonSpecRegions(text: string): string {
   let prevBlank = true;
   // Whether the last visible line can continue a paragraph in its container.
   let paragraphOpen = false;
+  // Type-7 HTML keeps the document-level paragraph rule used by this reader.
+  let htmlParagraphOpen = false;
 
   const maskLine = (line: string, index: number): string => {
     const previousParagraphOpen = paragraphOpen;
@@ -567,7 +569,7 @@ export function maskNonSpecRegions(text: string): string {
       // `-->` continues that paragraph or table row and cannot open a block.
       // Blanking it whole cut a table at the row a cell's comment closed in.
       const visible = NON_PARAGRAPH_LINE.test(masked.text) ? "" : masked.text;
-      paragraphOpen = visible.trim().length > 0;
+      paragraphOpen = previousParagraphOpen || visible.trim().length > 0;
       return visible;
     }
 
@@ -589,7 +591,7 @@ export function maskNonSpecRegions(text: string): string {
     // the fence check, so `<div>` inside a fenced sample is sample text.
     if (
       BLANK_TERMINATED_HTML_START.test(masked.text) ||
-      (!previousParagraphOpen && SINGLE_TAG_HTML_START.test(masked.text))
+      (!htmlParagraphOpen && SINGLE_TAG_HTML_START.test(masked.text))
     ) {
       inBlankTerminatedHtml = true;
       return "";
@@ -598,7 +600,13 @@ export function maskNonSpecRegions(text: string): string {
     return masked.text;
   };
 
-  return lines.map(maskLine).join("\n");
+  return lines
+    .map((line, index) => {
+      const visible = maskLine(line, index);
+      htmlParagraphOpen = visible.trim().length > 0 && !NON_PARAGRAPH_LINE.test(visible);
+      return visible;
+    })
+    .join("\n");
 }
 
 /**

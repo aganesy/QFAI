@@ -98,6 +98,7 @@ describe("parseRenderedMarkdownTables", () => {
     ["- - ~~~md", "    ~~~", "    "],
     ["123.\n     ~~~md", "     ~~~", "     "],
     ["- Heading\n  -\n    ~~~md", "    ~~~", "  "],
+    ["- Heading <!--\n  hidden prose\n  -->\n  -\n    ~~~md", "    ~~~", "  "],
     ["- Prior paragraph\n-\n     ~~~md", "     ~~~", "  "],
     ["- # Heading\n  -\n      ~~~md", "      ~~~", "    "],
   ])("ignores a fenced table inside list content starting with %j", (opener, closer, indent) => {
@@ -375,11 +376,11 @@ describe("maskNonSpecRegions", () => {
     expect(visible(text)).toEqual(["## Scope"]);
   });
 
-  it("does not let a custom-element tag interrupt a paragraph", () => {
+  it.each(["Some prose.", "> lead"])("does not let a custom-element tag interrupt %j", (lead) => {
     // A type-7 block cannot interrupt a paragraph, so the tag line and what
     // follows it are paragraph text.
-    expect(visible(["Some prose.", "<review-note>", "## Scope"].join("\n"))).toEqual([
-      "Some prose.",
+    expect(visible([lead, "<review-note>", "## Scope"].join("\n"))).toEqual([
+      lead,
       "<review-note>",
       "## Scope",
     ]);
