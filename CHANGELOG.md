@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The seeded Git attributes explain how to handle a restored question row.**
+  After a union merge restores a deleted open question, the guidance calls for
+  a separate cleanup commit before pushing. It preserves other rows and IDs.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
