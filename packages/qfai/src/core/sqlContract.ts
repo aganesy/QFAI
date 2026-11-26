@@ -162,23 +162,9 @@ export function parseSqlContract(text: string): SqlParseResult {
     // `/* */`, nestable
     if (ch === "/" && next === "*") {
       const openedAt = line;
-      let nesting = 1;
-      index += 2;
-      while (index < text.length && nesting > 0) {
-        if (text[index] === "\n") line += 1;
-        if (text[index] === "/" && text[index + 1] === "*") {
-          nesting += 1;
-          index += 2;
-          continue;
-        }
-        if (text[index] === "*" && text[index + 1] === "/") {
-          nesting -= 1;
-          index += 2;
-          continue;
-        }
-        index += 1;
-      }
-      if (nesting > 0) {
+      const close = sqlBlockCommentEnd(text, index);
+      const end = close ?? text.length;
+      if (close === undefined) {
         errors.push({
           kind: "unterminated-comment",
           line: openedAt,
@@ -189,8 +175,10 @@ export function parseSqlContract(text: string): SqlParseResult {
       // `CREATE/*x*/TABLE t (…)` became `CREATETABLE` and stopped matching
       // `CREATE_RE` — a valid statement that silently left the redefinition
       // scan. Newlines are preserved one-for-one so reported lines stay true.
-      const spannedLines = line - openedAt;
+      const spannedLines = countNewlines(text.slice(index, end));
+      line += spannedLines;
       current += spannedLines > 0 ? "\n".repeat(spannedLines) : " ";
+      index = end;
       continue;
     }
 
@@ -316,6 +304,24 @@ export function parseSqlContract(text: string): SqlParseResult {
   push();
 
   return { statements, errors };
+}
+
+/** Offset after the matching SQL block comment close, or undefined if it stays open. */
+export function sqlBlockCommentEnd(text: string, start: number): number | undefined {
+  let depth = 1;
+  for (let index = start + 2; index < text.length; index += 1) {
+    const ch = text[index];
+    const next = text[index + 1];
+    if (ch === "/" && next === "*") {
+      depth += 1;
+      index += 1;
+    } else if (ch === "*" && next === "/") {
+      depth -= 1;
+      if (depth === 0) return index + 2;
+      index += 1;
+    }
+  }
+  return undefined;
 }
 
 /** One character that may continue an identifier, under the rules {@link DOLLAR_QUOTE_MARKER} follows. */

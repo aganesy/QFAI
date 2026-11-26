@@ -219,6 +219,7 @@ describe("reading a contract's own DDL", () => {
     expect(references.size).toBe(0);
   });
 
+  // QFAI:EX-0001-0052-16
   it.each(["\n", "\r\n", "\r"])(
     "ignores references inside nested block comments with %j",
     async (separator) => {
@@ -258,6 +259,17 @@ describe("reading a contract's own DDL", () => {
       ]);
     },
   );
+
+  // QFAI:EX-0001-0052-16
+  it("masks the rest of an unclosed outer block comment", () => {
+    const ddl = "CREATE TABLE orders (id integer);";
+    const sql = ddl + " /* Outer /* Inner */ REFERENCES phantom(id)";
+    const masked = blankSqlNoise(sql);
+
+    expect(masked).toHaveLength(sql.length);
+    expect(masked.trimEnd()).toBe(ddl);
+    expect(readTableEdges(sql).references.size).toBe(0);
+  });
 
   it("lets a backslash escape nothing in a standard string or after a longer name", () => {
     // Only a lone `E` or `e` opens an escape string. `'C:\'` is a whole

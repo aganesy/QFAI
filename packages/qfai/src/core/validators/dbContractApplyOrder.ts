@@ -23,7 +23,12 @@
 import path from "node:path";
 
 import { declaredContractId, extractDeclaredDependencies } from "../contractsDecl.js";
-import { CREATE_TABLE_MODIFIERS, DOLLAR_QUOTE_MARKER, opensEscapeString } from "../sqlContract.js";
+import {
+  CREATE_TABLE_MODIFIERS,
+  DOLLAR_QUOTE_MARKER,
+  opensEscapeString,
+  sqlBlockCommentEnd,
+} from "../sqlContract.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -111,8 +116,9 @@ export function tableName(raw: string): TableName {
  * nothing; it is kept, not blanked, because it may be the table a key names.
  * A string is matched by its opening quote alone and read on by
  * {@link stringLiteralEnd}, because where it ends depends on what precedes it.
+ * A block comment opens at `/*` and ends at the matching close after any nested blocks.
  */
-const SQL_NOISE = String.raw`--[^\n]*|\/\*[\s\S]*?\*\/|'|${QUOTED_IDENTIFIER}|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`;
+const SQL_NOISE = String.raw`--[^\n]*|\/\*|'|${QUOTED_IDENTIFIER}|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`;
 
 /**
  * The offset just past the string literal whose opening quote is at `quoteAt`,
@@ -150,7 +156,7 @@ function stringLiteralEnd(sql: string, quoteAt: number): number | undefined {
  * data. Removing the text would move the rest; replacing each character with a
  * space leaves the file the same length, so a later match still lands where the
  * reader sees it. Double-quoted identifiers are left as they are, and so is a
- * string that never closes.
+ * string that never closes. An unclosed block comment is masked through the end.
  */
 export function blankSqlNoise(sql: string): string {
   const noise = new RegExp(SQL_NOISE, "g");
@@ -159,7 +165,10 @@ export function blankSqlNoise(sql: string): string {
   for (let match = noise.exec(sql); match !== null; match = noise.exec(sql)) {
     const start = match.index;
     let end = start + match[0].length;
-    if (match[0] === "'") {
+    if (match[0] === "/*") {
+      end = sqlBlockCommentEnd(sql, start) ?? sql.length;
+      noise.lastIndex = end;
+    } else if (match[0] === "'") {
       const close = stringLiteralEnd(sql, start);
       if (close === undefined) {
         continue;
@@ -170,7 +179,7 @@ export function blankSqlNoise(sql: string): string {
     if (sql[start] === '"') {
       continue;
     }
-    blanked += sql.slice(copied, start) + sql.slice(start, end).replace(/[^\n]/g, " ");
+    blanked += sql.slice(copied, start) + sql.slice(start, end).replace(/[^\r\n]/g, " ");
     copied = end;
   }
   return blanked + sql.slice(copied);
