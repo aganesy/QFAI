@@ -222,11 +222,11 @@ export function collectHardRequiredEntries(content: string): string[] {
  * spelling that hides an entry was the one spelling that reported nothing.
  *
  * Callers pass policy text already processed by {@link maskNonSpecRegions}.
- * That helper removes HTML comments while preserving line count and keeps
- * literal comment delimiters inside code spans. It handles indented code at
- * the top level only and approximates inline comments around tables and
- * block markers, as documented on the helper. A bullet left empty by masking
- * names nothing.
+ * That helper removes HTML comments while preserving line count and handles
+ * indented code at the top level only. Its `maskLineComments` scan preserves
+ * literal comment delimiters in single-line code spans, with a simplified
+ * search for the closing backticks. See the masking helpers for limits around
+ * tables and block markers. A bullet left empty by masking names nothing.
  */
 function collectBucketEntries(content: string, headerWithTail: RegExp): string[] {
   const entries: string[] = [];
