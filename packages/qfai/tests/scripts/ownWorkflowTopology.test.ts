@@ -4110,6 +4110,9 @@ describe("release automation performs decisions rather than making them", () => 
   });
 
   describe("the tag gate reads the field the REST response actually carries", () => {
+    const repository = "owner/repo";
+    const pushedCommit = "deadbeef";
+
     /**
      * The shipped association check, cut out of `tag-release.yml` and made
      * runnable.
@@ -4163,7 +4166,9 @@ describe("release automation performs decisions rather than making them", () => 
             "set -euo pipefail",
             `claimed=${JSON.stringify(claimed)}`,
             `pulls=${JSON.stringify(response)}`,
-            "GITHUB_SHA=deadbeef",
+            `export GITHUB_SHA=${pushedCommit}`,
+            `export GITHUB_REPOSITORY=${repository}`,
+            "export GITHUB_REF_NAME=main",
             `GITHUB_OUTPUT=${JSON.stringify(path.join(dir, "out").replace(/\\/g, "/"))}`,
             "",
             associationGate(),
@@ -4198,10 +4203,40 @@ describe("release automation performs decisions rather than making them", () => 
       runGate(JSON.stringify(pulls), claimed).tagged;
 
     // The shape `GET /repos/{owner}/{repo}/commits/{sha}/pulls` returns, trimmed to
-    // the fields this gate can see. `head.ref` is where the branch name lives.
-    const restPayload = (ref: string): unknown => [
-      { number: 1152, state: "closed", head: { ref, sha: "1111111" }, base: { ref: "main" } },
-    ];
+    // the fields this gate can see. The pushed commit is independent of the head SHA.
+    const restPull = (ref: string) => ({
+      number: 1152,
+      state: "closed",
+      merged_at: "2026-01-01T00:00:00Z",
+      merge_commit_sha: pushedCommit,
+      head: { ref, sha: "1111111", repo: { full_name: repository } },
+      base: { ref: "main", repo: { full_name: repository } },
+    });
+    const restPayload = (ref: string): unknown[] => [restPull(ref)];
+
+    it("requires the release PR to come from this repository and merge the pushed commit", () => {
+      const release = restPull("release/v1.10.2");
+      const nonqualifying = [
+        [
+          "different head repository",
+          { ...release, head: { ...release.head, repo: { full_name: "other/repo" } } },
+        ],
+        ["missing head repository", { ...release, head: { ...release.head, repo: null } }],
+        [
+          "different base repository",
+          { ...release, base: { ...release.base, repo: { full_name: "other/repo" } } },
+        ],
+        ["different base branch", { ...release, base: { ...release.base, ref: "maintenance" } }],
+        ["open PR", { ...release, state: "open", merged_at: null }],
+        ["closed without merging", { ...release, merged_at: null }],
+        ["different merge commit", { ...release, merge_commit_sha: "aaaaaaaa" }],
+      ] as const;
+
+      expect(wouldTag([release], "1.10.2")).toBe(true);
+      expect(
+        nonqualifying.filter(([, pull]) => wouldTag([pull], "1.10.2")).map(([name]) => name),
+      ).toEqual([]);
+    });
 
     it("tags a release merge and declines everything else, measured by running it", () => {
       expect(
