@@ -11,6 +11,7 @@
  * justification has drifted away from it cannot be reviewed, and the next reader
  * has no way to tell a considered floor from one somebody typed.
  */
+import { spawnSync } from "node:child_process";
 import type * as NodeFs from "node:fs";
 import {
   existsSync,
@@ -22,7 +23,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -141,7 +142,7 @@ describe("receiving a GitHub response", () => {
     const execute = () => {
       throw Object.assign(new Error("GitHub CLI output exceeded maxBuffer"), {
         code: "ENOBUFS",
-        stdout: HEADERS.join("\r\n"),
+        stdout: `HTTP/2.0 200 OK\n${HEADERS.join("\r\n")}\r\n`,
       });
     };
 
@@ -158,6 +159,62 @@ describe("receiving a GitHub response", () => {
     };
 
     expect(ghApi("repos/owner/repo/actions/jobs/404/logs", execute)).toEqual({ text });
+  });
+
+  it("reports and saves the budget without saving a truncated job log", async () => {
+    const root = await mkdtemp(path.join(await realpath(os.tmpdir()), "gh-budget-overflow-"));
+    try {
+      const library = path.join("scripts", "lib", "bounded-read.mjs");
+      await mkdir(path.join(root, path.dirname(library)), { recursive: true });
+      for (const file of [SCRIPT_REL, library]) {
+        await copyFile(path.join(repoRoot, file), path.join(root, file));
+      }
+
+      // Inject the child error at the process boundary without a real call or a 64 MiB fixture.
+      const preload = path.join(root, "overflow.cjs");
+      await writeFile(
+        preload,
+        [
+          'const childProcess = require("node:child_process");',
+          "childProcess.execFileSync = (command, args) => {",
+          '  if (command === "git" && args.join(" ") === "remote get-url origin") {',
+          '    return "https://github.com/owner/repo.git\\n";',
+          "  }",
+          '  if (command !== "gh" || args.join(" ") !== "api -i repos/owner/repo/actions/jobs/123/logs") {',
+          '    throw new Error("Unexpected command in the fixture.");',
+          "  }",
+          '  throw Object.assign(new Error("Output exceeded maxBuffer"), {',
+          '    code: "ENOBUFS",',
+          `    stdout: ${JSON.stringify(response(HEADERS, "partial job log"))},`,
+          "  });",
+          "};",
+          'require("node:module").syncBuiltinESMExports();',
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = spawnSync(
+        process.execPath,
+        ["--require", preload, path.join(root, SCRIPT_REL), "log", "123"],
+        { cwd: root, encoding: "utf8", timeout: 10000 },
+      );
+      expect(result).toMatchObject({
+        status: 2,
+        stdout: "REST calls left: 2785 of 5000 (core), resets 09:31 UTC\n",
+        stderr: `The GitHub response is too large. The limit is ${String(MAX_RESPONSE_BYTES)} bytes.\n`,
+      });
+      const cache = path.join(root, "tmp", "gh-budget");
+      expect(readdirSync(cache)).toEqual(["last-reading.json"]);
+      expect(JSON.parse(await readFile(path.join(cache, "last-reading.json"), "utf8"))).toEqual({
+        remaining: 2785,
+        limit: 5000,
+        reset: 1789723893,
+        resource: "core",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
 
