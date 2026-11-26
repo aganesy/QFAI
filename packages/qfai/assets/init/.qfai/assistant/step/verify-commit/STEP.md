@@ -73,7 +73,7 @@ covering that action, target and scope. Commit authority alone covers none of th
    repository root. Compare the entire index with the authorized deliverable
    paths. Read NUL-separated paths with
    `git diff --cached --name-only --no-renames --no-relative --ignore-submodules=none -z --`
-   so renames, paths outside the current directory and submodule changes are
+   so renames, paths outside the starting subdirectory and submodule changes are
    included. If the index cannot be read, report the failure and stop before
    staging. If unrelated staged paths exist, report them and
    stop before changing the index or creating a commit.
