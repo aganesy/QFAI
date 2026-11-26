@@ -727,8 +727,9 @@ jobs:
         run: |
           # Every ```mermaid block in the tree, parsed with Mermaid's own
           # grammar. A block whose body is a template with `<placeholder>`
-          # tokens opts out with `<!-- mermaid-lint:ignore -->` on the line
-          # directly above its opening fence. `--tools` names the directory the
+          # tokens opts out with `<!-- mermaid-lint:ignore -->` in Markdown or
+          # `{/* mermaid-lint:ignore */}` in MDX. Put the marker on the line
+          # directly above the opening fence. `--tools` names the directory the
           # install step put Mermaid and jsdom in.
           if [ -d node_modules/qfai ]; then
             node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools
