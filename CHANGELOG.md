@@ -1314,6 +1314,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   staging and respects Git's ignore rules. A failed Git file listing widens
   the check and prints a warning.
 
+- The changed-scope schema check requests only untracked Markdown paths from
+  Git, regardless of extension case. Unrelated untracked files no longer fill
+  the captured Git output and trigger a full-tree check.
+
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
   20,000 files, so a large tree could run out of file descriptors and fail
@@ -2561,6 +2565,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - The turn-end hook clears the saved failure for the current session and agent
   when the gate is disabled or `tech.md` is missing. If the check becomes
   available again, a failing command blocks the turn as a fresh failure.
+
+- The turn-end hook also clears that session and agent's saved failure when
+  it finds no `qfai.config.yaml`. The stop stays silent, and the same failing
+  command can block again after the configuration returns.
 
 - **The turn-end check tells a failure in another worktree from a repeat.**
   When a continued turn failed with the same output it had blocked on, the
