@@ -131,11 +131,36 @@ async function textFilesUnder(dir: string): Promise<string[]> {
   return names.filter((name) => /\.(md|ya?ml|sql)$/i.test(name));
 }
 
-/** Every citation in `text` of a document named `file`, as written, path prefix included. */
+/** Every path citing `file`, including invalid suffixes and excluding fragments. */
 function citationsOf(text: string, file: string): string[] {
-  const pattern = new RegExp(`[^\\s\`"'()<>]*${file.replace(".", "\\.")}`, "g");
-  return [...text.matchAll(pattern)].map((match) => match[0]);
+  const pathPart = "[^\\s`\"'()<>#\\[\\]]*";
+  const pattern = new RegExp(`${pathPart}${file.replaceAll(".", "\\.")}${pathPart}`, "g");
+  return [...text.matchAll(pattern)].map((match) => {
+    const cited = match[0];
+    const left = text[match.index - 1] ?? "";
+    const right = text[match.index + cited.length];
+    // A period in prose is punctuation. A period inside a citation is part of its path.
+    return /[\x60"'(<]/.test(left) || right === "#" ? cited : cited.replace(/[.,;:!?]+$/, "");
+  });
 }
+
+it("keeps complete SDD citation paths while separating fragments and prose punctuation", () => {
+  const file = "requirements-decomposition.md";
+  const canonical = `.qfai/assistant/skill/qfai-sdd/references/${file}`;
+  const text = [
+    `See ${canonical}.`,
+    `Read \`${canonical}#where-each-answer-goes\`.`,
+    `Invalid \`${canonical}.bak#where-each-answer-goes\`.`,
+    `Invalid \`${canonical}.\`.`,
+  ].join("\n");
+
+  expect(citationsOf(text, file)).toEqual([
+    canonical,
+    canonical,
+    `${canonical}.bak`,
+    `${canonical}.`,
+  ]);
+});
 
 describe("qfai-sdd writes the story tree", () => {
   // QFAI:AC-0001-0147-04
