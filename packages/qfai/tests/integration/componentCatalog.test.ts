@@ -442,6 +442,7 @@ describe("a stale catalogue is a warning, and no catalogue asks nothing", () => 
       ["QFAI-COMP-004", "warning", CATALOG],
     ]);
     expect(findings[0]?.message).toContain(CATALOG + " is a symbolic link.");
+    expect(findings[0]?.suggested_action).toContain("qfai catalog components");
   });
 
   // QFAI:EX-0001-0307-10
