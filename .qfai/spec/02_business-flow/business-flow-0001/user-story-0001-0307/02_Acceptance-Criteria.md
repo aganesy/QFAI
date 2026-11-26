@@ -18,6 +18,7 @@ Feature: Catalogue the components a project already has
     When `qfai catalog components --check` runs
     Then it exits 0 when the committed catalogue is the file the command would write, line ends aside
     And it exits 1 naming the file when the catalogue is missing or differs, and leaves the file as it was
+    And a catalogue above 8388608 bytes exits 1 with the path and limit, with no comparison or write
 
   # AC-0001-0307-03
   Scenario: JSX needs the TypeScript compiler the project installs
@@ -46,6 +47,7 @@ Feature: Catalogue the components a project already has
     When `qfai validate` runs in one of those profiles
     Then a committed catalogue that differs from what `qfai catalog components` would write, or does not parse as a list of components, raises one `QFAI-COMP-004` at warning naming the file and the command
     And a catalogue path with a symbolic link, including a broken link, or an existing catalogue entry that cannot be read as a regular file also raises one `QFAI-COMP-004` at warning naming the reason, without reading through the link
+    And a catalogue above 8388608 bytes is unreadable and raises the same warning naming the byte limit
     And a missing catalogue on an otherwise allowed path raises no `QFAI-COMP` finding other than `QFAI-COMP-005` where a registry is declared, and the other profiles raise none
 
   # AC-0001-0307-07
