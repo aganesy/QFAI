@@ -557,12 +557,16 @@ describe("locateToolAgainstProject", () => {
       expect(mismatch?.severity).toBe("error");
       expect(mismatch?.message).toContain("Validation launcher mismatch in this checkout.");
       expect(mismatch?.message).toContain("npx uses a fetched or cached copy");
-      expect(mismatch?.suggested_action).toContain(
-        "a worktree of the QFAI source repository, run `pnpm bootstrap`",
+      expect(mismatch?.suggested_action).toMatch(
+        /remove the link itself.*a worktree of the QFAI source repository, run `pnpm bootstrap`/,
       );
-      expect(mismatch?.suggested_action).toContain("`corepack pnpm bootstrap`");
-      expect(mismatch?.suggested_action).toContain("the project's dependency install command");
-      expect(mismatch?.suggested_action).toContain("documented build and install steps");
+      expect(mismatch?.suggested_action).toContain(
+        "`corepack pnpm bootstrap`) from the worktree root",
+      );
+      expect(mismatch?.suggested_action).toContain(
+        "Otherwise, run the project's dependency install command",
+      );
+      expect(mismatch?.suggested_action).toContain("follow its documented build and install steps");
       expect(mismatch?.suggested_action).toContain("Original validation target: " + root);
       expect(mismatch?.suggested_action).toContain("Replace any original `--root` option");
       expect(mismatch?.suggested_action).toContain("keep the other validation options");
