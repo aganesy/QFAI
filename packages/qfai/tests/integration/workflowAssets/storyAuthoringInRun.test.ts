@@ -263,7 +263,7 @@ describe("qfai-sdd writes the story tree", () => {
 
   // QFAI:AC-0001-0147-07
   // QFAI:EX-0001-0147-11
-  it("cites the change-classification and requirements-decomposition documents where they live", async () => {
+  it("checks canonical references in each SDD step that uses them", async () => {
     const skillDir = path.join(SHIPPED_ASSISTANT, "skill", "qfai-sdd");
     const files = [
       ...(await textFilesUnder(skillDir)).map((name) => path.join(skillDir, name)),
@@ -273,8 +273,14 @@ describe("qfai-sdd writes the story tree", () => {
     ];
     const classification = ".qfai/assistant/rule/change-classification.md";
     const decomposition = `${defaultConfig.paths.skillsDir}/qfai-sdd/references/requirements-decomposition.md`;
-    let classificationCitations = 0;
-    let decompositionCitations = 0;
+    const triage = await readShipped(TRIAGE_STEP);
+    expect(citationsOf(triage, "change-classification.md"), TRIAGE_STEP).toContain(classification);
+    expect(citationsOf(triage, "requirements-decomposition.md"), TRIAGE_STEP).toContain(
+      decomposition,
+    );
+    const flow = await readShipped(FLOW_STEP);
+    expect(citationsOf(flow, "requirements-decomposition.md"), FLOW_STEP).toContain(decomposition);
+
     for (const file of files) {
       const text = await readFile(file, "utf-8");
       expect(text, file).not.toContain(".qfai/assistant/constitution/");
@@ -288,11 +294,7 @@ describe("qfai-sdd writes the story tree", () => {
         decomposed.filter((cited) => cited !== decomposition),
         file,
       ).toEqual([]);
-      classificationCitations += classified.length;
-      decompositionCitations += decomposed.length;
     }
-    expect(classificationCitations).toBeGreaterThan(0);
-    expect(decompositionCitations).toBeGreaterThan(0);
     expect(shippedExists("rule/change-classification.md")).toBe(true);
     expect(shippedExists("skill/qfai-sdd/references/requirements-decomposition.md")).toBe(true);
   });
