@@ -973,6 +973,9 @@ describe("assets guardrails", () => {
         /\bunion\b/i,
         /\bbase branch\b/i,
         /\blocally\b/i,
+        /\brestore(?:s|d)?\b[^.]*\bopen-question row\b/i,
+        /\bdelete\b[^.]*\bseparate commit\b[^.]*\bbefore pushing\b/i,
+        /\bother register rows and IDs\b/i,
       ];
       for (const term of terms) {
         expect(comment, `${file}: the comment must say why (${String(term)})`).toMatch(term);
