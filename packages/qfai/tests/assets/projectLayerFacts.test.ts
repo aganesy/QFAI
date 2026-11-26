@@ -24,6 +24,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import fg from "fast-glob";
+import MarkdownIt from "markdown-it";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
@@ -202,6 +203,17 @@ function namesItsCommit(command: string): boolean {
   );
 }
 
+const releaseMarkdown = new MarkdownIt("commonmark");
+
+function releaseShellBlocks(guide: string): string[] {
+  return releaseMarkdown
+    .parse(guide, {})
+    .filter(
+      ({ type, info }) => type === "fence" && /^(?:sh|bash|shell)(?:[ \t]|$)/.test(info.trim()),
+    )
+    .map(({ content }) => content);
+}
+
 function releaseTaggingStatements(guide: string): string[] {
   const statements = [...guide.matchAll(/^\s*```(?:sh|bash|shell)[ \t]*\r?\n([\s\S]*?)^\s*```/gm)]
     .map(([, body]) => (body ?? "").replace(/&&[ \t]*\r?\n\s*/g, "&& "))
@@ -211,9 +223,7 @@ function releaseTaggingStatements(guide: string): string[] {
 }
 
 function releaseBuildBlock(guide: string): string | undefined {
-  return [...guide.matchAll(/^\s*```sh\n([\s\S]*?)^\s*```/gm)]
-    .map(([, body]) => body ?? "")
-    .find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
+  return releaseShellBlocks(guide).find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
 }
 
 describe("the project layer describes the repository it is in", () => {
@@ -489,6 +499,7 @@ describe("the project layer describes the repository it is in", () => {
       const duplicate = "pnpm verify:pack";
       const guide = ["```" + shell, build, duplicate, "```"].join(newline);
       const block = releaseBuildBlock(guide);
+      expect(block).toBeDefined();
       expect(block).toContain(build);
       expect(block).toMatch(/^\s*pnpm verify:pack$/m);
     },
