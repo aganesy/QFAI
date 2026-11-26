@@ -4318,6 +4318,14 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   reads a base that still holds the column without it, so that change needs no
   change request. A settled question row may then
   be deleted once a decision row names its ID; until one does, the row stays.
+
+  Before removing Status, check the decision register and its pages for
+  `Test exception:` entries marked `SUPERSEDED (by DEC-…)`. Reword their
+  Content to start with `Former test exception:` and keep their IDs and
+  history. In 2.4.0, the `Test exception:` prefix activates the exemption
+  again after the Status cell is removed. If you already upgraded, find
+  those entries in the pre-upgrade register and reword them in the current one.
+
 - **A decision row may be restated under its ID.** The `drift` profile of
   `qfai validate` now reports only a decision row the base holds that the
   branch removes or renumbers (`QFAI-STORY-010`); a row whose Content or
