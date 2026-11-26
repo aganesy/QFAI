@@ -98,7 +98,8 @@ export async function ensureGraphGitignore(
       conflicts: [
         "Git already tracks generated output under .qfai/tools/. " +
           "From the repository root, review the indexed paths with `git ls-files -- .qfai/tools/`. " +
-          "If you want a generated file to stay local, remove its index entry with `git rm --cached -- <path>`. " +
+          "If you want a generated file to stay local, use `git --literal-pathspecs rm --cached -- <path>`. " +
+          "Replace `<path>` with one exact path relative to the repository root and quote it for your shell. " +
           "This keeps the files in your working tree. Keep an effective ignore rule for future output.",
       ],
     };

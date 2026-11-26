@@ -61,36 +61,33 @@ describe("AC-0001-0236-06", () => {
         "Review .gitignore and explicitly exclude .qfai/tools/",
       );
       expect(visible.conflicts.join(" ")).not.toContain("Git already tracks generated output");
-      await mkdir(path.join(project.root, ".qfai", "tools", "adopter"), { recursive: true });
-      await writeFile(
-        path.join(project.root, ".qfai", "tools", "adopter", "graph.json"),
-        "Tracked by adopter",
-      );
+      const trackedPath = ".qfai/tools/adopter/graph.json";
+      const trackedFile = path.join(project.root, ...trackedPath.split("/"));
+      await mkdir(path.dirname(trackedFile), { recursive: true });
+      await writeFile(trackedFile, "Tracked by adopter");
       expect(
-        (
-          await runGraphProcess("git", ["add", "--", ".qfai/tools/adopter/graph.json"], {
-            cwd: project.root,
-          })
-        ).exitCode,
+        (await runGraphProcess("git", ["add", "--", trackedPath], { cwd: project.root })).exitCode,
       ).toBe(0);
       const conflict = await ensureGraphGitignore(project.root, runGraphProcess);
       expect(conflict.conflicts.join(" ")).toContain(".qfai/tools/");
       expect(conflict.files).toEqual([]);
       expect(await readFile(ignoreFile, "utf8")).toBe(ignore);
-      expect(
-        await readFile(path.join(project.root, ".qfai", "tools", "adopter", "graph.json"), "utf8"),
-      ).toBe("Tracked by adopter");
+      expect(await readFile(trackedFile, "utf8")).toBe("Tracked by adopter");
 
       await writeFile(ignoreFile, `${ignore}/.qfai/tools/\n`);
       expect(
         (
-          await runGraphProcess(
-            "git",
-            ["check-ignore", "--no-index", "-q", ".qfai/tools/adopter/graph.json"],
-            { cwd: project.root },
-          )
+          await runGraphProcess("git", ["check-ignore", "--no-index", "-q", trackedPath], {
+            cwd: project.root,
+          })
         ).exitCode,
       ).toBe(0);
+      await writeFile(trackedFile, "Working copy edits");
+      const readIndex = () =>
+        runGraphProcess("git", ["ls-files", "--stage", "-z"], { cwd: project.root });
+      const before = await readIndex();
+      expect(before.exitCode).toBe(0);
+      expect(before.stdout).toContain(trackedPath);
       const output = await captureStdout(() =>
         runInit(
           { dir: project.root, force: false, dryRun: false, yes: true },
@@ -103,20 +100,16 @@ describe("AC-0001-0236-06", () => {
       );
       expect(output).toContain("Git already tracks generated output under .qfai/tools/.");
       expect(output).toContain("git ls-files -- .qfai/tools/");
-      expect(output).toContain("git rm --cached -- <path>");
+      expect(output).toContain("git --literal-pathspecs rm --cached -- <path>");
+      expect(output).toContain("one exact path relative to the repository root");
+      expect(output).toContain("quote it for your shell");
       expect(output).toContain("This keeps the files in your working tree.");
       expect(output).not.toContain("Git still sees");
       expect(await readFile(ignoreFile, "utf8")).toBe(`${ignore}/.qfai/tools/\n`);
-      expect(
-        await readFile(path.join(project.root, ".qfai", "tools", "adopter", "graph.json"), "utf8"),
-      ).toBe("Tracked by adopter");
-      const stillTracked = await runGraphProcess(
-        "git",
-        ["ls-files", "--", ".qfai/tools/adopter/graph.json"],
-        { cwd: project.root },
-      );
-      expect(stillTracked.exitCode).toBe(0);
-      expect(stillTracked.stdout.trim()).toBe(".qfai/tools/adopter/graph.json");
+      expect(await readFile(trackedFile, "utf8")).toBe("Working copy edits");
+      const after = await readIndex();
+      expect(after.exitCode).toBe(0);
+      expect(after.stdout).toBe(before.stdout);
       expect(output).toContain("Managed graph CLI entrypoint: ready");
 
       for (const name of ["qfai-tests.yml", "qfai-validate.yml", "qfai-docs.yml"]) {
