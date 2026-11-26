@@ -24,6 +24,38 @@ const ASSISTANT_ROOTS = [
   path.join(repoRoot, ".qfai", "assistant"),
 ];
 
+const OPTIONAL_SEVERITY_ROW =
+  /^\|\s*`relaxedFrom`\s*\|.*\|\s*(?:(?:the\s+)?(?:field|value|severity)\s+)?(?:is\s+)?(?:optional|may\s+be\s+(?:absent|omitted))\b[^|]*\|\s*$/i;
+
+function explainsExplorationDowngrade(text: string): boolean {
+  const wording = text.replace(/\s+/g, " ");
+  return [
+    /\b(?:was|is|had been) (?:lowered|downgraded|reduced|changed) from (?:an? )?error (?:to|into) (?:an? )?warning (?:by|due to|because of|under) exploration[- ]mode\b/i,
+    /\b(?:began|started) as (?:an? )?error and (?:ended|finished) as (?:an? )?warning (?:by|due to|because of|under) exploration[- ]mode\b/i,
+    /\bexploration[- ]mode (?:lowered|downgraded|reduced|changed) (?:(?:the|this|that) )?(?:(?:severity|finding) )?from (?:an? )?error (?:to|into) (?:an? )?warning\b/i,
+  ].some((pattern) => pattern.test(wording));
+}
+
+it("requires the original severity row to say that the field is optional", () => {
+  expect("| `relaxedFrom` | severity | The field may be omitted. |").toMatch(OPTIONAL_SEVERITY_ROW);
+  expect("| `relaxedFrom` | severity | The field is not optional. |").not.toMatch(
+    OPTIONAL_SEVERITY_ROW,
+  );
+});
+
+it.each([
+  ["An old finding began as an error and ended as a warning due to exploration mode.", true],
+  ["Exploration mode downgraded the finding from error to warning.", true],
+  ["An older finding was not lowered from error to warning by exploration mode.", false],
+  [
+    "An older finding was lowered from error to warning by a waiver. Exploration mode had no effect.",
+    false,
+  ],
+  ["An older finding was changed from warning to error by exploration mode.", false],
+])("checks the historical severity transition in %s", (wording, expected) => {
+  expect(explainsExplorationDowngrade(wording)).toBe(expected);
+});
+
 function tableKeys(text: string): string[] {
   const start = text.indexOf("## Top level");
   const end = text.indexOf("\n## ", start + 1);
@@ -87,22 +119,19 @@ describe.each(ASSISTANT_ROOTS)("validate.json guide under %s", (assistantRoot) =
     const relaxedFrom = "relaxedFrom" satisfies keyof Issue;
     const issues = sectionOf(text, "## `issues[]`");
     const row = rowOf(issues, `\`${relaxedFrom}\``);
-    expect(row).toMatch(
-      /^\|\s*`relaxedFrom`\s*\|.*\|[^|]*\b(?:optional|may be (?:absent|omitted))\b[^|]*\|\s*$/i,
-    );
+    expect(row).toMatch(OPTIONAL_SEVERITY_ROW);
 
     const originalSeverity = '`relaxedFrom: "error"`';
     const currentSeverity = '`severity: "warning"`';
     const example =
       issues.split(/\r?\n\s*\r?\n/).find((paragraph) => paragraph.includes(originalSeverity)) ?? "";
     expect(example).toContain(currentSeverity);
-    expect(example).toMatch(/\b(?:older?|historical|legacy|previous(?:ly)?|past)\b/i);
-    expect(example).toMatch(/\bexploration[-\s]+mode\b/i);
+    expect(example).toMatch(/\b(?:old(?:er)?|historical|legacy|previous(?:ly)?|past)\b/i);
     const account = example
       .replace(originalSeverity, "")
       .replace(currentSeverity, "")
       .replaceAll("`", "");
-    expect(account).toMatch(/\berror\s+(?:\w+\s+){0,4}(?:to|into|became)\s+(?:an?\s+)?warning\b/i);
+    expect(explainsExplorationDowngrade(account)).toBe(true);
   });
 
   // A waiver on an `error` finding is refused with `QFAI-WAIVER-002`, so the
