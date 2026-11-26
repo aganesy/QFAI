@@ -51,9 +51,11 @@ Feature: Get one fixed plan for every kind of request
     And owned cleanup runs its cleanup and close steps without tracked repository/product deliverables, test gates or a commit
     And it checks authority, current ownership and every target before deletion, then verifies target absence and unchanged tracked files and index
     And denial, unsafe or changed targets, busy targets or partial deletion keep it unfinished instead of reporting cleaned
-    And `run-operation` carries out the operation the user named in one step, writes no tracked file, and moves to a newly decided route when the operation needs a tracked change
-    And before a merge `run-operation` merges the base into the branch locally, pushes and waits for the checks, never enabling the host's auto-merge, and resolves a conflict confined to the decision and question registers by that merge alone, editing and renumbering no row
-    And after a base merge whose conflicts are confined to the registers it follows the base repository's review requirements for the pull request's base branch on the updated head
+    And `run-operation` carries out the operation the user named in one step, writes only permitted operation records or the merge correction below, and moves to a newly decided route when the operation needs any other tracked change
+    And before a merge `run-operation` merges the base into the branch locally, pushes and waits for the checks, never enabling the host's auto-merge, and resolves conflicts confined to the decision and question registers with the union merge. If the merge restores an open-question row deleted by one side, the step deletes that row again and commits the deletion before pushing. Other register rows and IDs remain as merged
+    And after updating the head and waiting for its checks, it applies the review requirements of the pull request's base branch
+    And before the final merge it fetches the base again, records any commit that differs from the recorded base and repeats the update, checks, review and final fetch
+    And it merges only when the fetched base matches the recorded commit and checks and review requirements hold for the updated head, using the base repository's required merge method
     And `quarantine-flaky` lifts its quarantine only after the recorded real repetitions, whatever the evidence of an ordinary cause
 
   # AC-0001-0220-07

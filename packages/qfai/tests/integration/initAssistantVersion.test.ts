@@ -4,7 +4,7 @@
  * plain run otherwise, and rewritten under `--force`.
  */
 import { constants } from "node:fs";
-import { appendFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import type * as fsPromises from "node:fs/promises";
 import path from "node:path";
 
@@ -102,6 +102,34 @@ describe("qfai init records the release that wrote the assistant tree", () => {
     expect(await readFile(versionFile(dir), "utf-8")).toBe(`${running}\n`);
   });
 
+  // QFAI:EX-0001-0021-17
+  it("reports a bounded list of the kept assets that deferred the version", async () => {
+    const dir = await newTempDir();
+    const skills = path.join(".qfai", "assistant", "skill");
+    const matching = path.join(skills, "qfai-sdd", "SKILL.md");
+    await init(dir);
+    await rm(versionFile(dir));
+    expect((await stat(path.join(dir, matching))).isFile()).toBe(true);
+    const edited = (await readdir(path.join(dir, skills), { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory() && entry.name !== "qfai-sdd")
+      .slice(0, 9)
+      .map((entry) => path.join(skills, entry.name, "SKILL.md"));
+    expect(edited).toHaveLength(9);
+    for (const file of edited) {
+      await appendFile(path.join(dir, file), "\n<!-- local edit -->\n");
+    }
+
+    const output = await init(dir);
+    const diagnostic = output
+      .split(/\r?\n/)
+      .find((line) => line.startsWith("Assistant VERSION stays absent"));
+
+    await expectAbsent(versionFile(dir));
+    expect(edited.filter((file) => diagnostic?.includes(file))).toHaveLength(8);
+    expect(diagnostic).toContain("and 1 more");
+    expect(diagnostic).not.toContain(matching);
+  });
+
   // QFAI:AC-0001-0021-01
   // QFAI:EX-0001-0021-15
   it("leaves the version absent when a required assistant asset could not be copied", async () => {
@@ -116,6 +144,9 @@ describe("qfai init records the release that wrote the assistant tree", () => {
     await expectAbsent(versionFile(dir));
     expect(output).toContain(
       "Assistant VERSION stays absent when required assets cannot be verified",
+    );
+    expect(output).toContain(
+      `${path.relative(dir, path.join(blocked, "STEP.md"))} was not written. An incompatible destination or parent path blocked the write.`,
     );
 
     await rm(blocked);
