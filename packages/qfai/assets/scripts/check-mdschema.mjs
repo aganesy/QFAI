@@ -43,8 +43,8 @@
  *   --scope files    only the paths named on the command line.
  *
  * A degraded base (no merge base, a shallow clone, a failed branch or worktree
- * diff or untracked listing) FAILS OPEN to `all`, because the alternative — silently checking
- * nothing and reporting green — claims a result the run never established.
+ * diff, or a failed untracked listing) checks every document as `all` does.
+ * A green result would otherwise claim the run checked an unknown set.
  *
  * ── What `--scope changed` holds a branch to ──────────────────────────────
  *
@@ -832,10 +832,11 @@ function changedFiles(base, root) {
     const reason = (staged.stderr ?? "").trim().split("\n")[0] || `git exited ${staged.status}`;
     return { degraded: `cannot diff the worktree against HEAD (${reason})` };
   }
-  const untracked = spawnSync("git", ["ls-files", "--others", "--exclude-standard", "-z"], {
-    cwd: root,
-    encoding: "utf-8",
-  });
+  const untracked = spawnSync(
+    "git",
+    ["ls-files", "--others", "--exclude-standard", "-z", "--", ":(glob,icase)**/*.md"],
+    { cwd: root, encoding: "utf-8" },
+  );
   if (untracked.status !== 0) {
     const reason =
       (untracked.stderr ?? "").trim().split("\n")[0] ||
