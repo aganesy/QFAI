@@ -744,6 +744,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   requires an explicit implementation request. High-risk changes also
   require review of the proposed diff and citations. Closes #4938.
 
+- The web-research completion message recommends sharing the cited artifact.
+  It gives implementation handoff only for an explicit application request.
+
 - **A constraint row that names a contract by its file name is refused.** The
   `constraint.md` schema refused `CLI-0010` in a constraint row but read
   `cli-0010` as plain words, so a row citing a contract by its file name passed
