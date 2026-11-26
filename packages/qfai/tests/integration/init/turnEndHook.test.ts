@@ -368,6 +368,11 @@ describe("turn-end hook", () => {
       second: { session_id: "review", agent_id: "qa?check" },
     },
     {
+      kind: "agent IDs with different letter case",
+      first: { session_id: "review", agent_id: "Worker" },
+      second: { session_id: "review", agent_id: "worker" },
+    },
+    {
       kind: "pairs with different session and agent boundaries",
       first: { session_id: "first-second", agent_id: "third" },
       second: { session_id: "first", agent_id: "second-third" },
