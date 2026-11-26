@@ -557,6 +557,41 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(created)).toEqual([{ kind: "FUNCTION", name: "f", lines: [1, 3] }]);
   });
 
+  it("matches equivalent qualified type names while keeping other routine types distinct", async () => {
+    const types = [
+      "app.custom_type",
+      '"app"."custom_type"',
+      'app . "custom_type"',
+      'app."Custom_Type"',
+      'app."custom,type"',
+      '"app.custom_type"',
+      "other.custom_type",
+    ];
+    const sql = types
+      .map(
+        (type) =>
+          `CREATE OR REPLACE FUNCTION f(a ${type}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n`,
+      )
+      .join("");
+    const { statements, errors } = parseSqlContract(sql);
+    expect(errors).toEqual([]);
+    const created = collectCreatedObjects(statements);
+    expect(created.map((object) => object.signature)).toEqual([
+      "app.custom_type",
+      "app.custom_type",
+      "app.custom_type",
+      'app."Custom_Type"',
+      'app."custom,type"',
+      '"app.custom_type"',
+      "other.custom_type",
+    ]);
+    expect(findRedefinitions(created)).toEqual([{ kind: "FUNCTION", name: "f", lines: [1, 2, 3] }]);
+    const issues = await runOn(HEADER + sql);
+    expect(
+      issues.filter((issue) => issue.code === "QFAI-DB-002").map((issue) => issue.severity),
+    ).toEqual(["error"]);
+  });
+
   it("distinguishes parentheses inside a type name from its modifiers", () => {
     const { statements } = parseSqlContract(
       `CREATE FUNCTION f("custom(x)"[]) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
