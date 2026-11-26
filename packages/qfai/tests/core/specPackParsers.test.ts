@@ -97,6 +97,8 @@ describe("parseRenderedMarkdownTables", () => {
     ["123. ```md", "", "     "],
     ["- - ~~~md", "    ~~~", "    "],
     ["123.\n     ~~~md", "     ~~~", "     "],
+    ["- Heading\n  -\n    ~~~md", "    ~~~", "  "],
+    ["- Prior paragraph\n-\n     ~~~md", "     ~~~", "  "],
   ])("ignores a fenced table inside list content starting with %j", (opener, closer, indent) => {
     const text = [
       header,

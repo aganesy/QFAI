@@ -144,7 +144,7 @@ function listContentLine(
   listIndents: number[],
   paragraphOpen: boolean,
 ): { container: number; contentOffset: number | undefined } {
-  const hadList = listIndents.length > 0;
+  const previousContainer = listIndents.at(-1) ?? 0;
   if (indentation.offset < line.length) {
     while ((listIndents.at(-1) ?? 0) > indentation.columns) listIndents.pop();
   }
@@ -162,8 +162,14 @@ function listContentLine(
     const markerEnd = columns + marker.length;
     const padding = markdownIndent(line, offset + marker.length, markerEnd);
     const empty = padding.offset === line.length;
-    if (empty && paragraphOpen && !hadList && offset === indentation.offset) {
-      // An empty first line cannot start a list by interrupting a paragraph.
+    if (
+      empty &&
+      paragraphOpen &&
+      container === previousContainer &&
+      offset === indentation.offset
+    ) {
+      // A single dash here can underline a heading in the current paragraph.
+      // An empty item can start after leaving that paragraph's container.
       return { container, contentOffset: undefined };
     }
     if (empty || padding.columns - markerEnd > 4) {
@@ -375,7 +381,7 @@ function tableRowLines(lines: readonly string[]): Set<number> {
       listIndents,
       paragraphOpen,
     );
-    paragraphOpen = line.trim().length > 0 && !endsParagraph(line);
+    paragraphOpen = contentOffset !== undefined && !endsParagraph(line.slice(contentOffset));
     if (contentOffset === undefined || !looksLikeTableRow(line)) {
       headerAt = -1;
       tableContainer = undefined;
