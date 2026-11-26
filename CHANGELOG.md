@@ -1186,6 +1186,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   arguments, and its overloads were reported as one routine defined twice. The
   list is now read from the parenthesis that follows the name. Closes #5149.
 
+- **`QFAI-DB-002` decodes Unicode escapes in qualified routine argument types.**
+  A `U&` spelling and its ordinary equivalent now identify the same type.
+  Case and punctuation still distinguish different quoted names.
+
 - **The graph ignore check covers every name graph setup writes under.** The
   paths `qfai init` checks against an existing managed graph block missed the
   CodeGraph install directory in its private home and most hidden directories

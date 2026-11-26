@@ -617,6 +617,7 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
       ["h", String.raw`app.U&"\+01F600"`],
       ["k", "app.U&\"a!!b\" UESCAPE '!'"],
       ["k", 'app."a!b"'],
+      ["g", String.raw`app.U&"A\+00002e\002d\0022"`],
     ] as const;
     const sql = routines
       .map(
