@@ -156,17 +156,21 @@ it("repairs only a missing runtime component and retains unrelated settings", as
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-partial-"));
   try {
     const fixture = graphProcessFixture();
-    await prepareGraphRuntimes(root, fixture.run);
+    const init = () =>
+      captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: false }, {}, fixture.run),
+      );
     const paths = graphRuntimePaths(root);
-    const codegraphBytes = await readFile(paths.codegraph);
     const settings = path.join(root, ".mcp.json");
     const original = '{"mcpServers":{"adopter":{"command":"keep-me"}}}\n';
     await writeFile(settings, original);
+    await init();
+    const codegraphBytes = await readFile(paths.codegraph);
     await rm(paths.python);
     fixture.calls.length = 0;
-    await captureStdout(() =>
-      runInit({ dir: root, force: false, dryRun: false, yes: false }, {}, fixture.run),
-    );
+
+    await init();
+
     await expect(access(paths.python)).resolves.toBeUndefined();
     expect(await readFile(paths.codegraph)).toEqual(codegraphBytes);
     expect(await readFile(settings, "utf8")).toBe(original);
