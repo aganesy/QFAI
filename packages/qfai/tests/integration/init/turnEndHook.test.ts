@@ -367,9 +367,10 @@ describe("turn-end hook", () => {
 
   // QFAI:EX-0001-0244-22
   it.each([
-    ["the gate is disabled", "workflow:\n  stopGate: false\n"],
-    ["tech.md is missing", null],
-  ])("clears only the current session failure when %s", async (_case, config) => {
+    ["the gate is disabled", "disabled"],
+    ["tech.md is missing", "missing-tech"],
+    ["the project configuration is missing", "missing-config"],
+  ] as const)("clears only the current session failure when %s", async (_case, condition) => {
     const fail = await script("fail.js", "type error\n", 1);
     const commands = [`- Lint: \`${fail}\``, "- Turn-end check: Lint"];
     await project(commands);
@@ -379,10 +380,12 @@ describe("turn-end hook", () => {
       expect(parsed(await hook(event)).decision).toBe("block");
     }
 
-    if (config === null) {
+    if (condition === "missing-config") {
+      await rm(path.join(root, "qfai.config.yaml"));
+    } else if (condition === "missing-tech") {
       await rm(path.join(root, ".qfai", "spec", "03_contract", "tech.md"));
     } else {
-      await project(commands, config);
+      await project(commands, "workflow:\n  stopGate: false\n");
     }
     expect(await hook({ session_id: "paused", stop_hook_active: true })).toBe("");
     expect(await readdir(stateDir)).toHaveLength(2);
