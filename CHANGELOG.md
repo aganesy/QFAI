@@ -1315,8 +1315,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   the check and prints a warning.
 
 - The changed-scope schema check requests only untracked Markdown paths from
-  Git, regardless of extension case. Unrelated untracked files no longer fill
-  the captured Git output and trigger a full-tree check.
+  Git, regardless of extension case. Untracked non-Markdown files no longer
+  fill the captured Git output and trigger a full-tree check.
 
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
