@@ -35,7 +35,7 @@
 # | Skipped when                  | every changed path is code a document check never reads; anything else, or any doubt, runs both checks   |
 # | Default-branch push           | runs the checks the push reaches; with `vars.QFAI_CI_PUSH_POLICY` set to `protected` or `none`, neither  |
 # | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
-# | Node support floor            | the package declares `engines: ">=20.19.0"`; the fall-open Node 20 satisfies it                          |
+# | Node support floor            | minimum Node 20.19.0; the fallback uses Node 20                           |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
 # | Jobs per pull request event   | idle: 1 (scope); lane runs: 4 (scope, checks x2, docs)                                                   |
 # | Required check                | docs, named "qfai docs (document shape and Mermaid syntax)"                                              |
@@ -491,7 +491,7 @@ jobs:
         with:
           # The version resolved by the step above: the adopter's own
           # version file when they have one, else the documented fallback
-          # (Node 20, matching the package `engines: ">=20.19.0"` floor).
+          # (Node 20, the major line containing the package's lowest supported version).
           node-version: ${{ steps.node-version.outputs.version }}
           # setup-node's `cache:` accepts a single package-manager value, and the step above
           # decides it — an expression cannot ask whether the package manager is on PATH, and

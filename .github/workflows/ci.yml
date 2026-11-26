@@ -351,7 +351,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           9b80c95d57c04e17369b07d2023cdb1754fc3dbc1969a54e9dafc85e6813c00c  scripts/check-toolchain-action.sh
-          3c5122f3db20da8fffbf628d6a05eedaf193fcc0a2f8042ceb319098ec3f099e  .github/pinned-bytes.txt
+          0c46ff03fcaec38ca34a8f196258e2c0e43bd6ccabe6bfb2395c89e194e7f3a8  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -513,7 +513,7 @@ jobs:
           # in the direction that passes.
           # SHIPPED-CI: not-applicable
           # Because: this verifies the Node floor of the package built by this repository.
-          expected="v$(node scripts/node-engine-floor.mjs packages/qfai/package.json)"
+          expected="v$(node .github/actions/setup/node-engine-floor.mjs packages/qfai/package.json)"
           actual="$(node --version)"
           echo "node-floor: engines floor ${expected}, running ${actual}"
           if [ "$actual" != "$expected" ]; then

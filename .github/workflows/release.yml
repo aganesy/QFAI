@@ -644,7 +644,7 @@ jobs:
           # answer to the same question, and the repository allows exactly one Node literal.
           # SHIPPED-CI: not-applicable
           # Because: this verifies the Node floor of the package the release gate will publish.
-          expected="v$(node scripts/node-engine-floor.mjs packages/qfai/package.json)"
+          expected="v$(node .ci-actions/.github/actions/setup/node-engine-floor.mjs packages/qfai/package.json)"
           actual="$(node --version)"
           echo "gate-floor: engines floor ${expected}, running ${actual}"
           if [ "$actual" != "$expected" ]; then
@@ -709,7 +709,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          expected="v$(node scripts/node-engine-floor.mjs packages/qfai/package.json)"
+          expected="v$(node .ci-actions/.github/actions/setup/node-engine-floor.mjs packages/qfai/package.json)"
           actual="$(node --version)"
           echo "gate-floor-whole: engines floor ${expected}, running ${actual}"
           if [ "$actual" != "$expected" ]; then

@@ -130,7 +130,7 @@
   // The floor itself is STATED rather than left for Renovate to infer from `engines`. Inference
   // is per manifest, this workspace has several, and the value that must bound a devDependency is
   // the one the published package promises — which is the package manifest's, not the root's.
-  constraints: { node: ">=20.19.0" },
+  constraints: { node: "^20.19.0 || ^22.13.0 || >=24.0.0" },
   constraintsFiltering: "strict",
 
   packageRules: [

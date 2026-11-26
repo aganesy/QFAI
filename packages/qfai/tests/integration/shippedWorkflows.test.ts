@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
-import { nodeEngineFloor } from "../../../../scripts/node-engine-floor.mjs";
+import { nodeEngineFloor } from "../../../../.github/actions/setup/node-engine-floor.mjs";
 import { isRecord, loadShippedWorkflows } from "../helpers/shippedWorkflowFixtures.js";
 
 // tests/integration/<this file> -> tests -> packages/qfai
