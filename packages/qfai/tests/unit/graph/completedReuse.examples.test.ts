@@ -45,7 +45,7 @@ it("retains completed local document analysis when snapshot restoration is unsup
 });
 
 // QFAI:EX-0001-0236-01
-// Mutation: packages/qfai/src/core/graph/documentReuse.ts `if (await inspect(staged, true)) {` -> `if (!(await inspect(staged, true))) {` fails "publishes and independently restores a completed document graph after native freshness checks"
+// Mutation: packages/qfai/src/core/graph/documentReuse.ts `if (checked && (await inspect(staged, true, checked))) {` -> `if (checked && !(await inspect(staged, true, checked))) {` fails "publishes and independently restores a completed document graph after native freshness checks"
 it("publishes and independently restores a completed document graph after native freshness checks", async () => {
   const fixture = await documentAnalysisFixture();
   const common = await mkdtemp(path.join(os.tmpdir(), "qfai-document-cache-"));
