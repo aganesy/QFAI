@@ -652,6 +652,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
 
+- The shipped merge procedure places the final merge after updated-head review.
+  If the final fetch sees a different base commit, it repeats the update,
+  checks and review before fetching again.
+
 - The verification guide distinguishes the built-in verdict scopes from
   acceptance-only validation with `qfai validate --profile atdd`.
 
