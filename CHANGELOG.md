@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Graph setup distinguishes tracked output from an ineffective ignore rule.**
+  Its warning shows how to inspect the index and stop tracking selected
+  generated files while keeping them in the working tree.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to

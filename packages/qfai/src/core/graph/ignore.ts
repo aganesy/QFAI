@@ -92,7 +92,17 @@ export async function ensureGraphGitignore(
     if (!isEnoent(cause)) throw cause;
   }
   const tracked = await run("git", ["ls-files", "-z", "--", ".qfai/tools/"], { cwd: root });
-  if (tracked.exitCode === 0 && tracked.stdout !== "") return conflict([]);
+  if (tracked.exitCode === 0 && tracked.stdout !== "") {
+    return {
+      files: [],
+      conflicts: [
+        "Git already tracks generated output under .qfai/tools/. " +
+          "From the repository root, review the indexed paths with `git ls-files -- .qfai/tools/`. " +
+          "If you want a generated file to stay local, remove its index entry with `git rm --cached -- <path>`. " +
+          "This keeps the files in your working tree. Keep an effective ignore rule for future output.",
+      ],
+    };
+  }
   if (content.includes(GRAPH_IGNORE_MARKER)) {
     const visible = await unignoredGraphOutputs(root, content, run);
     return visible.length === 0 ? { files: [], conflicts: [] } : conflict(visible);
