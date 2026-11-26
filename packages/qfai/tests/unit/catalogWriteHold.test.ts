@@ -2,7 +2,7 @@ import { setImmediate } from "node:timers/promises";
 
 import { expect, it } from "vitest";
 
-import { waitForCatalogueWriteHold } from "../helpers/catalogWriteHold.js";
+import { waitForCatalogueWriteHold, withCatalogueWriteHold } from "../helpers/catalogWriteHold.js";
 
 // The rename signal settles on the next turn, so ignoring the writer fails promptly too.
 it("reports the exit code and diagnostic when a catalogue writer exits before the held rename", async () => {
@@ -20,4 +20,25 @@ it("preserves an unexpected catalogue writer rejection before the held rename", 
   await expect(waitForCatalogueWriteHold(setImmediate(), Promise.reject(error), [])).rejects.toBe(
     error,
   );
+});
+
+it("settles a held writer before returning the fixture error", async () => {
+  const fixtureError = new Error("Fixture work failed after the pause.");
+  let resume = (): void => undefined;
+  const resumed = new Promise<void>((resolve) => {
+    resume = resolve;
+  });
+  let settled = false;
+  const writer = resumed.then(async () => {
+    await setImmediate();
+    settled = true;
+    throw new Error("The released writer also failed.");
+  });
+
+  await expect(
+    withCatalogueWriteHold({ held: Promise.resolve(), resume }, writer, [], () =>
+      Promise.reject(fixtureError),
+    ),
+  ).rejects.toBe(fixtureError);
+  expect(settled).toBe(true);
 });
