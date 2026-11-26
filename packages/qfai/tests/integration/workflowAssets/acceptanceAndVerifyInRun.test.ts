@@ -48,14 +48,20 @@ describe("qfai-verify in a workflow run", () => {
     expect(rowOf(scope, "| `prototyping`")).toContain("--profile prototyping");
     expect(scope).not.toMatch(/^\| `atdd`/mu);
 
-    const contract = await section(
-      "skill/qfai-verify/references/verify-output-contract.md",
+    const contractScope = sectionOf(
+      await readShipped("skill/qfai-verify/references/verify-output-contract.md"),
       "## Scope",
     );
+    const contract = flat(contractScope);
     expect(contract).toContain(
       "Built-in stages write `verify.json` only for `full` and `prototyping`",
     );
-    expect(contract).toMatch(/\| `atdd`.*`npx qfai validate --profile atdd`/u);
+    const atddRow = contractScope.split(/\r?\n/).find((line) => /^\|\s*`atdd`\s*\|/u.test(line));
+    expect(atddRow).toContain("`npx qfai validate --profile atdd`");
+    expect(contract).toContain(
+      "`verify-context` selects the scope when `qfai-verify` is invoked by name.",
+    );
+    expect(contract).toContain("A route runs its verify gates at `full` scope.");
     expect(contract).toContain(
       "The verdict format includes `atdd` for an acceptance-only gate set",
     );

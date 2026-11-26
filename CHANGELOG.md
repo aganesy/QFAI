@@ -648,12 +648,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Validation launcher mismatch errors identify the checkout problem and explain
   how to install its dependencies and rerun validation through its own launcher.
+  The recovery names `pnpm bootstrap` for QFAI source worktrees and explains
+  how to replace an original `--root` while retaining the other options.
 
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
 
+- The shipped merge procedure places the final merge after updated-head review.
+  If the final fetch sees a different base commit, it repeats the update,
+  checks and review before fetching again.
+
 - The verification guide distinguishes the built-in verdict scopes from
   acceptance-only validation with `qfai validate --profile atdd`.
+
+- The verification verdict guide explains scope selection for named invocations
+  and the `full` scope used by planned routes.
 
 - **Plain `qfai init` defers the assistant version file when a required asset
   could not be verified.** A blocked copy no longer records a complete
@@ -746,6 +755,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   before passing the parent number to Git. It stops when the scope or parent
   is ambiguous. Closes #4827.
 
+- **Backports check every selected commit against the requested scope.** If any
+  patch includes unrelated changes, the procedure reports them and stops
+  before creating the backport branch.
+
 - **The `tech.md` placeholder check counts only the template's own slots and
   quotes what it flags.** `QFAI-ASSETS-003` treated any `<...>` in the
   contract-layer `tech.md` as an unfilled slot, so a generic path such as
@@ -757,6 +770,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Web research ends with a cited artifact.** Applying a finding to code
   requires an explicit implementation request. High-risk changes also
   require review of the proposed diff and citations. Closes #4938.
+
+- The web-research completion message recommends sharing the cited artifact.
+  It gives implementation handoff only for an explicit application request.
 
 - **A constraint row that names a contract by its file name is refused.** The
   `constraint.md` schema refused `CLI-0010` in a constraint row but read
@@ -1259,6 +1275,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 
 - The routine parser skips commas and parentheses inside quoted argument
   names and preserves quoted type names when checking for duplicate routines.
+
+- Dollar-quoted and directly `E`- or `e`-prefixed defaults in SQL routines
+  preserve the argument types that follow them. The duplicate check ignores
+  punctuation inside these defaults when comparing the argument types.
 
 - **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
   The duplicate check compared each argument type as written, so
@@ -1792,6 +1812,9 @@ decisions` headings appeared anywhere in the file, so a record with several
 
 - Proposal triage records terminal acceptance as `accepted` and uses
   `adopted` when a `decide-design` decision accepts implementation in this project.
+  This requires explicit approval to implement or a recorded delegation that
+  covers the implementation decision. An implementation proposal that is still
+  open or only assumed stays pending as `deferred`.
 
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two
