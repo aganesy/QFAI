@@ -11,6 +11,7 @@ import type { GraphPreparedFiles } from "./ignore.js";
 
 export async function installGraphEntrypoints(root: string): Promise<GraphPreparedFiles> {
   const directory = graphToolsDirectory(root);
+  const directorySegments = path.relative(root, directory).split(path.sep);
   await assertGraphStoragePath(root, directory);
   const bundle = path.resolve(getInitAssetsDir(), "..", "..", "dist", "graph");
   const sources: Record<string, string> = {
@@ -19,7 +20,7 @@ export async function installGraphEntrypoints(root: string): Promise<GraphPrepar
   const record = GRAPH_ENTRYPOINT_RECORD;
   const names = [...Object.keys(sources), record];
   for (const name of names) {
-    if (await findUnsafeHostFileComponent(root, [".qfai", "tools", name])) return conflict();
+    if (await findUnsafeHostFileComponent(root, [...directorySegments, name])) return conflict();
     try {
       const stats = await lstat(path.join(directory, name));
       if (!stats.isFile() || stats.nlink !== 1) return conflict();
@@ -64,7 +65,10 @@ export async function installGraphEntrypoints(root: string): Promise<GraphPrepar
   const ownership = JSON.stringify({ kind: "graph-entrypoints", sources }) + "\n";
   if (missing.length > 0 || Object.keys(previous).length === 0)
     await replaceWhole(path.join(directory, record), ownership);
-  return { files: missing.map((name) => `.qfai/tools/${name}`), conflicts: [] };
+  return {
+    files: missing.map((name) => path.posix.join(...directorySegments, name)),
+    conflicts: [],
+  };
 }
 
 /**

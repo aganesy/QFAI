@@ -90,6 +90,38 @@ it("makes one refresh copy when a document query finds the analysis not current 
   }
 });
 
+// QFAI:EX-0001-0236-20 BR-CLI-0021-0026
+// Mutation: packages/qfai/src/core/graph/codePreparation.ts `if (checkCurrent && (await inspectCurrentCodeAnalysis(root, run)))` -> `if (await inspectCurrentCodeAnalysis(root, run))` fails "makes one refresh copy when a code query finds the analysis not current and prepares it"
+it("makes one refresh copy when a code query finds the analysis not current and prepares it", async () => {
+  const fixture = await codeAnalysisFixture();
+  try {
+    const priorSource = "export function checkout() { return 2; }\n";
+    const activeSource = path.join(fixture.analysis, "checkout.ts");
+    await writeFile(activeSource, priorSource);
+    const run: GraphProcess = async (command, args, options) => {
+      if (args.includes("status")) {
+        fixture.calls.push({ command, args });
+        return { exitCode: 0, stdout: '{"initialized":false}' };
+      }
+      if (args.includes("--version") || args.includes("--liftoff-only"))
+        return { exitCode: 1, stdout: "" };
+      return fixture.run(command, args, options);
+    };
+    await expect(
+      queryPreparedGraph(fixture.root, { domain: "code", question: "checkout" }, run),
+    ).resolves.toMatchObject({ status: "failed", engine: "codegraph" });
+    const refreshChecks = fixture.calls.filter(
+      (call) =>
+        call.args[1] === "status" &&
+        path.basename(call.args[2] ?? "").startsWith(".refreshing-codegraph-"),
+    );
+    expect(refreshChecks).toHaveLength(1);
+    expect(await readFile(activeSource, "utf8")).toBe(priorSource);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
 // Mutation: packages/qfai/src/core/graph/storage.ts `await discardLeftoverRefreshCopies(analysis, engine);` -> `` fails "removes the refresh copies earlier queries left before a document query makes a new one"
 // Mutation: packages/qfai/src/core/graph/layout.ts `-${STAGING_ID}$` -> `-` fails "removes the refresh copies earlier queries left before a document query makes a new one"
 it("removes the refresh copies earlier queries left before a document query makes a new one", async () => {

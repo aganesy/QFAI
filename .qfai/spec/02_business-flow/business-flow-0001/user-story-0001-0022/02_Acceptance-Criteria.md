@@ -10,4 +10,11 @@ Feature: Forced update
     When `qfai init --force` runs
     Then the skill files under `skill/` are overwritten with the shipped release
     And the files under `skill.local/` are left unchanged
+
+  # AC-0001-0022-02
+  Scenario: A forced template copy refuses a special file
+    Given a FIFO, socket or device occupies the destination of a shipped template file
+    When `qfai init --force` runs or previews the copy with `--dry-run`
+    Then the destination is reported as refused
+    And the existing entry is left in place
 ```
