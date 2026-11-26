@@ -14,9 +14,11 @@ import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promis
 import os from "node:os";
 import path from "node:path";
 
-import { validateProject } from "../../src/core/validate.js";
 import * as pnpProvenance from "../../src/core/pnpProvenance.js";
-import {
+import { validateProject } from "../../src/core/validate.js";
+import * as version from "../../src/core/version.js";
+
+const {
   classifyAgainstDeclaration,
   classifyToolLocation,
   findDeclaringDir,
@@ -25,7 +27,7 @@ import {
   reachedThroughLinkedNodeModules,
   resolveToolPackageDir,
   resolvesThroughOwnNodeModules,
-} from "../../src/core/version.js";
+} = version;
 
 async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
   const dir = await realpath(await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-")));
@@ -46,26 +48,38 @@ it("accepts an external PnP copy only for the project that resolves that directo
     const manifest = JSON.stringify({ devDependencies: { qfai: "2.5.0" } });
     await Promise.all([
       writeFile(path.join(project, "package.json"), manifest),
+      writeFile(path.join(project, "qfai.config.yaml"), "{}\n"),
       writeFile(path.join(unrelated, "package.json"), manifest),
+      writeFile(path.join(unrelated, "qfai.config.yaml"), "{}\n"),
     ]);
+    const resolveToUnqualified = vi.fn(() => running);
+    const api = {
+      findPackageLocator: () => ({ name: "project", reference: "workspace:." }),
+      getPackageInformation: () => ({ packageLocation: project }),
+      resolveToUnqualified,
+    };
     const selected = vi
       .spyOn(pnpProvenance, "resolveActivePnpPackage")
-      .mockImplementation((directory) => (directory === project ? running : null));
+      .mockImplementation((directory) => pnpProvenance.selectPnpPackage(api, directory));
+    const loaded = vi
+      .spyOn(version, "locateToolAgainstProject")
+      .mockImplementation((directory) => locateToolAgainstProject(directory, running));
+    const provenanceCodes = async (directory: string): Promise<string[]> => {
+      const { issues } = await validateProject(directory, undefined, { profile: "discussion" });
+      return issues
+        .map((issue) => issue.code)
+        .filter((code) => code === "QFAI-TOOL-001" || code === "QFAI-TOOL-002");
+    };
     try {
-      expect(await locateToolAgainstProject(project, running)).toMatchObject({
-        outside: false,
-        declaredElsewhere: false,
-      });
-      expect(await locateToolAgainstProject(unrelated, running)).toMatchObject({
-        outside: true,
-        declaredElsewhere: true,
-      });
-      selected.mockReturnValue(path.join(root, "different-cache", "node_modules", "qfai"));
-      expect(await locateToolAgainstProject(project, running)).toMatchObject({
-        outside: true,
-        declaredElsewhere: true,
-      });
+      expect(await provenanceCodes(project)).toEqual([]);
+      expect(resolveToUnqualified).toHaveBeenCalledWith("qfai", path.join(project, "package.json"));
+      expect(await provenanceCodes(unrelated)).toEqual(["QFAI-TOOL-002"]);
+      resolveToUnqualified.mockReturnValue(
+        path.join(root, "different-cache", "node_modules", "qfai"),
+      );
+      expect(await provenanceCodes(project)).toEqual(["QFAI-TOOL-002"]);
     } finally {
+      loaded.mockRestore();
       selected.mockRestore();
     }
   });

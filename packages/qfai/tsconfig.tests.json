@@ -627,7 +627,6 @@
     "tests/e2e/bf0004MigrationOutcomesE2E.test.ts",
     "tests/e2e/bf0004MigrationRerunE2E.test.ts",
     "tests/e2e/bf0001WorkflowClaimAHostE2E.test.ts",
-    "tests/e2e/yarnPnpProvenance.test.ts",
     "tests/eval/routingEval.run.ts",
     "tests/eval/vitest.config.ts",
     "tests/helpers/designAuthoringEval.ts",

@@ -24,25 +24,29 @@ function isPnpApi(value: unknown): value is PnpApi {
 export function resolveActivePnpPackage(directory: string): string | null {
   if (!process.versions.pnp) return null;
   try {
-    const api: unknown = createRequire(import.meta.url)("pnpapi");
-    if (!isPnpApi(api)) return null;
-    const issuer = path.join(directory, "package.json");
-    const locator = api.findPackageLocator(issuer);
-    if (typeof locator !== "object" || locator === null) return null;
-    const info = api.getPackageInformation(locator);
-    if (
-      typeof info !== "object" ||
-      info === null ||
-      !("packageLocation" in info) ||
-      typeof info.packageLocation !== "string" ||
-      path.relative(directory, info.packageLocation) !== ""
-    ) {
-      return null;
-    }
-    const selected = api.resolveToUnqualified("qfai", issuer);
-    return typeof selected === "string" && path.isAbsolute(selected) ? selected : null;
+    return selectPnpPackage(createRequire(import.meta.url)("pnpapi"), directory);
   } catch {
     // A failed resolution supplies no proof that this copy belongs to the project.
     return null;
   }
+}
+
+/** Select QFAI only for a project directory owned by this resolver. */
+export function selectPnpPackage(api: unknown, directory: string): string | null {
+  if (!isPnpApi(api)) return null;
+  const issuer = path.join(directory, "package.json");
+  const locator = api.findPackageLocator(issuer);
+  if (typeof locator !== "object" || locator === null) return null;
+  const info = api.getPackageInformation(locator);
+  if (
+    typeof info !== "object" ||
+    info === null ||
+    !("packageLocation" in info) ||
+    typeof info.packageLocation !== "string" ||
+    path.relative(directory, info.packageLocation) !== ""
+  ) {
+    return null;
+  }
+  const selected = api.resolveToUnqualified("qfai", issuer);
+  return typeof selected === "string" && path.isAbsolute(selected) ? selected : null;
 }
