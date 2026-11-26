@@ -746,6 +746,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   before passing the parent number to Git. It stops when the scope or parent
   is ambiguous. Closes #4827.
 
+- **Backports check every selected commit against the requested scope.** If any
+  patch includes unrelated changes, the procedure reports them and stops
+  before creating the backport branch.
+
 - **The `tech.md` placeholder check counts only the template's own slots and
   quotes what it flags.** `QFAI-ASSETS-003` treated any `<...>` in the
   contract-layer `tech.md` as an unfilled slot, so a generic path such as
