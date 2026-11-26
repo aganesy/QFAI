@@ -889,6 +889,7 @@ describe("the ratchet in --scope changed", () => {
       const content = readFileSync(process.argv.at(-1), "utf8");
       if (content.includes("Merge-base-only marker.")) {
         process.stdout.write("x".repeat(65536));
+        setInterval(() => undefined, 1000);
       } else {
         process.stderr.write("Head does not conform.");
         process.exitCode = 1;
@@ -901,7 +902,7 @@ describe("the ratchet in --scope changed", () => {
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain(
-      "check-mdschema: mdschema did not finish: it printed more than 64 bytes and was stopped",
+      "check-mdschema: over a single document, mdschema did not finish: it printed more than 64 bytes and was stopped",
     );
   });
 
