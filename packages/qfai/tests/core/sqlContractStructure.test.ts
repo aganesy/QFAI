@@ -119,6 +119,34 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     expect(statements).toHaveLength(2);
   });
 
+  it.each(["\n", "\r\n", "\r"])(
+    "uses physical SQL lines with the %j separator",
+    async (separator) => {
+      const sql = [
+        "-- QFAI-CONTRACT-ID: DB-0001",
+        "-- Create the same table after the comments and literal bodies.",
+        "CREATE TABLE orders (id integer);",
+        "SELECT E'first",
+        "second';",
+        "SELECT $$third",
+        "fourth$$;",
+        "/* block",
+        "comment */",
+        "CREATE TABLE orders (id text);",
+      ].join(separator);
+      const { statements, errors } = parseSqlContract(sql);
+
+      expect(errors).toEqual([]);
+      expect(statements.map(({ line }) => line)).toEqual([3, 4, 6, 10]);
+      expect(statements[1]?.text).toBe(`SELECT E'first${separator}second'`);
+      expect(statements[2]?.text).toBe(`SELECT $$third${separator}fourth$$`);
+      const findings = (await runOn(sql)).filter((issue) => issue.code === "QFAI-DB-002");
+      expect(findings.map(({ message }) => message)).toEqual([
+        expect.stringContaining("(lines 3, 10)"),
+      ]);
+    },
+  );
+
   it("handles nested block comments, which PostgreSQL allows", () => {
     const { errors } = parseSqlContract(`/* outer /* inner */ still outer */ SELECT 1;`);
     expect(errors).toEqual([]);
