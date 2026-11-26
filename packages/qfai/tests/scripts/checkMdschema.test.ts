@@ -115,6 +115,7 @@ vi.mock("node:fs", async (importOriginal) => {
 });
 
 const gitListingFault = vi.hoisted(() => ({ enabled: false }));
+const gitListingOutput = vi.hoisted((): { paths: string[] | null } => ({ paths: null }));
 
 vi.mock("node:child_process", async (importOriginal) => {
   const actual = await importOriginal<typeof NodeChildProcess>();
@@ -122,13 +123,15 @@ vi.mock("node:child_process", async (importOriginal) => {
     ...actual,
     spawnSync(command: string, args?: string[] | SpawnSyncOptions, options?: SpawnSyncOptions) {
       if (!Array.isArray(args)) return actual.spawnSync(command, args);
-      if (
-        gitListingFault.enabled &&
-        command === "git" &&
-        args[0] === "ls-files" &&
-        args[1] === "--others"
-      ) {
-        return actual.spawnSync(command, ["ls-files", "--qfai-invalid-option"], options);
+      if (command === "git" && args[0] === "ls-files" && args[1] === "--others") {
+        if (gitListingFault.enabled) {
+          return actual.spawnSync(command, ["ls-files", "--qfai-invalid-option"], options);
+        }
+        const result = actual.spawnSync(command, args, options);
+        if (gitListingOutput.paths !== null) {
+          gitListingOutput.paths = String(result.stdout).split("\0").filter(Boolean);
+        }
+        return result;
       }
       return actual.spawnSync(command, args, options);
     },
@@ -929,6 +932,27 @@ describe("the ratchet in --scope changed", () => {
     expect(result.status, result.stderr).toBe(1);
     expect(result.stderr).toContain("business-flow-0003");
     expect(result.stdout + result.stderr).not.toContain("business-flow-0004");
+  });
+
+  it("captures only non-ignored untracked Markdown candidates from Git", async () => {
+    const tracked = { "business-flow-0001": CONFORMING_FLOW };
+    const root = await twoCommits(tracked, tracked);
+    const candidate = await writeFlow(root, "business-flow-0003", CONFORMING_FLOW);
+    await writeFile(path.join(root, "notes.MD"), "ignored by document scope\n", "utf8");
+    await writeFile(path.join(root, "unrelated.txt"), "not Markdown\n", "utf8");
+    await writeFile(path.join(root, "ignored.md"), "ignored by Git\n", "utf8");
+    await writeFile(path.join(root, ".git", "info", "exclude"), "/ignored.md\n", "utf8");
+
+    const argv = process.argv;
+    try {
+      gitListingOutput.paths = [];
+      process.argv = ["node", SCRIPT, "--root", root, "--scope", "changed", "--base", "main"];
+      expect(main()).toBe(0);
+      expect(gitListingOutput.paths).toEqual([candidate, "notes.MD"]);
+    } finally {
+      gitListingOutput.paths = null;
+      process.argv = argv;
+    }
   });
 
   // QFAI:EX-0001-0011-29
