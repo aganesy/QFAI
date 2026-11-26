@@ -372,14 +372,22 @@ describe("a question answered without a change", () => {
     );
     const finalFetch = procedure.indexOf("fetch the base again just before the final merge");
     const finalMerge = procedure.indexOf(
-      "merge the pull request using the method the project requires",
+      "merge the pull request using the method the base repository requires",
     );
     expect(waitForChecks).toBeGreaterThan(0);
     expect(review).toBeGreaterThan(waitForChecks);
     expect(finalFetch).toBeGreaterThan(review);
     expect(finalMerge).toBeGreaterThan(finalFetch);
-    expect(procedure.slice(finalFetch, finalMerge)).toContain(
+    const freshness = procedure.slice(finalFetch, finalMerge);
+    expect(freshness).toContain(
+      "If the fetched base commit differs from the recorded commit, record the new commit",
+    );
+    expect(freshness).toContain(
       "repeat the base refresh, checks and updated-head review for the new commit",
+    );
+    expect(freshness).toContain("Fetch the base again after each repeat.");
+    expect(freshness).toContain(
+      "When the fetched base matches the recorded commit and checks and review requirements hold for the updated head",
     );
     expect(procedure).not.toContain("only then merge");
     expect(procedure).not.toContain("ask for no new review of that merge");

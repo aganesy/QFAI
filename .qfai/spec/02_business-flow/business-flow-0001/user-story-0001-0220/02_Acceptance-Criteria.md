@@ -54,8 +54,8 @@ Feature: Get one fixed plan for every kind of request
     And `run-operation` carries out the operation the user named in one step, writes no tracked file, and moves to a newly decided route when the operation needs a tracked change
     And before a merge `run-operation` merges the base into the branch locally, pushes and waits for the checks, never enabling the host's auto-merge, and resolves a conflict confined to the decision and question registers by that merge alone, editing and renumbering no row
     And after updating the head and waiting for its checks, it applies the review requirements of the pull request's base branch
-    And before the final merge it fetches the base again and repeats the update, checks and review if the base has advanced
-    And it merges only once the current base, checks and review requirements hold, using the project's required merge method
+    And before the final merge it fetches the base again, records any commit that differs from the recorded base and repeats the update, checks, review and final fetch
+    And it merges only when the fetched base matches the recorded commit and checks and review requirements hold for the updated head, using the base repository's required merge method
     And `quarantine-flaky` lifts its quarantine only after the recorded real repetitions, whatever the evidence of an ordinary cause
 
   # AC-0001-0220-07
