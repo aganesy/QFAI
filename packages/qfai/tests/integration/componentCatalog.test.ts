@@ -447,6 +447,7 @@ describe("a stale catalogue is a warning, and no catalogue asks nothing", () => 
   });
 
   // QFAI:EX-0001-0307-28
+  // QFAI:EX-0001-0307-29
   it("reports the catalogue byte limit and still reads a file at the limit", async () => {
     const limit = 8 * 1024 * 1024;
     const prefix = "components: []\n#";
@@ -464,7 +465,7 @@ describe("a stale catalogue is a warning, and no catalogue asks nothing", () => 
 
     const check = await cli(["catalog", "components", "--check", "--root", root]);
     expect(check.code).toBe(1);
-    expect(check.stderr).toContain(`could not read ${CATALOG}, so nothing was compared: ${reason}`);
+    expect(check.err).toContain(`could not read ${CATALOG}, so nothing was compared: ${reason}`);
     expect((await stat(file)).size).toBe(limit + 1);
 
     await truncate(file, limit);
@@ -475,6 +476,10 @@ describe("a stale catalogue is a warning, and no catalogue asks nothing", () => 
         "The component catalogue is out of date with the components the surface files export.",
       ],
     ]);
+    const compared = await cli(["catalog", "components", "--check", "--root", root]);
+    expect(compared.code).toBe(1);
+    expect(compared.err).toContain(`${CATALOG} is out of date with the source.`);
+    expect((await stat(file)).size).toBe(limit);
   });
 
   // QFAI:EX-0001-0307-11

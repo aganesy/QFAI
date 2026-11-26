@@ -18,7 +18,7 @@ Feature: Catalogue the components a project already has
     When `qfai catalog components --check` runs
     Then it exits 0 when the committed catalogue is the file the command would write, line ends aside
     And it exits 1 naming the file when the catalogue is missing or differs, and leaves the file as it was
-    And a catalogue above 8388608 bytes exits 1 with the path and limit, with no comparison or write
+    And it exits 1 with the path and limit when the catalogue exceeds 8388608 bytes or grows past that limit during the read. It reads from the verified descriptor and requests no byte past the limit plus one. It makes no comparison or write
 
   # AC-0001-0307-03
   Scenario: JSX needs the TypeScript compiler the project installs
