@@ -219,25 +219,41 @@ describe("reading a contract's own DDL", () => {
     expect(references.size).toBe(0);
   });
 
-  it.each(["\n", "\r\n", "\r"])("preserves %j boundaries while masking SQL noise", (separator) => {
-    const sql = [
-      "CREATE TABLE orders (",
-      "  -- REFERENCES hidden_comment(id)",
-      "  note text DEFAULT 'REFERENCES hidden_string(id)",
-      "continued',",
-      "  /* REFERENCES hidden_block(id)",
-      "     still hidden */",
-      "  buyer_id integer REFERENCES buyers(id)",
-      ");",
-    ].join(separator);
-    const masked = blankSqlNoise(sql);
-    const lineBreaks = (text: string) =>
-      [...text.matchAll(/\r\n?|\n/g)].map((match) => [match.index, match[0]]);
+  // QFAI:EX-0001-0052-15
+  it.each(["\n", "\r\n", "\r"])(
+    "preserves %j boundaries while masking SQL noise",
+    async (separator) => {
+      const sql = [
+        "CREATE TABLE orders (",
+        "  -- REFERENCES hidden_comment(id)",
+        "  note text DEFAULT 'REFERENCES hidden_string(id)",
+        "continued',",
+        "  /* REFERENCES hidden_block(id)",
+        "     still hidden */",
+        "  buyer_id integer REFERENCES buyers(id)",
+        ");",
+      ].join(separator);
+      const masked = blankSqlNoise(sql);
+      const lineBreaks = (text: string) =>
+        [...text.matchAll(/\r\n?|\n/g)].map((match) => [match.index, match[0]]);
 
-    expect([...readTableEdges(sql).references.keys()]).toEqual(["buyers"]);
-    expect(masked).toHaveLength(sql.length);
-    expect(lineBreaks(masked)).toEqual(lineBreaks(sql));
-  });
+      expect([...readTableEdges(sql).references.keys()]).toEqual(["buyers"]);
+      expect(masked).toHaveLength(sql.length);
+      expect(lineBreaks(masked)).toEqual(lineBreaks(sql));
+
+      const root = await newRoot();
+      const parent = await contract(
+        root,
+        "DB-0001",
+        "CREATE TABLE buyers (id integer PRIMARY KEY);",
+      );
+      const child = await contract(root, "DB-0002", `-- Depends on: -\n${sql}`);
+      const issues = await validateDbContractApplyOrder(root, [parent, child]);
+      expect(issues.map(({ code, refs }) => ({ code, refs }))).toEqual([
+        { code: "QFAI-CONTRACT-036", refs: ["DB-0002", "DB-0001"] },
+      ]);
+    },
+  );
 
   it("lets a backslash escape nothing in a standard string or after a longer name", () => {
     // Only a lone `E` or `e` opens an escape string. `'C:\'` is a whole

@@ -112,7 +112,7 @@ export function tableName(raw: string): TableName {
  * A string is matched by its opening quote alone and read on by
  * {@link stringLiteralEnd}, because where it ends depends on what precedes it.
  */
-const SQL_NOISE = String.raw`--[^\n]*|\/\*[\s\S]*?\*\/|'|${QUOTED_IDENTIFIER}|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`;
+const SQL_NOISE = String.raw`--[^\r\n]*|\/\*[\s\S]*?\*\/|'|${QUOTED_IDENTIFIER}|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`;
 
 /**
  * The offset just past the string literal whose opening quote is at `quoteAt`,
@@ -170,7 +170,7 @@ export function blankSqlNoise(sql: string): string {
     if (sql[start] === '"') {
       continue;
     }
-    blanked += sql.slice(copied, start) + sql.slice(start, end).replace(/[^\n]/g, " ");
+    blanked += sql.slice(copied, start) + sql.slice(start, end).replace(/[^\r\n]/g, " ");
     copied = end;
   }
   return blanked + sql.slice(copied);

@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The DB apply-order check keeps foreign keys that follow comments in
+  contracts with bare carriage returns. Masked regions retain their original
+  line separators and offsets.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
