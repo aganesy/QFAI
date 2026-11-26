@@ -219,7 +219,7 @@ it("walks a restored copy once for safety and once to mirror its inputs", async 
   }
 });
 
-it("walks a copy for publication once before checking freshness", async () => {
+it("walks a publication copy exactly once", async () => {
   vi.mocked(readdir).mockClear();
   const fixture = await completedDocumentSnapshotFixture();
   try {
