@@ -124,6 +124,7 @@ describe("receiving a GitHub response", () => {
     const execute = vi.fn(() => {
       throw Object.assign(new Error("GitHub CLI output exceeded maxBuffer"), {
         code: "ENOBUFS",
+        signal: "SIGTERM",
         stdout: response(HEADERS, "partial job log"),
       });
     });
@@ -152,10 +153,25 @@ describe("receiving a GitHub response", () => {
     });
   });
 
+  it("rejects the partial output of an interrupted GitHub CLI", () => {
+    const execute = () => {
+      throw Object.assign(new Error("Command was interrupted"), {
+        signal: "SIGTERM",
+        status: null,
+        stdout: response(HEADERS, "partial job log"),
+      });
+    };
+
+    expect(ghApi("repos/owner/repo/actions/jobs/123/logs", execute)).toEqual({
+      error: "The GitHub CLI was interrupted (SIGTERM).",
+      reading: { remaining: 2785, limit: 5000, reset: 1789723893, resource: "core" },
+    });
+  });
+
   it("preserves the HTTP response returned with an ordinary nonzero exit", () => {
     const text = "HTTP/2.0 404 Not Found\n\n";
     const execute = () => {
-      throw Object.assign(new Error("Not Found"), { stdout: text });
+      throw Object.assign(new Error("Not Found"), { signal: null, status: 1, stdout: text });
     };
 
     expect(ghApi("repos/owner/repo/actions/jobs/404/logs", execute)).toEqual({ text });

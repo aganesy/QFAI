@@ -642,6 +642,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
 
+- `gh-budget` also discards a partial job log when a signal stops GitHub CLI.
+  It keeps the rate-limit reading if the headers arrived in full.
+
 - Plain `qfai init` preserves an assistant `VERSION` marker another writer creates
   during initialization.
 
