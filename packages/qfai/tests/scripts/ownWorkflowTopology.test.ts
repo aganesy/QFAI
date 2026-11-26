@@ -3858,7 +3858,7 @@ describe("release automation performs decisions rather than making them", () => 
     ).toBeLessThan(firstApiCall);
   });
 
-  it("tags only what an approved release pull request carried", () => {
+  it("reads the release association from GitHub without wider permissions", () => {
     // The trigger is `packages/qfai/package.json` changing, which is necessary and NOT
     // sufficient. A pinned feature branch — `feature/vX.Y.Z`, which this repository's version
     // discipline actively encourages — syncs that manifest and writes its own CHANGELOG
@@ -3888,13 +3888,10 @@ describe("release automation performs decisions rather than making them", () => 
     ).toMatch(/commits\/\$\{GITHUB_SHA}\/pulls/);
     expect(
       commands,
-      "and the answer must be required to be THIS version's release branch: a manifest that " +
-        "moved is necessary and not sufficient",
-      // The GREP, on the same line — not a mention. Measured: replacing the comparison with
-      // `grep -q .` (accept any pull request at all) left this row GREEN, because the message
-      // inside the branch names `release/v${claimed}` too. Sixth time in this work that a row
-      // matched a sentence about a check instead of the check; every one found by planting.
-    ).toMatch(/grep[^\n]*release\/v\$\{claimed}/);
+      "pass the manifest version's release branch to the association parser",
+      // The shell passes the branch as a parser argument. Matching a diagnostic that names
+      // the branch would not show that the association check received it.
+    ).toMatch(/^' -- [^\n]*"release\/v\$\{claimed\}"/m);
 
     // …and the permission surface must not have widened to pay for it. Asking the API needs
     // `pull-requests: read`, and granting it here would make `BR-CLI-0016-0016`'s closed departure
