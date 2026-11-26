@@ -58,6 +58,7 @@ let inspectionThrows = false;
  * replaced with one that delegates except while this is set.
  */
 let symlinkDenied = false;
+let unfollowableWrapper: string | null = null;
 let initAssetsOverride: string | null = null;
 
 vi.mock("../../../src/shared/assets.js", async (importOriginal) => {
@@ -80,6 +81,12 @@ vi.mock("node:fs/promises", async (importOriginal) => {
         });
       }
       return await actual.symlink(...args);
+    },
+    stat: async (...args: Parameters<typeof actual.stat>) => {
+      if (args[0] === unfollowableWrapper) {
+        throw Object.assign(new Error("EPERM: cannot follow this wrapper"), { code: "EPERM" });
+      }
+      return await actual.stat(...args);
     },
   };
 });
@@ -111,6 +118,7 @@ afterEach(() => {
   injectedFindings = null;
   inspectionThrows = false;
   symlinkDenied = false;
+  unfollowableWrapper = null;
   initAssetsOverride = null;
 });
 
@@ -804,15 +812,34 @@ describe("repairIntegrationWrappers", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      await rm(wrapperPath(root));
-      const wrongTarget = path.join("..", "..", "missing-skill");
-      await symlink(wrongTarget, wrapperPath(root), "dir");
-      injectedFindings = [{ ...linkFinding(WRAPPER), suppressed: true }];
+      unfollowableWrapper = wrapperPath(root);
+      // A correct but unfollowable link is info and can be waived. A wrong target is an error.
+      injectedFindings = [{ ...linkFinding(WRAPPER), severity: "info" }];
+      const waiverPath = path.join(root, ".qfai", "waivers.yml");
+      await writeFile(
+        waiverPath,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: keep-wrapper",
+          "    rule: QFAI-LINK-001",
+          "    scope:",
+          `      paths: ["${WRAPPER}"]`,
+          "    reason: wrapper intentionally deferred",
+          '    expires: "2099-01-01"',
+          "    evidence: reviewed wrapper exception",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
 
       const lines = await repair(root);
 
       expect(lines.join("\n")).toContain("nothing to repair");
-      expect(await readlink(wrapperPath(root))).toBe(wrongTarget);
+      expect(await readlink(wrapperPath(root))).toBe(SINGULAR_TARGET);
+
+      await rm(waiverPath);
+      expect((await repair(root)).join("\n")).toContain(`relinked ${WRAPPER}`);
     });
   });
 
