@@ -479,11 +479,13 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
         "toolProvenance.resolvedAgainstDeclaration",
         [located.packageDir],
         "canonical",
-        "If this working tree's node_modules is a link to another checkout's, remove the " +
-          "link itself, not what it points to. Run the project's dependency install command " +
+        "If the declaring directory's node_modules links to another checkout, remove the link itself. " +
+          "If this is a worktree of the QFAI source repository, run `pnpm bootstrap` " +
+          "(or `corepack pnpm bootstrap`) from the worktree root to install dependencies, build QFAI, " +
+          "and reinstall to link the local launcher. Otherwise, run the project's dependency install command " +
           "from the directory that declares qfai (`npm ci`, `pnpm install` or `yarn install`, as applicable). " +
-          "If this is a source workspace and the local QFAI entry has not been built, " +
-          "complete the workspace's documented build and install steps. From the declaring directory, rerun with " +
+          "If another source workspace needs to build a local QFAI entry, follow its documented build and install steps. " +
+          "From the declaring directory, rerun with " +
           "`./node_modules/.bin/qfai validate --root <absolute-project-root>`" +
           " (PowerShell: `.\\node_modules\\.bin\\qfai.cmd validate --root <absolute-project-root>`), " +
           "or use `yarn exec qfai validate --root <absolute-project-root>` with Yarn Plug'n'Play. " +
@@ -491,7 +493,8 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
           path.resolve(root) +
           ". " +
           "Substitute that directory for <absolute-project-root> and quote it for your shell. " +
-          "Keep the original validation options, including the profile and any flow selection. " +
+          "Replace any original `--root` option with the one shown and keep the other validation options, " +
+          "including the profile and any flow selection. " +
           "If a global install is intended, remove the qfai dependency declaration from " +
           "this project — a declaration that disagrees with the running copy is the " +
           "state this finding reports.",
