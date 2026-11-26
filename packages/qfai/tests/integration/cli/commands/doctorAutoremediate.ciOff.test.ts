@@ -228,6 +228,7 @@ describe("doctor --autoremediate CI detection follows the convention", () => {
     await wireProject(root);
     await recordAssistantVersion(root);
     const wrapper = path.join(root, ".claude", "skills", SHIPPED_SKILL);
+    const missingWrapper = path.join(root, ".agents", "skills", SHIPPED_SKILL);
     const agent = "architecture-reviewer";
     const agentWrapper = path.join(root, ".github", "agents", `${agent}.agent.md`);
     const agentSource = path.join(root, ".qfai", "assistant", "agent", `${agent}.md`);
@@ -240,6 +241,7 @@ describe("doctor --autoremediate CI detection follows the convention", () => {
     const wrongAgentTarget = path.join("..", "..", "missing-agent.md");
     const projectContent = "project-owned instructions\n";
     await rm(wrapper);
+    await rm(missingWrapper);
     await symlink(wrongTarget, wrapper, "dir");
     await writeFile(agentSource, "# canonical agent\n", "utf-8");
     await symlink(wrongAgentTarget, agentWrapper, "file");
@@ -263,8 +265,10 @@ describe("doctor --autoremediate CI detection follows the convention", () => {
     try {
       expect(await run(true)).toBe(0);
       expect(output()).toContain(`would relink .claude/skills/${SHIPPED_SKILL}`);
+      expect(output()).toContain(`would relink .agents/skills/${SHIPPED_SKILL}`);
       expect(output()).toContain(`would relink .github/agents/${agent}.agent.md`);
       expect(await readlink(wrapper)).toBe(wrongTarget);
+      await expect(readlink(missingWrapper)).rejects.toMatchObject({ code: "ENOENT" });
       expect(await readlink(agentWrapper)).toBe(wrongAgentTarget);
       expect(await readFile(projectFile, "utf-8")).toBe(projectContent);
       expect(await readFile(projectNote, "utf-8")).toBe(projectContent);
@@ -272,8 +276,10 @@ describe("doctor --autoremediate CI detection follows the convention", () => {
       stderr.mockClear();
       expect(await run(false)).toBe(0);
       expect(output()).toContain(`relinked .claude/skills/${SHIPPED_SKILL}`);
+      expect(output()).toContain(`relinked .agents/skills/${SHIPPED_SKILL}`);
       expect(output()).toContain(`relinked .github/agents/${agent}.agent.md`);
       expect(await readlink(wrapper)).toBe(canonicalTarget);
+      expect(await readlink(missingWrapper)).toBe(canonicalTarget);
       expect(await readlink(agentWrapper)).toBe(canonicalAgentTarget);
       expect(await readFile(projectFile, "utf-8")).toBe(projectContent);
       expect(await readFile(projectNote, "utf-8")).toBe(projectContent);
