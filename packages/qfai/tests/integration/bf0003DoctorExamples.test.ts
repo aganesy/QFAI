@@ -259,6 +259,7 @@ describe("BF-0003 output routing", () => {
     expect(written.summary).toBeDefined();
   });
 
+  // QFAI:AC-0003-0005-02
   // QFAI:EX-0003-0005-04
   it("resolves a relative --out against the checked project root", async () => {
     const root = await newTempDir("relative");

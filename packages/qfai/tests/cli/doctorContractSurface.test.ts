@@ -155,9 +155,8 @@ describe("`qfai doctor` CLI contract surface", () => {
   });
 
   it("declares the `--out` write, which needs neither mutating flag", async () => {
-    // `runDoctor` creates the parent directories and writes the file on any
-    // invocation carrying `--out`, so "doctor writes nothing unless --clean or
-    // --autoremediate" would be false for the one write an operator names.
+    // `runDoctor` creates the parent directories and writes `--out` when it
+    // builds a diagnosis, even when the operator does not ask for a repair.
     const rules = await readRules();
 
     const out = ruleWith(rules, "With `--out <path>`");

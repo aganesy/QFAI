@@ -104,6 +104,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
     expect(await pathExists(stale)).toBe(true);
   });
 
+  // QFAI:AC-0003-0005-02
   // QFAI:EX-0003-0005-05
   it.each([
     { flag: "--clean", options: { clean: true }, message: "would remove -> run-20260401120000001" },
