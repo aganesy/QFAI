@@ -30,6 +30,8 @@ import { parse as parseYaml } from "yaml";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const LAYER = ".instruction/02_project";
+const NODE_RANGE_CLAIM =
+  /(?:\^|>=)\s*\d+(?:\.\d+){0,2}(?:\s*\|\|\s*(?:\^|>=)\s*\d+(?:\.\d+){0,2})*/g;
 
 /**
  * A backticked repository-relative path: one that starts at a root-level entry
@@ -250,8 +252,10 @@ describe("the project layer describes the repository it is in", () => {
     const disagreeing: string[] = [];
     for (const name of await layerFiles()) {
       const text = await readFile(path.join(repoRoot, LAYER, name), "utf-8");
-      for (const [stated] of text.matchAll(/>=\s*\d+(?:\.\d+)*(?:\.\d+)?/g)) {
-        if (stated.replace(/\s+/g, "") !== engines) disagreeing.push(`${name}: ${stated}`);
+      for (const [stated] of text.matchAll(NODE_RANGE_CLAIM)) {
+        if (stated.replace(/\s+/g, "") !== engines?.replace(/\s+/g, "")) {
+          disagreeing.push(`${name}: ${stated}`);
+        }
       }
     }
 
@@ -269,13 +273,13 @@ describe("the project layer describes the repository it is in", () => {
     expect(engines, "package.json declares no Node range").not.toBeUndefined();
 
     const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
-    const stated = [...withoutFencedBlocks(guide).matchAll(/>=\s*\d+(?:\.\d+)*/g)].map(([match]) =>
-      match.replace(/\s+/g, ""),
+    const stated = [...withoutFencedBlocks(guide).matchAll(NODE_RANGE_CLAIM)].map(
+      ([match]) => match,
     );
 
     expect(stated.length, "the release guide states no Node floor to check").toBeGreaterThan(0);
     expect(
-      stated.filter((floor) => floor !== engines),
+      stated.filter((range) => range.replace(/\s+/g, "") !== engines?.replace(/\s+/g, "")),
       `the declared Node range is ${String(engines)}`,
     ).toEqual([]);
   });
