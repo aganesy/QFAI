@@ -52,8 +52,11 @@ describe("AC-0001-0236-06", () => {
       expect((await runGraphProcess("git", ["ls-files"], { cwd: project.root })).stdout).toContain(
         "graph-processing.json",
       );
-      const ignore = `${GRAPH_IGNORE_MARKER}\n# Adopter tracks generated output\n`;
       const ignoreFile = path.join(project.root, ".gitignore");
+      const effectiveIgnore = await readFile(ignoreFile, "utf8");
+      expect(effectiveIgnore).toContain(GRAPH_IGNORE_MARKER);
+      const ignore = effectiveIgnore.replace(/^\/\.qfai\/tools\/\r?\n/m, "");
+      expect(ignore).not.toBe(effectiveIgnore);
       await writeFile(ignoreFile, ignore);
       const visible = await ensureGraphGitignore(project.root, runGraphProcess);
       expect(visible.conflicts.join(" ")).toContain("Git still sees");
@@ -74,7 +77,7 @@ describe("AC-0001-0236-06", () => {
       expect(await readFile(ignoreFile, "utf8")).toBe(ignore);
       expect(await readFile(trackedFile, "utf8")).toBe("Tracked by adopter");
 
-      await writeFile(ignoreFile, `${ignore}/.qfai/tools/\n`);
+      await writeFile(ignoreFile, effectiveIgnore);
       expect(
         (
           await runGraphProcess("git", ["check-ignore", "--no-index", "-q", trackedPath], {
@@ -105,7 +108,7 @@ describe("AC-0001-0236-06", () => {
       expect(output).toContain("quote it for your shell");
       expect(output).toContain("This keeps the files in your working tree.");
       expect(output).not.toContain("Git still sees");
-      expect(await readFile(ignoreFile, "utf8")).toBe(`${ignore}/.qfai/tools/\n`);
+      expect(await readFile(ignoreFile, "utf8")).toBe(effectiveIgnore);
       expect(await readFile(trackedFile, "utf8")).toBe("Working copy edits");
       const after = await readIndex();
       expect(after.exitCode).toBe(0);
