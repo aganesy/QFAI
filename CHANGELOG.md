@@ -736,6 +736,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   commit checks the entire index before staging its deliverables. If other
   staged paths exist, the step reports them and stops. Closes #4810.
 
+- **Verification uses the repository root for index checks and staging.**
+  A run started in a subdirectory compares authorized deliverables and staged
+  entries using the same paths relative to the Git root.
+
 - **`qfai sdd preflight` no longer says "Nothing was written" after creating
   directories.** When its output-directory check failed after it had created
   `<outDir>/preflight/`, the error still said nothing was written. A check that
@@ -745,6 +749,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   procedure checks the original source branch history and the requested change
   before passing the parent number to Git. It stops when the scope or parent
   is ambiguous. Closes #4827.
+
+- **Backports check every selected commit against the requested scope.** If any
+  patch includes unrelated changes, the procedure reports them and stops
+  before creating the backport branch.
 
 - **The `tech.md` placeholder check counts only the template's own slots and
   quotes what it flags.** `QFAI-ASSETS-003` treated any `<...>` in the
@@ -757,6 +765,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Web research ends with a cited artifact.** Applying a finding to code
   requires an explicit implementation request. High-risk changes also
   require review of the proposed diff and citations. Closes #4938.
+
+- The web-research completion message recommends sharing the cited artifact.
+  It gives implementation handoff only for an explicit application request.
 
 - **A constraint row that names a contract by its file name is refused.** The
   `constraint.md` schema refused `CLI-0010` in a constraint row but read
