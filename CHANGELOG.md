@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **DB SQL validation keeps commas inside routine array defaults.** A default
+  such as `ARRAY[1, 2]` or a nested array now leaves the declared argument
+  types intact when checking for `QFAI-DB-002`.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to

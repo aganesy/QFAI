@@ -595,6 +595,7 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(redefinitions.map((issue) => issue.severity)).toEqual(["error"]);
   });
 
+  // QFAI:EX-0001-0039-74
   it.each(["ARRAY[1, 2]", "ARRAY[[1, 2], [3, 4]]"])(
     "keeps actual parameter boundaries with the default %s",
     async (arrayDefault) => {
