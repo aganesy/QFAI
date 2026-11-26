@@ -69,7 +69,7 @@ it("accepts yarn exec qfai when PnP resolves the declared dependency into an ext
     ]);
     expect(resolved.outcome, outputContext(resolved)).toBe(EXIT_ZERO);
     expect(resolved.stdout.trim()).toContain(cache);
-    const result = await yarn([
+    const validate = [
       "exec",
       "qfai",
       "validate",
@@ -79,11 +79,22 @@ it("accepts yarn exec qfai when PnP resolves the declared dependency into an ext
       "github",
       "--fail-on",
       "error",
-    ]);
+    ];
+    const result = await yarn(validate);
     expect(result.stdout, outputContext(result)).toContain(
       `(${resolved.stdout.trim().replace(/[/\\]$/, "")})`,
     );
-    expect(result.stdout).not.toContain("QFAI-TOOL-002");
+    expect(result.stdout).not.toMatch(/QFAI-TOOL-00[12]/);
+
+    const unrelated = path.join(scratch, "unrelated");
+    await mkdir(unrelated);
+    await writeFile(
+      path.join(unrelated, "package.json"),
+      JSON.stringify({ name: "unrelated", devDependencies: { qfai: `file:${tarball}` } }),
+    );
+    await writeFile(path.join(unrelated, "qfai.config.yaml"), "{}\n");
+    const elsewhere = await yarn([...validate, "--root", unrelated]);
+    expect(elsewhere.stdout, outputContext(elsewhere)).toContain("QFAI-TOOL-002");
   } finally {
     await removeTempTree(scratch);
   }

@@ -631,6 +631,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
+- Validation accepts the QFAI copy selected by Yarn Plug’n’Play for the project,
+  including a copy loaded from a shared cache outside the project directory.
+
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 

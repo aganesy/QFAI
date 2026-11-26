@@ -9,12 +9,13 @@
  * printed on every run, and the case that cannot be told from the printout by a
  * gate gets a code.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { validateProject } from "../../src/core/validate.js";
+import * as pnpProvenance from "../../src/core/pnpProvenance.js";
 import {
   classifyAgainstDeclaration,
   classifyToolLocation,
@@ -34,6 +35,41 @@ async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
     await rm(dir, { recursive: true, force: true });
   }
 }
+
+// QFAI:EX-0001-0039-79
+it("accepts an external PnP copy only for the project that resolves that directory", async () => {
+  await withTempDir(async (root) => {
+    const project = path.join(root, "project");
+    const unrelated = path.join(root, "unrelated");
+    const running = path.join(root, "cache", "node_modules", "qfai");
+    await Promise.all([mkdir(project), mkdir(unrelated), mkdir(running, { recursive: true })]);
+    const manifest = JSON.stringify({ devDependencies: { qfai: "2.5.0" } });
+    await Promise.all([
+      writeFile(path.join(project, "package.json"), manifest),
+      writeFile(path.join(unrelated, "package.json"), manifest),
+    ]);
+    const selected = vi
+      .spyOn(pnpProvenance, "resolveActivePnpPackage")
+      .mockImplementation((directory) => (directory === project ? running : null));
+    try {
+      expect(await locateToolAgainstProject(project, running)).toMatchObject({
+        outside: false,
+        declaredElsewhere: false,
+      });
+      expect(await locateToolAgainstProject(unrelated, running)).toMatchObject({
+        outside: true,
+        declaredElsewhere: true,
+      });
+      selected.mockReturnValue(path.join(root, "different-cache", "node_modules", "qfai"));
+      expect(await locateToolAgainstProject(project, running)).toMatchObject({
+        outside: true,
+        declaredElsewhere: true,
+      });
+    } finally {
+      selected.mockRestore();
+    }
+  });
+});
 
 /**
  * A directory link at `at`, or `false` where this filesystem cannot make one.
