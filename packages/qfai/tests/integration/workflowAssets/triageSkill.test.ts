@@ -327,7 +327,8 @@ describe("a question answered without a change", () => {
   // QFAI:AC-0001-0220-06
   // QFAI:EX-0001-0220-52
   it("waits for the checks a merge needs and checks the merged result", async () => {
-    const procedure = flat(sectionOf(await step("triage-operate"), "## Procedure"));
+    const operate = await step("triage-operate");
+    const procedure = flat(sectionOf(operate, "## Procedure"));
     expect(procedure).toMatch(/Wait for checks still running before a merge/);
     expect(procedure).toMatch(
       /Checks still running means every check run of the pull request's head commit that is queued or in progress, including checks branch protection does not require/,
@@ -364,6 +365,13 @@ describe("a question answered without a change", () => {
     );
     expect(procedure).toMatch(
       /Edit no register row except to delete again a question row the union merge kept although one side deleted it, committing that deletion before the push. Renumber no ID/,
+    );
+    expect(operate).toMatch(/^purpose:.*deleting a question row restored by the union merge/m);
+    expect(flat(sectionOf(operate, "## What it writes"))).toMatch(
+      /separate commit before pushing.+deletion of an open-question row restored by the union merge/,
+    );
+    expect(flat(sectionOf(operate, "## Gate"))).toMatch(
+      /deletion of an open-question row restored by the union merge.+Other register rows and IDs remain as merged/,
     );
     expect(procedure).toContain("The union merge adds no review requirement of its own.");
     const waitForChecks = procedure.indexOf("wait for the checks that push starts");
