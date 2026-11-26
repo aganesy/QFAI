@@ -133,6 +133,7 @@ export type ParsedArgs = {
     workflowIn?: string;
     /** `--order` for `qfai workflow plan`: plan an operation on finished work with no extraction. */
     workflowOrder?: boolean;
+    /** Whether the caller passed `--help` or `-h`. */
     help: boolean;
     /**
      * `--version` / `-V`: print the resolved tool version to stdout and
@@ -219,7 +220,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    */
   const markInvalid = (reason: string): void => {
     invalid = true;
-    options.help = true;
     invalidReason ??= reason;
   };
 
@@ -449,7 +449,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--format": {
         const next = consumeOptionValue();
         if (next === null) {
-          // `--format` requires a value. When it is missing, show the help (without consuming the next option).
           markInvalid(missingValue("--format"));
           break;
         }
@@ -881,21 +880,23 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   ) {
     markInvalid("qfai session-review: give --session or --since, not both.");
   }
-  if (command === "catalog" && !options.help && !options.catalogAction) {
-    markInvalid(subcommandReason("catalog", null));
-  }
-  if (command === "atdd" && !options.help && !options.atddAction) {
-    markInvalid(subcommandReason("atdd", null));
-  }
-  if (command === "sdd" && !options.help && !options.sddAction) {
-    markInvalid(subcommandReason("sdd", null));
-  }
-  if (command === "sdd" && options.sddAction === "next-id" && !options.help && !options.version) {
-    if (!options.sddIdKind)
-      markInvalid(
-        `qfai sdd next-id: the ID kind is missing; it comes right after next-id, one of ${NEXT_ID_KINDS.join("|")}. Expected: ${NEXT_ID_USAGE}`,
-      );
-    if (!options.sddBase) markInvalid(missingValue("--base"));
+  if (!invalid && !options.help) {
+    if (command === "catalog" && !options.catalogAction) {
+      markInvalid(subcommandReason("catalog", null));
+    }
+    if (command === "atdd" && !options.atddAction) {
+      markInvalid(subcommandReason("atdd", null));
+    }
+    if (command === "sdd" && !options.sddAction) {
+      markInvalid(subcommandReason("sdd", null));
+    }
+    if (command === "sdd" && options.sddAction === "next-id" && !options.version) {
+      if (!options.sddIdKind)
+        markInvalid(
+          `qfai sdd next-id: the ID kind is missing; it comes right after next-id, one of ${NEXT_ID_KINDS.join("|")}. Expected: ${NEXT_ID_USAGE}`,
+        );
+      if (!options.sddBase) markInvalid(missingValue("--base"));
+    }
   }
   // Every command except init reads `--root` as the target directory. init
   // looked only at `--dir`, so passing `--root` dropped the value and
