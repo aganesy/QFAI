@@ -1080,6 +1080,15 @@ describe("the ratchet in --scope changed", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("pre-existing");
     expect(result.stdout).toContain("Root heading is");
+    expect(result.stdout.split(/\r?\n/)).toContain(
+      path.posix.join(
+        ".qfai",
+        "specs",
+        "02_business-flow",
+        "business-flow-0002",
+        "business-flow.md",
+      ),
+    );
   });
 
   // QFAI:EX-0001-0011-29
