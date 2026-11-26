@@ -91,18 +91,21 @@ describe("parseRenderedMarkdownTables", () => {
   const header = "| Label | Expected |";
   const separator = "| --- | --- |";
 
-  it("ignores a fenced table inside an ordered list and keeps the surrounding tables", () => {
+  // QFAI:EX-0001-0039-77
+  it.each([
+    ["123. Sample:\n     ```md", "     ```"],
+    ["123. ```md", ""],
+  ])("ignores a fenced table inside an ordered list starting with %j", (opener, closer) => {
     const text = [
       header,
       separator,
       "| Before | visible |",
       "",
-      "123. Sample:",
-      "     ```md",
+      opener,
       "     " + header,
       "     " + separator,
       "     | Inside | hidden |",
-      "     ```",
+      closer,
       "",
       header,
       separator,
@@ -115,6 +118,7 @@ describe("parseRenderedMarkdownTables", () => {
     ]);
   });
 
+  // QFAI:EX-0001-0039-77
   it("keeps visible cells between incomplete comment delimiters in separate rows", () => {
     const text = [
       header,
@@ -136,6 +140,7 @@ describe("parseRenderedMarkdownTables", () => {
     ]);
   });
 
+  // QFAI:EX-0001-0039-77
   it("omits tables in ordinary fences and HTML comment blocks", () => {
     const text = [
       "~~~md",
@@ -358,10 +363,7 @@ describe("maskNonSpecRegions", () => {
     ]);
   });
 
-  it("keeps the table rows after the row a cell's comment closes in", () => {
-    // Every line an open comment ran into was blanked whole, so the row
-    // holding `-->` became a blank line, the table ended there, and every row
-    // below it was lost.
+  it("keeps comment-like text when its delimiters are in separate table rows", () => {
     const text = [
       "| ID | Note |",
       "| --- | --- |",
@@ -371,13 +373,11 @@ describe("maskNonSpecRegions", () => {
     ].join("\n");
 
     const [table] = parseAllMarkdownTables(maskNonSpecRegions(text));
-    expect(table?.rows).toHaveLength(3);
-    expect(table?.rows[0]).toEqual(["CLI-0001", "a"]);
-    // The row the comment closes in keeps only the text after its `-->`, the
-    // simplification `maskNonSpecRegions` documents; GFM would show both rows'
-    // cells. Lifting it changes this row, so the test says so.
-    expect(table?.rows[1]).toEqual([""]);
-    expect(table?.rows[2]).toEqual(["CLI-0003", "c"]);
+    expect(table?.rows).toEqual([
+      ["CLI-0001", "a <!-- todo"],
+      ["CLI-0002", "b -->"],
+      ["CLI-0003", "c"],
+    ]);
   });
 
   it("ends the paragraph of a mid-line `<!--` at a line that starts another block", () => {

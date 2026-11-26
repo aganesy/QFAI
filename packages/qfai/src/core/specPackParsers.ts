@@ -100,7 +100,20 @@ const COMMENT_BLOCK_START = /^ {0,3}<!--/;
 const INDENTED_CODE_LINE = /^(?: {4}|\t)/;
 
 /** A list item marker, which makes the indentation below it continuation. */
-const LIST_ITEM_LINE = /^\s*(?:[-*+]|\d+[.)])\s/;
+const LIST_ITEM_LINE = /^[ \t]*(?<marker>[-*+]|\d{1,9}[.)])[ \t]+(?<content>.*)$/;
+
+/** Measure indentation in columns so tabs use CommonMark's four-column stops. */
+function markdownIndent(
+  text: string,
+  offset = 0,
+  columns = 0,
+): { offset: number; columns: number } {
+  while (text[offset] === " " || text[offset] === "\t") {
+    columns += text[offset] === "\t" ? 4 - (columns % 4) : 1;
+    offset += 1;
+  }
+  return { offset, columns };
+}
 
 /**
  * The CommonMark raw HTML blocks that run to an end marker regardless of blank
@@ -267,8 +280,13 @@ function endsParagraph(line: string): boolean {
  */
 function paragraphClosers(lines: readonly string[]): boolean[] {
   const ahead: boolean[] = new Array<boolean>(lines.length).fill(false);
+  const tableRows = tableRowLines(lines);
   let closer = false;
   for (let index = lines.length - 1; index >= 0; index -= 1) {
+    if (tableRows.has(index)) {
+      closer = false;
+      continue;
+    }
     ahead[index] = closer;
     const line = lines[index] ?? "";
     if (endsParagraph(line)) {
@@ -278,6 +296,25 @@ function paragraphClosers(lines: readonly string[]): boolean[] {
     }
   }
   return ahead;
+}
+
+/** A table row cannot carry an inline comment into the next row. */
+function tableRowLines(lines: readonly string[]): Set<number> {
+  const rows = new Set<number>();
+  for (let index = 0; index + 1 < lines.length; index += 1) {
+    if (!looksLikeTableRow(lines[index] ?? "") || !isTableSeparator(lines[index + 1] ?? "")) {
+      continue;
+    }
+    rows.add(index);
+    rows.add(index + 1);
+    index += 2;
+    while (looksLikeTableRow(lines[index] ?? "")) {
+      rows.add(index);
+      index += 1;
+    }
+    index -= 1;
+  }
+  return rows;
 }
 
 /**
@@ -306,13 +343,9 @@ function paragraphClosers(lines: readonly string[]): boolean[] {
  * the next line that starts a block — a blank line, a heading, a thematic
  * break, a fence, an HTML block, a block quote or a list item — is literal text.
  *
- * SIMPLIFIED: an inline comment runs across table rows, although GFM parses
- * each row on its own and shows a comment split over two rows as text; the
- * row it closes in keeps only the text after its `-->`. And text after an
- * inline `-->` that would read as a heading or thematic break is blanked
- * rather than kept as paragraph text.
- * Lift when: a document needs a table cell's comment shown as text, or reads
- * an ID from text after an inline comment's `-->`, which none in this tree does.
+ * A table row ends the inline comment scan for that row. Delimiters on
+ * separate rows remain visible. Text after an inline `-->` that would read
+ * as a heading or thematic break is blanked rather than kept as paragraph text.
  *
  * **Raw HTML blocks are blanked too**, all seven CommonMark types. A `<pre>`, a
  * CDATA section, a `<div>` or a custom element such as `<review-note>` holds
@@ -320,15 +353,13 @@ function paragraphClosers(lines: readonly string[]): boolean[] {
  * `| TC-ID |` row inside one is not a table row — reading either as spec
  * content lets a document satisfy a gate with markup it never wrote.
  *
- * **Indented code is recognised only at the top level.** Under a list item,
- * four-space indentation is continuation rather than code, and telling the two
- * apart needs the list's content column. Rather than guess it, a block is code
- * only when no list is open — which closes the hole a document can be authored
- * into while never blanking a table someone indented under a bullet.
+ * Fenced blocks under a list item use the item's content column. Unclosed
+ * fences end with their item. Indented code blocks are recognised at the top
+ * level; under list items the reader preserves indented table continuations.
  */
 export function maskNonSpecRegions(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  let open: { marker: string; length: number } | null = null;
+  let open: { marker: string; length: number; container: number } | null = null;
   let inComment = false;
   // Whether the open comment opened a line, and so is an HTML block.
   let inBlockComment = false;
@@ -338,7 +369,7 @@ export function maskNonSpecRegions(text: string): string {
   let inIndentedCode = false;
   let rawHtmlEnd: RegExp | null = null;
   let inBlankTerminatedHtml = false;
-  let listOpen = false;
+  const listIndents: number[] = [];
   let prevBlank = true;
   // Whether the line before is visible paragraph text, which a type-7 block
   // cannot interrupt.
@@ -350,12 +381,21 @@ export function maskNonSpecRegions(text: string): string {
   let paragraphOpen = false;
 
   const maskLine = (line: string, index: number): string => {
+    const blank = line.trim().length === 0;
+    const indentation = markdownIndent(line);
     if (open !== null) {
-      const closing = FENCE_CLOSE_LINE.exec(line)?.[1];
-      if (closing && closing.charAt(0) === open.marker && closing.length >= open.length) {
+      if (!blank && indentation.columns < open.container) {
         open = null;
+      } else {
+        const closing =
+          indentation.columns - open.container <= 3
+            ? FENCE_CLOSE_LINE.exec(line.slice(indentation.offset))?.[1]
+            : undefined;
+        if (closing && closing.charAt(0) === open.marker && closing.length >= open.length) {
+          open = null;
+        }
+        return "";
       }
-      return "";
     }
 
     if (rawHtmlEnd !== null) {
@@ -366,8 +406,6 @@ export function maskNonSpecRegions(text: string): string {
       }
       return "";
     }
-
-    const blank = line.trim().length === 0;
 
     if (inBlankTerminatedHtml) {
       // The blank line ends the block and is itself outside it, so it is kept
@@ -380,6 +418,10 @@ export function maskNonSpecRegions(text: string): string {
       return "";
     }
 
+    if (!blank) {
+      while ((listIndents.at(-1) ?? 0) > indentation.columns) listIndents.pop();
+    }
+    let container = listIndents.at(-1) ?? 0;
     if (inIndentedCode) {
       // A blank line does not end the block — an indented sample may contain
       // one — but the first non-blank line at a shallower indent does.
@@ -388,18 +430,21 @@ export function maskNonSpecRegions(text: string): string {
         return "";
       }
       inIndentedCode = false;
-    } else if (!listOpen && prevBlank && !blank && INDENTED_CODE_LINE.test(line)) {
+    } else if (container === 0 && prevBlank && !blank && INDENTED_CODE_LINE.test(line)) {
       inIndentedCode = true;
       prevBlank = false;
       return "";
     }
 
-    if (LIST_ITEM_LINE.test(line)) {
-      listOpen = true;
-    } else if (!blank && !/^\s/.test(line)) {
-      // A non-blank line at column zero that is not a list item ends the list,
-      // so indentation after it is code again.
-      listOpen = false;
+    let fenceText = indentation.columns - container <= 3 ? line.slice(indentation.offset) : "";
+    const item = LIST_ITEM_LINE.exec(fenceText)?.groups;
+    if (item?.marker) {
+      const markerEnd = indentation.columns + item.marker.length;
+      const padding = markdownIndent(line, indentation.offset + item.marker.length, markerEnd);
+      const hasNormalPadding = padding.columns - markerEnd <= 4;
+      container = hasNormalPadding ? padding.columns : markerEnd + 1;
+      listIndents.push(container);
+      fenceText = hasNormalPadding ? (item.content ?? "") : "";
     }
     prevBlank = blank;
 
@@ -408,9 +453,9 @@ export function maskNonSpecRegions(text: string): string {
     // when a comment is already open does the scan come first: a fence marker
     // inside one is comment text.
     if (!inComment) {
-      const opener = FENCE_LINE.exec(line)?.[1];
+      const opener = FENCE_LINE.exec(fenceText)?.[1];
       if (opener) {
-        open = { marker: opener.charAt(0), length: opener.length };
+        open = { marker: opener.charAt(0), length: opener.length, container };
         return "";
       }
     }
@@ -445,7 +490,7 @@ export function maskNonSpecRegions(text: string): string {
 
     const fence = FENCE_LINE.exec(masked.text)?.[1];
     if (fence) {
-      open = { marker: fence.charAt(0), length: fence.length };
+      open = { marker: fence.charAt(0), length: fence.length, container };
       return "";
     }
 
