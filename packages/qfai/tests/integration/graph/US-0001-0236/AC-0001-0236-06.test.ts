@@ -5,11 +5,14 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { graphProject } from "../../../helpers/graphProject.js";
+import { captureStdout } from "../../../helpers/stdout.js";
+import { runInit } from "../../../../src/cli/commands/init.js";
 import { ensureGraphGitignore, GRAPH_IGNORE_MARKER } from "../../../../src/core/graph/ignore.js";
 import { runGraphProcess } from "../../../../src/core/graph/process.js";
 import { getInitAssetsDir } from "../../../../src/shared/assets.js";
 
 describe("AC-0001-0236-06", () => {
+  // QFAI:EX-0001-0237-31
   it("keeps generated state untracked and preserves adopter tracking choices without mandatory graph CI", async () => {
     const project = await graphProject();
     try {
@@ -70,6 +73,20 @@ describe("AC-0001-0236-06", () => {
       expect(
         await readFile(path.join(project.root, ".qfai", "tools", "adopter", "graph.json"), "utf8"),
       ).toBe("Tracked by adopter");
+
+      const output = await captureStdout(() =>
+        runInit(
+          { dir: project.root, force: false, dryRun: false, yes: true },
+          {},
+          (command, args, options) =>
+            command === "git"
+              ? runGraphProcess(command, args, options)
+              : project.fixture.run(command, args, options),
+        ),
+      );
+      expect(output).toContain("Review .gitignore and explicitly exclude .qfai/tools/");
+      expect(output).toContain("Managed graph CLI entrypoint: ready");
+
       for (const name of ["qfai-tests.yml", "qfai-validate.yml", "qfai-docs.yml"]) {
         const workflow: {
           jobs: Record<string, { steps?: { run?: string; uses?: string; with?: unknown }[] }>;
