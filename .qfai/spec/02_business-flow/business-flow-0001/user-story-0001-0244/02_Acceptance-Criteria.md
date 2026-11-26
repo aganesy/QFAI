@@ -22,6 +22,9 @@ Feature: Keep an agent's turn going while a turn-end check fails
     Given the hook blocked a stop on a failure
     When the agent ends the turn again and the same failure is seen, or the hook would block a fourth time in a row
     Then the hook lets the turn end and tells the user which check still fails and how to run it
+    And the hook keeps the exact session and agent identities separate, even if their filename spellings would collide
+    And an explicit agent ID stays separate from the main or subagent identity used when that ID is omitted
+    And a legacy state record whose exact identity cannot be recovered is ignored
 
   # AC-0001-0244-04
   Scenario: A project turns the hook off

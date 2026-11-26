@@ -355,6 +355,60 @@ describe("turn-end hook", () => {
     );
   });
 
+  // QFAI:EX-0001-0244-23
+  it.each([
+    {
+      kind: "session IDs with different punctuation",
+      first: { session_id: "team/run", agent_id: "worker" },
+      second: { session_id: "team?run", agent_id: "worker" },
+    },
+    {
+      kind: "agent IDs with different punctuation",
+      first: { session_id: "review", agent_id: "qa/check" },
+      second: { session_id: "review", agent_id: "qa?check" },
+    },
+    {
+      kind: "pairs with different session and agent boundaries",
+      first: { session_id: "first-second", agent_id: "third" },
+      second: { session_id: "first", agent_id: "second-third" },
+    },
+    {
+      kind: "an explicit main ID and an event without an agent ID",
+      first: { session_id: "review", hook_event_name: "Stop", agent_id: "main" },
+      second: { session_id: "review", hook_event_name: "Stop" },
+    },
+    {
+      kind: "an explicit subagent ID and an event without an agent ID",
+      first: { session_id: "review", hook_event_name: "SubagentStop", agent_id: "subagent" },
+      second: { session_id: "review", hook_event_name: "SubagentStop" },
+    },
+  ])("keeps independent blocks for $kind", async ({ first, second }) => {
+    const fail = await script("fail.js", "type error\n", 1);
+    await project([`- Typecheck: \`${fail}\``, "- Turn-end check: Typecheck"]);
+
+    expect(parsed(await hook(first)).decision).toBe("block");
+    expect(parsed(await hook({ ...second, stop_hook_active: true })).decision).toBe("block");
+
+    for (const event of [first, second]) {
+      const repeated = parsed(await hook({ ...event, stop_hook_active: true }));
+      expect(repeated.decision).toBeUndefined();
+      expect(repeated.systemMessage).toContain("ended anyway");
+    }
+  });
+
+  // QFAI:EX-0001-0244-23
+  it("starts a fresh failure count when a legacy state file exists", async () => {
+    const fail = await script("fail.js", "type error\n", 1);
+    await project([`- Typecheck: \`${fail}\``, "- Turn-end check: Typecheck"]);
+    const legacy = path.join(stateDir, "qfai-turn-end-review-main");
+    const prior = JSON.stringify({ digest: "legacy failure", blocks: 3 });
+    await writeFile(legacy, prior, "utf8");
+
+    const output = parsed(await hook({ session_id: "review", stop_hook_active: true }));
+    expect(output.decision).toBe("block");
+    await expect(readFile(legacy, "utf8")).resolves.toBe(prior);
+  });
+
   // QFAI:EX-0001-0244-11
   it("runs nothing when workflow.stopGate is false", async () => {
     const fail = await script("fail.js", "type error\n", 1);
