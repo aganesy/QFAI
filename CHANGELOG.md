@@ -359,6 +359,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file counts, as before. A large lockfile is no longer read and decoded on
   every `qfai doctor` and `qfai init` run. The findings are unchanged.
 
+- **Doctor counts unreadable regular lockfiles.** The shipped-workflow checks
+  use regular-file metadata and match the package manager selection in CI.
+  They can now report a missing pnpm version or multiple lockfiles even when
+  the selected lockfile cannot be read.
+
 - **The graph exploration rule describes the graph CLI lifecycle once.** Its
   opening now says the integration registers no graph MCP server and runs no
   daemon or IPC, and one sentence after the command example says each CLI

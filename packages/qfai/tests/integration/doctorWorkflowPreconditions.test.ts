@@ -246,6 +246,7 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
         }),
       ]),
     );
+    expect(checks.some(({ id }) => id === "workflows.preconditionsUnread")).toBe(false);
     expect(lockfileReads).toEqual([]);
   });
 
