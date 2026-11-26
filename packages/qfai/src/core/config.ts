@@ -78,7 +78,7 @@ export type QfaiOutputConfig = {
 
 export type QfaiUiuxAuditConfig = {
   enabled?: boolean;
-  /** @deprecated QFAI accepts and ignores the legacy boolean. */
+  /** Deprecated legacy option. QFAI accepts and ignores the boolean. */
   slopDetection?: boolean;
   maxRawTokenLiteralWarnings?: number;
   maxDuplicateFindingsPerRule?: number;
