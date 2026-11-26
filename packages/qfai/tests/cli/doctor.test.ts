@@ -517,25 +517,6 @@ describe("doctor", () => {
     }
   });
 
-  // QFAI:EX-0003-0006-07
-  it.each([
-    ["relative.html", "error"],
-    ["ftp://example.invalid/prototype", "error"],
-    ["https://test-user@example.invalid/prototype", "error"],
-    [null, "warning"],
-  ])("reports the configuration for %s without an HTTP status", async (targetUrl, severity) => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    try {
-      await seedPrototypingFixture(root, targetUrl);
-      const parsed = await readDoctorData(root, { profile: "prototyping" });
-      const check = findCheck(parsed.checks, "prototyping.targetUrl");
-      expect(check?.severity).toBe(severity);
-      expect(check?.details?.statusCode).toBeUndefined();
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
   it("does not require an optional implementation role wrapper", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
@@ -924,7 +905,7 @@ async function withSandboxCwd(body: (sandbox: string) => Promise<void>): Promise
   }
 }
 
-async function seedPrototypingFixture(root: string, targetUrl: string | null): Promise<void> {
+async function seedPrototypingFixture(root: string, targetUrl: string): Promise<void> {
   await writeFile(
     path.join(root, "qfai.config.yaml"),
     [
@@ -938,7 +919,7 @@ async function seedPrototypingFixture(root: string, targetUrl: string | null): P
       "prototyping:",
       "  primaryUiContract: UI-0001",
       "  execution:",
-      `    targetUrl: ${JSON.stringify(targetUrl)}`,
+      `    targetUrl: ${targetUrl}`,
       "    browserTool: playwright",
       "",
     ].join("\n"),

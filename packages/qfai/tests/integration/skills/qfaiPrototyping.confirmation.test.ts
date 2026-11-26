@@ -449,11 +449,13 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
-  it("says that doctor probes the one URL it is given and what status passes", async () => {
+  it("checks the target URL locally in doctor and checks reachability in preflight", async () => {
     const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
+    expect(preflight).toContain("Doctor checks the target URL's format without contacting it.");
     expect(preflight).toContain(
-      "Doctor sends one `GET` to exactly the URL it is given, without following a redirect, and waits 3 seconds. A status from 200 to 399 passes;",
+      "the preflight sends one `GET` to exactly that URL without following redirects, and waits up to 3 seconds. A status from 200 to 399 passes. Any other status or no answer stops the preflight.",
     );
+    expect(preflight).toContain("and all required target requests pass.");
     expect(preflight).toContain("can answer 404 on `/`, so pass a URL that answers 200");
   });
 

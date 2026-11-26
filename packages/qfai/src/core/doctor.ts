@@ -1170,21 +1170,14 @@ async function buildPrototypingDoctorChecks(
   targetUrlOverride?: string,
 ): Promise<DoctorCheck[]> {
   const targetUrl = targetUrlOverride ?? config.prototyping?.execution?.targetUrl ?? undefined;
-  const [
-    primarySpec,
-    uiContracts,
-    designMdReadiness,
-    requiredRoles,
-    launcherChecks,
-    targetUrlCheck,
-  ] = await Promise.all([
-    buildPrototypingPrimarySpecCheck(root, config),
-    buildPrototypingUiContractsCheck(root, config),
-    buildPrototypingDesignMdReadinessCheck(root, config),
-    buildPrototypingRolesCheck(root),
-    buildPlaywrightLauncherChecks(root),
-    buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
-  ]);
+  const [primarySpec, uiContracts, designMdReadiness, requiredRoles, launcherChecks] =
+    await Promise.all([
+      buildPrototypingPrimarySpecCheck(root, config),
+      buildPrototypingUiContractsCheck(root, config),
+      buildPrototypingDesignMdReadinessCheck(root, config),
+      buildPrototypingRolesCheck(root),
+      buildPlaywrightLauncherChecks(root),
+    ]);
   const designMdChecks = await buildPrototypingDesignMdChecks(root);
   return [
     primarySpec,
@@ -1192,7 +1185,7 @@ async function buildPrototypingDoctorChecks(
     designMdReadiness,
     requiredRoles,
     ...launcherChecks,
-    targetUrlCheck,
+    buildTargetUrlCheck(targetUrl, targetUrlOverride ? "cli" : "config"),
     ...designMdChecks,
   ];
 }
@@ -1607,11 +1600,7 @@ function buildNotFoundCheck(lookedInRelative: LauncherLookedIn, probeOrder: stri
   };
 }
 
-async function buildTargetUrlCheck(
-  root: string,
-  targetUrl: string | null | undefined,
-  source: "cli" | "config",
-): Promise<DoctorCheck> {
+function buildTargetUrlCheck(targetUrl: string | undefined, source: "cli" | "config"): DoctorCheck {
   if (!targetUrl) {
     return {
       id: "prototyping.targetUrl",
@@ -1622,20 +1611,19 @@ async function buildTargetUrlCheck(
     };
   }
 
-  const probe = await probeHttpUrl(targetUrl);
-  if (!probe.ok) {
+  const url = URL.canParse(targetUrl) ? new URL(targetUrl) : null;
+  if (
+    url === null ||
+    (url.protocol !== "http:" && url.protocol !== "https:") ||
+    url.username !== "" ||
+    url.password !== ""
+  ) {
     return {
       id: "prototyping.targetUrl",
       severity: "error",
       title: "Target URL",
-      message: probe.statusCode
-        ? `targetUrl responded with HTTP ${probe.statusCode}`
-        : `targetUrl probe failed: ${probe.error ?? "unknown error"}`,
-      details: {
-        source,
-        targetUrl,
-        ...(probe.statusCode ? { statusCode: probe.statusCode } : {}),
-      },
+      message: "targetUrl must be an absolute HTTP or HTTPS URL without credentials.",
+      details: { source },
     };
   }
 
@@ -1643,38 +1631,9 @@ async function buildTargetUrlCheck(
     id: "prototyping.targetUrl",
     severity: "ok",
     title: "Target URL",
-    message: `targetUrl responded with HTTP ${probe.statusCode}`,
-    details: {
-      source,
-      targetUrl,
-      statusCode: probe.statusCode,
-    },
+    message: "targetUrl is valid. The prototyping preflight checks whether it responds.",
+    details: { source, targetUrl },
   };
-}
-
-async function probeHttpUrl(
-  targetUrl: string,
-): Promise<{ ok: boolean; statusCode?: number; error?: string }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3_000);
-  try {
-    const response = await fetch(targetUrl, {
-      method: "GET",
-      redirect: "manual",
-      signal: controller.signal,
-    });
-    return {
-      ok: response.status >= 200 && response.status < 400,
-      statusCode: response.status,
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
 }
 
 /**
