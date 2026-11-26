@@ -10,6 +10,7 @@ Feature: Idempotent initialization
     When `qfai init` runs again
     Then existing files are skipped and only new files are added
     And the skipped files are reported on the console
+    And if required assistant assets defer the version marker, a bounded list names the kept causes and counts any additional ones
 
   # AC-0001-0021-02
   Scenario: A run that writes a new assistant file and keeps a differing one says so

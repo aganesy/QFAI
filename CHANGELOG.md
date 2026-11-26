@@ -663,6 +663,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   could not be verified.** A blocked copy no longer records a complete
   installation. Init reports why the version file was deferred. Closes #4527.
 
+- **`qfai init` names kept assets that defer the assistant version file.** The
+  diagnostic lists up to eight changed or unverifiable paths and counts the
+  rest. Blocked writes still produce individual warnings.
+
 - `QFAI-DRIFT-002` compares rendered example rows. Changing a sample table in
   fenced code or an HTML comment leaves the example drift result unchanged.
 
