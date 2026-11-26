@@ -1255,8 +1255,8 @@ decisions` headings appeared anywhere in the file, so a record with several
 - The routine parser skips commas and parentheses inside quoted argument
   names and preserves quoted type names when checking for duplicate routines.
 
-- Dollar-quoted and escape-string defaults in SQL routines preserve the
-  argument types that follow them. The duplicate check ignores punctuation
+- Dollar-quoted and directly `E`-prefixed defaults in SQL routines preserve
+  the argument types that follow them. The duplicate check ignores punctuation
   inside these defaults when comparing the argument types.
 
 - **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
