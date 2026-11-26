@@ -19,12 +19,24 @@ import { captureStdout } from "../helpers/stdout.js";
 
 type FsPromises = typeof fsPromises;
 
-const race = vi.hoisted((): { destination: string | undefined } => ({ destination: undefined }));
+const race = vi.hoisted(
+  (): { destination: string | undefined; versionDestination: string | undefined } => ({
+    destination: undefined,
+    versionDestination: undefined,
+  }),
+);
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
   return {
     ...actual,
+    open: async (...args: Parameters<FsPromises["open"]>) => {
+      const [destination] = args;
+      if (destination === race.versionDestination) {
+        await actual.writeFile(destination, "0.0.1\n", { flag: "wx" });
+      }
+      return actual.open(...args);
+    },
     copyFile: async (...args: Parameters<FsPromises["copyFile"]>) => {
       const [, destination, mode] = args;
       if (destination === race.destination && mode === constants.COPYFILE_EXCL) {
@@ -137,6 +149,23 @@ describe("qfai init records the release that wrote the assistant tree", () => {
 
     expect(await readFile(skill, "utf-8")).toBe("concurrent edit\n");
     await expectAbsent(versionFile(dir));
+  });
+
+  // QFAI:AC-0001-0021-01
+  it("keeps a competing version marker created just before plain init opens it", async () => {
+    const dir = await newTempDir();
+    const marker = versionFile(dir);
+    race.versionDestination = marker;
+
+    try {
+      await init(dir);
+    } finally {
+      race.versionDestination = undefined;
+    }
+
+    expect(await readFile(marker, "utf-8")).toBe("0.0.1\n");
+    await init(dir, true);
+    expect(await readFile(marker, "utf-8")).toBe(`${await resolveToolVersion()}\n`);
   });
 
   // QFAI:AC-0001-0021-01
