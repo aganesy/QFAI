@@ -68,7 +68,7 @@ export function syncShippedWorkflowToolchain(directory, checkOnly = false) {
   return changes.map(({ name }) => name);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [option, extra] = process.argv.slice(2);
   if (extra !== undefined || (option !== undefined && option !== "--check")) {
     console.error("Usage: node scripts/sync-shipped-workflow-toolchain.mjs [--check]");
