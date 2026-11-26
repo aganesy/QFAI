@@ -65,17 +65,12 @@ describe("a fix route from the diagnosis to the commit", () => {
   });
 
   // QFAI:EX-0001-0225-07
-  it("commits exactly the paths the run wrote, and pushes nothing", async () => {
+  it("commits only changes the run owns, and pushes nothing", async () => {
     const step = flat(await readShipped("step/verify-commit/STEP.md"));
     expect(step).toContain("Express the authorized deliverable paths relative to that root.");
     expect(step).toContain("Run the index comparisons and staging from the repository root.");
-    expect(step).toMatch(
-      /stage exactly the (?:authorized )?tracked deliverables the run wrote, with `git add <those paths>`/i,
-    );
+    expect(step).toMatch(/stage exactly the authorized changes the run made/i);
     expect(step).toMatch(/never `git add -A`/i);
-    expect(step).toMatch(
-      /already modified before the run and then written by it is committed whole; the final report names it/i,
-    );
     expect(step).toMatch(/in the final report: the commit, and the files it holds/i);
     const gate = flat(sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Gate"));
     expect(gate).toMatch(/nothing was pushed, and no pull request or merge was made/i);
@@ -85,7 +80,7 @@ describe("a fix route from the diagnosis to the commit", () => {
   it("protects unrelated staged paths before an ordinary verification commit", async () => {
     const procedure = await section("verify-commit", "## Procedure");
     const guard = procedure.indexOf("Before staging for an ordinary commit");
-    const stage = procedure.indexOf("Stage exactly the authorized tracked deliverables");
+    const stage = procedure.indexOf("Stage exactly the authorized changes");
     expect(guard).toBeGreaterThanOrEqual(0);
     expect(stage).toBeGreaterThan(guard);
     const preflight = procedure.slice(guard, stage);
@@ -113,6 +108,33 @@ describe("a fix route from the diagnosis to the commit", () => {
       "unrelated staged paths appeared, report them, preserve the index and stop before committing.",
     );
     expect(procedure).toContain("Repeat the index comparison before every ordinary commit retry.");
+  });
+
+  // QFAI:EX-0001-0225-26
+  it("keeps earlier edits out of the commit even in the same authorized path", async () => {
+    const baseline = await section("common-policy-check", "## Record the starting changes");
+    expect(baseline).toMatch(/before the first tracked edit/i);
+    expect(baseline).toMatch(/from the repository root/i);
+    expect(baseline).toMatch(/starting commit, staged and unstaged diffs, and untracked paths/i);
+
+    const procedure = await section("verify-commit", "## Procedure");
+    const guard = procedure.indexOf("Before staging for an ordinary commit");
+    const stage = procedure.indexOf("Stage exactly the authorized changes");
+    expect(guard).toBeGreaterThanOrEqual(0);
+    expect(stage).toBeGreaterThan(guard);
+    const preflight = procedure.slice(guard, stage);
+    expect(preflight).toMatch(
+      /compare the staged diff and intended hunks with the starting record/i,
+    );
+    expect(preflight).toMatch(/unrelated staged hunk.*even in an authorized path/i);
+    expect(preflight).toMatch(/cannot attribute a hunk.*report the path and reason and stop/i);
+    expect(procedure.slice(stage)).toMatch(
+      /for a path with existing edits, stage only the run’s patch/i,
+    );
+    expect(procedure).toMatch(
+      /immediately before committing.*entire staged diff.*exactly the authorized hunks/i,
+    );
+    expect(procedure).toMatch(/preserve the index and stop before committing/i);
   });
 
   // QFAI:EX-0001-0225-08
