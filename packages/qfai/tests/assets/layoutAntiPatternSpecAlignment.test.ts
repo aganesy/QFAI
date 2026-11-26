@@ -3,9 +3,9 @@
  *
  * The reviewer records declared identifiers in `layoutAntiPatternsDetected[]`.
  * The story tree and CLI contracts point to the registry for that vocabulary.
- * This suite reads the registry and checks any concrete identifier cited in
- * those documents. A negative or historical example identifies the context
- * on the same line.
+ * This suite reads the registry and checks backticked identifiers in those
+ * documents. A negative or historical example identifies the context on the
+ * same line.
  */
 
 import { readFile } from "node:fs/promises";
@@ -23,7 +23,7 @@ const REGISTRY_REL = "packages/qfai/assets/validators/layoutAntiPatterns.json";
 /** Where a stale identifier does damage: what a reviewer measures against. */
 const SCANNED = [".qfai/spec/02_business-flow/**/*.md", ".qfai/spec/03_contract/cli/*.md"];
 
-/** Decision records can cite historical identifiers. */
+/** The scan excludes the decision record, which can cite historical identifiers. */
 const EXEMPT_FILE = /(^\.qfai\/spec\/decisions\.md$)/;
 
 /**
