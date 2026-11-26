@@ -632,6 +632,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
+- `gh-budget` reports oversized GitHub responses without saving a partial
+  Actions job log.
+
+- Root-heading diagnostics in `check-mdschema` print paths relative to the
+  checked tree when the command is run from another directory.
+
 - Validation launcher mismatch errors identify the checkout problem and explain
   how to install its dependencies and rerun validation through its own launcher.
 
@@ -644,6 +650,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Plain `qfai init` defers the assistant version file when a required asset
   could not be verified.** A blocked copy no longer records a complete
   installation. Init reports why the version file was deferred. Closes #4527.
+
+- `QFAI-DRIFT-002` compares rendered example rows. Changing a sample table in
+  fenced code or an HTML comment leaves the example drift result unchanged.
 
 - **The reviewer remit for `/qfai-triage` names the files triage may change.**
   Its row still said no tracked file changed, so a reviewer following it
@@ -804,12 +813,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   blanked to the next whitespace. Closes #5020.
 
 - **A graph query copies the active analysis once and clears the copies
-  earlier queries left.** A document query whose inputs had changed copied
-  and checked the whole active analysis twice when the copy was not current:
-  once to answer, and again before preparing a new analysis. It now prepares
-  straight from the first result. A refresh copy that could not be removed,
-  such as one a Windows process still held open, stayed as a hidden
-  `.refreshing-graphify-<id>` or `.refreshing-codegraph-<id>` folder under
+  earlier queries left.** A code or document query whose inputs had changed
+  copied and checked the whole active analysis twice when the copy was not
+  current. It now prepares straight from the first result. A refresh copy
+  that could not be removed, such as one a Windows process still held open, stayed
+  as a hidden `.refreshing-graphify-<id>` or `.refreshing-codegraph-<id>` folder under
   `.qfai/tools/analysis/`; the next refresh of that engine removes them first.
   The corpus walk compares file sizes before it reads any contents, so a file
   of another size is no longer read in full to find it changed. Closes #5204.
@@ -1049,6 +1057,11 @@ decisions` headings appeared anywhere in the file, so a record with several
   `RangeError: Maximum call stack size exceeded`. Every one is now
   collected, in the same order.
 
+- **Migration preserves large constraint sections and story non-goal lists.**
+  Step 3 keeps the manual rewrite notes for every affected row of a large
+  constraint table, and step 4 keeps every non-goal of a large old story.
+  Both preserve the original order.
+
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
   `analysis` folder. When a file inside it could not be read, the copy threw:
@@ -1062,6 +1075,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   between the two, or a failed put-back, left that content there, and nothing
   reported it after the one note printed at the time. A later `qfai init` now
   names each such directory beside a wrapper it writes, and leaves it in place.
+  The note also describes retained project content when cleanup fails after
+  the link has been written.
   Closes #5317.
 
 - **The README skill list names every skill `qfai init` installs.** It left
@@ -1097,6 +1112,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   waits for a reader that may never come. A FIFO, a socket or a device at a
   template file's path is now refused and left as it is, on a dry run too.
   Closes #5257.
+
+- **`qfai init --force` reports a directory in a template file's place.**
+  The directory is listed as refused and its contents are preserved. The copy
+  continues with the other template files. A dry run reports the same refusal.
 
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried

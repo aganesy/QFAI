@@ -1709,6 +1709,7 @@ describe("a heading finding", () => {
     const raw = runDriver(["--root", root, "--scope", "files", "--show-patterns", file]);
 
     expect(explained.status).toBe(1);
+    expect(explained.stderr.split(/\r?\n/)).toContain(file);
     expect(explained.stderr).toContain(
       'Root heading is "# Objectives", but the schema requires "# Objective";',
     );

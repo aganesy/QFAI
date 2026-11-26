@@ -2271,7 +2271,7 @@ function runLane(limits) {
       const before = baseRev === null ? null : fileAtRev(baseRev, file, root);
       const wasWrong = before !== null && rootHeadingVerdict(schemaText, before)?.ok === false;
       (wasWrong ? rootHeld : rootOwed).push(
-        describeRootMismatch(schemaText, path.relative(root, file), contentOf(file)),
+        describeRootMismatch(schemaText, file, contentOf(file)),
       );
     }
     inheritedFiles += rootHeld.length;
