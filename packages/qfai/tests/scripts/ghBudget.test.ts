@@ -23,7 +23,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -162,7 +162,7 @@ describe("receiving a GitHub response", () => {
   });
 
   it("reports and saves the budget without saving a truncated job log", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "gh-budget-overflow-"));
+    const root = await mkdtemp(path.join(await realpath(os.tmpdir()), "gh-budget-overflow-"));
     try {
       const library = path.join("scripts", "lib", "bounded-read.mjs");
       await mkdir(path.join(root, path.dirname(library)), { recursive: true });
