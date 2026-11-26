@@ -80,8 +80,8 @@ covering that action, target and scope. Commit authority alone covers none of th
    staging. If unrelated staged paths exist, report them and
    stop before changing the index or creating a commit.
    For an ordinary commit, compare the staged diff and intended hunks with
-   the starting record and the edits the run made. An unrelated staged hunk
-   stops the commit even in an authorized path. If the starting record is
+   the starting record and the edits the run made. If an unrelated staged
+   hunk is present, even in an authorized path, or the starting record is
    missing or you cannot attribute a hunk to the run, report the path and
    reason and stop before staging. A file already present as an untracked
    path counts as an existing edit.
@@ -114,7 +114,8 @@ covering that action, target and scope. Commit authority alone covers none of th
    preserve the index and stop before committing. Commit with a message in
    the project's convention that says what changed and why.
 4. Where a commit hook refuses the commit, fix the cause and commit again.
-   Repeat the index comparison before every ordinary commit retry.
+   Repeat both the complete index path and hunk checks before every ordinary
+   commit retry.
    Never skip the hook. When the fix changes code or tests, rerun the verify
    gates first, and the code review too when behaviour changed.
 

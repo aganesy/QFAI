@@ -107,7 +107,9 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(procedure).toContain(
       "unrelated staged paths appeared, report them, preserve the index and stop before committing.",
     );
-    expect(procedure).toContain("Repeat the index comparison before every ordinary commit retry.");
+    expect(procedure).toContain(
+      "Repeat both the complete index path and hunk checks before every ordinary commit retry.",
+    );
   });
 
   // QFAI:EX-0001-0225-26
@@ -126,9 +128,11 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(preflight).toMatch(
       /compare the staged diff and intended hunks with the starting record/i,
     );
-    expect(preflight).toMatch(/unrelated staged hunk.*even in an authorized path/i);
     expect(preflight).toContain("CI transport commits follow the ordinary commit rules.");
-    expect(preflight).toMatch(/cannot attribute a hunk.*report the path and reason and stop/i);
+    expect(preflight).toMatch(
+      /unrelated staged hunk[^.]*even in an authorized path[^.]*report the path and reason and stop before staging/i,
+    );
+    expect(preflight).toMatch(/cannot attribute a hunk[^.]*report the path and reason and stop/i);
     expect(preflight).toContain("`git apply --cached --check` before staging anything");
     expect(procedure.slice(stage)).toMatch(
       /for a path with existing edits, stage only the run’s patch/i,
