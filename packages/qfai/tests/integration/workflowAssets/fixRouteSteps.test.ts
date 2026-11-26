@@ -67,6 +67,8 @@ describe("a fix route from the diagnosis to the commit", () => {
   // QFAI:EX-0001-0225-07
   it("commits exactly the paths the run wrote, and pushes nothing", async () => {
     const step = flat(await readShipped("step/verify-commit/STEP.md"));
+    expect(step).toContain("Express the authorized deliverable paths relative to that root.");
+    expect(step).toContain("Run the index comparisons and staging from the repository root.");
     expect(step).toMatch(
       /stage exactly the (?:authorized )?tracked deliverables the run wrote, with `git add <those paths>`/i,
     );
@@ -90,8 +92,6 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(preflight).toContain(
       "identify the Git repository root even when the run starts below it.",
     );
-    expect(preflight).toContain("Express the authorized deliverable paths relative to that root.");
-    expect(preflight).toContain("Run the index comparisons and staging from the repository root.");
     expect(preflight).toContain(
       "git diff --cached --name-only --no-renames --no-relative --ignore-submodules=none -z --",
     );
