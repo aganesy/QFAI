@@ -94,8 +94,81 @@ function citedPaths(markdown: string): string[] {
   return cited.filter((cite) => !NOT_A_PATH.some((shape) => shape.test(cite)));
 }
 
-/** The flags that make `git tag` delete, list or verify a tag instead of creating one. */
-const NON_CREATING_TAG_FLAGS = new Set(["-d", "--delete", "-l", "--list", "-v", "--verify"]);
+/** Options that select deletion, listing or verification. */
+const NON_CREATING_TAG_FLAGS = new Set([
+  "-d",
+  "--delete",
+  "-l",
+  "--list",
+  "-v",
+  "--verify",
+  "-n",
+  "--contains",
+  "--no-contains",
+  "--points-at",
+  "--merged",
+  "--no-merged",
+]);
+
+/** The tag creation options whose next word is their value. */
+const VALUE_TAKING_TAG_FLAGS = new Set(["-m", "--message", "-F", "--file", "-u", "--local-user"]);
+
+/** Sorting and formatting do not switch a command with a tag operand into list mode. */
+const TAG_LIST_MODIFIERS = new Set(["--sort", "--format"]);
+
+function isTagCreation(command: string): boolean {
+  // Keep quoted words together so flag-like text in a tag message stays a value.
+  const words = command.match(/(?:[^\s"'\\]|"(?:[^"\\]|\\.)*"|'[^']*'|\\.)+/g);
+  const args = words?.slice(2) ?? [];
+  let hasOperand = false;
+  let hasListModifier = false;
+
+  for (let index = 0; index < args.length; index++) {
+    const word = args[index] ?? "";
+    const arg = word.replace(
+      /"((?:[^"\\]|\\.)*)"|'([^']*)'|\\(.)/g,
+      (_, doubleQuoted: string | undefined, singleQuoted: string | undefined, escaped: string) =>
+        doubleQuoted?.replace(/\\(["\\$`])/g, "$1") ?? singleQuoted ?? escaped,
+    );
+    if (arg === "--") {
+      hasOperand ||= index + 1 < args.length;
+      break;
+    }
+
+    const [flag = "", value] = arg.split("=", 2);
+    if (NON_CREATING_TAG_FLAGS.has(flag) || /^-n\d+$/.test(flag)) return false;
+
+    const listModifier = TAG_LIST_MODIFIERS.has(flag);
+    hasListModifier ||= listModifier;
+    const takesSeparateValue =
+      (/^--/.test(flag) && VALUE_TAKING_TAG_FLAGS.has(flag) && value === undefined) ||
+      /^-[aesfi]*[mFu]$/.test(arg);
+    if ((listModifier && value === undefined) || takesSeparateValue) index++;
+    if (!arg.startsWith("-")) hasOperand = true;
+  }
+
+  // A continued command may name the tag on its next physical line.
+  return hasOperand || (args.length > 0 && (!hasListModifier || command.endsWith("\\")));
+}
+
+function splitShellCommands(line: string): string[] {
+  const parts: string[] = [];
+  // The capture group identifies quoted or escaped text to leave in the command.
+  const tokens = /("(?:[^"\\]|\\.)*"|'[^']*'|\\.)|(^|\s)#|#|&&|\|\||;|\|/g;
+  let start = 0;
+  for (const token of line.matchAll(tokens)) {
+    if (token[1] !== undefined) continue;
+    if (token[2] !== undefined || (token[0] === "#" && token.index === start)) {
+      parts.push(line.slice(start, token.index));
+      return parts;
+    }
+    if (token[0] === "#") continue;
+    parts.push(line.slice(start, token.index));
+    start = token.index + token[0].length;
+  }
+  parts.push(line.slice(start));
+  return parts;
+}
 
 /**
  * Every `git tag` command in `markdown` that creates a tag: whole lines and
@@ -105,17 +178,12 @@ const NON_CREATING_TAG_FLAGS = new Set(["-d", "--delete", "-l", "--list", "-v", 
 function tagCreations(markdown: string): string[] {
   const spans = Array.from(markdown.matchAll(/`([^`\n]+)`/g), (m) => m[1] ?? "");
   return [...markdown.split(/\r?\n/), ...spans]
-    .flatMap((text) => text.split(/&&|\|\||;|\|/))
-    .map((part) => part.trim().replace(/\\$/, "").trim())
+    .flatMap(splitShellCommands)
+    .map((part) => part.trim())
     .filter((part) => /^git\s+tag(?:\s|$)/.test(part))
-    .filter((part) => {
-      const args = part.split(/\s+/).slice(2);
-      return args.length > 0 && !args.some((arg) => NON_CREATING_TAG_FLAGS.has(arg));
-    });
+    .filter(isTagCreation)
+    .map((part) => part.replace(/\\$/, "").trim());
 }
-
-/** The `git tag` flags whose next word is their value, not the commit. */
-const VALUE_TAKING_TAG_FLAGS = new Set(["-m", "--message", "-F", "--file", "-u", "--local-user"]);
 
 /**
  * Whether a tag command names its commit: the last word is the `<SHA>`
@@ -132,6 +200,14 @@ function namesItsCommit(command: string): boolean {
     !VALUE_TAKING_TAG_FLAGS.has(beforeLast) &&
     !words.some((word) => /^(?:HEAD|@)(?:[~^].*)?$/.test(word))
   );
+}
+
+function releaseTaggingStatements(guide: string): string[] {
+  const statements = [...guide.matchAll(/^\s*```(?:sh|bash|shell)[ \t]*\r?\n([\s\S]*?)^\s*```/gm)]
+    .map(([, body]) => (body ?? "").replace(/&&[ \t]*\r?\n\s*/g, "&& "))
+    .flatMap((body) => body.split(/\r?\n/))
+    .map((line) => line.trim());
+  return statements.filter((statement) => tagCreations(statement).length > 0);
 }
 
 describe("the project layer describes the repository it is in", () => {
@@ -265,16 +341,47 @@ describe("the project layer describes the repository it is in", () => {
     expect(namesItsCommit(`git tag vX.Y.Z ${"a".repeat(40)}`)).toBe(true);
   });
 
+  it("ignores listing options when identifying tag creation commands", () => {
+    const listings = [
+      "git tag -n",
+      "git tag -n3",
+      "git tag --contains <SHA>",
+      "git tag --no-contains <SHA>",
+      "git tag --points-at=<SHA>",
+      "git tag --merged <SHA>",
+      "git tag --no-merged=<SHA>",
+      "git tag --sort=version:refname",
+      'git tag --format="%(refname)"',
+    ];
+    const creations = [
+      "git tag vX.Y.Z <SHA>",
+      "git tag --sort version:refname vX.Y.Z <SHA>",
+      'git tag --format="%(refname)" vX.Y.Z',
+      'git tag -m "See --contains usage" vX.Y.Z <SHA>',
+      "git tag -m --contains vX.Y.Z <SHA>",
+      "git tag -am --contains vX.Y.Z",
+      "git tag -iam --contains vX.Y.Z",
+      'git tag "--message" --contains vX.Y.Z',
+      "git tag --format='%(refname)' -m 'release; candidate | notes' vX.Y.Z",
+      'git tag --format="%(refname)" -m "prepare && ship" vX.Y.Z',
+      "git tag --format='%(refname)' -m prepare\\;ship vX.Y.Z",
+    ];
+    const guide = ["```sh", ...listings, ...creations, "```"].join("\n");
+    expect(tagCreations(guide)).toEqual(creations);
+    expect(tagCreations("git tag vX.Y.Z # --contains; git tag --format=unused")).toEqual([
+      "git tag vX.Y.Z",
+    ]);
+    expect(tagCreations('git tag --format="%(refname)" \\\n  vX.Y.Z')).toEqual([
+      'git tag --format="%(refname)"',
+    ]);
+  });
+
   // Pasted as separate lines, the block tagged even when the ancestry check
   // failed, because a failing line does not stop the next one. Chained with
   // `&&`, the tag is created only after every check before it passed.
   it("creates the release tag only after its checks pass", async () => {
     const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
-    const statements = [...guide.matchAll(/^\s*```sh\r?\n([\s\S]*?)^\s*```/gm)]
-      .map(([, body]) => (body ?? "").replace(/&&[ \t]*\r?\n\s*/g, "&& "))
-      .flatMap((body) => body.split(/\r?\n/))
-      .map((line) => line.trim());
-    const tagging = statements.filter((statement) => tagCreations(statement).length > 0);
+    const tagging = releaseTaggingStatements(guide);
 
     expect(tagging.length, "the release guide shows one tag command in a shell block").toBe(1);
     const steps = (tagging[0] ?? "").split("&&").map((step) => step.trim());
@@ -296,6 +403,21 @@ describe("the project layer describes the repository it is in", () => {
     expect(guide, "the guide says to stop when there is no merge commit").toMatch(
       /prints nothing or `null`[^.]*\bstop here\b/,
     );
+  });
+
+  it.each(["sh", "bash", "shell", "bash  "])(
+    "reads ordered release tag statements from %s fences",
+    (shell) => {
+      const check = "git merge-base --is-ancestor <SHA> origin/main";
+      const tag = "git tag vX.Y.Z <SHA>";
+      const guide = ["```" + shell, check + " &&", "  " + tag, "```"].join("\n");
+      expect(releaseTaggingStatements(guide)).toEqual([check + " && " + tag]);
+    },
+  );
+
+  it("ignores tag examples in fences for other languages", () => {
+    const guide = "```powershell\ngit tag vX.Y.Z <SHA>\n```";
+    expect(releaseTaggingStatements(guide)).toEqual([]);
   });
 
   // npm installs into the nearest directory holding a `package.json`. The smoke

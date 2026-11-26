@@ -629,6 +629,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 

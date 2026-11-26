@@ -52,8 +52,22 @@ function printable(text: string): string {
     .slice(0, 80);
 }
 
-/** A file that exists and could not be read: its `/`-separated path below the root and the cause. */
-type UnreadFile = { path: string; code: string; cause: string };
+type UnreadPath = { path: string; kind: "file" | "directory"; code: string; cause: string };
+
+function recordUnreadPath(
+  unread: UnreadPath[],
+  relative: string,
+  kind: UnreadPath["kind"],
+  error: unknown,
+): void {
+  if (isEnoent(error)) return;
+  unread.push({
+    path: printable(relative),
+    kind,
+    code: hasErrnoCode(error) ? error.code : "unknown",
+    cause: printable(error instanceof Error ? error.message : String(error)),
+  });
+}
 
 /**
  * The text of `relative` (`/`-separated below `root`), or `undefined` when it does not exist. Any
@@ -63,25 +77,19 @@ type UnreadFile = { path: string; code: string; cause: string };
 async function readText(
   root: string,
   relative: string,
-  unread: UnreadFile[],
+  unread: UnreadPath[],
 ): Promise<string | undefined> {
   try {
     return await readFile(path.join(root, ...relative.split("/")), "utf-8");
   } catch (error) {
-    if (!isEnoent(error)) {
-      unread.push({
-        path: printable(relative),
-        code: hasErrnoCode(error) ? error.code : "unknown",
-        cause: printable(error instanceof Error ? error.message : String(error)),
-      });
-    }
+    recordUnreadPath(unread, relative, "file", error);
     return undefined;
   }
 }
 
 async function readPackageJson(
   root: string,
-  unread: UnreadFile[],
+  unread: UnreadPath[],
 ): Promise<Record<string, unknown> | undefined> {
   const text = await readText(root, "package.json", unread);
   if (text === undefined) return undefined;
@@ -174,7 +182,7 @@ function engineRange(manifest: Record<string, unknown> | undefined): string | un
 }
 
 /** A version file that exists and cannot be read counts as present: its own warning names it. */
-async function hasNodeVersionFile(root: string, unread: UnreadFile[]): Promise<boolean> {
+async function hasNodeVersionFile(root: string, unread: UnreadPath[]): Promise<boolean> {
   for (const name of [".nvmrc", ".node-version"]) {
     const before = unread.length;
     const text = await readText(root, name, unread);
@@ -188,7 +196,7 @@ async function hasNodeVersionFile(root: string, unread: UnreadFile[]): Promise<b
 async function nodeVersionFileCheck(
   root: string,
   range: string | undefined,
-  unread: UnreadFile[],
+  unread: UnreadPath[],
 ): Promise<WorkflowPreconditionCheck | undefined> {
   if (range === undefined || (await hasNodeVersionFile(root, unread))) return undefined;
   return {
@@ -272,11 +280,12 @@ function pinnedVersions(workflow: string): string[] {
   return pins.map((pin) => pin.trim().replace(/^v/u, "")).filter((pin) => /^\d/u.test(pin));
 }
 
-async function workflowFiles(root: string): Promise<string[]> {
+async function workflowFiles(root: string, unread: UnreadPath[]): Promise<string[]> {
   try {
     const names = await readdir(path.join(root, ...WORKFLOWS_DIR));
     return names.filter((name) => /\.ya?ml$/iu.test(name)).sort();
-  } catch {
+  } catch (error) {
+    recordUnreadPath(unread, WORKFLOWS_DIR.join("/"), "directory", error);
     return [];
   }
 }
@@ -284,12 +293,12 @@ async function workflowFiles(root: string): Promise<string[]> {
 async function nodePinCheck(
   root: string,
   range: string | undefined,
-  unread: UnreadFile[],
+  unread: UnreadPath[],
 ): Promise<WorkflowPreconditionCheck | undefined> {
   const lowest = range === undefined ? undefined : lowestAllowed(range);
   if (range === undefined || lowest === undefined) return undefined;
   const below: { file: string; version: string }[] = [];
-  for (const name of await workflowFiles(root)) {
+  for (const name of await workflowFiles(root, unread)) {
     const text = await readText(root, [...WORKFLOWS_DIR, name].join("/"), unread);
     for (const version of pinnedVersions(text ?? "")) {
       const parts = numericParts(version);
@@ -312,17 +321,19 @@ async function nodePinCheck(
   };
 }
 
-/** One warning per file that exists and could not be read, so the facts it holds are not skipped silently. */
-function unreadCheck(file: UnreadFile): WorkflowPreconditionCheck {
+/** Warn when a repository path could not be checked. */
+function unreadCheck(entry: UnreadPath): WorkflowPreconditionCheck {
+  const operation = entry.kind === "directory" ? "list" : "read";
+  const state = entry.kind === "directory" ? "listed" : "read";
   return {
     id: "workflows.preconditionsUnread",
     severity: "warning",
-    title: `Repository file the workflow checks could not read (${file.path})`,
+    title: `Repository ${entry.kind} the workflow checks could not ${operation} (${entry.path})`,
     message:
-      `${file.path} cannot be read (${file.code}): ${file.cause}. doctor checked the shipped workflows' ` +
+      `${entry.path} cannot be ${state} (${entry.code}): ${entry.cause}. doctor checked the shipped workflows' ` +
       `preconditions without it, so a problem it holds would go unreported. ` +
       "Make it readable, then run doctor again.",
-    details: { path: file.path, code: file.code, cause: file.cause },
+    details: { path: entry.path, code: entry.code, cause: entry.cause },
   };
 }
 
@@ -333,7 +344,7 @@ function unreadCheck(file: UnreadFile): WorkflowPreconditionCheck {
 export async function checkWorkflowPreconditions(
   root: string,
 ): Promise<WorkflowPreconditionCheck[]> {
-  const unread: UnreadFile[] = [];
+  const unread: UnreadPath[] = [];
   const manifest = await readPackageJson(root, unread);
   // An unreadable package.json is not a missing "packageManager": its own warning names it.
   const manifestUnread = unread.length > 0;
