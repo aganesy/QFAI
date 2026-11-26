@@ -182,6 +182,7 @@ describe("a FIFO where a template file goes", () => {
     if (!planted) skip();
   }
 
+  // QFAI:EX-0001-0022-04
   it("is refused by a forced copy, which neither opens nor removes it", async (ctx) => {
     const { source, dest, destFile } = await trees("a\n", "a\n");
     await plantFifo(destFile, () => ctx.skip());
@@ -193,6 +194,7 @@ describe("a FIFO where a template file goes", () => {
     expect((await lstat(destFile)).isFIFO()).toBe(true);
   });
 
+  // QFAI:EX-0001-0022-04
   it("is refused by a forced dry run too", async (ctx) => {
     const { source, dest, destFile } = await trees("a\n", "a\n");
     await plantFifo(destFile, () => ctx.skip());
@@ -201,5 +203,6 @@ describe("a FIFO where a template file goes", () => {
 
     expect(result.refused).toEqual([path.join(dest, "doc.md")]);
     expect(result.copied).toEqual([]);
+    expect((await lstat(destFile)).isFIFO()).toBe(true);
   });
 });

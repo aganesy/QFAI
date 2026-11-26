@@ -629,6 +629,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
+
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 

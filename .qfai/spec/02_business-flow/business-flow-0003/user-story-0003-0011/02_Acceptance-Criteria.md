@@ -20,6 +20,7 @@ Feature: Shipped workflow checks
     And the `workflows.lockfiles` message names the lockfiles, the package manager the shipped workflows install with and the lockfile they ignore
     And the `workflows.nodeVersionFile` message names `engines.node` and the Node the shipped workflows use instead
     And the `workflows.nodePin` message names each workflow file and the pinned version
+    And if the workflows directory cannot be listed for the Node-pin check, `workflows.preconditionsUnread` warns with its path and cause
     And a fact that is met, or one that does not apply to the project, raises no finding
 
   # AC-0003-0011-09
