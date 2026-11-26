@@ -93,18 +93,19 @@ describe("parseRenderedMarkdownTables", () => {
 
   // QFAI:EX-0001-0039-77
   it.each([
-    ["123. Sample:\n     ```md", "     ```"],
-    ["123. ```md", ""],
-  ])("ignores a fenced table inside an ordered list starting with %j", (opener, closer) => {
+    ["123. Sample:\n     ```md", "     ```", "     "],
+    ["123. ```md", "", "     "],
+    ["- - ~~~md", "    ~~~", "    "],
+  ])("ignores a fenced table inside list content starting with %j", (opener, closer, indent) => {
     const text = [
       header,
       separator,
       "| Before | visible |",
       "",
       opener,
-      "     " + header,
-      "     " + separator,
-      "     | Inside | hidden |",
+      indent + header,
+      indent + separator,
+      indent + "| Inside | hidden |",
       closer,
       "",
       header,
@@ -154,6 +155,25 @@ describe("parseRenderedMarkdownTables", () => {
       separator,
       "| Commented | hidden |",
       "-->",
+      "",
+      header,
+      separator,
+      "| After | visible |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
+  it("keeps a malformed table inside its multiline inline comment", () => {
+    const text = [
+      "Before <!--",
+      header,
+      "| --- |",
+      "| Hidden | example |",
+      "--> after",
       "",
       header,
       separator,

@@ -100,7 +100,8 @@ const COMMENT_BLOCK_START = /^ {0,3}<!--/;
 const INDENTED_CODE_LINE = /^(?: {4}|\t)/;
 
 /** A list item marker, which makes the indentation below it continuation. */
-const LIST_ITEM_LINE = /^[ \t]*(?<marker>[-*+]|\d{1,9}[.)])[ \t]+(?<content>.*)$/;
+const LIST_ITEM_LINE = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]/;
+const LIST_ITEM_MARKER_AT = /(?:[-*+]|\d{1,9}[.)])(?=[ \t])/y;
 
 /** Measure indentation in columns so tabs use CommonMark's four-column stops. */
 function markdownIndent(
@@ -302,7 +303,16 @@ function paragraphClosers(lines: readonly string[]): boolean[] {
 function tableRowLines(lines: readonly string[]): Set<number> {
   const rows = new Set<number>();
   for (let index = 0; index + 1 < lines.length; index += 1) {
-    if (!looksLikeTableRow(lines[index] ?? "") || !isTableSeparator(lines[index + 1] ?? "")) {
+    const header = lines[index] ?? "";
+    const delimiter = lines[index + 1] ?? "";
+    if (!looksLikeTableRow(header) || !isTableSeparator(delimiter)) {
+      continue;
+    }
+    const delimiterCells = splitMarkdownRow(delimiter);
+    if (
+      delimiterCells.some((cell) => cell.length === 0) ||
+      splitMarkdownRow(header).length !== delimiterCells.length
+    ) {
       continue;
     }
     rows.add(index);
@@ -436,15 +446,27 @@ export function maskNonSpecRegions(text: string): string {
       return "";
     }
 
-    let fenceText = indentation.columns - container <= 3 ? line.slice(indentation.offset) : "";
-    const item = LIST_ITEM_LINE.exec(fenceText)?.groups;
-    if (item?.marker) {
-      const markerEnd = indentation.columns + item.marker.length;
-      const padding = markdownIndent(line, indentation.offset + item.marker.length, markerEnd);
-      const hasNormalPadding = padding.columns - markerEnd <= 4;
-      container = hasNormalPadding ? padding.columns : markerEnd + 1;
-      listIndents.push(container);
-      fenceText = hasNormalPadding ? (item.content ?? "") : "";
+    let fenceText = "";
+    if (indentation.columns - container <= 3) {
+      let { offset, columns } = indentation;
+      for (;;) {
+        LIST_ITEM_MARKER_AT.lastIndex = offset;
+        const marker = LIST_ITEM_MARKER_AT.exec(line)?.[0];
+        if (!marker) {
+          fenceText = line.slice(offset);
+          break;
+        }
+        const markerEnd = columns + marker.length;
+        const padding = markdownIndent(line, offset + marker.length, markerEnd);
+        if (padding.columns - markerEnd > 4) {
+          container = markerEnd + 1;
+          listIndents.push(container);
+          break;
+        }
+        ({ offset, columns } = padding);
+        container = columns;
+        listIndents.push(container);
+      }
     }
     prevBlank = blank;
 
