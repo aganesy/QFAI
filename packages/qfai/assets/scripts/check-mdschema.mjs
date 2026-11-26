@@ -2077,6 +2077,8 @@ function parseArgs(argv) {
  *
  * @param {{ timeoutMs: number, maxOutputBytes?: number }} [limits] Bounds for
  *   each mdschema run. Crossing either limit stops the run and exits 2.
+ *   When supplied, maxOutputBytes is a positive byte count. Zero disables
+ *   the synchronous Node.js output limit.
  * @returns {number}
  */
 export function main(limits = MDSCHEMA_LIMITS) {
