@@ -452,14 +452,15 @@ describe("doctor", () => {
     }
   });
 
-  it("adds prototyping profile checks when preflight prerequisites exist", async () => {
+  // QFAI:EX-0003-0006-07
+  it("checks the configured prototyping target without contacting it", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
 
-      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      const parsed = await readDoctorData(root, { profile: "prototyping" });
       expect(parsed.profile).toBe("prototyping");
       expect(findCheck(parsed.checks, "prototyping.primaryUiContract")?.severity).toBe("ok");
       expect(findCheck(parsed.checks, "prototyping.uiContracts")?.severity).toBe("ok");
@@ -467,13 +468,19 @@ describe("doctor", () => {
       expect(findCheck(parsed.checks, "prototyping.requiredRoles")?.severity).toBe("ok");
       expect(findCheck(parsed.checks, "prototyping.playwrightCli")?.severity).toBe("ok");
       expect(findCheck(parsed.checks, "prototyping.targetUrl")?.severity).toBe("ok");
+      expect(server.requests).toEqual([]);
+      expect(findCheck(parsed.checks, "prototyping.targetUrl")?.details).toEqual({
+        source: "config",
+        targetUrl: server.url,
+      });
     } finally {
       await stopTestServer(server.server);
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("forwards --target-url on doctor --profile prototyping", async () => {
+  // QFAI:EX-0003-0006-07
+  it("validates the explicit prototyping target instead of the configured URL", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
     try {
@@ -499,8 +506,32 @@ describe("doctor", () => {
 
       const parsed = JSON.parse(await readFile(outPath, "utf-8")) as DoctorData;
       expect(findCheck(parsed.checks, "prototyping.targetUrl")?.severity).toBe("ok");
+      expect(server.requests).toEqual([]);
+      expect(findCheck(parsed.checks, "prototyping.targetUrl")?.details).toEqual({
+        source: "cli",
+        targetUrl: server.url,
+      });
     } finally {
       await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0003-0006-07
+  it.each([
+    ["relative.html", "error"],
+    ["ftp://example.invalid/prototype", "error"],
+    ["https://test-user@example.invalid/prototype", "error"],
+    [null, "warning"],
+  ])("reports the configuration for %s without an HTTP status", async (targetUrl, severity) => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      await seedPrototypingFixture(root, targetUrl);
+      const parsed = await readDoctorData(root, { profile: "prototyping" });
+      const check = findCheck(parsed.checks, "prototyping.targetUrl");
+      expect(check?.severity).toBe(severity);
+      expect(check?.details?.statusCode).toBeUndefined();
+    } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
@@ -893,7 +924,7 @@ async function withSandboxCwd(body: (sandbox: string) => Promise<void>): Promise
   }
 }
 
-async function seedPrototypingFixture(root: string, targetUrl: string): Promise<void> {
+async function seedPrototypingFixture(root: string, targetUrl: string | null): Promise<void> {
   await writeFile(
     path.join(root, "qfai.config.yaml"),
     [
@@ -907,7 +938,7 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
       "prototyping:",
       "  primaryUiContract: UI-0001",
       "  execution:",
-      `    targetUrl: ${targetUrl}`,
+      `    targetUrl: ${JSON.stringify(targetUrl)}`,
       "    browserTool: playwright",
       "",
     ].join("\n"),
@@ -993,8 +1024,10 @@ async function writeTestPlaywright(binDir: string, exitCode: 0 | 1): Promise<voi
   await chmod(launcherPath, 0o755);
 }
 
-async function startTestServer(): Promise<{ server: Server; url: string }> {
-  const server = createServer((_, response) => {
+async function startTestServer(): Promise<{ server: Server; url: string; requests: string[] }> {
+  const requests: string[] = [];
+  const server = createServer((request, response) => {
+    requests.push(request.url ?? "");
     response.statusCode = 200;
     response.end("ok");
   });
@@ -1006,6 +1039,7 @@ async function startTestServer(): Promise<{ server: Server; url: string }> {
   return {
     server,
     url: `http://127.0.0.1:${address.port}`,
+    requests,
   };
 }
 
