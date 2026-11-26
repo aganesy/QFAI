@@ -168,6 +168,41 @@ async function newTempDir(): Promise<string> {
   return dir;
 }
 
+async function installMdschemaStub(script: string): Promise<string> {
+  const tools = await newTempDir();
+  const packageDir = path.join(tools, "node_modules", "@jackchuka", "mdschema");
+  await mkdir(path.join(packageDir, "bin"), { recursive: true });
+  await writeFile(path.join(packageDir, "bin", "cli.js"), script, "utf-8");
+  await writeFile(
+    path.join(packageDir, "package.json"),
+    JSON.stringify({ name: "@jackchuka/mdschema", bin: { mdschema: "bin/cli.js" } }),
+    "utf-8",
+  );
+  return tools;
+}
+
+function runDriverWithLimits(
+  args: string[],
+  limits: { timeoutMs: number; maxOutputBytes?: number },
+): RunResult {
+  const argv = process.argv;
+  const stderr = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const stdout = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  try {
+    process.argv = ["node", SCRIPT, ...args];
+    const status = main(limits);
+    return {
+      status,
+      stdout: stdout.mock.calls.flat().join("\n"),
+      stderr: stderr.mock.calls.flat().join("\n"),
+    };
+  } finally {
+    process.argv = argv;
+    stderr.mockRestore();
+    stdout.mockRestore();
+  }
+}
+
 afterEach(async () => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -842,6 +877,34 @@ describe("the ratchet in --scope changed", () => {
   /** The same legacy document at both revisions, one line longer at the head. */
   const LEGACY = "# flow: a heading the schema does not accept\n\n## Metadata\n\n- something\n";
   const LEGACY_EDITED = `${LEGACY}- one more line\n`;
+
+  // QFAI:EX-0001-0011-28
+  it("exits 2 when only the merge-base check exceeds its output limit", async () => {
+    const root = await twoCommits(
+      { "business-flow-0002": `${NON_CONFORMING_FLOW}\nMerge-base-only marker.\n` },
+      { "business-flow-0002": `${NON_CONFORMING_FLOW}\nChanged on the branch.\n` },
+    );
+    const tools = await installMdschemaStub(`
+      const { readFileSync } = require("node:fs");
+      const content = readFileSync(process.argv.at(-1), "utf8");
+      if (content.includes("Merge-base-only marker.")) {
+        process.stdout.write("x".repeat(65536));
+        setInterval(() => undefined, 1000);
+      } else {
+        process.stderr.write("Head does not conform.");
+        process.exitCode = 1;
+      }
+    `);
+    const result = runDriverWithLimits(
+      ["--root", root, "--tools", tools, "--scope", "changed", "--base", "main"],
+      { timeoutMs: 15_000, maxOutputBytes: 64 },
+    );
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain(
+      "check-mdschema: over a single document, mdschema did not finish: it printed more than 64 bytes and was stopped",
+    );
+  });
 
   // QFAI:EX-0001-0011-29
   it("leaves a pre-existing failure to its own change when a branch edits the document", async () => {
@@ -2165,32 +2228,14 @@ describe("bounding each mdschema run in the lane", () => {
     const root = await newTempDir();
     await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
     // The mdschema stub stays alive until the lane stops it.
-    const tools = await newTempDir();
-    const packageDir = path.join(tools, "node_modules", "@jackchuka", "mdschema");
-    await mkdir(path.join(packageDir, "bin"), { recursive: true });
-    await writeFile(path.join(packageDir, "bin", "cli.js"), script, "utf-8");
-    await writeFile(
-      path.join(packageDir, "package.json"),
-      JSON.stringify({ name: "@jackchuka/mdschema", bin: { mdschema: "bin/cli.js" } }),
-      "utf-8",
+    const tools = await installMdschemaStub(script);
+    const started = Date.now();
+    const result = runDriverWithLimits(
+      ["--root", root, "--tools", tools, "--scope", "all"],
+      limits,
     );
-
-    const argv = process.argv;
-    const stderr = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const stdout = vi.spyOn(console, "log").mockImplementation(() => undefined);
-    try {
-      process.argv = ["node", SCRIPT, "--root", root, "--tools", tools, "--scope", "all"];
-      const started = Date.now();
-
-      expect(main(limits)).toBe(2);
-      expect(Date.now() - started).toBeLessThan(30_000);
-      expect(stderr.mock.calls.flat().join("\n")).toContain(
-        "check-mdschema: mdschema did not finish: " + reason,
-      );
-    } finally {
-      process.argv = argv;
-      stderr.mockRestore();
-      stdout.mockRestore();
-    }
+    expect(result.status).toBe(2);
+    expect(Date.now() - started).toBeLessThan(30_000);
+    expect(result.stderr).toContain("check-mdschema: mdschema did not finish: " + reason);
   });
 });
