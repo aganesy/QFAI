@@ -557,6 +557,7 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(created)).toEqual([{ kind: "FUNCTION", name: "f", lines: [1, 3] }]);
   });
 
+  // QFAI:EX-0001-0039-73
   it("matches equivalent qualified type names while keeping other routine types distinct", async () => {
     const types = [
       "app.custom_type",
