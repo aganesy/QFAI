@@ -14,7 +14,7 @@ Feature: Shipped action pin policy and trailer resolution
 
   # AC-0002-0002-02
   Scenario: The leakage guard keeps its breadth
-    Given the SHA-pinned shipped workflow set and the post-build `check-no-internal-version-leakage` guard that scans files listed by `npm pack --dry-run` for leaked internal versions and identifiers
-    When the guard scans the package file set, and scans it again after a conventional `# v<X.Y.Z>` pin trailer is planted in a file in that set
+    Given the SHA-pinned shipped workflow set and the post-build `check-no-internal-version-leakage` guard that derives its top-level scan roots from the `npm pack --dry-run` file list
+    When the guard scans those roots recursively for leaked internal versions and identifiers, and scans them again after a conventional `# v<X.Y.Z>` pin trailer is planted in a file listed for packaging
     Then the first run exits 0 and the second exits 1. The resolution comes from the shipped spelling: the guard has lost no pattern and narrowed none, and has gained no pragma handling, no allowed path and no allow-list entry. A pattern is only ever added, and only in the lockstep NFR-C0005 sets: the three guard implementations and `.agents/rules/distributed-surface.local.md` in one change that edits no template
 ```
