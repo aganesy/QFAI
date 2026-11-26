@@ -198,7 +198,32 @@ describe("qfai init", () => {
       );
 
       expect(output).toContain(
-        `${path.join(".qfai", "spec", "01_policy", "objective.md")} was not written: an entry above it is a symbolic link or not a directory.`,
+        `${path.join(".qfai", "spec", "01_policy", "objective.md")} was not written. An incompatible destination or parent path blocked the write.`,
+      );
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("reports a directory blocking a forced template file and completes init", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const relative = path.join(".agents", "rules", "minimal-implementation.md");
+      const blocked = path.join(root, relative);
+      await mkdir(blocked, { recursive: true });
+      const ownedFile = path.join(blocked, "owned.md");
+      await writeFile(ownedFile, "project content\n", "utf-8");
+
+      const output = await captureStdout(() =>
+        runInit({ dir: root, force: true, dryRun: false, yes: true }),
+      );
+
+      expect(output).toContain(
+        `${relative} was not written. An incompatible destination or parent path blocked the write. Check the path before retrying.`,
+      );
+      expect(await readFile(ownedFile, "utf-8")).toBe("project content\n");
+      expect((await lstat(path.join(root, ".agents", "rules", "user-questions.md"))).isFile()).toBe(
+        true,
       );
     } finally {
       await removeTempTree(root);
