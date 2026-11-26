@@ -85,6 +85,7 @@ import {
   entryTitles,
   recordedCutoff,
 } from "../../../../scripts/check-release-notes.mjs";
+import { nodeEngineFloor } from "../../../../scripts/node-engine-floor.mjs";
 import {
   expectWindowsPreflightRefusal,
   expectWindowsRunnerHeadChangeRefusal,
@@ -1774,6 +1775,15 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
 });
 
 describe("one lane runs on the floor `engines.node` declares", () => {
+  it("keeps single-version floors and refuses ranges with an excluded or ambiguous floor", () => {
+    expect(nodeEngineFloor(">=20.19.0")).toBe("20.19.0");
+    expect(nodeEngineFloor("20.19.0")).toBe("20.19.0");
+    expect(nodeEngineFloor("^20.19.10 || ^20.19.2 || >=22.0.0")).toBe("20.19.2");
+    for (const range of [">20.19.0", "20.x", ">=20.019.0", "^20.19.0 ||", ">=20.19.0 <23"]) {
+      expect(() => nodeEngineFloor(range)).toThrow("engines.node must use");
+    }
+  });
+
   it("pins the lowest supported version from a disjunctive engines range", () => {
     const step = setupActionSteps().find((candidate) => candidate["id"] === "shim");
     const body = step?.["run"];

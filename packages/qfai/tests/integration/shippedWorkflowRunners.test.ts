@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
+import { nodeEngineFloor } from "../../../../scripts/node-engine-floor.mjs";
 import { invocationsOf } from "../helpers/shippedLaneCommands.js";
 import {
   collectJobSteps,
@@ -509,7 +510,7 @@ function collectFloorClaims(text: string): string[] {
   return [...claims].sort();
 }
 
-/** The `>=X.Y.Z` floor `package.json#engines.node` declares, read at run time. */
+/** The lowest version `package.json#engines.node` declares, read at run time. */
 async function declaredNodeFloor(): Promise<string> {
   const raw = await readFile(path.join(packageRoot, "package.json"), "utf-8");
   const parsed: unknown = JSON.parse(raw);
@@ -518,11 +519,7 @@ async function declaredNodeFloor(): Promise<string> {
   if (typeof node !== "string") {
     throw new Error("package.json#engines.node is missing — the floor oracle has no baseline");
   }
-  const floor = /^>=\s*([0-9]+(?:\.[0-9]+){0,2})$/.exec(node.trim())?.[1];
-  if (floor === undefined) {
-    throw new Error(`package engines.node "${node}" declares no >=X.Y.Z floor`);
-  }
-  return floor;
+  return nodeEngineFloor(node);
 }
 
 // QFAI:AC-0002-0005-01
@@ -594,7 +591,7 @@ describe("TC-0003-0042 (TDD-0042): each shipped header table is complete and cla
       for (const claimed of collectFloorClaims(headerComment(body))) {
         if (claimed !== floor) {
           violations.push(
-            `${name}: header claims Node support floor "${claimed}" but package engines.node declares ">=${floor}"`,
+            `${name}: header claims Node support floor "${claimed}" but the declared floor is "${floor}"`,
           );
         }
       }

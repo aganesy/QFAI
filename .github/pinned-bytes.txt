@@ -14,7 +14,7 @@
 #
 # `sha256sum -c` format, so the pre-flight needs no parser: two spaces between the digest and
 # the path, paths relative to the repository root.
-8484c380946a0c033486e34857cf85ba76b9b3c20c10755c0b72730e400073f8  .github/actions/setup/action.yml
+a342e4c82200afd98095d876292595c8c8033515b7691fb1af124f21257d56ff  .github/actions/setup/action.yml
 f97098ef9f69132551dfd3e7f2e83944b5e6a16a976749d59789b39196ebd741  .github/actions/setup/bootstrap-corepack.sh
 3230335c2f0bc71bfcec72150d56fd51dc30524ca0fb35405197054709bd13b5  .github/actions/setup/dependency-builds.txt
 81c83080bfbae274d46c90cdae9f9ae3dd3af6240fe56fc88aec461799802ae3  .github/actions/setup/verify-rebuild-sources.mjs
@@ -69,6 +69,7 @@ b6501b31043719b5bb131994fce0aa3ed28b8bf6b4e8d77035610778681dad24  scripts/lib/ts
 cfdd1a0a2dc37ce06a183338e3550e9d6bd169ef633cc0cfbd1110d19d5e9dc9  scripts/lib/write-declaration.mjs
 95e1a867294bccf8e6afc72b49cd410ad5d5663abe21626ae2f3992b1eda27b9  scripts/link-assistant-tree.mjs
 80e6557bf405dcfbe27afdf67bc416d7f84abd8d5d801279e64f4f0210b131da  scripts/list-startup-context.mjs
+205feb2e6d9557127cb96bc173f8787a48591ce59f1611a2e3ff7be0dfe292f1  scripts/node-engine-floor.mjs
 5f50c9f5effc579728d06b3c50b87bbe5ef89acf4bd106c5fde9313e5f64251f  scripts/pin-always-loaded-footprint.mjs
 c6c8b7868e98f5acc30522485745055225ec2a04e587cc4d7b9670e6aeb11ba5  scripts/pin-code-path-cost.mjs
 1160b750f6e44c2a9e41eabcd9f7216eb72f71a6542f7cd71ce36702e5ea2eed  scripts/pin-documentation-only-cost.mjs

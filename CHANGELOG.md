@@ -629,6 +629,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The declared Node.js range matches the jsdom dependency.** QFAI supports Node.js `^20.19.0 || ^22.13.0 || >=24.0.0`. The CI and release floor checks derive the lowest version from the package manifest.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to

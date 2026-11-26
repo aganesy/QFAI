@@ -4,7 +4,7 @@
 
 | Component | Choice |
 | --- | --- |
-| Runtime | Node.js `>=20.19.0` (`packages/qfai/package.json#engines`) |
+| Runtime | Node.js 20.x from 20.19.0, 22.x from 22.13.0, or 24.0.0 and later (`packages/qfai/package.json#engines`) |
 | Platform | Linux and Windows; CI runs the suite on Linux and a Windows parity subset |
 | Surface | `cli` |
 | CI | GitHub Actions (`.github/workflows/`) |
