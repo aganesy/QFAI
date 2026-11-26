@@ -21,6 +21,7 @@ import {
 import { step03 } from "../../../../src/migration/specToStory/step03MoveCatalog.js";
 
 const roots: string[] = [];
+const LARGE_REPORT_COUNT = 200_000;
 
 afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
@@ -337,6 +338,58 @@ describe("migration catalog move", () => {
     expect(notes).toHaveLength(rowCount);
     expect(notes[0]).toContain(`rewrite TC-1 of "## Constraints" in ${source}`);
     expect(notes.at(-1)).toContain(`rewrite TC-${rowCount} of "## Constraints" in ${source}`);
+  });
+
+  // QFAI:EX-0004-0006-11
+  it.each([
+    {
+      section: "Key packages / entrypoints",
+      table: "",
+      item: (index: number) => `- CLI: service-${index} -> story`,
+      note: "the entrypoint service-",
+    },
+    {
+      section: "Architecture",
+      table: "| Layer | Responsibility | Depends on |\n| --- | --- | --- |\n",
+      item: (index: number) => `| service-${index} | Lives in src/service.ts | - |`,
+      note: "rewrite the layer service-",
+    },
+  ])(
+    "keeps every manual note in a large $section section in order",
+    async ({ section, table, item, note }) => {
+      const context = await fixture();
+      const rows = Array.from({ length: LARGE_REPORT_COUNT }, (_, index) => item(index));
+      await put(
+        context.root,
+        ".qfai/assistant/catalog/structure.md",
+        `# Structure\n\n## ${section}\n\n${table}${rows.join("\n")}\n`,
+      );
+
+      const plan = await step03.plan(context);
+      const notes = plan.forAPerson?.filter((entry) => entry.includes(note)) ?? [];
+      expect(notes).toHaveLength(LARGE_REPORT_COUNT);
+      expect(notes.findIndex((entry, index) => !entry.includes(`${note}${index} of `))).toBe(-1);
+    },
+  );
+
+  // QFAI:EX-0004-0006-14
+  it("keeps every manual note from a large contract index in order", async () => {
+    const context = await fixture();
+    const note = "rewrite the row for missing-";
+    const rows = Array.from(
+      { length: LARGE_REPORT_COUNT },
+      (_, index) => `| missing-${index}.yaml | Purpose |`,
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/05_Contracts.md",
+      `# Contracts\n\n## Contract Index\n\n| File | Purpose |\n| --- | --- |\n${rows.join("\n")}\n`,
+    );
+
+    const plan = await step03.plan(context);
+    const notes = plan.forAPerson?.filter((entry) => entry.includes(note)) ?? [];
+    expect(notes).toHaveLength(LARGE_REPORT_COUNT);
+    expect(notes.findIndex((entry, index) => !entry.includes(`${note}${index}.yaml,`))).toBe(-1);
   });
 
   // QFAI:EX-0004-0006-27
