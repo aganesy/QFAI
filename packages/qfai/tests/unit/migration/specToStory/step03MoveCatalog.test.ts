@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { tmpdir } from "node:os";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { getInitAssetsDir } from "../../../../src/shared/assets.js";
@@ -19,6 +19,8 @@ import {
   validateTechArchitecture,
 } from "../../../../src/core/validators/storyTreeStructure.js";
 import { step03 } from "../../../../src/migration/specToStory/step03MoveCatalog.js";
+import * as policyDocuments from "../../../../src/migration/specToStory/policyDocuments.js";
+import { routeStructureCatalog } from "../../../../src/migration/specToStory/structureCatalog.js";
 
 const roots: string[] = [];
 const LARGE_REPORT_COUNT = 200_000;
@@ -390,6 +392,61 @@ describe("migration catalog move", () => {
     const notes = plan.forAPerson?.filter((entry) => entry.includes(note)) ?? [];
     expect(notes).toHaveLength(LARGE_REPORT_COUNT);
     expect(notes.findIndex((entry, index) => !entry.includes(`${note}${index}.yaml,`))).toBe(-1);
+  });
+
+  // QFAI:EX-0004-0006-11
+  it("keeps every known Skeleton line from a large entrypoint section in order", () => {
+    const commands = new Map<string, string>();
+    const entries: string[] = [];
+    for (let index = 0; index < LARGE_REPORT_COUNT; index += 1) {
+      commands.set(`service-${index}`, `run service-${index}`);
+      entries.push(`- CLI: service-${index} -> story`);
+    }
+
+    const techTarget = ".qfai/spec/03_contract/tech.md";
+    const plan = routeStructureCatalog({
+      source: ".qfai/assistant/catalog/structure.md",
+      preamble: "",
+      sections: [{ heading: "Key packages / entrypoints", body: entries.join("\n") }],
+      commands,
+      tech: () => policyDocuments.newPolicyDraft(techTarget),
+      techTarget,
+    });
+    expect(plan.forAPerson).toEqual([]);
+    expect(plan.skeletonLines).toHaveLength(LARGE_REPORT_COUNT);
+    expect(
+      plan.skeletonLines.findIndex(
+        (line, index) => line !== `- Skeleton: \`service-${index}\` -> \`run service-${index}\``,
+      ),
+    ).toBe(-1);
+  });
+
+  // QFAI:EX-0004-0006-33
+  it("keeps a large batch of renumbered identifiers separate and in order", async () => {
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/07_Constraints.md",
+      "# Old constraints\n\n## Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Runs on Linux | Adopters |\n",
+    );
+    const identifiers = Array.from(
+      { length: LARGE_REPORT_COUNT },
+      (_, index) => `TC-${LARGE_REPORT_COUNT + index} is now TC-${index + 1}`,
+    );
+    // Isolate accumulation from the constraint draft's duplicate search.
+    const renumber = vi
+      .spyOn(policyDocuments, "renumberConstraints")
+      .mockReturnValueOnce(identifiers);
+    try {
+      const plan = await step03.plan(context);
+      expect(renumber).toHaveBeenCalledTimes(1);
+      expect(plan.forAPerson).toEqual([]);
+      const notes = plan.forAPersonIdentifiers ?? [];
+      expect(notes).toHaveLength(LARGE_REPORT_COUNT);
+      expect(notes.findIndex((note, index) => note !== identifiers[index])).toBe(-1);
+    } finally {
+      renumber.mockRestore();
+    }
   });
 
   // QFAI:EX-0004-0006-27
