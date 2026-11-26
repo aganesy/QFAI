@@ -51,7 +51,7 @@ const CONSTRAINT_SECTIONS: Readonly<Record<string, string>> = {
  * old form the migrated document still holds and in the form a rule takes after migration.
  */
 const CONCRETE_CONSTRAINT =
-  /`|(?:^|[^A-Za-z0-9_-])(?:BR-(?:(?:CLI|API|DB|UI)-)?\d{4}|EX-\d{4}-|AC-\d{4}-|(?:CLI|API|DB|UI)-\d{4})/;
+  /`|(?:^|[^A-Za-z0-9_-])(?:BR-(?:(?:CLI|API|DB|UI)-)?\d{4}|EX-\d{4}-|AC-\d{4}-|(?:CLI|API|DB|UI|cli|api|db|ui)-\d{4})/;
 
 const RULES: Readonly<Record<PolicyDocument, PolicyRules>> = {
   "objective.md": {
