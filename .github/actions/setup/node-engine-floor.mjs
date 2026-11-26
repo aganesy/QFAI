@@ -2,6 +2,9 @@ import { readFileSync } from "node:fs";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
+// SHIPPED-CI: not-applicable
+// Because: adopter workflows resolve Node from the consuming project's version file.
+
 // The helper comes from the setup action's checkout and runs before the target's
 // dependencies are installed. Each alternative includes its lower bound.
 const VERSION = /^(?:>=|\^)?((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))$/u;
