@@ -388,7 +388,8 @@ describe("uiux validators", () => {
     expect(issues).toHaveLength(0);
   });
 
-  it("reports the file line of the Mermaid declaration and transition it flags", async () => {
+  // QFAI:EX-0001-0039-80
+  it("reports Mermaid warnings only inside Mermaid fences", async () => {
     const root = await newTempDir();
     const specsDir = path.join(root, ".qfai", "specs");
     await mkdir(specsDir, { recursive: true });
@@ -412,11 +413,17 @@ describe("uiux validators", () => {
         "  A --> B", // line 15
         "```", // line 16
         "",
+        "stateDiagram",
+        "",
+        "```text",
+        "stateDiagram",
+        "```",
       ].join("\n"),
       "utf-8",
     );
 
     const issues = await validateMermaidScreenFlow(root, defaultConfig);
+    expect(issues.map(({ severity }) => severity)).toEqual(["warning", "warning", "warning"]);
     const lines = Object.fromEntries(
       issues.map((finding) => [
         finding.code,
