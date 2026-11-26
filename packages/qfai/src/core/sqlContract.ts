@@ -496,11 +496,17 @@ function foldUnquotedIdentifier(text: string): string {
 }
 
 function closingQuote(text: string, from: number, quote: string): number {
-  let close = text.indexOf(quote, from + 1);
-  while (close !== -1 && text[close + 1] === quote) {
-    close = text.indexOf(quote, close + 2);
+  const escapes = quote === "'" && opensEscapeString(text, from);
+  for (let index = from + 1; index < text.length; index += 1) {
+    if (escapes && text[index] === "\\") {
+      index += 1;
+      continue;
+    }
+    if (text[index] !== quote) continue;
+    if (text[index + 1] !== quote) return index;
+    index += 1;
   }
-  return close;
+  return -1;
 }
 
 function skipSpaces(text: string, from: number): number {
@@ -568,12 +574,13 @@ function argumentList(statement: string, nameEnd: number): string {
   if (statement[open] !== "(") return "";
   let depth = 0;
   for (let index = open; index < statement.length; index += 1) {
-    const ch = statement[index];
-    if (ch === "'" || ch === '"') {
-      index = closingQuote(statement, index, ch);
-      if (index === -1) return "";
+    const quoteEnd = closingArgumentQuote(statement, index);
+    if (quoteEnd !== undefined) {
+      if (quoteEnd === -1) return "";
+      index = quoteEnd;
       continue;
     }
+    const ch = statement[index];
     if (ch === "(") depth += 1;
     if (ch === ")") {
       depth -= 1;
@@ -581,6 +588,18 @@ function argumentList(statement: string, nameEnd: number): string {
     }
   }
   return "";
+}
+
+/** Last index of a quoted argument token, -1 if unclosed, or undefined for other text. */
+function closingArgumentQuote(text: string, from: number): number | undefined {
+  const quote = text[from];
+  if (quote === "'" || quote === '"') return closingQuote(text, from, quote);
+  if (quote !== "$") return undefined;
+  DOLLAR_QUOTE_AT.lastIndex = from;
+  const marker = DOLLAR_QUOTE_AT.exec(text)?.[0];
+  if (marker === undefined) return undefined;
+  const close = text.indexOf(marker, from + marker.length);
+  return close === -1 ? -1 : close + marker.length - 1;
 }
 
 const ARGUMENT_MODES = new Set(["in", "out", "inout", "variadic"]);
@@ -715,12 +734,14 @@ function splitTopLevel(text: string): string[] {
   let depth = 0;
   let start = 0;
   for (let index = 0; index < text.length; index += 1) {
+    const quoteEnd = closingArgumentQuote(text, index);
+    if (quoteEnd !== undefined) {
+      if (quoteEnd === -1) break;
+      index = quoteEnd;
+      continue;
+    }
     const ch = text[index];
-    if (ch === "'" || ch === '"') {
-      const close = closingQuote(text, index, ch);
-      if (close === -1) break;
-      index = close;
-    } else if (ch === "(") {
+    if (ch === "(") {
       depth += 1;
     } else if (ch === ")") {
       depth -= 1;
