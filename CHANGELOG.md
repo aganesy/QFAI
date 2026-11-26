@@ -905,6 +905,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - The `validate.json` guide explains the original severity recorded in
   `issues[].relaxedFrom` by older exploration-mode runs.
+  The field is optional.
 
 - **A directory whose name begins with two dots counts as inside its base
   everywhere.** Several more checks tested whether a path relative to its base
@@ -1292,6 +1293,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `character varying`, `timestamptz` and the other built-in aliases);
   `float(p)` becomes `real` or `double precision` by its precision. Closes
   #5047.
+
+- Qualified SQL routine argument types compare the schema and type identifiers
+  separately. Equivalent ordinary double-quoted and bare spellings match. Case and
+  punctuation that distinguish quoted identifiers are preserved.
 
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`

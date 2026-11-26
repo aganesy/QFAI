@@ -557,6 +557,50 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(created)).toEqual([{ kind: "FUNCTION", name: "f", lines: [1, 3] }]);
   });
 
+  // QFAI:EX-0001-0039-73
+  it("matches equivalent qualified type names while keeping other routine types distinct", async () => {
+    const types = [
+      "app.custom_type",
+      '"app"."custom_type"',
+      'APP . "custom_type"',
+      'app."Custom_Type"',
+      'app."custom,type"',
+      '"app.custom_type"',
+      "other.custom_type",
+    ];
+    const sql =
+      types
+        .map(
+          (type) =>
+            `CREATE OR REPLACE FUNCTION f(a ${type}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n`,
+        )
+        .join("") +
+      `CREATE OR REPLACE FUNCTION g(a app . default DEFAULT NULL) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+      `CREATE OR REPLACE FUNCTION g(a "app"."default" DEFAULT NULL) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`;
+    const { statements, errors } = parseSqlContract(sql);
+    expect(errors).toEqual([]);
+    const created = collectCreatedObjects(statements);
+    expect(created.map((object) => object.signature)).toEqual([
+      "app.custom_type",
+      "app.custom_type",
+      "app.custom_type",
+      'app."Custom_Type"',
+      'app."custom,type"',
+      '"app.custom_type"',
+      "other.custom_type",
+      "app.default",
+      "app.default",
+    ]);
+    expect(findRedefinitions(created)).toEqual([
+      { kind: "FUNCTION", name: "f", lines: [1, 2, 3] },
+      { kind: "FUNCTION", name: "g", lines: [8, 9] },
+    ]);
+    const issues = await runOn(HEADER + sql);
+    expect(
+      issues.filter((issue) => issue.code === "QFAI-DB-002").map((issue) => issue.severity),
+    ).toEqual(["error", "error"]);
+  });
+
   it("distinguishes parentheses inside a type name from its modifiers", () => {
     const { statements } = parseSqlContract(
       `CREATE FUNCTION f("custom(x)"[]) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
@@ -567,13 +611,20 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(created)).toEqual([]);
   });
 
-  it("recognizes only unquoted default markers in routine arguments", () => {
-    const { statements } = parseSqlContract(
-      `CREATE FUNCTION f("a=b" "type default value" DEFAULT NULL) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n`,
-    );
+  it("reports a duplicate when quoted names contain routine default markers", async () => {
+    const sql =
+      `CREATE FUNCTION f("a=b" "type default value" DEFAULT NULL) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+      `CREATE FUNCTION f(a "type default value" = NULL) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`;
+    const { statements, errors } = parseSqlContract(sql);
+    expect(errors).toEqual([]);
     expect(collectCreatedObjects(statements).map((object) => object.signature)).toEqual([
       '"type default value"',
+      '"type default value"',
     ]);
+    const issues = await runOn(HEADER + sql);
+    expect(
+      issues.filter((issue) => issue.code === "QFAI-DB-002").map((issue) => issue.severity),
+    ).toEqual(["error"]);
   });
 
   // QFAI:EX-0001-0039-72
