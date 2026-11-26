@@ -631,6 +631,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
+- Verification commits keep earlier edits out even when a run writes the same
+  file. If the run cannot isolate its changes or finds an unrelated staged
+  hunk, it reports the affected path and stops before committing.
+
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 

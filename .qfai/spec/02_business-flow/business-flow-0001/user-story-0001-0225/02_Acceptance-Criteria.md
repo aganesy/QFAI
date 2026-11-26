@@ -30,9 +30,10 @@ Feature: Review a change twice: the specification before the code, and the code 
     And an ordinary verification commit uses repository-root-relative paths and runs index checks and staging from the repository root
     And an initial index read failure is reported and stops the run before staging
     And an ordinary verification commit with unrelated staged paths reports them and stops before committing, preserving their staged state
-    And before the first tracked edit the run records the starting staged and unstaged changes and untracked paths from the repository root
+    And for a run that can end in an ordinary verification commit, the run records the starting commit or unborn HEAD, staged and unstaged changes, and untracked paths from the repository root before its first tracked edit
     And an ordinary verification commit stages only the run's hunks in a deliverable with existing edits and checks the staged hunks again before the commit
     And it stops with the path and reason when a staged hunk is unrelated or the run cannot establish which hunks it owns
+    And a delegated CI transport commit follows the ordinary verification commit rules for protecting earlier edits
     And a gate delegated (CI-only or by instruction), under a user instruction or project policy covering the commit, may remain DELEGATED with its named check pending while a local commit transports only the session's tracked deliverables to CI
     And every nondelegated gate must pass, and a delegated red check stops transport of the same unchanged candidate
     And an explicitly delegated transport commit may instead carry actual changes addressing that failure through the existing planned fix procedure into a new CI candidate, preserving the prior failing head, check, run and observed result as FAIL

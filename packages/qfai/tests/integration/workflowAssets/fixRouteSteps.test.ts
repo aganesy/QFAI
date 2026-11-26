@@ -127,7 +127,9 @@ describe("a fix route from the diagnosis to the commit", () => {
       /compare the staged diff and intended hunks with the starting record/i,
     );
     expect(preflight).toMatch(/unrelated staged hunk.*even in an authorized path/i);
+    expect(preflight).toContain("CI transport commits follow the ordinary commit rules.");
     expect(preflight).toMatch(/cannot attribute a hunk.*report the path and reason and stop/i);
+    expect(preflight).toContain("`git apply --cached --check` before staging anything");
     expect(procedure.slice(stage)).toMatch(
       /for a path with existing edits, stage only the run’s patch/i,
     );

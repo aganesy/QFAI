@@ -13,6 +13,7 @@ The last step of a change route. It records the run's work as a local commit.
 
 - The verify results in the stage report.
 - The paths the run wrote, as its stage reports name them.
+- The starting Git record from `common-policy-check` for an ordinary commit.
 - The project's commit message convention, where it states one.
 - `.agents/rules/action-reversibility.md`, before an action that deletes, pushes, publishes or
   is visible to others.
@@ -70,18 +71,33 @@ covering that action, target and scope. Commit authority alone covers none of th
 2. Before staging for an ordinary commit, identify the Git repository root
    even when the run starts below it. Express the authorized deliverable paths
    relative to that root. Run the index comparisons and staging from the
-   repository root. Compare the entire index with the authorized deliverable
+   repository root. CI transport commits follow the ordinary commit rules.
+   Compare the entire index with the authorized deliverable
    paths. Read NUL-separated paths with
    `git diff --cached --name-only --no-renames --no-relative --ignore-submodules=none -z --`
    so renames, paths outside the starting subdirectory and submodule changes are
    included. If the index cannot be read, report the failure and stop before
    staging. If unrelated staged paths exist, report them and
    stop before changing the index or creating a commit.
-   Stage exactly the authorized tracked deliverables the run wrote, with
-   `git add <those paths>`. Never `git add -A`, `git add .` or `git add -f`,
-   and never a file git ignores, such as `.qfai/report/*`. A file that was
-   already modified before the run and then written by it is committed whole;
-   the final report names it. In the `resolve-conflicts` route, first confirm
+   For an ordinary commit, compare the staged diff and intended hunks with
+   the starting record and the edits the run made. An unrelated staged hunk
+   stops the commit even in an authorized path. If the starting record is
+   missing or you cannot attribute a hunk to the run, report the path and
+   reason and stop before staging. A file already present as an untracked
+   path counts as an existing edit.
+
+   Build each selective patch against the index using only the run's hunks.
+   Check that every selective patch applies to the index with
+   `git apply --cached --check` before staging anything. If a check fails,
+   report the path and reason and stop without changing the index or working
+   tree. Stage exactly the authorized changes the run made. Use
+   `git add <paths>` only for paths whose complete diff belongs to the run.
+   For a path with existing edits, stage only the run’s patch with
+   `git apply --cached`. The earlier edits stay unstaged. Never `git add -A`,
+   `git add .` or `git add -f`, and never stage an ignored file such as
+   `.qfai/report/*`.
+
+   In the `resolve-conflicts` route, first confirm
    that the combined diff in the stage report passed the added-line check, then
    stage the resolved paths and conclude the merge in progress with
    `git commit` and a message that names the base and gives each renumber as
@@ -89,11 +105,14 @@ covering that action, target and scope. Commit authority alone covers none of th
    `git show --remerge-diff` of that commit in the stage report. A check that
    fails after the commit undoes it with `git reset --merge ORIG_HEAD`, which is
    allowed before a push, and the run stops.
+
 3. Otherwise, repeat the index comparison immediately before committing.
    If the index cannot be read, report the failure and stop before committing.
    If unrelated staged paths appeared, report them, preserve the index and
-   stop before committing. Commit with a message in the project's convention
-   that says what changed and why.
+   stop before committing. Confirm that the entire staged diff contains
+   exactly the authorized hunks. If any differ, report the affected paths,
+   preserve the index and stop before committing. Commit with a message in
+   the project's convention that says what changed and why.
 4. Where a commit hook refuses the commit, fix the cause and commit again.
    Repeat the index comparison before every ordinary commit retry.
    Never skip the hook. When the fix changes code or tests, rerun the verify
@@ -109,7 +128,7 @@ When the delegated check reports, `verify-repo-gate`'s `## After CI` updates the
 
 ## Gate
 
-- The commit exists and holds exactly the tracked deliverables the run wrote,
+- The commit exists and holds exactly the authorized hunks the run wrote,
   or, in the `resolve-conflicts` route, the merge the run concluded. The final
   report names each renumber the merge holds.
 - Pending CI is named in the report with the target, current head, run ID or URL

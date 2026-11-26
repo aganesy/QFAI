@@ -13,6 +13,17 @@ contract this step serves is
 it runs once per run, at the start, and no affected work continues on stale policy.
 The ultra-light routes `answer-in-session` and `run-operation` do not run it.
 
+## Record the starting changes
+
+On a run that can end in an ordinary verification commit, record the starting
+commit, staged and unstaged diffs, and untracked paths from the repository root
+before the first tracked edit, including edits this step makes. Read Git's
+index and worktree diffs separately and use NUL-separated untracked paths.
+If HEAD has no commit yet, record that state.
+Keep the record local for `verify-commit` and leave earlier edits in place
+throughout the run. If Git cannot supply the starting record, record the
+failure for the commit step.
+
 ## Reads
 
 The policy files under `<paths.specsDir>`, resolved from `qfai.config.yaml`
