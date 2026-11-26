@@ -101,10 +101,7 @@ describe("init --force overwrites the regenerated assets", () => {
     const fifo = path.join(dir, relative);
     await mkdir(path.dirname(fifo), { recursive: true });
     const original = await createFifoFixture(fifo);
-    if (original === undefined) {
-      ctx.skip("No usable FIFO fixture on this host.");
-      return;
-    }
+    if (original === undefined) return ctx.skip("No usable FIFO fixture on this host.");
 
     for (const dryRun of [true, false]) {
       const output = await captureStdout(() => runInit({ dir, force: true, dryRun, yes: true }));

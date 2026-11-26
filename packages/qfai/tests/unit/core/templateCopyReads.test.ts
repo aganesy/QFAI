@@ -168,7 +168,6 @@ describe("a directory where a template file goes", () => {
 });
 
 describe("a FIFO where a template file goes", () => {
-  // QFAI:EX-0001-0022-04
   it.for([
     { mode: "copy", dryRun: false },
     { mode: "dry run", dryRun: true },
@@ -178,10 +177,7 @@ describe("a FIFO where a template file goes", () => {
       const { source, dest, destFile } = await trees("a\n", "a\n");
       await rmFile(destFile);
       const original = await createFifoFixture(destFile);
-      if (original === undefined) {
-        ctx.skip("No usable FIFO fixture on this host.");
-        return;
-      }
+      if (original === undefined) return ctx.skip("No usable FIFO fixture on this host.");
 
       const result = await copyTemplateTree(source, dest, { force: true, dryRun });
 
