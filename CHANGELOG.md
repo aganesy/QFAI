@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The final pull request merge is conditional on the reviewed head.**
+  If the head changes, the merge procedure refreshes the base, checks and
+  review for the new commit before trying again.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
