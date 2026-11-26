@@ -250,13 +250,15 @@ function stringField(event: Record<string, unknown>, key: string): string | unde
  */
 function agentKey(event: Record<string, unknown>): string {
   const agent = stringField(event, "agent_id");
-  if (agent !== undefined) return agent;
+  if (agent !== undefined) return `id:${agent}`;
   return event.hook_event_name === "SubagentStop" ? "subagent" : "main";
 }
 
 function stateFile(stateDir: string, session: string, agent: string): string {
-  const name = ["qfai-turn-end", session, agent].join("-").replace(/[^\w.-]/g, "_");
-  return path.join(stateDir, name);
+  // Use a new prefix because a legacy filename can describe more than one pair.
+  const identity = JSON.stringify([session, agent]);
+  const key = createHash("sha256").update(identity).digest("hex");
+  return path.join(stateDir, `qfai-turn-state-${key}.json`);
 }
 
 /** The failure the hook last blocked on for one session and agent, and the blocks in a row. */
