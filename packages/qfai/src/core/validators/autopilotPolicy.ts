@@ -221,12 +221,12 @@ export function collectHardRequiredEntries(content: string): string[] {
  * bucket, and an empty bucket is a narrowing this check permits: the one
  * spelling that hides an entry was the one spelling that reported nothing.
  *
- * An HTML comment is dropped before any line is read, keeping the line breaks
- * it spanned. A comment states no policy, and read as text an indented one was
- * joined to the entry above it, so `output formatting <!-- rationale -->`
- * matched no category. A bullet left empty by the drop names nothing.
- * Ceiling: a `<!--` inside a code span is dropped too, and an unclosed one is
- * kept as text. Lifting that needs the bucket read by a Markdown parser.
+ * Callers pass policy text already processed by {@link maskNonSpecRegions}.
+ * That helper removes HTML comments while preserving line count and handles
+ * indented code at the top level only. Its `maskLineComments` scan preserves
+ * literal comment delimiters in single-line code spans, with a simplified
+ * search for the closing backticks. See the masking helpers for limits around
+ * tables and block markers. A bullet left empty by masking names nothing.
  */
 function collectBucketEntries(content: string, headerWithTail: RegExp): string[] {
   const entries: string[] = [];

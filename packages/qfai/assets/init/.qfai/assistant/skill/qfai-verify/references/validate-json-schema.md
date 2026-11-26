@@ -153,7 +153,7 @@ which includes `htmlMockLoadMs` and `sharedMarkdownReadMs`.
 | ------------------ | -------------------------------- | -------------------------------------------------------------------- |
 | `code`             | `string`                         | the finding code — **copy this into a waiver's `rule:`**             |
 | `severity`         | `"info" \| "warning" \| "error"` |                                                                      |
-| `relaxedFrom`      | `"info" \| "warning" \| "error"` | severity before an older exploration-mode downgrade                  |
+| `relaxedFrom`      | `"info" \| "warning" \| "error"` | optional severity before an older exploration-mode downgrade         |
 | `category`         | `string`                         | `canonical` for a contract violation, `change` for an advisory       |
 | `message`          | `string`                         | human-readable, not stable across versions                           |
 | `suggested_action` | `string?`                        | the remedy, when the rule has one                                    |
