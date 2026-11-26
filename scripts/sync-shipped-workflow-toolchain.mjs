@@ -13,25 +13,35 @@ const DESTINATIONS = [
   { name: "qfai-tests.yml", lane: "tests", result: "test" },
   { name: "qfai-docs.yml", lane: "docs", result: "validate" },
 ];
-const FIRST_STEP = "      - name: Resolve the package manager (pnpm route fails closed)";
-const LAST_STEP = "      - name: Install dependencies (lockfile-aware)";
+const SETUP_STEP_PREFIXES = [
+  "      - name: Resolve the package manager (pnpm route fails closed)",
+  "      - name: Set up pnpm via pnpm/action-setup ",
+  "      - name: Resolve the Node version (adopter file wins, else fall open)",
+  "      - name: Choose a package-manager cache setup-node can actually resolve",
+  "      - name: Set up Node via actions/setup-node ",
+  "      - name: Install dependencies (lockfile-aware)",
+];
 
 /** @param {string} text @param {string} name */
 function readBlock(text, name) {
   const newline = text.includes("\r\n") ? "\r\n" : "\n";
   const lines = text.split(newline);
-  const first = lines.indexOf(FIRST_STEP);
-  const last = lines.indexOf(LAST_STEP);
-  const end = lines.findIndex((line, index) => index > last && /^ {6}- \S/u.test(line));
+  const first = lines.indexOf(SETUP_STEP_PREFIXES[0]);
+  // A de-dented mapping key or comment ends the current sequence just as a
+  // following list item does. In particular, the install step can end a job.
+  const boundaries = lines.flatMap((line, index) =>
+    index >= first && /^ {0,7}\S/u.test(line) ? [{ line, index }] : [],
+  );
   if (
     first < 0 ||
-    last <= first ||
-    end <= last ||
-    lines.lastIndexOf(FIRST_STEP) !== first ||
-    lines.lastIndexOf(LAST_STEP) !== last
+    lines.lastIndexOf(SETUP_STEP_PREFIXES[0]) !== first ||
+    !SETUP_STEP_PREFIXES.every((prefix, index) => boundaries[index]?.line.startsWith(prefix))
   ) {
-    throw new Error(`toolchain step boundaries are missing or ambiguous in ${name}`);
+    throw new Error(`the six expected toolchain steps are missing or interrupted in ${name}`);
   }
+  let end = boundaries[SETUP_STEP_PREFIXES.length]?.index ?? lines.length;
+  // Leave trailing separators and YAML comments with the destination.
+  while (end > first && /^(?:\s*$| {0,8}#)/u.test(lines[end - 1])) end -= 1;
   return { newline, lines, first, end };
 }
 

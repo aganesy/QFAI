@@ -25,10 +25,25 @@ describe("shared setup in shipped workflows", () => {
     try {
       const source = await readFile(path.join(workflows, validate), "utf8");
       const originalTests = await readFile(path.join(workflows, tests), "utf8");
-      const originalDocs = (await readFile(path.join(workflows, docs), "utf8")).replace(
+      const docsSource = (await readFile(path.join(workflows, docs), "utf8")).replace(
         /\r?\n/g,
         "\r\n",
       );
+      const docsOnlyStep = docsSource.indexOf(
+        "      - name: Install the document-shape and diagram checkers",
+      );
+      expect(docsOnlyStep).toBeGreaterThan(0);
+      const originalDocs =
+        docsSource.slice(0, docsOnlyStep) +
+        [
+          "      # This comment belongs to the docs workflow.",
+          "  later:",
+          "    runs-on: ubuntu-latest",
+          "    steps:",
+          "      - name: Finish the docs workflow",
+          '        run: echo "docs complete"',
+          "",
+        ].join("\r\n");
       const oldComment = "# report a validate result it never computed.";
       const newComment = "# report a validate result without running.";
       const changedSource = source.replace(oldComment, newComment);
@@ -55,6 +70,41 @@ describe("shared setup in shipped workflows", () => {
         originalDocs.replace(oldComment, newComment),
       );
       expect(syncShippedWorkflowToolchain(directory)).toEqual([]);
+    } finally {
+      await removeTempTree(directory);
+    }
+  });
+
+  it("rejects an extra destination step before writing either workflow", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "qfai-shipped-toolchain-"));
+    try {
+      const source = await readFile(path.join(workflows, validate), "utf8");
+      const originalTests = await readFile(path.join(workflows, tests), "utf8");
+      const originalDocs = (await readFile(path.join(workflows, docs), "utf8")).replace(
+        /\r?\n/g,
+        "\n",
+      );
+      const install = "      - name: Install dependencies (lockfile-aware)";
+      const interrupted = originalDocs.replace(
+        install,
+        `      - name: Docs-only setup\n        run: echo docs-only\n${install}`,
+      );
+      expect(interrupted).not.toBe(originalDocs);
+      await Promise.all([
+        writeFile(
+          path.join(directory, validate),
+          source.replace("it never computed.", "without running."),
+          "utf8",
+        ),
+        writeFile(path.join(directory, tests), originalTests, "utf8"),
+        writeFile(path.join(directory, docs), interrupted, "utf8"),
+      ]);
+
+      expect(() => syncShippedWorkflowToolchain(directory)).toThrow(
+        /interrupted in qfai-docs\.yml/u,
+      );
+      expect(await readFile(path.join(directory, tests), "utf8")).toBe(originalTests);
+      expect(await readFile(path.join(directory, docs), "utf8")).toBe(interrupted);
     } finally {
       await removeTempTree(directory);
     }
