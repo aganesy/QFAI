@@ -1294,6 +1294,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `float(p)` becomes `real` or `double precision` by its precision. Closes
   #5047.
 
+- Qualified SQL routine argument types compare the schema and type identifiers
+  separately. Equivalent ordinary double-quoted and bare spellings match. Case and
+  punctuation that distinguish quoted identifiers are preserved.
+
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
   are two tables, not one redefinition. An index created without a name
