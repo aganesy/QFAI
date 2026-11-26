@@ -128,7 +128,7 @@ export function parseSqlContract(text: string): SqlParseResult {
   const lineOf = (at: number): number => {
     let count = 1;
     for (let i = 0; i < at; i += 1) {
-      if (text[i] === "\n") count += 1;
+      if (isSqlLineBreak(text, i)) count += 1;
     }
     return count;
   };
@@ -145,7 +145,7 @@ export function parseSqlContract(text: string): SqlParseResult {
     const ch = text[index] ?? "";
     const next = text[index + 1] ?? "";
 
-    if (ch === "\n") {
+    if (isSqlLineBreak(text, index)) {
       line += 1;
       current += ch;
       index += 1;
@@ -154,8 +154,8 @@ export function parseSqlContract(text: string): SqlParseResult {
 
     // `--` line comment
     if (ch === "-" && next === "-") {
-      const end = text.indexOf("\n", index);
-      index = end === -1 ? text.length : end;
+      index += 2;
+      while (index < text.length && !isSqlLineBreak(text, index)) index += 1;
       continue;
     }
 
@@ -165,7 +165,7 @@ export function parseSqlContract(text: string): SqlParseResult {
       let nesting = 1;
       index += 2;
       while (index < text.length && nesting > 0) {
-        if (text[index] === "\n") line += 1;
+        if (isSqlLineBreak(text, index)) line += 1;
         if (text[index] === "/" && text[index + 1] === "*") {
           nesting += 1;
           index += 2;
@@ -229,11 +229,11 @@ export function parseSqlContract(text: string): SqlParseResult {
       let cursor = index + 1;
       let closed = false;
       while (cursor < text.length) {
-        if (text[cursor] === "\n") line += 1;
+        if (isSqlLineBreak(text, cursor)) line += 1;
         // In an `E'…'` string a backslash escapes the next character, a quote
         // included, so `E'it\'s'` is one literal and not `E'it\'` then `s'`.
         if (escapes && text[cursor] === "\\") {
-          if (text[cursor + 1] === "\n") line += 1;
+          if (isSqlLineBreak(text, cursor + 1)) line += 1;
           cursor += 2;
           continue;
         }
@@ -394,10 +394,15 @@ export function separateLiterals(statement: string): StatementParts {
   return { code, literals };
 }
 
+/** Count CRLF at its LF and a bare CR at the CR, while preserving the source. */
+function isSqlLineBreak(value: string, index: number): boolean {
+  return value[index] === "\n" || (value[index] === "\r" && value[index + 1] !== "\n");
+}
+
 function countNewlines(value: string): number {
   let count = 0;
-  for (const ch of value) {
-    if (ch === "\n") count += 1;
+  for (let index = 0; index < value.length; index += 1) {
+    if (isSqlLineBreak(value, index)) count += 1;
   }
   return count;
 }

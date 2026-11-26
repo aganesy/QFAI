@@ -108,8 +108,11 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     expect(statements).toHaveLength(3);
   });
 
-  it("counts a newline escaped inside an E string", () => {
-    const { statements, errors } = parseSqlContract(`SELECT E'a\\\nb';\nSELECT 2;`);
+  // QFAI:EX-0001-0039-78
+  it.each(["\n", "\r\n", "\r"])("counts a %j newline escaped inside an E string", (separator) => {
+    const { statements, errors } = parseSqlContract(
+      `SELECT E'a\\${separator}b';${separator}SELECT 2;`,
+    );
     expect(errors).toEqual([]);
     expect(statements.map((statement) => statement.line)).toEqual([1, 3]);
   });
@@ -119,6 +122,7 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     expect(statements).toHaveLength(2);
   });
 
+  // QFAI:EX-0001-0039-78
   it.each(["\n", "\r\n", "\r"])(
     "uses physical SQL lines with the %j separator",
     async (separator) => {
@@ -140,10 +144,15 @@ describe("the statement splitter knows SQL's quoting rules", () => {
       expect(statements.map(({ line }) => line)).toEqual([3, 4, 6, 10]);
       expect(statements[1]?.text).toBe(`SELECT E'first${separator}second'`);
       expect(statements[2]?.text).toBe(`SELECT $$third${separator}fourth$$`);
-      const findings = (await runOn(sql)).filter((issue) => issue.code === "QFAI-DB-002");
-      expect(findings.map(({ message }) => message)).toEqual([
-        expect.stringContaining("(lines 3, 10)"),
-      ]);
+      const findings = await runOn(sql + separator + "SELECT );");
+      expect(
+        findings.filter((issue) => issue.code === "QFAI-DB-002").map(({ message }) => message),
+      ).toEqual([expect.stringContaining("(lines 3, 10)")]);
+      expect(
+        findings
+          .filter((issue) => issue.code === "QFAI-CONTRACT-021")
+          .map(({ message }) => message),
+      ).toEqual([expect.stringContaining("(line 11)")]);
     },
   );
 
