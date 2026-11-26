@@ -441,7 +441,7 @@ export const step03: MigrationStep = {
         targets.add(target);
         if (shaped(target)) {
           const move = target === tech ? moveTechSection : movePolicySection;
-          forAPerson.push(...move(draftFor(target), { ...section, source }));
+          for (const note of move(draftFor(target), { ...section, source })) forAPerson.push(note);
           continue;
         }
         if (!documents.has(target)) {

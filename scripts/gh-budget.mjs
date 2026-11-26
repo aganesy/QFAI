@@ -493,16 +493,23 @@ function git(args) {
  * `-i` is what makes the reading available: without the headers there is no way
  * to know the budget except by asking for it, which is the call this saves.
  */
-function ghApi(apiPath) {
+export function ghApi(apiPath, execute = execFileSync) {
   try {
     return {
-      text: execFileSync("gh", ["api", "-i", apiPath], {
+      text: execute("gh", ["api", "-i", apiPath], {
         encoding: "utf-8",
         maxBuffer: MAX_RESPONSE_BYTES,
       }),
     };
   } catch (cause) {
     const stdout = typeof cause?.stdout === "string" ? cause.stdout : "";
+    if (cause?.code === "ENOBUFS") {
+      const { head } = splitResponse(stdout);
+      return {
+        error: `The GitHub response is too large. The limit is ${String(MAX_RESPONSE_BYTES)} bytes.`,
+        reading: head === stdout ? undefined : readingFrom(head),
+      };
+    }
     if (stdout !== "") return { text: stdout };
     return {
       error: cause?.code === "ENOENT" ? "gh is not on PATH" : String(cause?.message ?? cause),
@@ -547,6 +554,10 @@ export function callAndReport(apiPath, handleBody, log = console.log) {
   const response = ghApi(apiPath);
   if (response.text === undefined) {
     console.error(response.error);
+    if (response.reading !== undefined) {
+      saveReading(response.reading);
+      reportBudget(response.reading, log);
+    }
     return 2;
   }
   const { head, body } = splitResponse(response.text);

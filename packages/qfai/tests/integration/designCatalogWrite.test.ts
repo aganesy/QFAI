@@ -23,6 +23,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { waitForCatalogueWriteHold } from "../helpers/catalogWriteHold.js";
+
 type FsPromises = typeof fsPromises;
 type RenameFault = (from: string, to: string) => boolean;
 type LstatFault = (file: string) => boolean;
@@ -373,7 +375,7 @@ describe("the design catalogue is written only inside the project, by the run th
       const hold = holdBeforeTheme();
       const err = captureStderr();
       const running = runCatalogDesign({ root });
-      await hold.held;
+      await waitForCatalogueWriteHold(hold.held, running, err);
       // Another file put in place by rename, so it never shares the placed file's inode.
       const other = catalogFile(root, ".design.tokens.json.other-run");
       await writeFile(other, '{ "other": "run" }\n', "utf-8");
@@ -488,7 +490,7 @@ describe("the design catalogue is written only inside the project, by the run th
     const hold = holdBeforeTheme();
     const err = captureStderr();
     const first = runCatalogDesign({ root });
-    await hold.held;
+    await waitForCatalogueWriteHold(hold.held, first, err);
     await changePrimary(root);
     const second = await runCatalogDesign({ root });
     hold.resume();
@@ -536,7 +538,7 @@ describe("the design catalogue is written only inside the project, by the run th
     const hold = holdBeforeTheme();
     const err = captureStderr();
     const running = runCatalogDesign({ root });
-    await hold.held;
+    await waitForCatalogueWriteHold(hold.held, running, err);
     const lock = otherRecord(process.pid);
     await writeFile(lockFile(root), lock, "utf-8");
     hold.resume();
@@ -567,7 +569,7 @@ describe("the design catalogue is written only inside the project, by the run th
     fault.rename = placesTheme;
     const err = captureStderr();
     const running = runCatalogDesign({ root });
-    await hold.held;
+    await waitForCatalogueWriteHold(hold.held, running, err);
     const lock = otherRecord(process.pid);
     await writeFile(lockFile(root), lock, "utf-8");
     hold.resume();

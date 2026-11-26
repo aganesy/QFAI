@@ -306,6 +306,39 @@ describe("migration catalog move", () => {
     );
   });
 
+  // QFAI:EX-0004-0006-36
+  it("plans a manual repair for each row of a large constraint section", async () => {
+    const context = await fixture();
+    const source = ".qfai/spec/_policies/07_Constraints.md";
+    const rowCount = 200_000;
+    const rows = Array.from(
+      { length: rowCount },
+      (_, index) => `| TC-${index + 1} | Paths use \`src/build.ts\` | Windows |`,
+    );
+    await put(
+      context.root,
+      source,
+      [
+        "# Old constraints",
+        "",
+        "## Constraints",
+        "",
+        "| ID | Constraint | Rationale |",
+        "| --- | --- | --- |",
+        ...rows,
+        "",
+      ].join("\n"),
+    );
+
+    const plan = await step03.plan(context);
+    const notes =
+      plan.forAPerson?.filter((note) => note.includes("## Technical Constraints: rewrite TC-")) ??
+      [];
+    expect(notes).toHaveLength(rowCount);
+    expect(notes[0]).toContain(`rewrite TC-1 of "## Constraints" in ${source}`);
+    expect(notes.at(-1)).toContain(`rewrite TC-${rowCount} of "## Constraints" in ${source}`);
+  });
+
   // QFAI:EX-0004-0006-27
   it("drops the Impact column and sends a constraint that is not in plain words to a person", async () => {
     const context = await fixture();
