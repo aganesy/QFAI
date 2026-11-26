@@ -562,7 +562,7 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     const types = [
       "app.custom_type",
       '"app"."custom_type"',
-      'app . "custom_type"',
+      'APP . "custom_type"',
       'app."Custom_Type"',
       'app."custom,type"',
       '"app.custom_type"',
