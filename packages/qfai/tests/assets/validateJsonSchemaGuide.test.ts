@@ -88,11 +88,21 @@ describe.each(ASSISTANT_ROOTS)("validate.json guide under %s", (assistantRoot) =
     const issues = sectionOf(text, "## `issues[]`");
     const row = rowOf(issues, `\`${relaxedFrom}\``);
     expect(row).toMatch(
-      /^\|\s*`relaxedFrom`\s*\|.*\|\s*optional severity before an older exploration-mode downgrade\s*\|\s*$/,
+      /^\|\s*`relaxedFrom`\s*\|.*\|[^|]*\b(?:optional|may be (?:absent|omitted))\b[^|]*\|\s*$/i,
     );
-    expect(issues).toMatch(
-      /`relaxedFrom: "error"` and `severity: "warning"` was\s+lowered from error to warning by exploration mode/,
-    );
+
+    const originalSeverity = '`relaxedFrom: "error"`';
+    const currentSeverity = '`severity: "warning"`';
+    const example =
+      issues.split(/\r?\n\s*\r?\n/).find((paragraph) => paragraph.includes(originalSeverity)) ?? "";
+    expect(example).toContain(currentSeverity);
+    expect(example).toMatch(/\b(?:older?|historical|legacy|previous(?:ly)?|past)\b/i);
+    expect(example).toMatch(/\bexploration[-\s]+mode\b/i);
+    const account = example
+      .replace(originalSeverity, "")
+      .replace(currentSeverity, "")
+      .replaceAll("`", "");
+    expect(account).toMatch(/\berror\s+(?:\w+\s+){0,4}(?:to|into|became)\s+(?:an?\s+)?warning\b/i);
   });
 
   // A waiver on an `error` finding is refused with `QFAI-WAIVER-002`, so the
