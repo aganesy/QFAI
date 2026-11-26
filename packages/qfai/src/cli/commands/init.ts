@@ -466,7 +466,7 @@ export async function runInit(
   const versionResult = await writeAssistantVersion(destRoot, {
     force: options.force,
     dryRun: options.dryRun,
-    wholeTreeIsThisRelease: skillsResult.kept.length === 0 && skillsResult.refused.length === 0,
+    assets: skillsResult,
   });
   reportRefusedWrites(
     [
@@ -661,7 +661,7 @@ export async function runInit(
  */
 async function writeAssistantVersion(
   destRoot: string,
-  options: { force: boolean; dryRun: boolean; wholeTreeIsThisRelease: boolean },
+  options: { force: boolean; dryRun: boolean; assets: Pick<CopyResult, "kept" | "refused"> },
 ): Promise<CopyResult> {
   const result: CopyResult = { copied: [], skipped: [], refused: [], kept: [] };
   const keep = (target: string): CopyResult => {
@@ -685,9 +685,19 @@ async function writeAssistantVersion(
       return result;
     }
     if (!options.force) return keep(target);
-  } else if (!options.force && !options.wholeTreeIsThisRelease) {
+  } else if (
+    !options.force &&
+    (options.assets.kept.length > 0 || options.assets.refused.length > 0)
+  ) {
+    const { kept, refused } = options.assets;
+    const keptNote =
+      kept.length > 0
+        ? ` Check the kept assets at ${formatKeptAssistantPaths(destRoot, kept)}.`
+        : "";
+    const refusedNote =
+      refused.length > 0 ? " See warnings for paths that could not be written." : "";
     info(
-      "Assistant VERSION stays absent when required assets cannot be verified. Review the refused files and use qfai init --verbose to list skipped files.",
+      `Assistant VERSION stays absent when required assets cannot be verified.${keptNote}${refusedNote}`,
     );
     return keep(target);
   }
@@ -700,8 +710,17 @@ async function writeAssistantVersion(
   return result;
 }
 
-/** The owner files a note names, at most; the rest are counted. */
-const KEPT_OWNERS_LISTED = 8;
+const KEPT_ASSISTANT_PATHS_LISTED = 8;
+
+/** Names a bounded set of kept files relative to the project and counts any remainder. */
+function formatKeptAssistantPaths(destRoot: string, files: readonly string[]): string {
+  const listed = files
+    .slice(0, KEPT_ASSISTANT_PATHS_LISTED)
+    .map((file) => formatReportPath(path.relative(destRoot, file)))
+    .join(", ");
+  const remaining = files.length - KEPT_ASSISTANT_PATHS_LISTED;
+  return remaining > 0 ? `${listed} and ${remaining} more` : listed;
+}
 
 /**
  * A note for a run without `--force` that wrote new assistant files and kept others that differ
@@ -719,16 +738,11 @@ function keptAssistantNote(
 ): string | undefined {
   if (force || copied.length === 0 || kept.length === 0) return undefined;
   const plural = (count: number): string => (count === 1 ? "file" : "files");
-  const owners = kept
-    .filter((file) => ["SKILL.md", "STEP.md"].includes(path.basename(file)))
-    .map((file) => formatReportPath(path.relative(destRoot, file)));
-  const listed = owners.slice(0, KEPT_OWNERS_LISTED).join(", ");
-  const more =
-    owners.length > KEPT_OWNERS_LISTED ? ` and ${owners.length - KEPT_OWNERS_LISTED} more` : "";
+  const owners = kept.filter((file) => ["SKILL.md", "STEP.md"].includes(path.basename(file)));
   const ownerSentence =
     owners.length === 0
       ? ""
-      : ` A new file that one of these lists or cites is reported by qfai validate until the owner is refreshed: ${listed}${more}.`;
+      : ` A new file that one of these lists or cites is reported by qfai validate until the owner is refreshed: ${formatKeptAssistantPaths(destRoot, owners)}.`;
   return (
     `${dryRun ? "Would write" : "Wrote"} ${copied.length} new ${plural(copied.length)} under .qfai/assistant ` +
     `and kept ${kept.length} ${plural(kept.length)} differing from this release's copy.` +
