@@ -4109,7 +4109,7 @@ describe("release automation performs decisions rather than making them", () => 
     }
   });
 
-  describe("the tag gate reads the field the REST response actually carries", () => {
+  describe("the tag gate matches the approved release pull request", () => {
     const repository = "owner/repo";
     const pushedCommit = "deadbeef";
 
@@ -4119,9 +4119,9 @@ describe("release automation performs decisions rather than making them", () => 
      *
      * The `version` step decides whether the commit arrived from the release pull
      * request. Everything before the check needs a token and a checkout; the
-     * check itself needs only `pulls` and `claimed`, so it is extracted from the
-     * parse of the response through the `fi` of the branch match, and run with
-     * those two supplied and the step's own `reject` in front of it.
+     * check uses the parsed response, release version and runner's push identity.
+     * Extract it through the end of the association condition and run it with
+     * those inputs and the step's own `reject`.
      */
     const associationGate = (): string => {
       const document = workflow("tag-release.yml");
@@ -4141,7 +4141,7 @@ describe("release automation performs decisions rather than making them", () => 
       const open = lines.findIndex((line) => line.includes('"$pulls"') && line.includes("node -e"));
       expect(open, "the association response is no longer parsed by the step").toBeGreaterThan(-1);
       const match = lines.findIndex(
-        (line, at) => at > open && line.includes("grep -qxF") && line.includes("release/v"),
+        (line, at) => at > open && line.trim() === 'if [ "$release_associated" != true ]; then',
       );
       expect(
         match,
@@ -4232,10 +4232,18 @@ describe("release automation performs decisions rather than making them", () => 
         ["different merge commit", { ...release, merge_commit_sha: "aaaaaaaa" }],
       ] as const;
 
-      expect(wouldTag([release], "1.10.2")).toBe(true);
-      expect(
-        nonqualifying.filter(([, pull]) => wouldTag([pull], "1.10.2")).map(([name]) => name),
-      ).toEqual([]);
+      expect(runGate(JSON.stringify([release]), "1.10.2")).toMatchObject({
+        status: 0,
+        tagged: true,
+        skipped: false,
+      });
+      for (const [name, pull] of nonqualifying) {
+        expect(runGate(JSON.stringify([pull]), "1.10.2"), name).toMatchObject({
+          status: 0,
+          tagged: false,
+          skipped: true,
+        });
+      }
     });
 
     it("tags a release merge and declines everything else, measured by running it", () => {
@@ -4249,10 +4257,7 @@ describe("release automation performs decisions rather than making them", () => 
       ).toBe(true);
 
       expect(
-        wouldTag(
-          [{ head: { ref: "feature/another-change" } }, { head: { ref: "release/v1.10.2" } }],
-          "1.10.2",
-        ),
+        wouldTag([restPull("feature/another-change"), restPull("release/v1.10.2")], "1.10.2"),
         "a release pull request must match even when another association comes first",
       ).toBe(true);
 
@@ -4269,61 +4274,19 @@ describe("release automation performs decisions rather than making them", () => 
       expect(wouldTag([], "1.10.2"), "a direct push belongs to no pull request").toBe(false);
     });
 
-    it("reads only string REST refs and rejects malformed responses", () => {
+    it("ignores missing or nonstring REST fields", () => {
       const graphqlShaped = [{ number: 1152, headRefName: "release/v1.10.2" }];
-      expect(
-        wouldTag(graphqlShaped, "1.10.2"),
-        "the GraphQL field cannot authorise a tag from a REST response",
-      ).toBe(false);
-
-      const gate = associationGate();
-      expect(gate, "the association check must not depend on jq").not.toMatch(/\bjq\b/);
-      const parser = /\bnode\s+-e\s+'([^']+)'/u.exec(gate)?.[1];
-      expect(
-        parser,
-        "the production check must parse stdin with its inline Node program",
-      ).toBeTypeOf("string");
-      if (parser === undefined) throw new Error("the association check has no inline Node parser");
-      const parse = (input: string) => {
-        const run = spawnSync(process.execPath, ["-e", parser], { input, encoding: "utf-8" });
-        if (run.error !== undefined) throw run.error;
-        return run;
-      };
-      const missingOrNonstringRefs = [
-        {},
-        { head: {} },
-        { head: { ref: null } },
-        { head: { ref: false } },
-        { head: { ref: 123 } },
-        { head: { ref: {} } },
-        { head: { ref: ["release/v1.10.2"] } },
-      ];
-      for (const payload of [[], graphqlShaped, missingOrNonstringRefs]) {
-        const run = parse(JSON.stringify(payload));
-        expect(run.status).toBe(0);
-        expect(run.stdout).toBe("");
-        expect(run.stderr).toBe("");
-        expect(wouldTag(payload, "1.10.2")).toBe(false);
-      }
-      const strings = parse(
-        JSON.stringify([
-          ...missingOrNonstringRefs,
-          { head: { ref: "feature/another-change" } },
-          { head: { ref: "release/v1.10.2" } },
-        ]),
-      );
-      expect(strings.status).toBe(0);
-      expect(strings.stdout).toBe("feature/another-change\nrelease/v1.10.2\n");
-      expect(strings.stderr).toBe("");
-      for (const input of ["{", "{}", "null", '"release/v1.10.2"']) {
-        const run = parse(input);
-        expect(run.status, "invalid REST responses must stop the parser").not.toBe(0);
-        expect(run.stdout, "invalid REST responses must emit no branch refs").toBe("");
-      }
-      for (const payload of [{}, null, "release/v1.10.2"]) {
-        expect(wouldTag(payload, "1.10.2"), "a non-array response must not authorise a tag").toBe(
-          false,
-        );
+      const release = restPull("release/v1.10.2");
+      const invalidRefs = [null, false, 123, {}, ["release/v1.10.2"]].map((ref) => ({
+        ...release,
+        head: { ...release.head, ref },
+      }));
+      for (const payload of [graphqlShaped, [null, {}, { head: {} }, ...invalidRefs]]) {
+        expect(runGate(JSON.stringify(payload), "1.10.2")).toMatchObject({
+          status: 0,
+          tagged: false,
+          skipped: true,
+        });
       }
     });
 
@@ -4376,7 +4339,7 @@ describe("release automation performs decisions rather than making them", () => 
         "the association request is gone; this row has the wrong subject",
       ).toBeGreaterThan(-1);
       const open = lines.findIndex(
-        (line) => line.includes("grep -qxF") && line.includes("release/v"),
+        (line) => line.trim() === 'if [ "$release_associated" != true ]; then',
       );
       const close = lines.findIndex((line, at) => at > open && line.trim() === "fi");
       expect(close, "the association check has no `fi`").toBeGreaterThan(start);
@@ -4403,8 +4366,9 @@ describe("release automation performs decisions rather than making them", () => 
             "  esac",
             "}",
             'claimed="1.10.2"',
-            "GITHUB_REPOSITORY=owner/repo",
-            "GITHUB_SHA=deadbeef",
+            `export GITHUB_REPOSITORY=${repository}`,
+            `export GITHUB_SHA=${pushedCommit}`,
+            "export GITHUB_REF_NAME=main",
             `GITHUB_OUTPUT=${JSON.stringify(path.join(dir, "out").replace(/\\/g, "/"))}`,
             "",
             lines.slice(start, close + 1).join("\n"),
@@ -4429,7 +4393,7 @@ describe("release automation performs decisions rather than making them", () => 
     };
 
     it("reads every page of associated pull requests before declining to tag", () => {
-      const page = (refs: readonly string[]): unknown[] => refs.map((ref) => ({ head: { ref } }));
+      const page = (refs: readonly string[]): unknown[] => refs.map(restPull);
       const firstPage = page(Array.from({ length: 100 }, (_, at) => `feature/change-${at}`));
 
       const laterPage = runFromRequest([firstPage, page(["release/v1.10.2"])]);

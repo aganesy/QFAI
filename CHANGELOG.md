@@ -629,6 +629,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Automatic release tagging verifies that the pushed commit came from merging the
+  version's release branch within this repository.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
