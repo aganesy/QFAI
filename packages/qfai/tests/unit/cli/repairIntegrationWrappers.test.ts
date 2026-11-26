@@ -381,7 +381,6 @@ describe("repairIntegrationWrappers", () => {
     });
   });
 
-  // QFAI:AC-0003-0009-06
   // QFAI:EX-0003-0009-17
   it("removes a hold left beside a link that is already right on a doctor pass", async () => {
     // The gate does not name a link that is right, so the writer never visits
@@ -798,6 +797,7 @@ describe("repairIntegrationWrappers", () => {
     });
   });
 
+  // QFAI:EX-0003-0009-18
   it("says nothing a waiver has suppressed", async () => {
     // `validate` runs its findings through the waiver pass. Rewriting a wrapper
     // a project has decided to keep would undo that decision unattended.
@@ -805,12 +805,14 @@ describe("repairIntegrationWrappers", () => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
       await rm(wrapperPath(root));
+      const wrongTarget = path.join("..", "..", "missing-skill");
+      await symlink(wrongTarget, wrapperPath(root), "dir");
       injectedFindings = [{ ...linkFinding(WRAPPER), suppressed: true }];
 
       const lines = await repair(root);
 
       expect(lines.join("\n")).toContain("nothing to repair");
-      await expect(stat(wrapperPath(root))).rejects.toThrow();
+      expect(await readlink(wrapperPath(root))).toBe(wrongTarget);
     });
   });
 

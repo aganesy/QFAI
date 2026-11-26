@@ -222,20 +222,32 @@ describe("doctor --autoremediate CI detection follows the convention", () => {
 
   // QFAI:AC-0003-0009-06
   // QFAI:EX-0003-0009-16
-  it("previews and repairs a managed wrapper while preserving a project-owned file", async (test) => {
+  it("previews and repairs managed wrappers while preserving project-owned entries", async (test) => {
     const root = await newTempDir("wrapper");
     if (!(await canCreateSymlink(root))) test.skip();
     await wireProject(root);
     await recordAssistantVersion(root);
     const wrapper = path.join(root, ".claude", "skills", SHIPPED_SKILL);
+    const agent = "architecture-reviewer";
+    const agentWrapper = path.join(root, ".github", "agents", `${agent}.agent.md`);
+    const agentSource = path.join(root, ".qfai", "assistant", "agent", `${agent}.md`);
     const projectFile = path.join(root, ".codex", "skills", SHIPPED_SKILL);
+    const projectDir = path.join(root, ".github", "skills", SHIPPED_SKILL);
+    const projectNote = path.join(projectDir, "notes.md");
     const canonicalTarget = await readlink(wrapper);
+    const canonicalAgentTarget = path.relative(path.dirname(agentWrapper), agentSource);
     const wrongTarget = path.join("..", "..", "missing-skill");
+    const wrongAgentTarget = path.join("..", "..", "missing-agent.md");
     const projectContent = "project-owned instructions\n";
     await rm(wrapper);
     await symlink(wrongTarget, wrapper, "dir");
+    await writeFile(agentSource, "# canonical agent\n", "utf-8");
+    await symlink(wrongAgentTarget, agentWrapper, "file");
     await rm(projectFile);
     await writeFile(projectFile, projectContent, "utf-8");
+    await rm(projectDir);
+    await mkdir(projectDir);
+    await writeFile(projectNote, projectContent, "utf-8");
 
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const run = (dryRun: boolean): Promise<number> =>
@@ -247,21 +259,24 @@ describe("doctor --autoremediate CI detection follows the convention", () => {
         format: "json",
         failOn: "never",
       });
+    const output = (): string => stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
     try {
       expect(await run(true)).toBe(0);
-      expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
-        `would relink .claude/skills/${SHIPPED_SKILL}`,
-      );
+      expect(output()).toContain(`would relink .claude/skills/${SHIPPED_SKILL}`);
+      expect(output()).toContain(`would relink .github/agents/${agent}.agent.md`);
       expect(await readlink(wrapper)).toBe(wrongTarget);
+      expect(await readlink(agentWrapper)).toBe(wrongAgentTarget);
       expect(await readFile(projectFile, "utf-8")).toBe(projectContent);
+      expect(await readFile(projectNote, "utf-8")).toBe(projectContent);
 
       stderr.mockClear();
       expect(await run(false)).toBe(0);
-      expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
-        `relinked .claude/skills/${SHIPPED_SKILL}`,
-      );
+      expect(output()).toContain(`relinked .claude/skills/${SHIPPED_SKILL}`);
+      expect(output()).toContain(`relinked .github/agents/${agent}.agent.md`);
       expect(await readlink(wrapper)).toBe(canonicalTarget);
+      expect(await readlink(agentWrapper)).toBe(canonicalAgentTarget);
       expect(await readFile(projectFile, "utf-8")).toBe(projectContent);
+      expect(await readFile(projectNote, "utf-8")).toBe(projectContent);
     } finally {
       stderr.mockRestore();
     }

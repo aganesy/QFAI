@@ -44,10 +44,10 @@ Feature: doctor --autoremediate mode
 
   # AC-0003-0009-06
   Scenario: Autoremediate repairs managed integration wrappers outside CI
-    Given an unsuppressed `QFAI-LINK-001` finding names a repairable wrapper for a shipped skill or agent
+    Given a project has managed integration wrappers for shipped skills or agents
     When `qfai doctor --autoremediate` runs outside CI
-    Then the wrapper points to its canonical target and the repair is reported
+    Then each repairable wrapper named by an unsuppressed `QFAI-LINK-001` finding is relinked to its canonical target and the repair is reported
     And files and directories owned by the project are preserved
-    And the pass may remove its own repair backups beside managed wrappers
+    And the pass can remove its own repair backup beside a healthy wrapper, even when no finding names that wrapper
     And `--dry-run` reports the planned wrapper changes without applying them
 ```
