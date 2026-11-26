@@ -756,11 +756,13 @@ describe("uiux validators", () => {
 
   // QFAI:EX-0001-0039-71
   it.each([
-    ["hsl()", "hsl(0, 0%, 75%)", "hsl(0, 0%, 80%)"],
-    ["space-separated rgb()", "rgb(191 191 191)", "rgb(204 204 204)"],
+    ["low", "hsl()", "hsl(0, 0%, 75%)", "hsl(0, 0%, 80%)", ["warning"]],
+    ["high", "hsl()", "hsl(0, 0%, 0%)", "hsl(0, 0%, 100%)", []],
+    ["low", "space-separated rgb()", "rgb(191 191 191)", "rgb(204 204 204)", ["warning"]],
+    ["high", "space-separated rgb()", "rgb(0 0 0)", "rgb(255 255 255)", []],
   ])(
-    "warns about low HTML mock contrast written in %s",
-    async (_format, foreground, background) => {
+    "checks %s HTML mock contrast written in %s",
+    async (_contrast, _format, foreground, background, expectedSeverities) => {
       const root = await newTempDir();
       const specsDir = path.join(root, ".qfai", "specs");
       await mkdir(specsDir, { recursive: true });
@@ -778,8 +780,7 @@ describe("uiux validators", () => {
 
       const issues = await validateHtmlMock(root, "web", defaultConfig);
       const contrast = issues.filter((item) => item.code === "QFAI-MOCK-008");
-      expect(contrast).toHaveLength(1);
-      expect(contrast[0]).toMatchObject({ severity: "warning" });
+      expect(contrast.map((item) => item.severity)).toEqual(expectedSeverities);
     },
   );
 

@@ -557,6 +557,11 @@ describe("the document schema entries of the story tree", () => {
   // QFAI:EX-0001-0011-36
   it("exits 2 when --scope files is given no path", async () => {
     const root = await newRoot();
+    await put(
+      root,
+      "qfai.config.yaml",
+      `paths:\n  specsDir: ${SPECS}\n  contractsDir: ${CONTRACTS}\n`,
+    );
 
     const result = lane("check-mdschema.mjs", ["--root", root, "--scope", "files"]);
 

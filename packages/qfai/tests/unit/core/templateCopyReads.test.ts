@@ -30,6 +30,12 @@ const { reads, boundedReads, reader } = vi.hoisted(() => ({
   reader: { refuses: false },
 }));
 
+const largeTree = vi.hoisted(() => ({ directory: "", destination: "" }));
+const LARGE_TEMPLATE_COUNT = 200_000;
+const missingDestination = Object.assign(new Error("The fixture destination is absent."), {
+  code: "ENOENT",
+});
+
 vi.mock("../../../src/shared/boundedRead.js", async (importOriginal) => {
   const actual = await importOriginal<BoundedRead>();
   return {
@@ -46,6 +52,30 @@ vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
   return {
     ...actual,
+    lstat: (...args: Parameters<FsPromises["lstat"]>) => {
+      if (
+        largeTree.destination !== "" &&
+        typeof args[0] === "string" &&
+        args[0].startsWith(largeTree.destination + path.sep)
+      ) {
+        return Promise.reject(missingDestination);
+      }
+      return actual.lstat(...args);
+    },
+    readdir: (...args: Parameters<FsPromises["readdir"]>) => {
+      if (args[0] === largeTree.directory) {
+        const isFile = () => true;
+        const isDirectory = () => false;
+        return Promise.resolve(
+          Array.from({ length: LARGE_TEMPLATE_COUNT }, (_, index) => ({
+            name: `file-${index}.md`,
+            isFile,
+            isDirectory,
+          })),
+        );
+      }
+      return actual.readdir(...args);
+    },
     readFile: (...args: Parameters<FsPromises["readFile"]>) => {
       if (typeof args[0] === "string") {
         const key = path.resolve(args[0]);
@@ -56,7 +86,7 @@ vi.mock("node:fs/promises", async () => {
   };
 });
 
-const { copyListedTemplateFiles, copyTemplateTree } =
+const { collectTemplateFiles, copyListedTemplateFiles, copyTemplatePaths, copyTemplateTree } =
   await import("../../../src/core/fs/templateCopy.js");
 
 let root: string | undefined;
@@ -68,6 +98,8 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  largeTree.directory = "";
+  largeTree.destination = "";
   if (root !== undefined) await removeTempTree(root);
   root = undefined;
 });
@@ -90,6 +122,54 @@ async function trees(template: string, installed: string) {
 }
 
 const plain = { force: false, dryRun: false, conflictPolicy: "skip" } as const;
+
+async function createLargeTree() {
+  root = await mkdtemp(path.join(os.tmpdir(), "qfai-template-large-"));
+  const source = path.join(root, "source");
+  const destination = path.join(root, "destination");
+  const nested = path.join(source, "nested");
+  await mkdir(nested, { recursive: true });
+  await mkdir(destination);
+  largeTree.directory = nested;
+  largeTree.destination = destination;
+  return { source, destination, nested };
+}
+
+describe("enumerating a large template subtree", () => {
+  it("keeps every nested file in directory order", async () => {
+    const { source, nested } = await createLargeTree();
+    const files = await collectTemplateFiles(source);
+    expect(files).toHaveLength(LARGE_TEMPLATE_COUNT);
+    expect(files.findIndex((file, index) => file !== path.join(nested, `file-${index}.md`))).toBe(
+      -1,
+    );
+  });
+
+  it("keeps a large selected subtree between the surrounding selections", async () => {
+    const { source, destination } = await createLargeTree();
+    await writeFile(path.join(source, "before.md"), "before");
+    await writeFile(path.join(source, "after.md"), "after");
+
+    const { copied } = await copyTemplatePaths(
+      source,
+      destination,
+      ["before.md", "nested", "after.md"],
+      {
+        ...plain,
+        dryRun: true,
+      },
+    );
+    expect(copied).toHaveLength(LARGE_TEMPLATE_COUNT + 2);
+    expect(copied[0]).toBe(path.join(destination, "before.md"));
+    expect(copied.at(-1)).toBe(path.join(destination, "after.md"));
+    const nested = path.join(destination, "nested");
+    expect(
+      copied
+        .slice(1, -1)
+        .findIndex((file, index) => file !== path.join(nested, `file-${index}.md`)),
+    ).toBe(-1);
+  });
+});
 
 describe("comparing an installed template", () => {
   it("reads each file once when only the line endings differ", async () => {
