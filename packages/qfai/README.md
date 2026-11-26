@@ -515,8 +515,9 @@ annotations do not satisfy these obligations.
 Configuration is stored at the repository root as `qfai.config.yaml`; you can change paths, traceability policies, and validation policy.
 
 `uiux.audit.slopDetection` is deprecated. QFAI accepts and ignores this legacy
-boolean. Put design rules in the root `DESIGN.md`. The `qfai-prototyping`
-review uses those rules and checks for layout anti-patterns.
+boolean. Define visual tokens and brand guidance in the root `DESIGN.md`.
+The `qfai-prototyping` review checks prototypes against that file and the
+shipped layout anti-pattern registry.
 
 Example: override paths and traceability globs.
 
