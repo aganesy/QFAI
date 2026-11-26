@@ -219,6 +219,26 @@ describe("reading a contract's own DDL", () => {
     expect(references.size).toBe(0);
   });
 
+  it.each(["\n", "\r\n", "\r"])("preserves %j boundaries while masking SQL noise", (separator) => {
+    const sql = [
+      "CREATE TABLE orders (",
+      "  -- REFERENCES hidden_comment(id)",
+      "  note text DEFAULT 'REFERENCES hidden_string(id)",
+      "continued',",
+      "  /* REFERENCES hidden_block(id)",
+      "     still hidden */",
+      "  buyer_id integer REFERENCES buyers(id)",
+      ");",
+    ].join(separator);
+    const masked = blankSqlNoise(sql);
+    const lineBreaks = (text: string) =>
+      [...text.matchAll(/\r\n?|\n/g)].map((match) => [match.index, match[0]]);
+
+    expect([...readTableEdges(sql).references.keys()]).toEqual(["buyers"]);
+    expect(masked).toHaveLength(sql.length);
+    expect(lineBreaks(masked)).toEqual(lineBreaks(sql));
+  });
+
   it("lets a backslash escape nothing in a standard string or after a longer name", () => {
     // Only a lone `E` or `e` opens an escape string. `'C:\'` is a whole
     // standard string, and in `name'x\'` the `e` belongs to the name.
