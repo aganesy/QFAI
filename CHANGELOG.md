@@ -631,11 +631,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
+- Migration step 3 sends constraint rows that cite lowercase contract IDs to
+  a person to rewrite in plain words.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
+
+- Plain `qfai init` preserves an assistant `VERSION` marker another writer creates
+  during initialization.
 
 - Root-heading diagnostics in `check-mdschema` print paths relative to the
   checked tree when the command is run from another directory.
@@ -652,6 +658,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Plain `qfai init` defers the assistant version file when a required asset
   could not be verified.** A blocked copy no longer records a complete
   installation. Init reports why the version file was deferred. Closes #4527.
+
+- **`qfai init` names kept assets that defer the assistant version file.** The
+  diagnostic lists up to eight changed or unverifiable paths and counts the
+  rest. Blocked writes still produce individual warnings.
 
 - `QFAI-DRIFT-002` compares rendered example rows. Changing a sample table in
   fenced code or an HTML comment leaves the example drift result unchanged.
