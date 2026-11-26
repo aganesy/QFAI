@@ -2548,6 +2548,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   when the gate is disabled or `tech.md` is missing. If the check becomes
   available again, a failing command blocks the turn as a fresh failure.
 
+- The turn-end hook also clears that session and agent's saved failure when
+  it finds no `qfai.config.yaml`. The stop stays silent, and the same failing
+  command can block again after the configuration returns.
+
 - **The turn-end check tells a failure in another worktree from a repeat.**
   When a continued turn failed with the same output it had blocked on, the
   hook let the turn end, even when the agent had moved to another worktree
