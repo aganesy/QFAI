@@ -1,7 +1,7 @@
 ---
 name: triage-operate
 owner: qfai-triage
-purpose: "Carry out and observe an operation the user named on finished work. Tracked changes are limited to the run's records, a base merge and, in run-operation, deleting a question row restored by the union merge."
+purpose: "Carry out and observe an operation the user named on finished work. Tracked changes are limited to the run's records, changes brought in by an authorized base merge, and the restored question-row deletion permitted only in run-operation."
 requires: []
 ---
 
@@ -171,11 +171,12 @@ request, or the version edit alone.
 
 ## What it writes
 
-- No file git tracks, apart from the base changes a merge of the base brings
-  in, the run's deliberation record and its `open-questions.md` rows.
-- In `run-operation`, a separate commit before pushing records only the
-  deletion of an open-question row restored by the union merge after one side
-  deleted it, as described in step 4.
+- No file git tracks changes except the run's deliberation record and its
+  `open-questions.md` rows, changes brought in by an authorized base merge,
+  and the restored question-row deletion described in step 4. In
+  `run-operation` only, delete an open-question row the union merge restored
+  after one side deleted it. Commit only that deletion in a separate commit
+  before pushing.
 - As the route's last step, after the operation, commit locally only the run's deliberation record
   and the `open-questions.md` rows the run wrote, and push nothing. If neither
   was written, skip that final commit.
@@ -184,9 +185,10 @@ request, or the version edit alone.
 ## Gate
 
 The stage worker confirms the operation was one the user named, its result is
-recorded as observed, and no tracked file changed beyond a merge of the base,
-the run's deliberation record and its `open-questions.md` rows, or the
-separately committed deletion of an open-question row restored by the union
-merge in `run-operation`. Other register rows and IDs remain as merged.
+recorded as observed, and no tracked file changed beyond the run's deliberation
+record and its `open-questions.md` rows, changes brought in by an authorized
+base merge, or the separate `run-operation` commit that deletes only an
+open-question row the union merge restored after one side deleted it.
+Other register rows and IDs remain as merged.
 For a release, it also confirms the delegation is quoted with its source, and
 that no tag, publication or publication approval came from the agent.

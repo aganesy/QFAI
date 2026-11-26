@@ -366,12 +366,14 @@ describe("a question answered without a change", () => {
     expect(procedure).toMatch(
       /Edit no register row except to delete again a question row the union merge kept although one side deleted it, committing that deletion before the push. Renumber no ID/,
     );
-    expect(operate).toMatch(/^purpose:.*deleting a question row restored by the union merge/m);
+    expect(operate).toMatch(
+      /^purpose:.*restored question-row deletion permitted only in run-operation/m,
+    );
     expect(flat(sectionOf(operate, "## What it writes"))).toMatch(
-      /separate commit before pushing.+deletion of an open-question row restored by the union merge/,
+      /No file git tracks changes except.+the restored question-row deletion described in step 4\. In `run-operation` only, delete an open-question row the union merge restored after one side deleted it\. Commit only that deletion in a separate commit before pushing/,
     );
     expect(flat(sectionOf(operate, "## Gate"))).toMatch(
-      /deletion of an open-question row restored by the union merge.+Other register rows and IDs remain as merged/,
+      /separate `run-operation` commit that deletes only an open-question row the union merge restored after one side deleted it\. Other register rows and IDs remain as merged/,
     );
     expect(procedure).toContain("The union merge adds no review requirement of its own.");
     const waitForChecks = procedure.indexOf("wait for the checks that push starts");
