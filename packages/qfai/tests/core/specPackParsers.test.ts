@@ -150,13 +150,16 @@ describe("parseRenderedMarkdownTables", () => {
   });
 
   // QFAI:EX-0001-0039-77
-  it("omits tables in ordinary fences and HTML comment blocks", () => {
+  it.each([
+    ["", ""],
+    ["- - -\n", "  "],
+  ])("omits tables in ordinary fences and HTML comment blocks after %j", (prefix, indent) => {
     const text = [
-      "~~~md",
+      prefix + indent + "~~~md",
       header,
       separator,
       "| Fenced | hidden |",
-      "~~~",
+      indent + "~~~",
       "",
       "<!--",
       header,

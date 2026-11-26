@@ -116,6 +116,27 @@ function markdownIndent(
   return { offset, columns };
 }
 
+/** Find a thematic break at the end of a line in one pass, before reading list markers. */
+function thematicBreakOffset(line: string): number {
+  let offset = line.length - 1;
+  while (line[offset] === " " || line[offset] === "\t") offset -= 1;
+  const marker = line[offset];
+  if (marker !== "-" && marker !== "*" && marker !== "_") return -1;
+
+  let markers = 0;
+  let start = offset;
+  for (; offset >= 0; offset -= 1) {
+    const ch = line[offset];
+    if (ch === marker) {
+      markers += 1;
+      start = offset;
+    } else if (ch !== " " && ch !== "\t") {
+      break;
+    }
+  }
+  return markers >= 3 ? start : -1;
+}
+
 /** Locate block markup within the current list item and any new markers on this line. */
 function listContentLine(
   line: string,
@@ -130,8 +151,10 @@ function listContentLine(
   let container = listIndents.at(-1) ?? 0;
   if (indentation.columns - container > 3) return { container, contentOffset: undefined };
 
+  const thematicBreak = thematicBreakOffset(line);
   let { offset, columns } = indentation;
   for (;;) {
+    if (offset === thematicBreak) return { container, contentOffset: offset };
     LIST_ITEM_MARKER_AT.lastIndex = offset;
     const marker = LIST_ITEM_MARKER_AT.exec(line)?.[0];
     if (!marker) return { container, contentOffset: offset };
