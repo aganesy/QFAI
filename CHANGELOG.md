@@ -631,6 +631,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
+- Migration step 3 sends constraint rows that cite lowercase contract IDs to
+  a person to rewrite in plain words.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
