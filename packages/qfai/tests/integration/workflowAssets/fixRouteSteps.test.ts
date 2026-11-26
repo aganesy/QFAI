@@ -283,13 +283,25 @@ describe("a fix route from the diagnosis to the commit", () => {
 
   it("resolves the mainline parent and backport scope before picking a merge", async () => {
     const procedure = await section("implement-backport", "## Procedure");
-    expect(procedure).toContain("Resolve and record the pick list before branching");
-    expect(procedure).toContain("source branch into which the change originally landed");
-    expect(procedure).toContain("git log --first-parent <source-ref>");
-    expect(procedure).toContain("A merge on that first-parent history uses parent 1.");
+    const branch = procedure.indexOf("3. Branch from the release branch");
+    expect(branch).toBeGreaterThan(0);
+    const preflight = procedure.slice(0, branch);
+    expect(preflight).toContain("Resolve and record the pick list before branching");
+    expect(preflight).toContain("source branch into which the change originally landed");
+    expect(preflight).toContain("git log --first-parent <source-ref>");
+    expect(preflight).toContain("A merge on that first-parent history uses parent 1.");
     expect(procedure).toContain("git cherry-pick -n -x -m <mainline-parent-number> <merge-commit>");
-    expect(procedure).toContain("explicitly identified constituent commits");
-    expect(procedure).toContain("stop before branching and report the missing evidence");
+    expect(preflight).toContain("explicitly identified constituent commits");
+    expect(preflight).toContain(
+      "Check the diff of each selected ordinary commit against the requested backport scope.",
+    );
+    expect(preflight).toContain(
+      "Check that the diff from the identified parent to the merge falls within the request",
+    );
+    expect(preflight).toContain("stop before branching and report the missing evidence");
+    expect(preflight).toContain(
+      "If any selected diff includes unrelated work, stop before branching and report the unrelated changes.",
+    );
   });
 
   it("works the diagnosis's matched example first, and skips an example under a test exception", async () => {
