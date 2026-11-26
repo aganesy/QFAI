@@ -2513,6 +2513,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   approval under `allowBuilds` for pnpm 10.31 or later and
   `onlyBuiltDependencies` for earlier pnpm 10.
 
+- **`qfai doctor` explains where pnpm records mdschema approval.** pnpm 10
+  updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
+  From 10.31.0 it can also create the map when neither legacy list is set.
+  Other pnpm 10 configurations use `onlyBuiltDependencies`, and pnpm 11
+  uses `allowBuilds` by default.
+
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
   key, even for a local server that needs no authentication, so document
