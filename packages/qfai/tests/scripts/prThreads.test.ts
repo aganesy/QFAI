@@ -539,11 +539,11 @@ describe("a call to gh that fails", () => {
       stderr: "HTTP 502: Bad Gateway\n",
     });
 
-  function errorOutput(argv: string[]): { code: number; text: string } {
-    vi.spyOn(console, "log").mockImplementation(() => undefined);
+  function errorOutput(argv: string[]): { code: number; text: string; printed: boolean } {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const code = run(argv);
-    return { code, text: error.mock.calls.join(" ") };
+    return { code, text: error.mock.calls.join(" "), printed: log.mock.calls.length > 0 };
   }
 
   it("returns 2 and names the operation when gh exits with an error", () => {
@@ -573,10 +573,10 @@ describe("a call to gh that fails", () => {
     [["defer", "12", "T1", "40"], "node(id:$id)", "reading review thread T1"],
   ])("rejects malformed JSON in %j", (argv, match, operation) => {
     calls.malformedGh = match;
-    const { code, text } = errorOutput(argv);
+    const { code, text, printed } = errorOutput(argv);
     expect(code).toBe(2);
     expect(text).toBe(`GitHub returned invalid JSON while ${operation}.`);
-    expect(console.log).not.toHaveBeenCalled();
+    expect(printed).toBe(false);
   });
 
   it("stops deferral before writes when a follow-up comment line is malformed", () => {
