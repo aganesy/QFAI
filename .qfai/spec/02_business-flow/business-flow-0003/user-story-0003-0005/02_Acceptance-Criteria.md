@@ -15,4 +15,6 @@ Feature: JSON diagnosis output
     Given the doctor checks complete
     When `qfai doctor --format json --out /tmp/doctor.json` runs
     Then the diagnosis is written to `/tmp/doctor.json`
+    And a relative output path resolves against the checked project root
+    And a dry run still writes an explicitly requested diagnosis while leaving the planned repairs unapplied
 ```

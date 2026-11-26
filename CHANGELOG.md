@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Doctor's help explains `--dry-run` with `--out`.** A dry run previews
+  repairs and still writes an explicitly requested diagnosis. The contract
+  now records that relative output paths resolve against the checked project root.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to

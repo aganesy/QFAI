@@ -260,7 +260,7 @@ describe("BF-0003 output routing", () => {
   });
 
   // QFAI:EX-0003-0005-04
-  it("prints an absolute path for a relative --out", async () => {
+  it("resolves a relative --out against the checked project root", async () => {
     const root = await newTempDir("relative");
     await put(root, "qfai.config.yaml", "paths:\n  specsDir: .qfai/spec\n");
     const stdout = await captureStdout(async () => {
@@ -272,10 +272,9 @@ describe("BF-0003 output routing", () => {
         failOn: "never",
       });
     });
-    const printed = stdout.trim().replace(/^doctor: wrote /u, "");
-    expect(stdout.trim()).toMatch(/^doctor: wrote /u);
-    expect(path.isAbsolute(printed)).toBe(true);
-    const written = JSON.parse(await readFile(printed, "utf-8")) as DoctorData;
+    const reportPath = path.join(root, "doctor.json");
+    expect(stdout.trim()).toBe(`doctor: wrote ${reportPath}`);
+    const written = JSON.parse(await readFile(reportPath, "utf-8")) as DoctorData;
     expect(written.summary).toBeDefined();
   });
 

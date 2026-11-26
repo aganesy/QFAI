@@ -209,7 +209,8 @@ describe("`qfai doctor` CLI contract surface", () => {
 
     expect(statement).toContain("only the changes that pass would make");
     expect(statement).toContain("would remove -> <run id>");
-    expect(statement).toContain("writes nothing");
+    expect(statement).toContain("writes no repair paths");
+    expect(statement).toContain("an explicitly requested `--out` report is still written");
   });
 
   it("keeps the `--yes` confirmation gate as a requirement", async () => {

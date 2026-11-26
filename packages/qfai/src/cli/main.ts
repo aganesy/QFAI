@@ -528,7 +528,8 @@ Options:
                   (that output includes the qfai-provided .github/copilot-instructions.md, which keeps the rule-list entries and sections the project added, and .github/instructions/**; the story tree, rule/*.local.md overlays, assistant/skill.local/**, qfai.config.yaml, DESIGN.md and AGENTS.md are never overwritten)
   --yes           init: reserved flag (no behavioural difference today because init is non-interactive; auto-Yes once prompts are introduced)
   --yes           doctor --autoremediate: skip the interactive confirmation (no effect elsewhere)
-  --dry-run       init / doctor: show what would change without writing anything
+  --dry-run       init: preview changes without writing
+                  doctor: preview repairs and still write a diagnosis requested with --out
   --verbose       init: expand the run report's skipped-path list (counts only by default)
   --format <text|github>       validate: output format
   --format <md|json>           report: output format
