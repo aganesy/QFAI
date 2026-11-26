@@ -392,14 +392,15 @@ describe("turn-end hook", () => {
       expect(await hook({ session_id: "paused", stop_hook_active: true })).toBe("");
 
       await project(commands);
-      expect(parsed(await hook({ session_id: "paused", stop_hook_active: true })).decision).toBe(
-        "block",
-      );
+      // Check the retained state before the active pair can record a new failure.
       for (const event of unaffected) {
         const other = parsed(await hook({ ...event, stop_hook_active: true }));
         expect(other.decision).toBeUndefined();
         expect(other.systemMessage).toContain("still fails");
       }
+      expect(parsed(await hook({ session_id: "paused", stop_hook_active: true })).decision).toBe(
+        "block",
+      );
     },
   );
 
