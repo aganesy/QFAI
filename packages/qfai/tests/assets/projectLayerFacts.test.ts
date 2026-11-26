@@ -341,6 +341,13 @@ describe("the project layer describes the repository it is in", () => {
     expect(namesItsCommit(`git tag vX.Y.Z ${"a".repeat(40)}`)).toBe(true);
   });
 
+  it("checks the tag's commit independently of a quoted message", () => {
+    expect(namesItsCommit('git tag -m "See HEAD for details" vX.Y.Z <SHA>')).toBe(true);
+    expect(namesItsCommit("git tag vX.Y.Z <SHA> --message 'Compare HEAD and @' ")).toBe(true);
+    expect(namesItsCommit('git tag -m "A release note" vX.Y.Z HEAD')).toBe(false);
+    expect(namesItsCommit('git tag -m "See HEAD for details" vX.Y.Z')).toBe(false);
+  });
+
   it("ignores listing options when identifying tag creation commands", () => {
     const listings = [
       "git tag -n",
