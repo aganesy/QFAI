@@ -648,6 +648,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Validation launcher mismatch errors identify the checkout problem and explain
   how to install its dependencies and rerun validation through its own launcher.
+  The recovery names `pnpm bootstrap` for QFAI source worktrees and explains
+  how to replace an original `--root` while retaining the other options.
 
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
