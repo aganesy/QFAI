@@ -601,6 +601,44 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     ).toEqual(["error", "error"]);
   });
 
+  // QFAI:EX-0001-0039-82
+  it("matches Unicode-escaped qualified routine argument types", async () => {
+    const routines = [
+      ["f", "app.custom_type"],
+      ["f", String.raw`app.U&"custom\005ftype"`],
+      ["f", String.raw`U&"a\0070p"."custom_type"`],
+      ["f", "app.U&\"custom=005ftype\" UESCAPE '=' DEFAULT NULL"],
+      ["f", String.raw`app.U&"Custom\005fType"`],
+      ["g", String.raw`app.U&"A\+00002e\002c\0022"`],
+      ["g", 'app."A.,"""'],
+      ["g", String.raw`app.U&"a\+00002e\002c\0022"`],
+      ["h", String.raw`app.U&"\D83D\DE00"`],
+      ["h", 'app."\u{1f600}"'],
+      ["h", String.raw`app.U&"\+01F600"`],
+      ["k", "app.U&\"a!!b\" UESCAPE '!'"],
+      ["k", 'app."a!b"'],
+    ] as const;
+    const sql = routines
+      .map(
+        ([name, type]) =>
+          `CREATE OR REPLACE FUNCTION ${name}(a ${type}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n`,
+      )
+      .join("");
+
+    const { statements, errors } = parseSqlContract(sql);
+    expect(errors).toEqual([]);
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([
+      { kind: "FUNCTION", name: "f", lines: [1, 2, 3, 4] },
+      { kind: "FUNCTION", name: "g", lines: [6, 7] },
+      { kind: "FUNCTION", name: "h", lines: [9, 10, 11] },
+      { kind: "FUNCTION", name: "k", lines: [12, 13] },
+    ]);
+    const issues = await runOn(HEADER + sql);
+    expect(
+      issues.filter((issue) => issue.code === "QFAI-DB-002").map((issue) => issue.severity),
+    ).toEqual(["error", "error", "error", "error"]);
+  });
+
   it("distinguishes parentheses inside a type name from its modifiers", () => {
     const { statements } = parseSqlContract(
       `CREATE FUNCTION f("custom(x)"[]) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
