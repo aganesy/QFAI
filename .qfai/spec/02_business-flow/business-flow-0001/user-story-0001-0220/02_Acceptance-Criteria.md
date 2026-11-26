@@ -56,7 +56,7 @@ Feature: Get one fixed plan for every kind of request
     And after updating the head and waiting for its checks, it applies the review requirements of the pull request's base branch
     And before the final merge it fetches the base again, records any commit that differs from the recorded base and repeats the update, checks, review and final fetch
     And it merges only when the fetched base matches the recorded commit and checks and review requirements hold for the updated head, using the base repository's required merge method
-    And the forge merge is conditional on the reviewed head. If the head changes, it repeats the base refresh, checks and review before attempting another conditional merge
+    And the forge merge is conditional on the reviewed head. If the head changes, it repeats the base refresh, checks, review and final base fetch before attempting another conditional merge. If the forge cannot enforce the reviewed head, it reports `needs-change`
     And `quarantine-flaky` lifts its quarantine only after the recorded real repetitions, whatever the evidence of an ordinary cause
 
   # AC-0001-0220-07

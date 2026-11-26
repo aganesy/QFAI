@@ -60,8 +60,9 @@ operation. This step runs it and reports what happened.
    fetched base matches the recorded commit and checks and review requirements
    hold for the updated head, merge the pull request using the method the base
    repository requires. Make the forge merge conditional on that reviewed
-   head commit. If the head changes, repeat the base refresh, checks and
-   review for the new head before attempting the conditional merge again.
+   head commit. If the head changes, repeat the base refresh, checks, review
+   and final base fetch for the new head before attempting the conditional
+   merge again.
    If the forge cannot enforce the precondition, report `needs-change`.
    Carry out any other named operation. Observe the result, such as the
    merge commit, deploy status or closed item.
