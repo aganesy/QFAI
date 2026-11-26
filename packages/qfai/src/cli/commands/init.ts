@@ -703,7 +703,8 @@ async function writeAssistantVersion(
   }
   if (!options.dryRun) {
     await mkdir(path.dirname(target), { recursive: true });
-    if (!(await writeGeneratedProfile(target, content))) return keep(target);
+    if (!(await writeGeneratedProfile(target, content, { createOnly: !options.force })))
+      return keep(target);
   }
   result.copied.push(target);
   return result;
@@ -2388,13 +2389,18 @@ function describeUnwritableDestination(stats: Stats | undefined): string | undef
  * symlink that arrived in between (`ELOOP`), `O_NONBLOCK` turns opening a FIFO
  * with no reader into `ENXIO` instead of a hang, and the `fstat` on the open
  * handle refuses a FIFO that *does* have a reader, a socket, or a device before
- * a byte is written. Returns `false` when it refuses.
+ * a byte is written. With `createOnly`, the open refuses a competing entry
+ * before it can be written. Returns `false` when it refuses.
  */
-async function writeGeneratedProfile(destination: string, content: string): Promise<boolean> {
+async function writeGeneratedProfile(
+  destination: string,
+  content: string,
+  { createOnly = false }: { createOnly?: boolean } = {},
+): Promise<boolean> {
   const flags =
     constants.O_WRONLY |
     constants.O_CREAT |
-    constants.O_TRUNC |
+    (createOnly ? constants.O_EXCL : constants.O_TRUNC) |
     (typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0) |
     (typeof constants.O_NONBLOCK === "number" ? constants.O_NONBLOCK : 0);
   let handle: FileHandle | undefined;
@@ -2406,8 +2412,9 @@ async function writeGeneratedProfile(destination: string, content: string): Prom
     await handle.writeFile(content, "utf-8");
     return true;
   } catch (err: unknown) {
-    const code = (err as NodeJS.ErrnoException | null)?.code;
-    // The three the guards above produce. Anything else is a real failure.
+    const code = hasErrnoCode(err) ? err.code : undefined;
+    if (createOnly && code === "EEXIST") return false;
+    // The guards above refuse links, FIFOs, and directories. Other errors still fail the write.
     if (code === "ELOOP" || code === "ENXIO" || code === "EISDIR") {
       return false;
     }

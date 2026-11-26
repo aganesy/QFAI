@@ -629,11 +629,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
+
+- Migration step 3 sends constraint rows that cite lowercase contract IDs to
+  a person to rewrite in plain words.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
+
+- Plain `qfai init` preserves an assistant `VERSION` marker another writer creates
+  during initialization.
 
 - Root-heading diagnostics in `check-mdschema` print paths relative to the
   checked tree when the command is run from another directory.
