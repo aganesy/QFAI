@@ -596,7 +596,7 @@ describe("migration CLI contract shape", () => {
       (note, index) => note !== `${NEW}: rewrite "## Legacy ${index + 1}" of ${OLD} by hand`,
     );
     expect(mismatch).toBe(-1);
-  }, 30_000);
+  });
 
   // QFAI:EX-0004-0006-21
   it("writes the template's placeholder where the old contract has no ownership boundary", async () => {
