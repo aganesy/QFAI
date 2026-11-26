@@ -200,7 +200,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
   const args = [...argv];
   let command = args.shift() ?? null;
-  let invalid = false;
 
   if (command !== null && HELP_FLAGS.has(command)) {
     options.help = true;
@@ -219,7 +218,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    * before the usage text. If several rejections fire, the first reason is kept.
    */
   const markInvalid = (reason: string): void => {
-    invalid = true;
     invalidReason ??= reason;
   };
 
@@ -880,7 +878,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   ) {
     markInvalid("qfai session-review: give --session or --since, not both.");
   }
-  if (!invalid && !options.help) {
+  if (invalidReason === undefined && !options.help) {
     if (command === "catalog" && !options.catalogAction) {
       markInvalid(subcommandReason("catalog", null));
     }
@@ -905,7 +903,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "init" && options.rootExplicit && !options.dirExplicit) {
     options.dir = options.root;
   }
-  return { command, invalid, ...(invalidReason ? { invalidReason } : {}), options };
+  return {
+    command,
+    invalid: invalidReason !== undefined,
+    ...(invalidReason !== undefined ? { invalidReason } : {}),
+    options,
+  };
 }
 
 /** The set of subcommands accepted by `qfai <command> <subcommand>`. */

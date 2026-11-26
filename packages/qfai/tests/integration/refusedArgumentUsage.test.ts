@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { resolveToolVersion } from "../../src/core/version.js";
 import { runCliCaptured } from "../helpers/cliCapture.js";
 
 const HELP_POINTER = "Run qfai --help for every option.";
@@ -87,5 +88,13 @@ describe("a refused argument prints the command's usage, not the whole help", ()
     expect(err).toContain(reason);
     expect(out).toContain("Commands:");
     expect(out).toContain("Options:");
+  });
+
+  // QFAI:AC-0001-0315-01 QFAI:EX-0001-0315-03
+  it("prints the version when the invocation also requests help and has a refused argument", async () => {
+    const { out, err, code } = await runCliCaptured(["validate", "--bogus", "--help", "--version"]);
+    expect(out.trim()).toBe(await resolveToolVersion());
+    expect(err).toBe("");
+    expect(code).toBe(0);
   });
 });
