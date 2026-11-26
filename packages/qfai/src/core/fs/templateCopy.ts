@@ -28,8 +28,7 @@ export type CopyResult = {
   skipped: string[];
   /**
    * Destinations not written because an entry above them is a link or not a directory, or, under
-   * `force`, because the destination itself is a FIFO, a socket or a device: writing to one opens
-   * it, and opening a FIFO for writing waits for a reader that may never come.
+   * `force`, because the destination itself is a directory, a FIFO, a socket or a device.
    */
   refused: string[];
   /**
@@ -146,10 +145,9 @@ export async function copyListedTemplateFiles(
       await skipExisting(file, dest);
       continue;
     }
-    // `copyFile` opens the destination to write it, and a FIFO blocks that open until a reader
-    // arrives. A FIFO, a socket or a device is the project's own entry, not a stale template file,
-    // so a forced copy refuses it rather than removing it.
-    if (options.force && isSpecialEntry(await lstatOrUndefined(dest))) {
+    // A forced file copy can replace a regular file or a symlink. Keep other
+    // destination entries in place. Opening a FIFO for writing can wait for a reader.
+    if (options.force && refusesForcedFileCopy(await lstatOrUndefined(dest))) {
       refused.push(dest);
       continue;
     }
@@ -205,12 +203,11 @@ export async function copyListedTemplateFiles(
  * are read as `\n`: a checkout that converts them is not an edit.
  *
  * A link, a shared inode or an entry that is not a regular file is `"different"`: a forced copy
- * replaces a link or a shared inode as an entry and refuses a FIFO, a socket or a device, so none
- * of them is skipped as identical. So is a destination the bounded reader refuses, such as one with
- * no read permission: a plain run keeps it and lists it as kept, and a forced copy writes over it,
- * because a file that could not be read is not known to hold the template. Writing `\r\n` for
- * every `\n` at most doubles the text, so a destination over twice the template's size cannot hold
- * it and is not read past that bound.
+ * replaces a link or a shared inode as an entry and refuses a directory, a FIFO, a socket or a
+ * device. A destination the bounded reader refuses also counts as different. A plain run lists
+ * an unreadable file as kept, and a forced copy writes over it because its bytes may differ.
+ * Writing `\r\n` for every `\n` at most doubles the text size. The reader bounds the
+ * comparison at twice the template's size.
  */
 async function compareInstalled(
   source: string,
@@ -226,9 +223,9 @@ async function compareInstalled(
   return normalize(wanted) === normalize(present) ? "same-text" : "different";
 }
 
-/** Whether `entry` is something other than a regular file, a link or a directory. */
-function isSpecialEntry(entry: Stats | undefined): boolean {
-  return entry !== undefined && !entry.isFile() && !entry.isSymbolicLink() && !entry.isDirectory();
+/** Whether an existing entry prevents writing a template file to its path. */
+function refusesForcedFileCopy(entry: Stats | undefined): boolean {
+  return entry !== undefined && !entry.isFile() && !entry.isSymbolicLink();
 }
 
 /** `lstat`, or `undefined` when nothing is at `target`. Other faults propagate. */

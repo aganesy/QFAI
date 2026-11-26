@@ -1057,6 +1057,11 @@ decisions` headings appeared anywhere in the file, so a record with several
   `RangeError: Maximum call stack size exceeded`. Every one is now
   collected, in the same order.
 
+- **Migration preserves large constraint sections and story non-goal lists.**
+  Step 3 keeps the manual rewrite notes for every affected row of a large
+  constraint table, and step 4 keeps every non-goal of a large old story.
+  Both preserve the original order.
+
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
   `analysis` folder. When a file inside it could not be read, the copy threw:
@@ -1070,6 +1075,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   between the two, or a failed put-back, left that content there, and nothing
   reported it after the one note printed at the time. A later `qfai init` now
   names each such directory beside a wrapper it writes, and leaves it in place.
+  The note also describes retained project content when cleanup fails after
+  the link has been written.
   Closes #5317.
 
 - **The README skill list names every skill `qfai init` installs.** It left
@@ -1105,6 +1112,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   waits for a reader that may never come. A FIFO, a socket or a device at a
   template file's path is now refused and left as it is, on a dry run too.
   Closes #5257.
+
+- **`qfai init --force` reports a directory in a template file's place.**
+  The directory is listed as refused and its contents are preserved. The copy
+  continues with the other template files. A dry run reports the same refusal.
 
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried

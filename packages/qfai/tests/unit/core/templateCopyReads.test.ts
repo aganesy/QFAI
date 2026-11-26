@@ -140,6 +140,33 @@ describe("an installed file the bounded reader refuses", () => {
   });
 });
 
+describe("a directory where a template file goes", () => {
+  it.each([
+    { mode: "copy", dryRun: false },
+    { mode: "dry run", dryRun: true },
+  ])("refuses that destination and continues the forced $mode", async ({ dryRun }) => {
+    const { source, dest, destFile } = await trees("template\n", "installed\n");
+    await rmFile(destFile);
+    await mkdir(destFile);
+    const ownedFile = path.join(destFile, "owned.md");
+    await writeFile(ownedFile, "project content\n");
+    await writeFile(path.join(source, "z-other.md"), "other template\n");
+
+    const result = await copyTemplateTree(source, dest, { force: true, dryRun });
+
+    const other = path.join(dest, "z-other.md");
+    expect(result.refused).toEqual([destFile]);
+    expect(result.copied).toEqual([other]);
+    expect((await lstat(destFile)).isDirectory()).toBe(true);
+    expect(await readFile(ownedFile, "utf-8")).toBe("project content\n");
+    if (dryRun) {
+      await expect(lstat(other)).rejects.toMatchObject({ code: "ENOENT" });
+    } else {
+      expect(await readFile(other, "utf-8")).toBe("other template\n");
+    }
+  });
+});
+
 describe("a FIFO where a template file goes", () => {
   /** Replaces the installed `doc.md` with a FIFO, or skips the case where this process sees none. */
   async function plantFifo(destFile: string, skip: () => void): Promise<void> {
@@ -155,6 +182,7 @@ describe("a FIFO where a template file goes", () => {
     if (!planted) skip();
   }
 
+  // QFAI:EX-0001-0022-04
   it("is refused by a forced copy, which neither opens nor removes it", async (ctx) => {
     const { source, dest, destFile } = await trees("a\n", "a\n");
     await plantFifo(destFile, () => ctx.skip());
@@ -166,6 +194,7 @@ describe("a FIFO where a template file goes", () => {
     expect((await lstat(destFile)).isFIFO()).toBe(true);
   });
 
+  // QFAI:EX-0001-0022-04
   it("is refused by a forced dry run too", async (ctx) => {
     const { source, dest, destFile } = await trees("a\n", "a\n");
     await plantFifo(destFile, () => ctx.skip());
@@ -174,5 +203,6 @@ describe("a FIFO where a template file goes", () => {
 
     expect(result.refused).toEqual([path.join(dest, "doc.md")]);
     expect(result.copied).toEqual([]);
+    expect((await lstat(destFile)).isFIFO()).toBe(true);
   });
 });

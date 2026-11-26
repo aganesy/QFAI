@@ -1035,7 +1035,10 @@ function storyParts(body: string): StoryParts | PartialStory | null {
     } else if (entry.kind === "paragraph") {
       sentences.push(entry.text);
     } else if (entry.key === "non-goals") {
-      nonGoals.push(...[entry.value, ...entry.items].map((text) => text.trim()).filter(Boolean));
+      for (const item of [entry.value, ...entry.items]) {
+        const text = item.trim();
+        if (text) nonGoals.push(text);
+      }
     } else if (DROPPED_STORY_FIELDS.has(entry.key)) {
       continue;
     } else if (entry.items.length > 0) {
