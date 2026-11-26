@@ -232,8 +232,9 @@ describe("qfai init and the holds of an interrupted repair", () => {
       const output = await captureStdout(() =>
         runInit({ dir: root, force: false, dryRun: false, yes: true }),
       );
-      expect(output).toContain(`holds project content an interrupted forced relink moved aside`);
-      expect(output).toContain(hold);
+      expect(output).toContain(
+        `${hold} holds project content moved aside from ${wrapper} during link repair`,
+      );
       expect(await readFile(path.join(owned, "SKILL.md"), "utf8")).toBe("project wrapper\n");
       expect(path.normalize(await readlink(wrapper))).toBe(SINGULAR_TARGET);
     });

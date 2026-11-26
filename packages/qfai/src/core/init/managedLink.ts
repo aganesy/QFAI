@@ -132,10 +132,9 @@ export async function repointHolds(
 /**
  * The holds beside `linkPath` that hold a real file or directory.
  *
- * {@link replaceEntryThroughHold} moves the project's own entry into a hold
- * before a forced relink writes the link. A run stopped between the two, or a
- * put-back that failed, leaves that entry there. It is the project's content,
- * so it is named and never removed.
+ * Link repair moves the earlier entry into a hold before writing the link.
+ * An interruption, a failed put-back, or a cleanup failure after the link is
+ * written can leave that entry there. These entries are reported and left in place.
  */
 async function contentHolds(linkPath: string): Promise<string[]> {
   const name = path.basename(linkPath);
@@ -171,7 +170,7 @@ async function holdsBeside(linkPath: string): Promise<string[]> {
 async function reportContentHolds(linkPath: string, note: Note): Promise<void> {
   for (const hold of await contentHolds(linkPath)) {
     note(
-      `  note: ${hold} holds project content an interrupted forced relink moved aside from ${linkPath}; it is left in place for you to move back or delete`,
+      `  note: ${hold} holds project content moved aside from ${linkPath} during link repair. It was left in place for you to move back or delete.`,
     );
   }
 }

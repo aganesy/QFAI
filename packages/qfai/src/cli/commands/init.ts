@@ -810,11 +810,11 @@ async function mastersHoldingShippedText(rootAssets: string, destRoot: string): 
   return held;
 }
 
-/** Names each destination a copy refused because an entry above it is a link or not a directory. */
+/** Reports paths a copy refused because of the destination or one of its parent paths. */
 function reportRefusedWrites(refused: readonly string[], destRoot: string): void {
   for (const dest of refused) {
     warn(
-      `WARN: ${formatReportPath(path.relative(destRoot, dest))} was not written: an entry above it is a symbolic link or not a directory.`,
+      `WARN: ${formatReportPath(path.relative(destRoot, dest))} was not written. An incompatible destination or parent path blocked the write. Check the path before retrying.`,
     );
   }
 }
