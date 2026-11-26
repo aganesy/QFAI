@@ -67,6 +67,8 @@ describe("a fix route from the diagnosis to the commit", () => {
   // QFAI:EX-0001-0225-07
   it("commits exactly the paths the run wrote, and pushes nothing", async () => {
     const step = flat(await readShipped("step/verify-commit/STEP.md"));
+    expect(step).toContain("Express the authorized deliverable paths relative to that root.");
+    expect(step).toContain("Run the index comparisons and staging from the repository root.");
     expect(step).toMatch(
       /stage exactly the (?:authorized )?tracked deliverables the run wrote, with `git add <those paths>`/i,
     );
@@ -87,8 +89,18 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(guard).toBeGreaterThanOrEqual(0);
     expect(stage).toBeGreaterThan(guard);
     const preflight = procedure.slice(guard, stage);
-    expect(preflight).toContain(
+    const checkIndex = preflight.indexOf(
       "git diff --cached --name-only --no-renames --no-relative --ignore-submodules=none -z --",
+    );
+    expect(checkIndex).toBeGreaterThan(0);
+    const pathSetup = preflight.slice(0, checkIndex);
+    expect(pathSetup).toContain(
+      "identify the Git repository root even when the run starts below it.",
+    );
+    expect(pathSetup).toContain("Express the authorized deliverable paths relative to that root.");
+    expect(pathSetup).toContain("Run the index comparisons and staging from the repository root.");
+    expect(preflight).toContain(
+      "If the index cannot be read, report the failure and stop before staging.",
     );
     expect(preflight).toContain(
       "If unrelated staged paths exist, report them and stop before changing the index or creating a commit.",
@@ -281,15 +293,27 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(procedure).toMatch(/`verify-commit` makes the commit/);
   });
 
-  it("resolves the mainline parent and backport scope before picking a merge", async () => {
+  it("checks ordinary and merge backport diffs before branching", async () => {
     const procedure = await section("implement-backport", "## Procedure");
-    expect(procedure).toContain("Resolve and record the pick list before branching");
-    expect(procedure).toContain("source branch into which the change originally landed");
-    expect(procedure).toContain("git log --first-parent <source-ref>");
-    expect(procedure).toContain("A merge on that first-parent history uses parent 1.");
+    const branch = procedure.indexOf("3. Branch from the release branch");
+    expect(branch).toBeGreaterThan(0);
+    const preflight = procedure.slice(0, branch);
+    expect(preflight).toContain("Resolve and record the pick list before branching");
+    expect(preflight).toContain("source branch into which the change originally landed");
+    expect(preflight).toContain("git log --first-parent <source-ref>");
+    expect(preflight).toContain("A merge on that first-parent history uses parent 1.");
     expect(procedure).toContain("git cherry-pick -n -x -m <mainline-parent-number> <merge-commit>");
-    expect(procedure).toContain("explicitly identified constituent commits");
-    expect(procedure).toContain("stop before branching and report the missing evidence");
+    expect(preflight).toContain("explicitly identified constituent commits");
+    expect(preflight).toContain(
+      "Check the diff of each selected ordinary commit against the requested backport scope.",
+    );
+    expect(preflight).toContain(
+      "Check that the diff from the identified parent to the merge falls within the request",
+    );
+    expect(preflight).toContain("stop before branching and report the missing evidence");
+    expect(preflight).toContain(
+      "If any selected diff includes unrelated work, stop before branching and report the unrelated changes.",
+    );
   });
 
   it("works the diagnosis's matched example first, and skips an example under a test exception", async () => {
