@@ -16,9 +16,6 @@ The repository's own rules for code and checks are in `AGENTS.md`.
 | Project facts                       | [Architecture](../02_project/architecture.md), [tech stack](../02_project/tech-stack.md), [development](../02_project/development.md), [domain](../02_project/domain.md), [patterns](../02_project/patterns.md), [spec-driven development](../02_project/spec-driven-development.md), [MCP](../02_project/mcp.md), [agent selection](../02_project/agent-selection.md), [orchestrator](../02_project/orchestrator.md) and [naming](../02_project/naming.md) |
 | Tool-specific guidance              | [Codex](../03_ai-agents/codex/), [Claude Code](../03_ai-agents/claude-code/) and [Copilot](../03_ai-agents/copilot/)                                                                                                                                                                                                                                                                                                                                        |
 
-Use [work scenarios](../01_specialties/work-scenarios.md) when a listed scenario
-matches the task and you need the order in which to read its guidance.
-
 ## Core stance
 
 - Always dig into "why", and settle the purpose, constraints and completion criteria first.

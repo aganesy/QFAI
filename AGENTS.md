@@ -1,7 +1,6 @@
 # AI Agent Instructions
 
-This is the entry point for AI agents working on Quality-First AI (QFAI), a CLI and verification
-framework for specification-driven development.
+Quality-First AI (QFAI) is a CLI and verification framework for specification-driven development.
 
 ## Stance
 
@@ -14,6 +13,8 @@ framework for specification-driven development.
   remaining risk. If something could not run, say why.
 - Read [working practice](.instruction/00_universal/working-practice.md) for tasks beyond one step.
   Its [task-specific guidance](.instruction/00_universal/working-practice.md#task-specific-guidance) points to the detailed instructions.
+- Read `.instruction/01_specialties/work-scenarios.md` when a listed scenario matches the task
+  and you need its reading order.
 - Read `.agents/rules/graph-exploration.md` before searching, exploring or investigating code or
   documents. Prefer the matching graph CLI. Ordinary search stays available.
 
@@ -73,8 +74,7 @@ framework for specification-driven development.
 
 ## Rules: what to read, and when
 
-The masters under `.agents/rules/` are the single source of truth. A `<name>.local.md` is an overlay
-with what is specific to this repository; read it with its master.
+Read the rule masters under `.agents/rules/` with their repository-specific `<name>.local.md` overlays.
 
 | Rule                                                                 | In short                                                                                                                          | Read when                                                                                       |
 | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
