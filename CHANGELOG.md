@@ -640,6 +640,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
 
+- `gh-budget` also discards a partial job log when a signal stops GitHub CLI.
+  It keeps the rate-limit reading if the headers arrived in full.
+
 - Plain `qfai init` preserves an assistant `VERSION` marker another writer creates
   during initialization.
 
@@ -1094,6 +1097,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   Step 3 keeps the manual rewrite notes for every affected row of a large
   constraint table, and step 4 keeps every non-goal of a large old story.
   Both preserve the original order.
+
+- Migration step 3 also keeps large structure catalogue results, contract
+  index notes and changed constraint identifiers in order without exceeding
+  the JavaScript argument limit.
 
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
