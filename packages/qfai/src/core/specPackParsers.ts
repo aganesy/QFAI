@@ -464,16 +464,12 @@ export function maskNonSpecRegions(text: string): string {
   let inBlankTerminatedHtml = false;
   const listIndents: number[] = [];
   let prevBlank = true;
-  // Whether the line before is visible paragraph text, which a type-7 block
-  // cannot interrupt.
-  //
-  // SIMPLIFIED: every visible line other than a heading, a setext underline or
-  // a thematic break counts as paragraph text, a table row included.
-  // Lift when: a document opens a custom-element block straight under a table
-  // row and needs it blanked, which none in this tree does.
+  // Whether the last visible line can continue a paragraph in its container.
   let paragraphOpen = false;
 
   const maskLine = (line: string, index: number): string => {
+    const previousParagraphOpen = paragraphOpen;
+    paragraphOpen = false;
     const blank = line.trim().length === 0;
     const indentation = markdownIndent(line);
     if (open !== null) {
@@ -515,7 +511,7 @@ export function maskNonSpecRegions(text: string): string {
       line,
       indentation,
       listIndents,
-      paragraphOpen,
+      previousParagraphOpen,
     );
     if (inIndentedCode) {
       // A blank line does not end the block — an indented sample may contain
@@ -570,7 +566,9 @@ export function maskNonSpecRegions(text: string): string {
       // A comment opened inside a line ends inside one, so what follows its
       // `-->` continues that paragraph or table row and cannot open a block.
       // Blanking it whole cut a table at the row a cell's comment closed in.
-      return NON_PARAGRAPH_LINE.test(masked.text) ? "" : masked.text;
+      const visible = NON_PARAGRAPH_LINE.test(masked.text) ? "" : masked.text;
+      paragraphOpen = visible.trim().length > 0;
+      return visible;
     }
 
     const fence = FENCE_LINE.exec(masked.text)?.[1];
@@ -591,21 +589,16 @@ export function maskNonSpecRegions(text: string): string {
     // the fence check, so `<div>` inside a fenced sample is sample text.
     if (
       BLANK_TERMINATED_HTML_START.test(masked.text) ||
-      (!paragraphOpen && SINGLE_TAG_HTML_START.test(masked.text))
+      (!previousParagraphOpen && SINGLE_TAG_HTML_START.test(masked.text))
     ) {
       inBlankTerminatedHtml = true;
       return "";
     }
+    paragraphOpen = !endsParagraph(masked.text.slice(contentOffset ?? indentation.offset));
     return masked.text;
   };
 
-  return lines
-    .map((line, index) => {
-      const visibleLine = maskLine(line, index);
-      paragraphOpen = visibleLine.trim().length > 0 && !NON_PARAGRAPH_LINE.test(visibleLine);
-      return visibleLine;
-    })
-    .join("\n");
+  return lines.map(maskLine).join("\n");
 }
 
 /**
