@@ -183,7 +183,7 @@ describe("init --force never writes through a link", () => {
       }
     }
     expect(output).toContain(
-      "was not written. An incompatible destination or parent path blocked the write.",
+      "was not written. Check whether a directory or special entry occupies the destination, or a symbolic link or non-directory blocks a parent path.",
     );
   });
 });

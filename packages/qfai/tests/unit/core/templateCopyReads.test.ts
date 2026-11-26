@@ -86,7 +86,7 @@ vi.mock("node:fs/promises", async () => {
   };
 });
 
-const { collectTemplateFiles, copyTemplatePaths, copyTemplateTree } =
+const { collectTemplateFiles, copyListedTemplateFiles, copyTemplatePaths, copyTemplateTree } =
   await import("../../../src/core/fs/templateCopy.js");
 
 let root: string | undefined;
@@ -226,16 +226,20 @@ describe("a directory where a template file goes", () => {
     { mode: "copy", dryRun: false },
     { mode: "dry run", dryRun: true },
   ])("refuses that destination and continues the forced $mode", async ({ dryRun }) => {
-    const { source, dest, destFile } = await trees("template\n", "installed\n");
+    const { source, dest, sourceFile, destFile } = await trees("template\n", "installed\n");
     await rmFile(destFile);
     await mkdir(destFile);
     const ownedFile = path.join(destFile, "owned.md");
     await writeFile(ownedFile, "project content\n");
-    await writeFile(path.join(source, "z-other.md"), "other template\n");
+    const otherSource = path.join(source, "other.md");
+    await writeFile(otherSource, "other template\n");
 
-    const result = await copyTemplateTree(source, dest, { force: true, dryRun });
+    const result = await copyListedTemplateFiles([sourceFile, otherSource], source, dest, {
+      force: true,
+      dryRun,
+    });
 
-    const other = path.join(dest, "z-other.md");
+    const other = path.join(dest, "other.md");
     expect(result.refused).toEqual([destFile]);
     expect(result.copied).toEqual([other]);
     expect((await lstat(destFile)).isDirectory()).toBe(true);
