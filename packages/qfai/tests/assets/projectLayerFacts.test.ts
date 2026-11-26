@@ -345,6 +345,7 @@ describe("the project layer describes the repository it is in", () => {
     const listings = [
       "git tag -n",
       "git tag -n3",
+      "git tag -ln3",
       "git tag --contains <SHA>",
       "git tag --no-contains <SHA>",
       "git tag --points-at=<SHA>",
@@ -360,6 +361,8 @@ describe("the project layer describes the repository it is in", () => {
       'git tag -m "See --contains usage" vX.Y.Z <SHA>',
       "git tag -m --contains vX.Y.Z <SHA>",
       "git tag -am --contains vX.Y.Z",
+      "git tag --mess --contains vX.Y.Z",
+      "git tag -aml vX.Y.Z",
       "git tag -iam --contains vX.Y.Z",
       'git tag "--message" --contains vX.Y.Z',
       "git tag --format='%(refname)' -m 'release; candidate | notes' vX.Y.Z",
