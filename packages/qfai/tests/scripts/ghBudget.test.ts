@@ -123,6 +123,7 @@ describe("receiving a GitHub response", () => {
     const execute = vi.fn(() => {
       throw Object.assign(new Error("GitHub CLI output exceeded maxBuffer"), {
         code: "ENOBUFS",
+        signal: "SIGTERM",
         stdout: response(HEADERS, "partial job log"),
       });
     });
