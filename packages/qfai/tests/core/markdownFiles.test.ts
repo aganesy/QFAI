@@ -98,7 +98,7 @@ describe("Markdown under the specs directory in the UI/UX group", () => {
   });
 
   it("fails the read with the read's own error when a file is there but cannot be read", async () => {
-    // Exercise the shared reader here so the test reaches the UI/UX read boundary.
+    // Exercise markdownFileReader directly at the UI/UX read boundary.
     // A persistently unreadable spec file stops validation at the earlier story-tree read.
     // validateRunUnreadableMarkdown.test.ts covers that CLI diagnostic and its file path.
     // At this boundary the original file error must reach the caller unchanged.
