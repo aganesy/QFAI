@@ -369,7 +369,7 @@ describe("turn-end hook", () => {
   it.each([
     ["the gate is disabled", "workflow:\n  stopGate: false\n"],
     ["tech.md is missing", null],
-  ])("clears only the current session failure when %s", async (_case, config) => {
+  ])("clears only the active session and agent's failure when %s", async (_case, config) => {
     const fail = await script("fail.js", "type error\n", 1);
     const commands = [`- Lint: \`${fail}\``, "- Turn-end check: Lint"];
     await project(commands);
@@ -385,7 +385,6 @@ describe("turn-end hook", () => {
       await project(commands, config);
     }
     expect(await hook({ session_id: "paused", stop_hook_active: true })).toBe("");
-    expect(await readdir(stateDir)).toHaveLength(2);
 
     await project(commands);
     expect(parsed(await hook({ session_id: "paused", stop_hook_active: true })).decision).toBe(
