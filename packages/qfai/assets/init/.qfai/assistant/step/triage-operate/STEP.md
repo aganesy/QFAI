@@ -1,7 +1,7 @@
 ---
 name: triage-operate
 owner: qfai-triage
-purpose: "Carry out an operation the user named on work that is already done, observe its result, and change no tracked file except the run's deliberation record and the `open-questions.md` rows the run wrote."
+purpose: "Carry out and observe an operation the user named on finished work. Tracked changes are limited to the run's records, a base merge and, in run-operation, deleting a question row restored by the union merge."
 requires: []
 ---
 
@@ -173,15 +173,20 @@ request, or the version edit alone.
 
 - No file git tracks, apart from the base changes a merge of the base brings
   in, the run's deliberation record and its `open-questions.md` rows.
+- In `run-operation`, a separate commit before pushing records only the
+  deletion of an open-question row restored by the union merge after one side
+  deleted it, as described in step 4.
 - As the route's last step, after the operation, commit locally only the run's deliberation record
-  and the `open-questions.md` rows the run wrote, and push nothing. A run that
-  wrote neither commits nothing.
+  and the `open-questions.md` rows the run wrote, and push nothing. If neither
+  was written, skip that final commit.
 - The operation, its result and any `needs-change` outcome, in the report.
 
 ## Gate
 
 The stage worker confirms the operation was one the user named, its result is
 recorded as observed, and no tracked file changed beyond a merge of the base,
-the run's deliberation record and its `open-questions.md` rows. For a release, it also
-confirms the delegation is quoted with its source, and that no tag, publication
-or publication approval came from the agent.
+the run's deliberation record and its `open-questions.md` rows, or the
+separately committed deletion of an open-question row restored by the union
+merge in `run-operation`. Other register rows and IDs remain as merged.
+For a release, it also confirms the delegation is quoted with its source, and
+that no tag, publication or publication approval came from the agent.

@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The triage write limits include the restored question-row exception.**
+  The shipped merge procedure and its write limits agree that a union-restored
+  question row is removed in a separate commit before pushing.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
