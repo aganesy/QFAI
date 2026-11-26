@@ -9,7 +9,8 @@ Feature: A refused argument shows the command's own usage, not the whole help
     Given a qfai command name the CLI knows
     When the CLI refuses one of its arguments, such as a missing value, an unknown option or a missing subcommand
     Then stderr carries the reason, as before
-    And stdout carries the usage lines of that command, narrowed to the subcommand when one was given, and one line pointing to `qfai --help`
+    And without a help flag, stdout carries the usage lines of that command, narrowed to the subcommand when one was given, and one line pointing to `qfai --help`
     And the exit code is the argument-error code, as before
-    And `--help`, a missing command and an unknown command name still print the whole help
+    And an explicit `--help` or `-h` gives the whole help on stdout
+    And a missing or unknown command name prints the whole help
 ```
