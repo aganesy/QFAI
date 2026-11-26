@@ -519,7 +519,6 @@ describe("migration catalog move", () => {
     );
   });
 
-  // QFAI:EX-0004-0006-29
   // QFAI:EX-0004-0006-37
   it("merges a large batch of Skeleton commands in order without repeatedly scanning the list", () => {
     const heading = "Standard commands (copy-paste)";
@@ -551,9 +550,12 @@ describe("migration catalog move", () => {
     measuring = false;
 
     expect(indexedReads).toBeLessThanOrEqual(readBudget);
-    expect(draft.lists.get(heading)).toEqual(expected);
+    const merged = draft.lists.get(heading) ?? [];
+    expect(merged).toHaveLength(expected.length);
+    expect(merged.findIndex((line, index) => line !== expected[index])).toBe(-1);
   });
 
+  // QFAI:EX-0004-0006-29
   it("says a layer's row was dropped for holding a path when another layer depends on it", async () => {
     const context = await fixture();
     await put(
