@@ -56,7 +56,8 @@ describe("qfai-verify in a workflow run", () => {
     expect(contract).toContain(
       "Built-in stages write `verify.json` only for `full` and `prototyping`",
     );
-    expect(rowOf(contractScope, "| `atdd`")).toContain("`npx qfai validate --profile atdd`");
+    const atddRow = contractScope.split(/\r?\n/).find((line) => /^\|\s*`atdd`\s*\|/u.test(line));
+    expect(atddRow).toContain("`npx qfai validate --profile atdd`");
     expect(contract).toContain(
       "`verify-context` selects the scope when `qfai-verify` is invoked by name.",
     );
