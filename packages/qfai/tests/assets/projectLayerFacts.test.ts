@@ -169,7 +169,8 @@ function readTagCommand(command: string): {
 
     const [flag = "", value] = arg.split("=", 2);
     if (NON_CREATING_TAG_FLAGS.has(flag) || /^-n\d+$/.test(flag)) {
-      return { creates: false, operands: [], optionsKnown };
+      // An earlier unknown option may consume this apparent mode switch.
+      return { creates: !optionsKnown, operands: [], optionsKnown };
     }
 
     const listModifier = TAG_LIST_MODIFIERS.has(flag);
@@ -191,7 +192,9 @@ function readTagCommand(command: string): {
 
   // A continued command may name the tag on its next physical line.
   const creates =
-    operands.length > 0 || (args.length > 0 && (!hasListModifier || command.endsWith("\\")));
+    !optionsKnown ||
+    operands.length > 0 ||
+    (args.length > 0 && (!hasListModifier || command.endsWith("\\")));
   return { creates, operands, optionsKnown };
 }
 
@@ -396,6 +399,15 @@ describe("the project layer describes the repository it is in", () => {
       namesItsCommit('git tag -m Release --trailer "Change-Id: X" --cleanup verbatim vX.Y.Z <SHA>'),
     ).toBe(true);
   });
+
+  it.each(["git tag vX.Y.Z --mess --contains", "git tag --mess --sort vX.Y.Z"])(
+    "checks the commit even when an unknown option may consume a flag in %s",
+    (command) => {
+      const creations = tagCreations(command);
+      expect(creations).toEqual([command]);
+      expect(creations.filter(namesItsCommit)).toEqual([]);
+    },
+  );
 
   it("ignores listing options when identifying tag creation commands", () => {
     const listings = [
