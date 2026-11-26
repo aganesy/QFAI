@@ -332,8 +332,10 @@ Check every item before declaring completion:
 
 ## Completion Message & Next Actions
 
-- Proceed (recommended): use the cited research output in the next implementation or review step.
-  Action: carry forward the verified citations and note any remaining assumptions.
+- Share the cited research artifact (recommended). Present the findings,
+  verified citations and remaining assumptions to finish a research-only request.
+- Apply the findings only when the user explicitly requests application.
+  Start a separate code change and follow the applicable gates in Section 6.
 - Need more evidence:
   Action: rerun the pipeline with refined query, allowlist, or `--max-depth` settings.
 - Reviewer returned REVISE:
