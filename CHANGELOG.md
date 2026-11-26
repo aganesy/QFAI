@@ -640,6 +640,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
 
+- Plain `qfai init` preserves an assistant `VERSION` marker another writer creates
+  during initialization.
+
 - Root-heading diagnostics in `check-mdschema` print paths relative to the
   checked tree when the command is run from another directory.
 
