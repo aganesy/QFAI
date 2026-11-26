@@ -55,6 +55,9 @@ document often exists in two trees. **Edit the one the package carries.**
   afterwards, with the dependencies installed, and commit the files it rewrites in the same change.
 - Editing the shipped `AGENTS.md` template or the generated Copilot instructions: run `pnpm build`,
   then `pnpm pins:entry`, which rewrites the test fixture and digest that pin them.
+- After reviewing edits to shipped workflow run bodies or comments, run
+  `pnpm pins:shipped-workflows` to refresh the workflow file and step body digests.
+  Review changes to workflow, job or step structure and update their shape pins separately.
 - `.qfai/spec/03_contract/cli/` holds the contracts for QFAI's own command surface and for the files
   QFAI writes into a consuming project; `api/`, `db/` and `ui/` beside it belong to the shipped
   `qfai-sdd` skill (`packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`). Each contract is Markdown with no `QFAI-CONTRACT-ID`, declares `# CLI-NNNN: <title>`

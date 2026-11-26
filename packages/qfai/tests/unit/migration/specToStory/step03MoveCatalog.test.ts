@@ -355,6 +355,7 @@ describe("migration catalog move", () => {
         "| TC-01 | Runs on Linux | Adopters | CI |",
         "| TC-02 | Paths use `node:path` | Windows | Review |",
         "| OC-01 | BR-0003 holds on every release | Contract | Release |",
+        "| BC-01 | Follow cli-0010 on every release | Contract | Release |",
         "",
       ].join("\n"),
     );
@@ -371,6 +372,9 @@ describe("migration catalog move", () => {
     expect(result.output).toContain(
       `${target} ## Operational Constraints: rewrite OC-01 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
     );
+    expect(result.output).toContain(
+      `${target} ## Business Constraints: rewrite BC-01 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
+    );
     const constraint = await readFile(
       path.join(context.specsDir, "01_policy", "constraint.md"),
       "utf8",
@@ -378,6 +382,7 @@ describe("migration catalog move", () => {
     expect(constraint).toContain(
       "## Technical Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Runs on Linux | Adopters |\n\n## Operational Constraints\n\n| ID  | Constraint | Rationale |\n| --- | ---------- | --------- |\n",
     );
+    expect(constraint).not.toContain("cli-0010");
     expect(conformance(context.specsDir, "constraint")).toContain("No violations");
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
