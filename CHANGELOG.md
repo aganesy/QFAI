@@ -901,6 +901,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - The `validate.json` guide explains the original severity recorded in
   `issues[].relaxedFrom` by older exploration-mode runs.
+  The field is optional.
 
 - **A directory whose name begins with two dots counts as inside its base
   everywhere.** Several more checks tested whether a path relative to its base
