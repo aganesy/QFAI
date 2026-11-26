@@ -1774,6 +1774,38 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
 });
 
 describe("one lane runs on the floor `engines.node` declares", () => {
+  it("pins the lowest supported version from a disjunctive engines range", () => {
+    const step = setupActionSteps().find((candidate) => candidate["id"] === "shim");
+    const body = step?.["run"];
+    if (typeof body !== "string") throw new Error("the setup shim has no run body");
+    const start = body.indexOf('if [ "${PIN_ENGINES_FLOOR}" = "true" ]; then');
+    if (start < 0) throw new Error("the setup shim has no floor selector");
+
+    const root = mkdtempSync(path.join(tmpdir(), "qfai-node-floor-"));
+    try {
+      writeFileSync(
+        path.join(root, "package.json"),
+        JSON.stringify({ engines: { node: "^22.13.0 || >=24.0.0 || ^20.19.0" } }),
+      );
+      const result = spawnSync("bash", ["-e", "-c", body.slice(start)], {
+        cwd: root,
+        encoding: "utf-8",
+        env: {
+          ...process.env,
+          ENGINES_MANIFEST: "./package.json",
+          GITHUB_OUTPUT: "github-output",
+          GITHUB_WORKSPACE: REPO_ROOT,
+          PIN_ENGINES_FLOOR: "true",
+        },
+      });
+
+      expect(result.status, result.stderr + result.stdout).toBe(0);
+      expect(readFileSync(path.join(root, "github-output"), "utf-8")).toBe("version=20.19.0\n");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("asks the shared definition for the floor, and checks it got it", () => {
     // Every other toolchain job resolves the range, so `setup-node` gives
     // them all the newest satisfying release and nothing ever runs on the floor the package
