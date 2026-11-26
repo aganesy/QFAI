@@ -575,6 +575,7 @@ describe("migration CLI contract shape", () => {
     expect((await run(step03, root)).output).toMatch(/## Operations\r?\nnone/);
   });
 
+  // QFAI:EX-0004-0006-37
   it("keeps every manual note from a large legacy CLI contract in source order", async () => {
     const root = await project();
     const sectionCount = 200_000;

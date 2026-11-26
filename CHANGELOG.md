@@ -629,6 +629,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Migration step 3 retains all notes from large CLI contracts and combines
+  large batches of Skeleton commands without repeatedly scanning the list.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to

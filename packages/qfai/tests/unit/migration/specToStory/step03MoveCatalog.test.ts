@@ -520,6 +520,7 @@ describe("migration catalog move", () => {
   });
 
   // QFAI:EX-0004-0006-29
+  // QFAI:EX-0004-0006-37
   it("merges a large batch of Skeleton commands in order without repeatedly scanning the list", () => {
     const heading = "Standard commands (copy-paste)";
     const draft = newPolicyDraft(".qfai/spec/03_contract/tech.md");
