@@ -17,6 +17,7 @@ const calls = vi.hoisted(() => ({
   threadPages: [] as string[],
   commentPages: [] as string[],
   failGh: undefined as ((args: string[]) => Error | undefined) | undefined,
+  malformedGh: "",
 }));
 
 vi.mock("node:child_process", () => ({
@@ -25,6 +26,9 @@ vi.mock("node:child_process", () => ({
     if (command === "git") return "https://github.com/aganesy/QFAI.git\n";
     const failure = calls.failGh?.(args);
     if (failure !== undefined) throw failure;
+    if (calls.malformedGh !== "" && args.some((arg) => arg.includes(calls.malformedGh))) {
+      return "<html>Bad gateway</html>";
+    }
     if (args.some((arg) => arg.includes("reviewThreads(")))
       return calls.threadPages.shift() ?? "{}";
     if (args[1] === "-i") return calls.commentPages.shift() ?? "HTTP/2.0 404 Not Found\n\n{}";
@@ -525,6 +529,7 @@ describe("a call to gh that fails", () => {
   afterEach(() => {
     calls.list.length = 0;
     calls.failGh = undefined;
+    calls.malformedGh = "";
     vi.restoreAllMocks();
   });
 
@@ -555,6 +560,47 @@ describe("a call to gh that fails", () => {
     expect(text).toContain(
       "`gh` could not be started (ENOENT) while reading the review threads of pull request 12.",
     );
+  });
+
+  it.each([
+    [["list", "12"], "reviewThreads(", "reading the review threads of pull request 12"],
+    [
+      ["reply", "T1", "reply.txt"],
+      "addPullRequestReviewThreadReply",
+      "replying to review thread T1",
+    ],
+    [["resolve", "T1"], "resolveReviewThread", "resolving review thread T1"],
+    [["defer", "12", "T1", "40"], "node(id:$id)", "reading review thread T1"],
+  ])("rejects malformed JSON in %j", (argv, match, operation) => {
+    calls.malformedGh = match;
+    const { code, text } = errorOutput(argv);
+    expect(code).toBe(2);
+    expect(text).toBe(`GitHub returned invalid JSON while ${operation}.`);
+    expect(console.log).not.toHaveBeenCalled();
+  });
+
+  it("stops deferral before writes when a follow-up comment line is malformed", () => {
+    calls.threadAnswer = JSON.stringify({
+      data: {
+        node: {
+          id: "T1",
+          isResolved: false,
+          path: "src/a.ts",
+          line: 7,
+          pullRequest: { number: 12, repository: { nameWithOwner: "aganesy/QFAI" } },
+          comments: {
+            nodes: [{ url: "https://x/c/1", author: { login: "reviewer" }, body: "Cover it." }],
+          },
+          latest: { nodes: [] },
+        },
+      },
+    });
+    calls.issueAnswer = `${JSON.stringify("A valid older comment.")}\n{`;
+
+    const { code, text } = errorOutput(["defer", "12", "T1", "40"]);
+    expect(code).toBe(2);
+    expect(text).toBe("GitHub returned invalid JSON while reading the comments of issue 40.");
+    expect(calls.list.filter(([command]) => command === "gh")).toHaveLength(2);
   });
 
   it("names the step of a deferral that failed", () => {
