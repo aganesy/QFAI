@@ -46,13 +46,22 @@ it("accepts yarn exec qfai when PnP resolves the declared dependency into an ext
         YARN_PNP_ENABLE_ESM_LOADER: "true",
         YARN_ENABLE_GLOBAL_CACHE: "true",
         YARN_GLOBAL_FOLDER: cache,
+        YARN_ENABLE_IMMUTABLE_INSTALLS: "false",
         YARN_ENABLE_SCRIPTS: "false",
       },
     };
     const yarn = async (args: string[]) =>
       await spawnCaptured("corepack", ["yarn@4.9.2", ...args], options);
     const installed = await yarn(["install"]);
-    expect(installed.outcome, "Yarn could not install the PnP fixture").toBe(EXIT_ZERO);
+    const installCodes = new Set(
+      (installed.stdout + installed.stderr).match(
+        /\b(?:YN\d{4}|ERR_[A-Z0-9_]+|E(?:AI_AGAIN|NOTFOUND|TIMEDOUT|CONNRESET|ACCES|NOENT))\b/g,
+      ),
+    );
+    expect(
+      installed.outcome,
+      `Yarn could not install the PnP fixture (${[...installCodes].join(", ")})`,
+    ).toBe(EXIT_ZERO);
     const resolved = await yarn([
       "node",
       "-p",
