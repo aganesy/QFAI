@@ -40,7 +40,7 @@ it("reports an unmet interpreter prerequisite with a recovery action", async () 
 });
 
 // QFAI:EX-0001-0237-21
-// Mutation: packages/qfai/src/core/graph/prepare.ts `(await inspectCurrentCodeAnalysis(root, run)) ? "code-ready" : "code-not-ready"` -> `(await inspectCurrentCodeAnalysis(root, run)) ? "code-not-ready" : "code-ready"` fails "reports current code analysis without starting another analysis or document model"
+// Mutation: packages/qfai/src/core/graph/prepare.ts `(await currentCodeAnalysis(root, run)) ? "code-ready" : "code-not-ready"` -> `(await currentCodeAnalysis(root, run)) ? "code-not-ready" : "code-ready"` fails "reports current code analysis without starting another analysis or document model"
 it("reports current code analysis without starting another analysis or document model", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-current-"));
   const fixture = graphProcessFixture();
@@ -370,7 +370,7 @@ it("names the Windows path limit for a deep project root", () => {
 });
 
 // QFAI:EX-0001-0237-28
-// Mutation: packages/qfai/src/core/graph/prepare.ts `path.join(path.dirname(current.directory), ...)` -> `path.join(root, ".qfai", "tools", ...)` fails "stages a runtime beside the installed one"
+// Mutation: packages/qfai/src/core/graph/prepare.ts `graphRuntimeStaging(current.directory, randomBytes(4).toString("hex"))` -> `graphRuntimeStaging(path.dirname(current.directory), randomBytes(4).toString("hex"))` fails "stages a runtime beside the installed one"
 it("stages a runtime beside the installed one", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-staging-"));
   const fixture = graphProcessFixture();

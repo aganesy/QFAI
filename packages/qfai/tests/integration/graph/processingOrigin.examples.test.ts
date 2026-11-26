@@ -254,7 +254,7 @@ async function close(...endpoints: Endpoint[]): Promise<void> {
 // QFAI:EX-0001-0234-21
 // Mutation: packages/qfai/assets/graph/graphify-origin.py `raise PermissionError(REFUSAL)` -> `pass` fails "delivers the synthetic document only to the selected local origin"
 // Mutation: packages/qfai/assets/graph/graphify-origin.py `    refuse_redirects()` -> `    pass` fails "delivers the synthetic document only to the selected local origin"
-// Mutation: packages/qfai/assets/graph/graphify-origin.py `if event in PROCESSES or event in REVERSE_LOOKUPS:` -> `if event in REVERSE_LOOKUPS:` fails "delivers the synthetic document only to the selected local origin"
+// Mutation: packages/qfai/assets/graph/graphify-origin.py `def hook(event, args):` -> `def hook(event, args, PermissionError=RuntimeError):` fails "delivers the synthetic document only to the selected local origin"
 // Mutation: packages/qfai/assets/graph/graphify-origin.py ` or event == "socket.bind":` -> `:` fails "delivers the synthetic document only to the selected local origin"
 // Mutation: packages/qfai/assets/graph/graphify-origin.py `    refuse_listening()` -> `    pass` fails "delivers the synthetic document only to the selected local origin"
 // Mutation: packages/qfai/assets/graph/graphify-origin.py `    hold_scheme(scheme)` -> `    pass` fails "delivers the synthetic document only to the selected local origin"
