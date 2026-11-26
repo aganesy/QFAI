@@ -720,7 +720,6 @@ function splitTopLevel(text: string): string[] {
     } else if (ch === "]") {
       bracketDepth -= 1;
     } else if (depth === 0 && bracketDepth === 0 && ch === ",") {
-      // BR-CLI-0014-0314
       parts.push(text.slice(start, index));
       start = index + 1;
     }
