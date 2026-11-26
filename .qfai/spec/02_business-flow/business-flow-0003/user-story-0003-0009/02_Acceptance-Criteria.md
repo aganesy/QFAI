@@ -41,4 +41,13 @@ Feature: doctor --autoremediate mode
     When `qfai doctor --autoremediate --yes` runs and `npm install` fails for that dependency
     Then the failure is printed with the dependency's name
     And doctor exits 1, even when `--fail-on never` is passed
+
+  # AC-0003-0009-06
+  Scenario: Autoremediate repairs managed integration wrappers outside CI
+    Given an unsuppressed `QFAI-LINK-001` finding names a repairable wrapper for a shipped skill or agent
+    When `qfai doctor --autoremediate` runs outside CI
+    Then the wrapper points to its canonical target and the repair is reported
+    And files and directories owned by the project are preserved
+    And the pass may remove its own repair backups beside managed wrappers
+    And `--dry-run` reports the planned wrapper changes without applying them
 ```

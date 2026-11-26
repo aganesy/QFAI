@@ -11,16 +11,30 @@
 // kill-switch to the convention (any truthy `CI`, plus `GITHUB_ACTIONS`)
 // rather than to one spelling.
 
-import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readlink,
+  rm,
+  symlink,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runAutoremediate } from "../../../../src/core/doctor/autoremediate.js";
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
 import { pathExists } from "../../../helpers/pathExists.js";
 import { recordAssistantVersion } from "../../../helpers/assistantVersion.js";
+import {
+  canCreateSymlink,
+  SHIPPED_SKILL,
+  wireProject,
+} from "../../../helpers/integrationWrapperFixture.js";
 
 const tempDirs: string[] = [];
 
@@ -205,4 +219,51 @@ describe("doctor --autoremediate CI detection follows the convention", () => {
       expect(await runInEnv(label, env)).toBe(true);
     });
   }
+
+  // QFAI:AC-0003-0009-06
+  // QFAI:EX-0003-0009-16
+  it("previews and repairs a managed wrapper while preserving a project-owned file", async (test) => {
+    const root = await newTempDir("wrapper");
+    if (!(await canCreateSymlink(root))) test.skip();
+    await wireProject(root);
+    await recordAssistantVersion(root);
+    const wrapper = path.join(root, ".claude", "skills", SHIPPED_SKILL);
+    const projectFile = path.join(root, ".codex", "skills", SHIPPED_SKILL);
+    const canonicalTarget = await readlink(wrapper);
+    const wrongTarget = path.join("..", "..", "missing-skill");
+    const projectContent = "project-owned instructions\n";
+    await rm(wrapper);
+    await symlink(wrongTarget, wrapper, "dir");
+    await rm(projectFile);
+    await writeFile(projectFile, projectContent, "utf-8");
+
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const run = (dryRun: boolean): Promise<number> =>
+      runDoctor({
+        root,
+        rootExplicit: true,
+        autoremediate: true,
+        dryRun,
+        format: "json",
+        failOn: "never",
+      });
+    try {
+      expect(await run(true)).toBe(0);
+      expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
+        `would relink .claude/skills/${SHIPPED_SKILL}`,
+      );
+      expect(await readlink(wrapper)).toBe(wrongTarget);
+      expect(await readFile(projectFile, "utf-8")).toBe(projectContent);
+
+      stderr.mockClear();
+      expect(await run(false)).toBe(0);
+      expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
+        `relinked .claude/skills/${SHIPPED_SKILL}`,
+      );
+      expect(await readlink(wrapper)).toBe(canonicalTarget);
+      expect(await readFile(projectFile, "utf-8")).toBe(projectContent);
+    } finally {
+      stderr.mockRestore();
+    }
+  });
 });
