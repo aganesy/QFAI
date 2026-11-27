@@ -256,7 +256,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   finding is drafted only once its fix has reached the users it affects in
   production or their distribution channel, and an unfixed one is named to the
   user instead, with its location only where the message reaches the user alone
-  and otherwise a request to ask for it where only they will see the answer. The
+  and otherwise advice to ask about it where only they will see the answer. The
   `qfai session-review` command still reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
