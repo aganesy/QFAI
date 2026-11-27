@@ -1,9 +1,9 @@
 # Accessibility check: the spec template
 
-`implement-scaffold` writes this spec under `<testsDir>/e2e/` in a project whose UI contracts declare
-a screen with a web route, or a web project declares a Markdown UI responsibility. For Markdown, obtain the concrete routes from the implementation or prototype. It is the layer `.qfai/assistant/rule/test-layers.md#l6-accessibility`
-defines: axe through Playwright, limited to the WCAG 2.2 A and AA rules, on every route the UI
-contracts declare, as each role that can reach it.
+`implement-scaffold` writes this spec under `<testsDir>/e2e/` for a Markdown UI responsibility on a
+web surface or a structured UI contract that declares a screen with a web route. The spec runs axe
+through Playwright with the WCAG 2.2 A and AA rules. It checks the application routes each role can
+reach, as `.qfai/assistant/rule/test-layers.md#l6-accessibility` defines.
 
 ## Contents
 
@@ -14,7 +14,9 @@ contracts declare, as each role that can reach it.
 
 ## What the adopter fills in
 
-- `ROUTES_BY_ROLE`: one entry per role, with every route from the UI contracts that role can reach.
+- `ROUTES_BY_ROLE` has one entry per role. For Markdown UI contracts, derive the routes each role
+  can reach from the running application or prototype. For legacy structured UI contracts, use the
+  web routes declared by the contract and include each one under the roles that can reach it.
   A route with a parameter, such as `/orders/:id`, is written with a record the role's test data
   owns. A route a visitor reaches before signing in goes under the role `visitor`, which runs with
   no session.
@@ -35,7 +37,7 @@ import { expect, test } from "./fixtures";
 /** The axe tags of the WCAG 2.2 A and AA rules. */
 const WCAG_22_A_AA = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
-/** Every route the UI contracts declare, under each role that can reach it. */
+/** Every route each role can reach in the application. */
 const ROUTES_BY_ROLE: Readonly<Record<string, readonly string[]>> = {
   visitor: ["/"],
   member: ["/orders", "/orders/new"],
