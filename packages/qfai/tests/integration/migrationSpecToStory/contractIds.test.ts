@@ -428,7 +428,10 @@ describe("migration contract IDs", () => {
     await put(root, `${CONTRACTS}/design/order.md`, "# Order screen\n");
     await run(step03, root);
     for (const [contract, reason] of [
-      ["api/orders.md", "Markdown is not a contract: api/ holds OpenAPI YAML or JSON contracts"],
+      [
+        "api/orders.md",
+        "expected api/api-NNNN-<slug>.md for a Markdown contract or OpenAPI YAML or JSON for a legacy contract",
+      ],
       [
         "design/order.md",
         "design/ no longer exists: the brand belongs in the root DESIGN.md and a screen in a ui/ contract",
@@ -575,6 +578,29 @@ describe("migration CLI contract shape", () => {
     expect((await run(step03, root)).output).toMatch(/## Operations\r?\nnone/);
   });
 
+  // QFAI:EX-0004-0006-38
+  it("keeps every manual note from a large legacy CLI contract in source order", async () => {
+    const root = await project();
+    const sectionCount = 200_000;
+    const sections = Array.from(
+      { length: sectionCount },
+      (_, index) => `## Legacy ${index + 1}\n\nRetain.\n\n`,
+    );
+    await put(
+      root,
+      OLD,
+      `# Contract: Orders command\n\n## Ownership boundary\n\n${OWNERSHIP}\n\n${sections.join("")}`,
+    );
+
+    const plan = await planContracts(await context(root));
+    const notes = plan.forAPerson.filter((note) => note.startsWith(`${NEW}: rewrite "## Legacy `));
+    expect(notes).toHaveLength(sectionCount);
+    const mismatch = notes.findIndex(
+      (note, index) => note !== `${NEW}: rewrite "## Legacy ${index + 1}" of ${OLD} by hand`,
+    );
+    expect(mismatch).toBe(-1);
+  });
+
   // QFAI:EX-0004-0006-21
   it("writes the template's placeholder where the old contract has no ownership boundary", async () => {
     const root = await project();
@@ -701,13 +727,25 @@ describe("migration files that are no contract", () => {
     expect(await files(path.join(root, CONTRACTS))).toEqual(NUMBERED);
     const map = await text(root, `${STATE}/contract-map.json`);
     for (const [relative, , form] of markdown) {
+      const directory = relative.split("/")[0];
       expect(map).not.toContain(relative);
       expect(result.output).toContain(`- ${CONTRACTS}/${relative}: delete`);
       expect(forAPerson(result.output)).toContain(
-        `${CONTRACTS}/${relative}: Markdown is not a contract: ${relative.split("/")[0]}/ holds ${form} contracts; rewrite what it states by hand`,
+        `${CONTRACTS}/${relative}: expected ${directory}/${directory}-NNNN-<slug>.md for a Markdown contract or ${form} for a legacy contract; rewrite what it states by hand`,
       );
     }
     expect((await run(step03, root)).output).toMatch(/## Operations\r?\nnone/);
+  });
+
+  it("preserves a migrated Markdown contract when step 3 resumes", async () => {
+    const root = await project();
+    const file = `${CONTRACTS}/api/api-0042-orders.md`;
+    const body = "# API-0042: Orders\n\n## Responsibility\n\nAccept orders.\n";
+    await put(root, file, body);
+    await run(step03, root);
+    expect(await text(root, file)).toBe(body);
+    await run(step03, root);
+    expect(await text(root, file)).toBe(body);
   });
 
   // QFAI:EX-0004-0006-25

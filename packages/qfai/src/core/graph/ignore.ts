@@ -92,7 +92,21 @@ export async function ensureGraphGitignore(
     if (!isEnoent(cause)) throw cause;
   }
   const tracked = await run("git", ["ls-files", "-z", "--", ".qfai/tools/"], { cwd: root });
-  if (tracked.exitCode === 0 && tracked.stdout !== "") return conflict([]);
+  if (tracked.exitCode === 0 && tracked.stdout !== "") {
+    return {
+      files: [],
+      conflicts: [
+        "Git already tracks generated output under .qfai/tools/. " +
+          "From the directory initialized by `qfai init`, review the indexed paths with `git ls-files -- .qfai/tools/`. " +
+          "From that same directory, use `git --literal-pathspecs rm --cached -- <path>` to stop tracking a file. " +
+          "Replace `<path>` with one exact path relative to that directory and quote it for your shell. " +
+          "This keeps the files in your working tree. " +
+          "If Git refuses because the staged content differs, review and preserve the staged version before retrying. " +
+          "The staged content must match HEAD or the working file. " +
+          "Keep an effective ignore rule for future output.",
+      ],
+    };
+  }
   if (content.includes(GRAPH_IGNORE_MARKER)) {
     const visible = await unignoredGraphOutputs(root, content, run);
     return visible.length === 0 ? { files: [], conflicts: [] } : conflict(visible);

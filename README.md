@@ -88,7 +88,7 @@ upgrades.
 
 A fresh `qfai init` needs these on the machine before the first run:
 
-- Node.js 20.19.0 or later, to run `qfai` at all.
+- A Node.js version matching `^20.19.0 || ^22.13.0 || >=24.0.0` to run `qfai`.
 - Python 3.10 or later, and [`uv`](https://docs.astral.sh/uv/). Init installs
   Graphify, the document graph runtime, with them.
 - npm, which ships with Node.js. Init installs CodeGraph, the code graph
@@ -513,6 +513,11 @@ annotations do not satisfy these obligations.
 ## Configuration
 
 Configuration is stored at the repository root as `qfai.config.yaml`; you can change paths, traceability policies, and validation policy.
+
+`uiux.audit.slopDetection` is deprecated. QFAI accepts and ignores this legacy
+boolean. Define visual tokens and brand guidance in the root `DESIGN.md`.
+The `qfai-prototyping` review checks prototypes against that file and the
+shipped layout anti-pattern registry.
 
 Example: override paths and traceability globs.
 

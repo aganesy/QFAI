@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- UI, API and database contracts can now describe responsibilities, inputs,
+  outcomes and business rules in Markdown. Validation checks their document
+  structure, example references, and the business-rule annotations in source
+  and tests. Existing structured contracts can migrate individually.
+- Browser guidance records the reason and fallback when an implementation uses
+  a feature beyond its supported browser target.
+
 - **`qfai catalog design` derives the design tokens and the Tailwind theme
   from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
   Design Tokens Community Group 2025.10 format, with the colours, their
@@ -41,9 +48,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A fix could run every step, reviews and full suite included, while an open
   issue or pull request already covered the same problem, and the work was
   thrown away when the other change merged first. After its announcement and
-  before any edit, `qfai-run` now makes one REST search of the forge for open
-  issues and pull requests naming the request's files or symptom, leaving out
-  the one the request itself names. A match is a result that describes the
+  before any edit, `qfai-run` now makes one REST search for the request's
+  files or symptom, leaving out the item the request itself names. The
+  GitHub query uses `is:issue` so it works with GitHub App user tokens.
+  Forges with combined search include open issues and pull requests.
+  A match is a result that describes the
   same problem, not one that only shares words. On a match it writes nothing
   and asks the user, with at most three matches, whether to continue or to
   leave the problem to that work. Without a
@@ -236,6 +245,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The end-of-session feedback review reads review findings too.** Besides the
+  session itself, it reads the findings reviewer sub-agents returned and the
+  inline review comments, review bodies and conversation comments on the pull
+  requests the session opened or answered review on. Each finding QFAI's design,
+  specification, implementation, test or verification guidance should have
+  prevented becomes an issue draft that names the shipped skill, step, rule,
+  template, command, hook or agent definition to change. A lapse against
+  guidance that was never loaded when it applied is drafted against what should
+  have loaded it. A finding whose cause lies only in the project is not drafted.
+  The `qfai session-review` counts only hint at what was loaded. A security
+  finding is drafted only once its fix has reached the users it affects in
+  production or their distribution channel, and a finding stays held back where
+  it is unknown whether the project releases or deploys. An unfixed one is named
+  to the user by a number alone; its class of defect and location are given only
+  where the message reaches the user alone, and otherwise the user is advised to
+  ask about it there. The `qfai session-review` command still reads local
+  transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A
@@ -359,6 +385,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file counts, as before. A large lockfile is no longer read and decoded on
   every `qfai doctor` and `qfai init` run. The findings are unchanged.
 
+- **Doctor counts unreadable regular lockfiles.** The shipped-workflow checks
+  use regular-file metadata and match the package manager selection in CI.
+  They can now report a missing pnpm version or multiple lockfiles even when
+  the selected lockfile cannot be read.
+
 - **The graph exploration rule describes the graph CLI lifecycle once.** Its
   opening now says the integration registers no graph MCP server and runs no
   daemon or IPC, and one sentence after the command example says each CLI
@@ -373,6 +404,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it too until a rerun clears it. The report of a merge names, next to the
   merge commit, each check run of the head commit with its conclusion when it
   merged. Part of #4399.
+
+- **`qfai-triage` explains the restored-question merge exception.** The shipped
+  skill lists authorized base merges and explains that only `run-operation`
+  permits a separate commit to delete a question row that the union merge
+  restored after one side deleted it. #5991.
 
 - **`web-research` loads its skill-loading and golden-task detail only when it
   needs them.** How the skill is loaded (what the roster scan reads, when the
@@ -629,24 +665,61 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Specification tables inside a list item's HTML comment block are ignored.
+  Inline comments are removed only within their own table cells, preserving the
+  boundaries and visible content of adjacent cells.
+
+- **`qfai doctor` explains a workflow path that cannot be listed.** For
+  `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
+  ancestors are directories. Other read failures retain the existing guidance.
+
+- Document graph cache restore checks the analysis directory and its processing
+  settings before native inventory. An ineligible snapshot leaves local analysis
+  available.
+
+- QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
+
 - Component catalogue generation respects the same UTF-8 byte limit as
   validation and preserves the existing file when rendered output exceeds it.
   Small catalogue reads use a buffer that grows with the bytes read. Check mode
   reports when the selected metadata would exceed the publication limit.
 
-- QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
+- Restoring or publishing a completed document graph reuses the safety check
+  on each copy during native freshness validation.
+
+- Turn-end checks keep independent failure counts for distinct sessions and
+  agents. An active turn with only an old state file starts a fresh count
+  after upgrade.
+
+- The shipped-workflow pin command identifies malformed YAML declarations
+  and reports the expected shape before it refreshes any pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 
+- Migration step 3 asks authors to rewrite rejected constraints in plain
+  words and omit contract IDs.
+
+- Commands using the general CLI help format print full help when explicitly
+  given `--help` or `-h` alongside a refused argument. The refusal still
+  writes its reason to stderr and exits 2. A version request takes precedence.
+
+- The shipped prototyping preflight lists Doctor's Playwright probe order:
+  the project-local shim, then `npx --no-install playwright --version`.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
+
+- **Specification table checks respect list fences and row boundaries.**
+  Tables within fenced list examples are ignored, and comment-like text
+  in one table row can no longer hide subsequent visible rows.
 
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
 
 - `gh-budget` also discards a partial job log when a signal stops GitHub CLI.
-  It keeps the rate-limit reading if the headers arrived in full.
+  It keeps the rate-limit reading if the headers arrived in full and tells the
+  operator to rerun the same command once the interruption clears.
 
 - Plain `qfai init` preserves an assistant `VERSION` marker another writer creates
   during initialization.
@@ -659,12 +732,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The recovery names `pnpm bootstrap` for QFAI source worktrees and explains
   how to replace an original `--root` while retaining the other options.
 
+- Validation accepts the QFAI copy selected by Yarn Plug’n’Play for the project,
+  including a copy loaded from a shared cache outside the project directory.
+
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
+
+- **The triage write limits include the restored question-row exception.**
+  The shipped merge procedure and its write limits agree that a union-restored
+  question row is removed in a separate commit before pushing.
 
 - The shipped merge procedure places the final merge after updated-head review.
   If the final fetch sees a different base commit, it repeats the update,
   checks and review before fetching again.
+
+- **The final pull request merge is conditional on the reviewed head.**
+  If the head changes, the merge procedure refreshes the base, checks and
+  review for the new commit before trying again.
 
 - The verification guide distinguishes the built-in verdict scopes from
   acceptance-only validation with `qfai validate --profile atdd`.
@@ -691,6 +775,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   none of them after a private security intake, as the skill's Reviewer Gate
   does. Closes #5540.
 
+- **The seeded Git attributes explain how to handle a restored question row.**
+  After a union merge restores a deleted open question, the guidance calls for
+  a separate cleanup commit before pushing. It preserves other rows and IDs.
+
 - **`QFAI-DB-001` warns when a DB contract calls a destructive function it
   defines.** A function or procedure body was skipped because creating it runs
   nothing, so a file that created one holding `TRUNCATE` and then ran
@@ -703,6 +791,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runtime installation.** If a project-edited entrypoint needs manual
   recovery, the summary marks it as not ready and preserves the edited file.
   Closes #4530.
+
+- **Graph setup distinguishes tracked output from an ineffective ignore rule.**
+  Its warning tells operators to run both recovery commands from the
+  initialized project directory to stop tracking selected generated files
+  while keeping them in the working tree. It also tells operators to preserve
+  staged content if Git refuses the removal.
 
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read
@@ -734,9 +828,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now uses `{/* mermaid-lint:ignore */}` on the line above the fence instead.
   Closes #5341.
 
+- **The shipped docs workflow installs patched KaTeX for Mermaid.** Its
+  temporary npm tool directory selects KaTeX 0.18.2 for
+  GHSA-238p-pmpm-9mq7. The workflow verifies the resolved version before
+  checking diagram syntax.
+
 - **The prototyping doctor probes the project Playwright shim first.** It uses
   `npx --no-install playwright --version` if the shim is unavailable or fails.
   The reported order matches the two probes. Closes #4773.
+
+- **The prototyping doctor validates target URLs offline.** It reports the
+  URL configuration without sending a request. The prototyping preflight
+  checks reachability separately before the first iteration. Closes #4473.
 
 - **A plain `qfai report` of an unfinished run also says it is not a clean
   result.** The notice that the report is not a clean result was documented
@@ -752,6 +855,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Verification uses the repository root for index checks and staging.**
   A run started in a subdirectory compares authorized deliverables and staged
   entries using the same paths relative to the Git root.
+
+- **Verification stages authorized filenames literally.** The shipped commit
+  procedure treats each filename as one argument and disables Git pathspec
+  interpretation, so a filename cannot select an unrelated path.
 
 - **`qfai sdd preflight` no longer says "Nothing was written" after creating
   directories.** When its output-directory check failed after it had created
@@ -1107,6 +1214,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   index notes and changed constraint identifiers in order without exceeding
   the JavaScript argument limit.
 
+- Migration step 3 retains all notes from large CLI contracts and combines
+  large batches of Skeleton commands without repeatedly scanning the list.
+
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
   `analysis` folder. When a file inside it could not be read, the copy threw:
@@ -1205,6 +1315,14 @@ decisions` headings appeared anywhere in the file, so a record with several
   arguments, and its overloads were reported as one routine defined twice. The
   list is now read from the parenthesis that follows the name. Closes #5149.
 
+- **DB SQL validation keeps commas inside routine array defaults.** A default
+  such as `ARRAY[1, 2]` or a nested array now leaves the declared argument
+  types intact when checking for `QFAI-DB-002`.
+
+- **`QFAI-DB-002` decodes Unicode escapes in qualified routine argument types.**
+  A `U&` spelling and its ordinary equivalent now identify the same type.
+  Case and punctuation still distinguish different quoted names.
+
 - **The graph ignore check covers every name graph setup writes under.** The
   paths `qfai init` checks against an existing managed graph block missed the
   CodeGraph install directory in its private home and most hidden directories
@@ -1270,6 +1388,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   such as `ARRAY[[1,2],[3,4]]` still parse, and a `[` left open is reported.
   Closes #5136.
 
+- DB SQL validation reports physical line numbers in contracts that use
+  bare carriage returns, including after comments and multiline literals.
+
 - **A failed code graph refresh keeps the previous graph with the files it
   was built from.** Checking whether the code graph was current copied the
   changed project files into the active analysis first, so when the
@@ -1295,6 +1416,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - The routine parser skips commas and parentheses inside quoted argument
   names and preserves quoted type names when checking for duplicate routines.
 
+- **DB SQL validation accepts punctuation after routine `DEFAULT`.** It
+  detects redefinitions with defaults such as `DEFAULT(NULL)` and preserves
+  qualified input types such as `app.default`.
+
 - Dollar-quoted and directly `E`- or `e`-prefixed defaults in SQL routines
   preserve the argument types that follow them. The duplicate check ignores
   punctuation inside these defaults when comparing the argument types.
@@ -1313,6 +1438,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   separately. Equivalent ordinary double-quoted and bare spellings match. Case and
   punctuation that distinguish quoted identifiers are preserved.
 
+- SQL routine identity ignores a Unicode-quoted parameter name together with
+  its `UESCAPE` clause and retains the full input type.
+
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
   are two tables, not one redefinition. An index created without a name
@@ -1329,13 +1457,15 @@ decisions` headings appeared anywhere in the file, so a record with several
   Property names are case-insensitive. A later ordinary `background` can still
   override `background-color: ... !important` in jsdom. Closes #5135.
 
+- **The declared Node.js range matches the jsdom dependency.** QFAI supports Node.js `^20.19.0 || ^22.13.0 || >=24.0.0`. The CI and release floor checks derive the lowest version from the package manifest.
+
 - `check-mdschema --scope changed` includes new Markdown documents before
   staging and respects Git's ignore rules. A failed Git file listing widens
   the check and prints a warning.
 
 - The changed-scope schema check requests only untracked Markdown paths from
-  Git, regardless of extension case. Unrelated untracked files no longer fill
-  the captured Git output and trigger a full-tree check.
+  Git, regardless of extension case. Untracked non-Markdown files no longer
+  fill the captured Git output and trigger a full-tree check.
 
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
@@ -1399,6 +1529,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `e` before the quote opens an escape string, in which a backslash escapes
   the next character. Closes #5137.
 
+- The DB apply-order check keeps foreign keys that follow comments in
+  contracts with bare carriage returns. Masked regions retain their original
+  line separators and offsets.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
@@ -1410,6 +1544,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   such as `CREATE PUBLICATION feed FOR TABLE orders` made its contract the owner
   of `orders`. Only the PostgreSQL modifiers `TEMP`, `TEMPORARY`, `GLOBAL`,
   `LOCAL` and `UNLOGGED` may now sit there.
+
+- DB apply-order validation ignores references inside nested PostgreSQL
+  block comments and retains references that follow the outer comment.
 
 - **A package.json QFAI cannot read is reported as unreadable.** While
   locating its init templates (for `qfai init`, `qfai doctor` and the graph
@@ -1999,6 +2136,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   check, so doctor reported the required lane installed although GitHub had
   no workflow there. The lane now counts only as a readable regular file.
 
+- **Doctor's help explains `--dry-run` with `--out`.** A dry run previews
+  repairs. When a diagnosis is produced, `--out` still writes it. The contract
+  now records that relative output paths resolve against the checked project root.
+
 - **Verification reads its context from the configured spec and contract
   directories.** The `verify-context` step read the policy, contracts and
   `decisions.md` from the default `.qfai/spec` paths, and looked for gate
@@ -2225,6 +2366,15 @@ decisions` headings appeared anywhere in the file, so a record with several
   and reported `Invalid structured contract`. The declaration line is now
   removed first, and the rest is read as JSON. Closes #4707.
 
+- **Markdown contract reviews cover both contract formats and give rule-specific repair steps.**
+  Validation reads business-rule annotations in recognised implementation
+  languages, including Groovy, Objective-C, Perl and Haskell, and tells
+  authors where to add or correct a business-rule annotation. Prototyping
+  guidance checks Markdown responsibilities and structured screen lists in prose
+  or Markdown list items.
+  Accessibility walkthroughs use the web routes each role can reach in the
+  running application or prototype for Markdown UI responsibilities.
+
 - **A null `requires:` is no longer read as an empty step list.** In a
   step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
   `requires: null`, or a `requires:` with no value, as `requires: []`. It now
@@ -2327,6 +2477,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   reported an unterminated string or split a statement at a `;` inside the
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
+
+- **DB SQL validation reads continued PostgreSQL escape strings.** Later
+  quoted segments inherit escape handling after a newline, preserving
+  statement and argument boundaries and ignoring references inside the string.
 
 - **The `validate.json` guide documents `profileValidatorsRan`.** The key is
   in every result of a `qfai validate` run that finishes, but the guide to
@@ -2549,12 +2703,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
-- **The mdschema approval advice names the key current pnpm writes.** The
-  README and the `qfai doctor` fix for a checker that does not run said pnpm
-  records the approval under `onlyBuiltDependencies`, a setting pnpm 11
-  removed. Both now recommend `pnpm approve-builds` and say it records the
-  approval under `allowBuilds` for pnpm 10.31 or later and
-  `onlyBuiltDependencies` for earlier pnpm 10.
+- **The README and `qfai doctor` explain mdschema approval on pnpm.**
+  The `pnpm approve-builds` command is available from pnpm 10.1.0. pnpm 10
+  updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
+  From 10.31.0 it can also create the map when neither legacy list is set.
+  In other configurations on pnpm 10.1.0 or later in the 10.x series, the
+  command uses `onlyBuiltDependencies`. pnpm 11 uses `allowBuilds` by default.
 
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
@@ -3144,6 +3298,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   `--verify-tag`, so it never creates a tag. It reads the tag once more after
   the create, and deletes the Release again and fails when the tag moved or
   was deleted in between. Closes #4504.
+
+- Automatic release tagging verifies that the pushed commit came from merging the
+  version's release branch within this repository.
 
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the
@@ -4353,6 +4510,20 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   reads a base that still holds the column without it, so that change needs no
   change request. A settled question row may then
   be deleted once a decision row names its ID; until one does, the row stays.
+
+  Before removing Status, check `Test exception:` entries in the decision
+  register and its pages. In 2.2.1, only `DONE` made an exception active. After
+  removing Status for 2.4.0, the `Test exception:` prefix grants an exemption
+  for each cited BF, AC or EX ID that still exists in the story tree.
+
+  Keep `Test exception:` on intentional `DONE` exemptions. For every other
+  status, including `REJECTED`, `SUPERSEDED` and `PARTLY SUPERSEDED`, change the
+  Content prefix to `Former test exception:` and keep the decision ID. Record
+  the old status and any superseding decision in Approach before dropping
+  Status, especially when the Status cell alone names the superseding decision.
+  If you already upgraded, recover the legacy statuses from the pre-upgrade
+  register and apply the same guidance to the current rows.
+
 - **A decision row may be restated under its ID.** The `drift` profile of
   `qfai validate` now reports only a decision row the base holds that the
   branch removes or renumbers (`QFAI-STORY-010`); a row whose Content or

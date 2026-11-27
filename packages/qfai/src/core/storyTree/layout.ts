@@ -23,7 +23,7 @@ export const BUSINESS_FLOW_FILES = ["business-flow.md", "user-stories.md"] as co
 export const CONTRACT_LAYER_FILES = ["contracts.md", "tech.md"] as const;
 export const CONTRACT_KIND_DIRS = ["api", "db", "ui", "cli"] as const;
 
-/** The form a contract takes in each kind directory that holds no Markdown contract. */
+/** The structured formats of legacy contracts used by the v1 migration. */
 export const NON_MARKDOWN_CONTRACT_FORMS = {
   api: "OpenAPI YAML or JSON",
   db: "SQL",
@@ -31,8 +31,8 @@ export const NON_MARKDOWN_CONTRACT_FORMS = {
 } as const;
 
 /**
- * The kind directory of a Markdown file under `api/`, `db/` or `ui/`, which is
- * not a contract, or `null` for any other path. `relative` is posix and
+ * The kind directory of a Markdown file under `api/`, `db/` or `ui/`, used to identify
+ * legacy notes during migration, or `null` for any other path. `relative` is posix and
  * relative to the contracts directory.
  */
 export function markdownOutsideContractForm(

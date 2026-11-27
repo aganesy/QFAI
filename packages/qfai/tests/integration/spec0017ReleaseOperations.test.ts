@@ -37,7 +37,7 @@ describe("spec-0017 release operation capabilities", () => {
       return body;
     });
     expect(bodies.join(" && ")).toBe(
-      "pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml packages/qfai/assets/init/.qfai/ && bash ./scripts/run-lint-checks.sh gate && pnpm check-types && node ./scripts/check-build-warnings.mjs && pnpm verify:pack",
+      "node ./scripts/sync-shipped-workflow-toolchain.mjs --check && pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml packages/qfai/assets/init/.qfai/ && bash ./scripts/run-lint-checks.sh gate && pnpm check-types && node ./scripts/check-build-warnings.mjs && pnpm verify:pack",
     );
     const selected = invocations("sliced", "operations")
       .filter((entry) => entry.manifest === "root")

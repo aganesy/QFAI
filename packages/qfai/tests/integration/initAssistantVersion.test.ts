@@ -102,13 +102,22 @@ describe("qfai init records the release that wrote the assistant tree", () => {
     expect(await readFile(versionFile(dir), "utf-8")).toBe(`${running}\n`);
   });
 
+  // QFAI:AC-0001-0021-01
   // QFAI:EX-0001-0021-17
-  it("reports a bounded list of the kept assets that deferred the version", async () => {
+  it.each([
+    { outcome: "kept assets only", refusesAsset: false },
+    { outcome: "kept and refused assets", refusesAsset: true },
+  ])("reports the bounded kept list for $outcome", async ({ refusesAsset }) => {
     const dir = await newTempDir();
     const skills = path.join(".qfai", "assistant", "skill");
     const matching = path.join(skills, "qfai-sdd", "SKILL.md");
+    const blocked = path.join(".qfai", "assistant", "step", "implement-tdd");
+    if (refusesAsset) {
+      await mkdir(path.dirname(path.join(dir, blocked)), { recursive: true });
+      await writeFile(path.join(dir, blocked), "project file\n", "utf-8");
+    }
     await init(dir);
-    await rm(versionFile(dir));
+    if (!refusesAsset) await rm(versionFile(dir));
     expect((await stat(path.join(dir, matching))).isFile()).toBe(true);
     const edited = (await readdir(path.join(dir, skills), { withFileTypes: true }))
       .filter((entry) => entry.isDirectory() && entry.name !== "qfai-sdd")
@@ -125,9 +134,29 @@ describe("qfai init records the release that wrote the assistant tree", () => {
       .find((line) => line.startsWith("Assistant VERSION stays absent"));
 
     await expectAbsent(versionFile(dir));
-    expect(edited.filter((file) => diagnostic?.includes(file))).toHaveLength(8);
-    expect(diagnostic).toContain("and 1 more");
-    expect(diagnostic).not.toContain(matching);
+    const summary =
+      /^Assistant VERSION stays absent when required assets cannot be verified\. Check the kept assets at (.+) and 1 more\.(.*)$/.exec(
+        diagnostic ?? "",
+      );
+    expect(summary).not.toBeNull();
+    expect(summary?.[2]).toBe(
+      refusesAsset ? " See warnings for paths that could not be written." : "",
+    );
+    const listed = (summary?.[1] ?? "").split(", ");
+    expect(listed).toHaveLength(8);
+    expect(new Set(listed).size).toBe(8);
+    expect(edited).toEqual(expect.arrayContaining(listed));
+    expect(listed).not.toContain(matching);
+    const refused = path.join(blocked, "STEP.md");
+    expect(listed).not.toContain(refused);
+    const refusal = output
+      .split(/\r?\n/)
+      .find((line) => line.startsWith(`WARN: ${refused} was not written.`));
+    if (refusesAsset) {
+      expect(refusal).toContain("non-directory blocks a parent path");
+    } else {
+      expect(refusal).toBeUndefined();
+    }
   });
 
   // QFAI:AC-0001-0021-01

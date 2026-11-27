@@ -131,11 +131,45 @@ async function textFilesUnder(dir: string): Promise<string[]> {
   return names.filter((name) => /\.(md|ya?ml|sql)$/i.test(name));
 }
 
-/** Every citation in `text` of a document named `file`, as written, path prefix included. */
+/** Every path citing `file`, including invalid suffixes and excluding fragments. */
 function citationsOf(text: string, file: string): string[] {
-  const pattern = new RegExp(`[^\\s\`"'()<>]*${file.replace(".", "\\.")}`, "g");
-  return [...text.matchAll(pattern)].map((match) => match[0]);
+  const pathPart = "[^\\s`\"'()<>#\\[\\]]*";
+  const codeSpan = "(?<!`)(?<ticks>`+)(?!`)(?<code>[^\\r\\n]*?)(?<!`)\\k<ticks>(?!`)";
+  const barePath = `(?<bare>${pathPart}${file.replaceAll(".", "\\.")}${pathPart})`;
+  const pattern = new RegExp(`${codeSpan}|${barePath}`, "g");
+  return [...text.matchAll(pattern)].flatMap((match) => {
+    const code = match.groups?.code;
+    if (code !== undefined) {
+      const cited = code.split("#", 1)[0]?.trim() ?? "";
+      return cited.includes(file) ? [cited] : [];
+    }
+    const cited = match.groups?.bare ?? "";
+    const left = text[match.index - 1] ?? "";
+    const right = text[match.index + cited.length];
+    // A period in prose is punctuation. A period inside a citation is part of its path.
+    return [/[\x60"'(<]/.test(left) || right === "#" ? cited : cited.replace(/[.,;:!?]+$/, "")];
+  });
 }
+
+it("keeps complete SDD citation paths while separating fragments and prose punctuation", () => {
+  const file = "requirements-decomposition.md";
+  const canonical = `.qfai/assistant/skill/qfai-sdd/references/${file}`;
+  const text = [
+    `See ${canonical}.`,
+    `Read \`${canonical}#where-each-answer-goes\`.`,
+    `Invalid \`${canonical}.bak#where-each-answer-goes\`.`,
+    `Invalid \`${canonical}.\`.`,
+    `Invalid \`\`${canonical} (copy)#where-each-answer-goes\`\`.`,
+  ].join("\n");
+
+  expect(citationsOf(text, file)).toEqual([
+    canonical,
+    canonical,
+    `${canonical}.bak`,
+    `${canonical}.`,
+    `${canonical} (copy)`,
+  ]);
+});
 
 describe("qfai-sdd writes the story tree", () => {
   // QFAI:AC-0001-0147-04
@@ -263,7 +297,7 @@ describe("qfai-sdd writes the story tree", () => {
 
   // QFAI:AC-0001-0147-07
   // QFAI:EX-0001-0147-11
-  it("cites the change-classification and requirements-decomposition documents where they live", async () => {
+  it("checks canonical references in each SDD step that uses them", async () => {
     const skillDir = path.join(SHIPPED_ASSISTANT, "skill", "qfai-sdd");
     const files = [
       ...(await textFilesUnder(skillDir)).map((name) => path.join(skillDir, name)),
@@ -273,8 +307,14 @@ describe("qfai-sdd writes the story tree", () => {
     ];
     const classification = ".qfai/assistant/rule/change-classification.md";
     const decomposition = `${defaultConfig.paths.skillsDir}/qfai-sdd/references/requirements-decomposition.md`;
-    let classificationCitations = 0;
-    let decompositionCitations = 0;
+    const triage = await readShipped(TRIAGE_STEP);
+    expect(citationsOf(triage, "change-classification.md"), TRIAGE_STEP).toContain(classification);
+    expect(citationsOf(triage, "requirements-decomposition.md"), TRIAGE_STEP).toContain(
+      decomposition,
+    );
+    const flow = await readShipped(FLOW_STEP);
+    expect(citationsOf(flow, "requirements-decomposition.md"), FLOW_STEP).toContain(decomposition);
+
     for (const file of files) {
       const text = await readFile(file, "utf-8");
       expect(text, file).not.toContain(".qfai/assistant/constitution/");
@@ -288,11 +328,7 @@ describe("qfai-sdd writes the story tree", () => {
         decomposed.filter((cited) => cited !== decomposition),
         file,
       ).toEqual([]);
-      classificationCitations += classified.length;
-      decompositionCitations += decomposed.length;
     }
-    expect(classificationCitations).toBeGreaterThan(0);
-    expect(decompositionCitations).toBeGreaterThan(0);
     expect(shippedExists("rule/change-classification.md")).toBe(true);
     expect(shippedExists("skill/qfai-sdd/references/requirements-decomposition.md")).toBe(true);
   });

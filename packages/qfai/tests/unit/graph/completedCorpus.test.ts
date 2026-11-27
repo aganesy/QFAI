@@ -5,11 +5,23 @@
  * project content.
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import type * as NativeFs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { safeCompletedCorpus } from "../../../src/core/graph/reuse.js";
+
+const rootCheck = vi.hoisted(() => ({ analysis: "", reportedFile: "" }));
+vi.mock("node:fs/promises", async (original) => {
+  const fs = await original<typeof NativeFs>();
+  return {
+    ...fs,
+    lstat: (target: string) =>
+      fs.lstat(target === rootCheck.analysis ? rootCheck.reportedFile : target),
+    readdir: vi.fn(fs.readdir),
+  };
+});
 
 const DELIBERATION = ".qfai/deliberation";
 let analysis: string;
@@ -24,7 +36,18 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  rootCheck.analysis = "";
+  rootCheck.reportedFile = "";
   await rm(analysis, { recursive: true, force: true });
+});
+
+it("checks that the analysis root is a directory before reading any entries", async () => {
+  rootCheck.analysis = analysis;
+  rootCheck.reportedFile = path.join(analysis, "README.md");
+  vi.mocked(readdir).mockClear();
+
+  expect(await safeCompletedCorpus(analysis, DELIBERATION)).toBeUndefined();
+  expect(readdir).not.toHaveBeenCalled();
 });
 
 it.each([".codegraph", "graphify-out"])(
