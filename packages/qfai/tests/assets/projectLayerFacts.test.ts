@@ -111,44 +111,91 @@ const NON_CREATING_TAG_FLAGS = new Set([
 ]);
 
 /** The tag creation options whose next word is their value. */
-const VALUE_TAKING_TAG_FLAGS = new Set(["-m", "--message", "-F", "--file", "-u", "--local-user"]);
+const VALUE_TAKING_TAG_FLAGS = new Set([
+  "--message",
+  "--file",
+  "--local-user",
+  "--trailer",
+  "--cleanup",
+]);
 
 /** Sorting and formatting do not switch a command with a tag operand into list mode. */
 const TAG_LIST_MODIFIERS = new Set(["--sort", "--format"]);
 
-function isTagCreation(command: string): boolean {
+const TAG_SWITCHES = new Set([
+  "--annotate",
+  "--sign",
+  "--no-sign",
+  "--force",
+  "--edit",
+  "--ignore-case",
+  "--color",
+  "--no-color",
+  "--omit-empty",
+  "--column",
+  "--no-column",
+  "--create-reflog",
+  "--no-create-reflog",
+]);
+
+function readTagCommand(command: string): {
+  creates: boolean;
+  operands: string[];
+  optionsKnown: boolean;
+} {
   // Keep quoted words together so flag-like text in a tag message stays a value.
   const words = command.match(/(?:[^\s"'\\]|"(?:[^"\\]|\\.)*"|'[^']*'|\\.)+/g);
-  const args = words?.slice(2) ?? [];
-  let hasOperand = false;
-  let hasListModifier = false;
-
-  for (let index = 0; index < args.length; index++) {
-    const word = args[index] ?? "";
-    const arg = word.replace(
+  const args = (words?.slice(2) ?? []).map((word) =>
+    word.replace(
       /"((?:[^"\\]|\\.)*)"|'([^']*)'|\\(.)/g,
       (_, doubleQuoted: string | undefined, singleQuoted: string | undefined, escaped: string) =>
         doubleQuoted?.replace(/\\(["\\$`])/g, "$1") ?? singleQuoted ?? escaped,
-    );
+    ),
+  );
+  let operands: string[] = [];
+  let hasListModifier = false;
+  let optionsKnown = true;
+
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index] ?? "";
     if (arg === "--") {
-      hasOperand ||= index + 1 < args.length;
+      operands = operands.concat(args.slice(index + 1));
       break;
+    }
+    if (!arg.startsWith("-")) {
+      operands.push(arg);
+      continue;
     }
 
     const [flag = "", value] = arg.split("=", 2);
-    if (NON_CREATING_TAG_FLAGS.has(flag) || /^-n\d+$/.test(flag)) return false;
+    if (NON_CREATING_TAG_FLAGS.has(flag) || /^-n\d+$/.test(flag)) {
+      // An earlier unknown option may consume this apparent mode switch.
+      return { creates: !optionsKnown, operands: [], optionsKnown };
+    }
 
     const listModifier = TAG_LIST_MODIFIERS.has(flag);
     hasListModifier ||= listModifier;
+    const longWithValue = listModifier || VALUE_TAKING_TAG_FLAGS.has(flag);
     const takesSeparateValue =
-      (/^--/.test(flag) && VALUE_TAKING_TAG_FLAGS.has(flag) && value === undefined) ||
-      /^-[aesfi]*[mFu]$/.test(arg);
-    if ((listModifier && value === undefined) || takesSeparateValue) index++;
-    if (!arg.startsWith("-")) hasOperand = true;
+      (longWithValue && value === undefined) || /^-[aesfi]*[mFu]$/.test(arg);
+    if (takesSeparateValue) {
+      index++;
+      if (index === args.length) optionsKnown = false;
+    } else if (
+      !longWithValue &&
+      !TAG_SWITCHES.has(flag) &&
+      !/^-[aesfi]*(?:[mFu].+|[aesfi])$/.test(arg)
+    ) {
+      optionsKnown = false;
+    }
   }
 
   // A continued command may name the tag on its next physical line.
-  return hasOperand || (args.length > 0 && (!hasListModifier || command.endsWith("\\")));
+  const creates =
+    !optionsKnown ||
+    operands.length > 0 ||
+    (args.length > 0 && (!hasListModifier || command.endsWith("\\")));
+  return { creates, operands, optionsKnown };
 }
 
 function splitShellCommands(line: string): string[] {
@@ -181,24 +228,21 @@ function tagCreations(markdown: string): string[] {
     .flatMap(splitShellCommands)
     .map((part) => part.trim())
     .filter((part) => /^git\s+tag(?:\s|$)/.test(part))
-    .filter(isTagCreation)
+    .filter((part) => readTagCommand(part).creates)
     .map((part) => part.replace(/\\$/, "").trim());
 }
 
 /**
- * Whether a tag command names its commit: the last word is the `<SHA>`
- * placeholder or a full 40-hex SHA and is no flag's value, and no word is
- * `HEAD` or `@`. Without a commit, `git tag` tags whatever the checkout has as
- * HEAD.
+ * The second positional operand names the commit. The guide requires the
+ * `<SHA>` placeholder or a full 40-hex SHA there.
  */
 function namesItsCommit(command: string): boolean {
-  const words = command.split(/\s+/);
-  const last = words[words.length - 1] ?? "";
-  const beforeLast = words[words.length - 2] ?? "";
+  const { creates, operands, optionsKnown } = readTagCommand(command);
   return (
-    /^(?:<SHA>|[0-9a-f]{40})$/.test(last) &&
-    !VALUE_TAKING_TAG_FLAGS.has(beforeLast) &&
-    !words.some((word) => /^(?:HEAD|@)(?:[~^].*)?$/.test(word))
+    creates &&
+    optionsKnown &&
+    operands.length === 2 &&
+    /^(?:<SHA>|[0-9a-f]{40})$/.test(operands[1] ?? "")
   );
 }
 
@@ -340,6 +384,30 @@ describe("the project layer describes the repository it is in", () => {
     expect(chained.every((command) => namesItsCommit(command))).toBe(true);
     expect(namesItsCommit(`git tag vX.Y.Z ${"a".repeat(40)}`)).toBe(true);
   });
+
+  it("checks the tag's commit independently of a quoted message", () => {
+    expect(namesItsCommit('git tag -m "See HEAD for details" vX.Y.Z <SHA>')).toBe(true);
+    expect(namesItsCommit("git tag vX.Y.Z <SHA> --message 'Compare HEAD and @'")).toBe(true);
+    expect(namesItsCommit('git tag -- vX.Y.Z "<SHA>"')).toBe(true);
+    expect(namesItsCommit('git tag -m "A release note" vX.Y.Z HEAD')).toBe(false);
+    expect(namesItsCommit("git tag vX.Y.Z @")).toBe(false);
+    expect(namesItsCommit('git tag -m "See HEAD for details" vX.Y.Z')).toBe(false);
+    expect(namesItsCommit("git tag vX.Y.Z -m <SHA>")).toBe(false);
+    expect(namesItsCommit("git tag vX.Y.Z --mess <SHA> --force")).toBe(false);
+    expect(namesItsCommit("git tag vX.Y.Z <SHA> --message")).toBe(false);
+    expect(
+      namesItsCommit('git tag -m Release --trailer "Change-Id: X" --cleanup verbatim vX.Y.Z <SHA>'),
+    ).toBe(true);
+  });
+
+  it.each(["git tag vX.Y.Z --mess --contains", "git tag --mess --sort vX.Y.Z"])(
+    "checks the commit even when an unknown option may consume a flag in %s",
+    (command) => {
+      const creations = tagCreations(command);
+      expect(creations).toEqual([command]);
+      expect(creations.filter(namesItsCommit)).toEqual([]);
+    },
+  );
 
   it("ignores listing options when identifying tag creation commands", () => {
     const listings = [
