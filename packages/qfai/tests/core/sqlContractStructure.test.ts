@@ -132,8 +132,10 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     expect(statements).toHaveLength(3);
   });
 
-  it("counts a newline escaped inside an E string", () => {
-    const { statements, errors } = parseSqlContract(`SELECT E'a\\\nb';\nSELECT 2;`);
+  it.each(["\n", "\r\n", "\r"])("counts a %j newline escaped inside an E string", (separator) => {
+    const { statements, errors } = parseSqlContract(
+      `SELECT E'a\\${separator}b';${separator}SELECT 2;`,
+    );
     expect(errors).toEqual([]);
     expect(statements.map((statement) => statement.line)).toEqual([1, 3]);
   });
@@ -142,6 +144,40 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     const { statements } = parseSqlContract(`-- a; b\nSELECT 1;\n/* c; d */\nSELECT 2;`);
     expect(statements).toHaveLength(2);
   });
+
+  // QFAI:EX-0001-0039-78
+  it.each(["\n", "\r\n", "\r"])(
+    "uses physical SQL lines with the %j separator",
+    async (separator) => {
+      const sql = [
+        "-- QFAI-CONTRACT-ID: DB-0001",
+        "-- Create the same table after the comments and literal bodies.",
+        "CREATE TABLE orders (id integer);",
+        "SELECT E'first\\",
+        "second';",
+        "SELECT $$third",
+        "fourth$$;",
+        "/* block",
+        "comment */",
+        "CREATE TABLE orders (id text);",
+      ].join(separator);
+      const { statements, errors } = parseSqlContract(sql);
+
+      expect(errors).toEqual([]);
+      expect(statements.map(({ line }) => line)).toEqual([3, 4, 6, 10]);
+      expect(statements[1]?.text).toBe(`SELECT E'first\\${separator}second'`);
+      expect(statements[2]?.text).toBe(`SELECT $$third${separator}fourth$$`);
+      const findings = await runOn(sql + separator + "SELECT );");
+      expect(
+        findings.filter((issue) => issue.code === "QFAI-DB-002").map(({ message }) => message),
+      ).toEqual([expect.stringContaining("(lines 3, 10)")]);
+      expect(
+        findings
+          .filter((issue) => issue.code === "QFAI-CONTRACT-021")
+          .map(({ message }) => message),
+      ).toEqual([expect.stringContaining("(line 11)")]);
+    },
+  );
 
   it("handles nested block comments, which PostgreSQL allows", () => {
     const { errors } = parseSqlContract(`/* outer /* inner */ still outer */ SELECT 1;`);
@@ -623,6 +659,51 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(
       issues.filter((issue) => issue.code === "QFAI-DB-002").map((issue) => issue.severity),
     ).toEqual(["error", "error"]);
+  });
+
+  // QFAI:EX-0001-0039-82
+  it("matches Unicode-escaped qualified routine argument types", async () => {
+    const routines = [
+      ["f", "app.custom_type"],
+      ["f", String.raw`app.U&"custom\005ftype"`],
+      ["f", String.raw`U&"a\0070p"."custom_type"`],
+      ["f", "app.U&\"custom=005ftype\" UESCAPE '=' DEFAULT NULL"],
+      ["f", String.raw`app.U&"Custom\005fType"`],
+      ["g", String.raw`app.U&"A\+00002e\002c\0022"`],
+      ["g", 'app."A.,"""'],
+      ["g", String.raw`app.U&"a\+00002e\002c\0022"`],
+      ["h", String.raw`app.U&"\D83D\DE00"`],
+      ["h", 'app."\u{1f600}"'],
+      ["h", String.raw`app.U&"\+01F600"`],
+      ["k", "app.U&\"a!!b\" UESCAPE '!'"],
+      ["k", 'app."a!b"'],
+      ["g", String.raw`app.U&"A\+00002e\002d\0022"`],
+      ["custom_escape_default", "app.custom_type"],
+      ["custom_escape_default", "app.U&\"custom=005ftype\" UESCAPE '='DEFAULT NULL"],
+      ["parenthesized_default", "app.custom_type"],
+      ["parenthesized_default", String.raw`app.U&"custom\005ftype" DEFAULT(NULL)`],
+    ] as const;
+    const sql = routines
+      .map(
+        ([name, type]) =>
+          `CREATE OR REPLACE FUNCTION ${name}(a ${type}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n`,
+      )
+      .join("");
+
+    const { statements, errors } = parseSqlContract(sql);
+    expect(errors).toEqual([]);
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([
+      { kind: "FUNCTION", name: "f", lines: [1, 2, 3, 4] },
+      { kind: "FUNCTION", name: "g", lines: [6, 7] },
+      { kind: "FUNCTION", name: "h", lines: [9, 10, 11] },
+      { kind: "FUNCTION", name: "k", lines: [12, 13] },
+      { kind: "FUNCTION", name: "custom_escape_default", lines: [15, 16] },
+      { kind: "FUNCTION", name: "parenthesized_default", lines: [17, 18] },
+    ]);
+    const issues = await runOn(HEADER + sql);
+    expect(
+      issues.filter((issue) => issue.code === "QFAI-DB-002").map((issue) => issue.severity),
+    ).toEqual(["error", "error", "error", "error", "error", "error"]);
   });
 
   it("distinguishes parentheses inside a type name from its modifiers", () => {

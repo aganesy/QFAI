@@ -18,7 +18,7 @@ describe("parseArgs", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--format", "--strict"], cwd);
     expect(parsed.options.strict).toBe(true);
-    expect(parsed.options.help).toBe(true);
+    expect(parsed.options.help).toBe(false);
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.validateFormat).toBe("text");
   });
@@ -155,7 +155,7 @@ describe("parseArgs", () => {
     for (const value of ["errr", "nver", "ERROR"]) {
       const bogus = parseArgs(["validate", "--fail-on", value], cwd);
       expect(bogus.invalid).toBe(true);
-      expect(bogus.options.help).toBe(true);
+      expect(bogus.options.help).toBe(false);
       expect(bogus.options.failOn).toBeUndefined();
     }
   });
@@ -164,13 +164,13 @@ describe("parseArgs", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--fail-on"], cwd);
     expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
+    expect(parsed.options.help).toBe(false);
   });
 
   it("does not consume other options as a value for --out", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["report", "--out", "--format", "json"], cwd);
-    expect(parsed.options.help).toBe(true);
+    expect(parsed.options.help).toBe(false);
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.reportFormat).toBe("json");
   });
@@ -190,7 +190,7 @@ describe("parseArgs", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["report", "--base-url", "--format", "md"], cwd);
     expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
+    expect(parsed.options.help).toBe(false);
   });
 
   it("parses --profile for validate", () => {
@@ -211,7 +211,7 @@ describe("parseArgs", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--profile", "unknown"], cwd);
     expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
+    expect(parsed.options.help).toBe(false);
   });
 
   it("parses --verbose for init and defaults it off", () => {
@@ -234,7 +234,7 @@ describe("parseArgs", () => {
     for (const command of ["validate", "doctor", "report"]) {
       const parsed = parseArgs([command, "--verbose"], cwd);
       expect(parsed.invalid).toBe(true);
-      expect(parsed.options.help).toBe(true);
+      expect(parsed.options.help).toBe(false);
       expect(parsed.options.verbose).toBe(false);
     }
   });
@@ -274,7 +274,7 @@ describe("parseArgs", () => {
       (command) => {
         const parsed = parseArgs([command, "--dry-run"], process.cwd());
         expect(parsed.invalid).toBe(true);
-        expect(parsed.options.help).toBe(true);
+        expect(parsed.options.help).toBe(false);
         expect(parsed.options.dryRun).toBe(false);
       },
     );
@@ -324,7 +324,7 @@ describe("parseArgs", () => {
         expect(parsed.invalidReason).toBe("qfai init: --dir requires a value.");
         expect(parsed.options.dir).toBe(cwd);
         expect(parsed.options.dirExplicit).toBe(false);
-        expect(parsed.options.help).toBe(true);
+        expect(parsed.options.help).toBe(flag === "-h");
         expect(parsed.options.version).toBe(flag === "-V");
       },
     );
@@ -388,7 +388,7 @@ describe("parseArgs", () => {
       const cwd = process.cwd();
       const parsed = parseArgs(["init", "--bogus-flag", "--dry-run"], cwd);
       expect(parsed.invalid).toBe(true);
-      expect(parsed.options.help).toBe(true);
+      expect(parsed.options.help).toBe(false);
       expect(parsed.options.invalidExitCode).toBe(2);
       expect(parsed.options.unknownFlags).toEqual(["--bogus-flag"]);
     });
@@ -572,7 +572,7 @@ describe("parseArgs", () => {
         const formatValue = wrongCommand[0] === "report" ? "json" : "github";
         const parsed = parseArgs([...wrongCommand, flag, value, "--format", formatValue], cwd);
         expect(parsed.invalid).toBe(true);
-        expect(parsed.options.help).toBe(true);
+        expect(parsed.options.help).toBe(false);
         untouched(parsed.options);
         // The dangling value must not have shifted into the positional
         // stream: the trailing --format is still honored.
@@ -592,7 +592,7 @@ describe("parseArgs", () => {
         const cwd = process.cwd();
         const parsed = parseArgs(["validate", flag, "--format", "github"], cwd);
         expect(parsed.invalid).toBe(true);
-        expect(parsed.options.help).toBe(true);
+        expect(parsed.options.help).toBe(false);
         expect(parsed.options.validateFormat).toBe("github");
         untouched(parsed.options);
       },
@@ -744,7 +744,7 @@ describe("parseArgs --fail-on", () => {
     // warnings exited 0 on a warning-only run.
     const parsed = parseArgs(["report", "--fail-on", "warn"], process.cwd());
     expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
+    expect(parsed.options.help).toBe(false);
     expect(parsed.options.failOn).toBeUndefined();
   });
 
