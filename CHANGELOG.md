@@ -243,6 +243,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The end-of-session feedback review reads review findings too.** Besides
+  the session itself, it reads the findings reviewer sub-agents returned and
+  the review comments on the pull requests the session opened or answered
+  review on. Each finding QFAI's design, specification, implementation, test
+  or verification guidance should have prevented becomes an issue draft that
+  names the shipped skill, step, rule, template or command to change. A
+  finding whose cause lies only in the project is not drafted, and
+  `qfai session-review` still reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A
