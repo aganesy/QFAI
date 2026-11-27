@@ -325,6 +325,10 @@ async function nodePinCheck(
 function unreadCheck(entry: UnreadPath): WorkflowPreconditionCheck {
   const operation = entry.kind === "directory" ? "list" : "read";
   const state = entry.kind === "directory" ? "listed" : "read";
+  const recovery =
+    entry.kind === "directory" && entry.code === "ENOTDIR"
+      ? `Check that ${entry.path} and its ancestors are directories. Then run doctor again.`
+      : "Make it readable, then run doctor again.";
   return {
     id: "workflows.preconditionsUnread",
     severity: "warning",
@@ -332,7 +336,7 @@ function unreadCheck(entry: UnreadPath): WorkflowPreconditionCheck {
     message:
       `${entry.path} cannot be ${state} (${entry.code}): ${entry.cause}. doctor checked the shipped workflows' ` +
       `preconditions without it, so a problem it holds would go unreported. ` +
-      "Make it readable, then run doctor again.",
+      recovery,
     details: { path: entry.path, code: entry.code, cause: entry.cause },
   };
 }

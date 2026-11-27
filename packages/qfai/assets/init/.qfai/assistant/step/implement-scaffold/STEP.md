@@ -171,8 +171,7 @@ hand-written parts hold. So the check is in place before any example is
 implemented, as `.qfai/assistant/rule/test-layers.md#l6-accessibility` defines
 it.
 
-Skip this section when no UI contract declares a screen whose `route` starts
-with `/`.
+For Markdown UI responsibilities on a web surface, obtain the concrete routes from the running app or prototype. For structured contracts, use screens whose declared route starts with `/`. Skip when neither applies.
 
 Otherwise:
 
