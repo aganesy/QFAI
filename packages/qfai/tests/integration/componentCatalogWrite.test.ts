@@ -161,11 +161,12 @@ it("writes at the UTF-8 limit and preserves the catalogue when output is larger"
 
   stderr.length = 0;
   await truncate(catalogFile(root), limit + 1);
+  const oversized = await readFile(catalogFile(root));
   expect(await runCatalogComponents({ root, loadTypescript, check: true })).toBe(1);
-  expect(stderr.join("")).toContain(
-    `could not read ${CATALOG}, so nothing was compared: The component catalogue exceeds ${limit} bytes.`,
+  expect(stderr.join("")).toBe(
+    `qfai catalog components: could not read ${CATALOG}, so nothing was compared: The component catalogue exceeds ${limit} bytes.\n`,
   );
-  expect((await stat(catalogFile(root))).size).toBe(limit + 1);
+  expect((await readFile(catalogFile(root))).equals(oversized)).toBe(true);
 });
 
 // QFAI:EX-0001-0307-29
