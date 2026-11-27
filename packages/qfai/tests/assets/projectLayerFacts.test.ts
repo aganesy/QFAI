@@ -441,6 +441,7 @@ describe("the project layer describes the repository it is in", () => {
   it("checks the tag's commit independently of a quoted message", () => {
     expect(namesItsCommit('git tag -m "See HEAD for details" vX.Y.Z <SHA>')).toBe(true);
     expect(namesItsCommit('git tag -am "See HEAD for details" vX.Y.Z <SHA>')).toBe(true);
+    expect(namesItsCommit("git tag -aml vX.Y.Z <SHA>")).toBe(true);
     expect(namesItsCommit('git tag --mess "See HEAD for details" vX.Y.Z <SHA>')).toBe(true);
     expect(namesItsCommit("git tag vX.Y.Z <SHA> --message 'Compare HEAD and @'")).toBe(true);
     expect(namesItsCommit('git tag -- vX.Y.Z "<SHA>"')).toBe(true);
