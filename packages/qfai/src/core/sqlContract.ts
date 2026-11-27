@@ -768,19 +768,21 @@ const ARGUMENT_DECLARATION_TOKEN = new RegExp(
   "gi",
 );
 
-/** Keep a leading Unicode name and its escape clause in the same word. */
+/** Read a leading Unicode parameter name at its token boundary. */
 function argumentWords(declaration: string): string[] {
   const tokens = declaration.matchAll(ARGUMENT_DECLARATION_TOKEN);
   const first = tokens.next().value;
   const mode = first && ARGUMENT_MODES.has(first[0].toLowerCase()) ? first[0] : undefined;
   const name = mode === undefined ? first : tokens.next().value;
-  if (name?.groups?.["escape"] === undefined) {
-    return declaration.match(ARGUMENT_WORD) ?? [];
+  if (name?.groups?.["unicode"] !== undefined) {
+    const rest = declaration.slice(name.index + name[0].length);
+    if (name.groups["escape"] !== undefined || IDENTIFIER_START.test(rest[0] ?? "")) {
+      const words = rest.match(ARGUMENT_WORD) ?? [];
+      return mode === undefined ? [name[0], ...words] : [mode, name[0], ...words];
+    }
   }
 
-  const rest = declaration.slice(name.index + name[0].length);
-  const words = rest.match(ARGUMENT_WORD) ?? [];
-  return mode === undefined ? [name[0], ...words] : [mode, name[0], ...words];
+  return declaration.match(ARGUMENT_WORD) ?? [];
 }
 
 /** Decode a Unicode-delimited identifier to the ordinary quoted spelling. */
