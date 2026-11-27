@@ -12,14 +12,17 @@ import { isEnoent } from "../../core/fs/errno.js";
 import { type OwnerLockOptions, withOwnerLock } from "../../core/fs/ownerLock.js";
 import { findUnsafeWrapperComponent } from "../../core/init/fsGuards.js";
 import { error, info } from "../../core/logger.js";
+import { componentBriefLines, tokenFileCount } from "../../core/uiux/catalogBrief.js";
 import {
   COMPONENT_CATALOG_MAX_BYTES,
   COMPONENT_CATALOG_PATH,
   COMPONENT_CATALOG_SIZE_REASON,
   COMPONENT_CATALOG_SIZE_RECOVERY,
+  type CatalogArtifactRead,
   type ComponentScan,
   inspectComponentCatalogPath,
   readCatalog,
+  readCatalogArtifact,
   renderCatalog,
   sameCatalogText,
   scanComponents,
@@ -41,11 +44,14 @@ export type CatalogComponentsOptions = {
   root: string;
   /** Compare with the committed file and write nothing. */
   check?: boolean;
+  /** Print the brief of the committed catalogue and write nothing. */
+  brief?: boolean;
   loadTypescript?: UiPlainTextOptions["loadTypescript"];
 };
 
 export async function runCatalogComponents(options: CatalogComponentsOptions): Promise<number> {
   const root = path.resolve(options.root);
+  if (options.brief) return printBrief(root);
   const { config, issues, configPath } = await loadConfig(root);
   // `loadConfig` falls back to the defaults on a configuration it cannot use, and scanning the
   // default surface would overwrite a catalogue the project's own paths produced.
@@ -88,6 +94,63 @@ export async function runCatalogComponents(options: CatalogComponentsOptions): P
       : `${target} is out of date with the source. Run \`qfai catalog components\` and commit it.`,
   );
   return EXIT_CODES.findings;
+}
+
+/**
+ * Prints the brief of the committed catalogue, then the design token line when the token file is
+ * there. It reads no configuration and scans no source: the brief is the catalogue as committed.
+ */
+async function printBrief(root: string): Promise<number> {
+  const target = COMPONENT_CATALOG_PATH.split(path.sep).join("/");
+  const committed = await readCatalog(root);
+  if (committed.state !== "read") {
+    error(
+      committed.state === "absent"
+        ? `${target} does not exist. Run \`qfai catalog components\` and commit it.`
+        : committed.state === "invalid"
+          ? `${target} is not a component catalogue. Run \`qfai catalog components\` and commit it.`
+          : `qfai catalog components: could not read ${target}: ${committed.reason}`,
+    );
+    return EXIT_CODES.findings;
+  }
+  const lines = componentBriefLines(committed.text, target);
+  if (lines === null) {
+    error(`${target} is not a component catalogue. Run \`qfai catalog components\` and commit it.`);
+    return EXIT_CODES.findings;
+  }
+  const tokens = await briefRead(root, DESIGN_TOKENS_PATH);
+  if (tokens === null) return EXIT_CODES.findings;
+  const theme = await briefRead(root, DESIGN_THEME_PATH, "presence");
+  if (theme === null) return EXIT_CODES.findings;
+  if (tokens.state === "read") {
+    lines.push(tokenLine(tokens.text, theme.state === "read"));
+  }
+  info(lines.join("\n"));
+  return EXIT_CODES.ok;
+}
+
+/** The token count or parse warning, with the theme path when present. */
+function tokenLine(text: string, hasTheme: boolean): string {
+  const file = DESIGN_TOKENS_PATH.split(path.sep).join("/");
+  const where = hasTheme ? `; theme: ${DESIGN_THEME_PATH.split(path.sep).join("/")}` : "";
+  const count = tokenFileCount(text);
+  if (count === null) {
+    return `Design tokens: ${file} does not parse${where}. Run \`qfai catalog design\`.`;
+  }
+  return `Design tokens: ${count} in ${file}${where}`;
+}
+
+/** A design file the brief reads, or null once one line naming the file that failed is printed. */
+async function briefRead(
+  root: string,
+  relative: string,
+  mode: "text" | "presence" = "text",
+): Promise<CatalogArtifactRead | null> {
+  const artifact = await readCatalogArtifact(root, relative, mode);
+  if (artifact.state !== "unreadable") return artifact;
+  const shown = relative.split(path.sep).join("/");
+  error(`qfai catalog components: could not read ${shown}: ${artifact.reason}`);
+  return null;
 }
 
 function scanSurface(

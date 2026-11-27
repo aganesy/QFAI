@@ -79,4 +79,46 @@ Feature: Catalogue the components a project already has
     When a second run starts after the source has changed
     Then the second run scans and writes nothing and exits 1 with one line saying another run holds `.qfai/tools/state/component-catalog.lock`, so the catalogue is the first run's
     And a lock whose owner is not running is left as it was and named for removal by hand, and a lock that no longer holds the run's record at the end is left in place and named in its one line
+
+  # AC-0001-0307-11
+  Scenario: Each component lists the business rules its declaration cites
+    Given exported components whose declarations hold standalone `QFAI:BR-UI-` comment lines, and one that cites none
+    When `qfai catalog components` runs
+    Then each entry records `realizes` with the IDs its own declaration cites, once each and sorted, as its last key, and the component that cites none has no `realizes` key
+    And an ID inside a single-line string, after code on the same line, or in another declarator of the same `const` list is not recorded
+    And the shipped implementation UI guidance says to carry the rule's comment inside the declaration of the component that realises it or on its leading comment lines and to look up `realizes` before writing a region for a rule
+
+  # AC-0001-0307-12
+  Scenario: Each component lists the string literal values its props take
+    Given exported components whose props types hold members typed as a string literal union, as a same-file alias of one and as other types, and one whose props are only destructured
+    When `qfai catalog components` runs
+    Then each entry with such a member records `variants` right after `props`, mapping each such member, in the order `props` lists it, to its literal values as written, `undefined` and `null` aside
+    And a member whose type is imported, mixed or a single literal records no variant, and an entry with none, a destructured one included, has no `variants` key
+    And an intersected property lists common values when every constraint is a supported union, and an unresolved intersection contributes no variants
+    And a committed catalogue whose `variants` is not a mapping from names to lists of strings is reported as malformed
+    And the shipped implementation UI guidance says to pass one of a prop's listed `variants` values rather than restyling the component
+
+  # AC-0001-0307-13
+  Scenario: Each component lists the theme variables its declaration references
+    Given exported components whose declarations reference CSS custom properties through `var(--name)` in strings, template literals, style objects and Tailwind arbitrary values, and one that uses only a theme utility class
+    When `qfai catalog components` runs
+    Then each entry records `tokens` with the names its own declaration references, once each and sorted, right before `realizes`, and the component that references none has no `tokens` key
+    And a name referenced in another declarator of the same `const` list is not recorded, and a catalogue whose `tokens` is not a list of names is reported as not a components list
+    And the shipped implementation UI guidance says to reference a theme value by its variable through `var(--…)` so that `tokens` lists it
+
+  # AC-0001-0307-14
+  Scenario: A shipped base catalogue describes the parts most products need before a project builds them
+    Given the assistant tree `qfai init` installs
+    When an implementer is about to build an error summary, a field with an error, a step indicator, a confirm step, a skip link, a sticky action bar, a status message or an empty state
+    Then `.qfai/assistant/rule/references/base-components.yaml` holds one entry for that part, with a unique kebab-case `id` and exactly the keys of its closed shape: purpose, anatomy, role, accessible name, keyboard, focus, states with how each renders, content rules, runtime notes on server rendering, content security policy and no-script, and sources
+    And the shipped implementation UI guidance and the procurement rule's reuse rung tell the implementer to read that entry, build the part once as a shared component and name the entry's `id` in its `@pattern`, and the guidance also says to give it `@source authored` with an `@reason` naming that `id`
+
+  # AC-0001-0307-15
+  Scenario: An agent's brief carries the committed catalogue
+    Given a committed `.qfai/catalog/components.yaml` and optional design artifacts
+    When `qfai catalog components --brief` runs
+    Then it writes nothing and prints one line per listed component with its name, file and every other key it holds, and a final line when a token file is present with the token count or a parse note, and the theme path when present
+    And a missing, invalid or unreadable catalogue, or a token file or theme that exists but cannot be read, exits 1 with one line naming that file
+    And `--brief` with `--check` is a usage error that exits 2
+    And the shipped implementation UI guidance and the prototyping generator prompt say to include that output in a screen unit's brief
 ```

@@ -6,6 +6,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The component catalogue is a closed vocabulary agents build screens from.**
+  Each entry that `qfai catalog components` writes now also lists:
+  - `variants`: the values of each prop typed as a union of string literals;
+  - `tokens`: the theme variables its declaration references through
+    `var(--…)`;
+  - `realizes`: the business rules its declaration cites on standalone
+    `QFAI:BR-UI-`, `QFAI:BR-API-` or `QFAI:BR-DB-` comment lines.
+
+  `qfai catalog components --brief` prints the committed catalogue as one line
+  per component, with the design token count, for the brief a screen unit is
+  handed. QFAI also ships a base catalogue of the parts most products need
+  (error summary, field with error, step indicator, confirm step, skip link,
+  sticky action bar, status message and empty state) in
+  `.qfai/assistant/rule/references/base-components.yaml`; a project component
+  that builds one names its `id` in `@pattern`. A committed catalogue with
+  such props, variables or rules is out of date until
+  `qfai catalog components` runs again; rerun it and commit the result.
+
 - UI, API and database contracts can now describe responsibilities, inputs,
   outcomes and business rules in Markdown. Validation checks their document
   structure, example references, and the business-rule annotations in source
@@ -681,8 +699,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Component catalogue generation respects the same UTF-8 byte limit as
   validation and preserves the existing file when rendered output exceeds it.
-  Small catalogue reads use a buffer that grows with the bytes read. Check mode
-  reports when the selected metadata would exceed the publication limit.
+  Small catalogue reads use a buffer that grows with the bytes read.
+
+- Component catalogue check mode reports when the selected metadata would
+  exceed the publication limit.
 
 - Restoring or publishing a completed document graph reuses the safety check
   on each copy during native freshness validation.

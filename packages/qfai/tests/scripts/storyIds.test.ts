@@ -465,6 +465,18 @@ const fourColumnDecisions = (...ids: string[]): string =>
 const fourColumnQuestions = (...ids: string[]): string =>
   fourColumnDecisions(...ids).replaceAll("Decisions", "Open Questions");
 
+const EXAMPLES =
+  ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md";
+const examples = (...rows: string[]): string =>
+  [
+    "# Examples",
+    "",
+    "| EX-ID | AC-Ref | Input | Expected |",
+    "| --- | --- | --- | --- |",
+    ...rows,
+    "",
+  ].join("\n");
+
 /** A clone whose `origin` is a bare repository standing in for GitHub. */
 describe("against a repository", () => {
   let root: string;
@@ -475,17 +487,6 @@ describe("against a repository", () => {
     mkdirSync(path.dirname(path.join(work, file)), { recursive: true });
     writeFileSync(path.join(work, file), text);
   };
-  const EXAMPLES =
-    ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md";
-  const examples = (...rows: string[]): string =>
-    [
-      "# Examples",
-      "",
-      "| EX-ID | AC-Ref | Input | Expected |",
-      "| --- | --- | --- | --- |",
-      ...rows,
-      "",
-    ].join("\n");
   const SENTINEL = "| EX-0001-0001-01 | AC-0001-0001-01 | a proposal names `BF-9999` | refused |";
   const pulls = [
     { number: 7, branch: "other" },
@@ -918,6 +919,77 @@ describe("parallel rows written in the same second", () => {
       expect(log.mock.calls).toEqual([["No ID this branch adds is taken elsewhere (1 checked)."]]);
       expect(error.mock.calls).toEqual([]);
       expect(existsSync(secondPushCounter)).toBe(false);
+    } finally {
+      log.mockRestore();
+      error.mockRestore();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("dependent pull requests", () => {
+  it("keeps inherited IDs after separate main merges and checks the draft's own IDs", async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "story-ids-dependent-"));
+    const work = path.join(root, "work");
+    const bare = path.join(root, "origin.git");
+    const git = (cwd: string, ...args: string[]): string =>
+      execFileSync("git", args, { cwd, encoding: "utf-8" }).trim();
+    const registerPath = path.join(work, ".qfai", "spec", "decisions.md");
+    const examplePath = path.join(work, EXAMPLES);
+    const inherited = "| EX-0001-0001-01 | AC-0001-0001-01 | parent example | kept |";
+    const draftOnly = "EX-0001-0001-02";
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      git(root, "init", "-q", "--bare", "-b", "main", bare);
+      git(root, "init", "-q", "-b", "main", work);
+      git(work, "config", "user.email", "test@example.com");
+      git(work, "config", "user.name", "test");
+      git(work, "config", "commit.gpgsign", "false");
+      git(work, "remote", "add", "origin", bare);
+      mkdirSync(path.dirname(examplePath), { recursive: true });
+      writeFileSync(registerPath, decisions("DEC-0001"));
+      writeFileSync(
+        path.join(work, ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md"),
+        "# BF-0001: Flow\n",
+      );
+      writeFileSync(examplePath, examples());
+      git(work, "add", ".qfai/spec");
+      git(work, "commit", "-q", "-m", "base");
+
+      git(work, "checkout", "-q", "-b", "parent");
+      writeFileSync(examplePath, examples(inherited));
+      git(work, "commit", "-q", "-am", "introduce parent example");
+      git(work, "checkout", "-q", "-b", "dependent");
+      writeFileSync(
+        examplePath,
+        examples(inherited, `| ${draftOnly} | AC-0001-0001-01 | draft example | kept |`),
+      );
+      git(work, "commit", "-q", "-am", "introduce dependent example");
+
+      git(work, "checkout", "-q", "main");
+      git(work, "commit", "-q", "--allow-empty", "-m", "advance main");
+      git(work, "push", "-q", "origin", "main");
+      git(work, "checkout", "-q", "dependent");
+      git(work, "merge", "-q", "--no-edit", "main");
+      git(work, "push", "-q", "origin", "HEAD:refs/pull/7/head");
+      git(work, "checkout", "-q", "parent");
+      git(work, "merge", "-q", "--no-edit", "main");
+      expect(git(work, "merge-base", "--all", "parent", "dependent").split("\n")).toHaveLength(2);
+
+      const list = () => ({ code: 0, pulls: [{ number: 7, branch: "dependent" }] });
+      expect(await run(["check"], { cwd: work, list })).toBe(0);
+      expect(log.mock.calls).toEqual([["No ID this branch adds is taken elsewhere (1 checked)."]]);
+      expect(error.mock.calls).toEqual([]);
+
+      writeFileSync(
+        examplePath,
+        examples(inherited, `| ${draftOnly} | AC-0001-0001-01 | another parent example | kept |`),
+      );
+      git(work, "commit", "-q", "-am", "introduce independent example with the same ID");
+      log.mockClear();
+      expect(await run(["check"], { cwd: work, list })).toBe(1);
+      expect(log.mock.calls).toEqual([[`${draftOnly} is also added by #7 (dependent)`]]);
     } finally {
       log.mockRestore();
       error.mockRestore();
