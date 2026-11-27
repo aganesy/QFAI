@@ -15,7 +15,7 @@ import path from "node:path";
 import type { JsMaskOptions } from "./validators/jsSourceMask.js";
 
 /** Test carrier extensions where a hash belongs to code or template syntax. */
-const NON_HASH_COMMENT_EXTENSIONS: ReadonlySet<string> = new Set([
+const EXTENSIONS_WITH_HASH_COMMENTS_DISABLED: ReadonlySet<string> = new Set([
   "js",
   "jsx",
   "mjs",
@@ -42,7 +42,7 @@ const NON_HASH_COMMENT_EXTENSIONS: ReadonlySet<string> = new Set([
 export function declarationMask(file: string): JsMaskOptions {
   const extension = path.extname(file).slice(1).toLowerCase();
   return {
-    hashComments: !NON_HASH_COMMENT_EXTENSIONS.has(extension),
+    hashComments: !EXTENSIONS_WITH_HASH_COMMENTS_DISABLED.has(extension),
     tripleQuoted: true,
     svelteBlocks: extension === "svelte",
   };

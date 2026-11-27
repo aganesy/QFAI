@@ -12,10 +12,18 @@ import type { GraphPreparedFiles } from "./ignore.js";
 export async function installGraphEntrypoints(root: string): Promise<GraphPreparedFiles> {
   const directory = graphToolsDirectory(root);
   const directorySegments = path.relative(root, directory).split(path.sep);
+  const relativeDirectory = path.posix.join(...directorySegments);
+  const rootUrl = "../".repeat(directorySegments.length);
+  const conflict = (): GraphPreparedFiles => ({
+    files: [],
+    conflicts: [
+      `Retain edited graph entrypoints. Review ${relativeDirectory} before repairing the graph CLI.`,
+    ],
+  });
   await assertGraphStoragePath(root, directory);
   const bundle = path.resolve(getInitAssetsDir(), "..", "..", "dist", "graph");
   const sources: Record<string, string> = {
-    [GRAPH_CLI_ENTRYPOINT]: wrapper(path.join(bundle, "cli.mjs"), "runInstalledGraphCli"),
+    [GRAPH_CLI_ENTRYPOINT]: wrapper(path.join(bundle, "cli.mjs"), "runInstalledGraphCli", rootUrl),
   };
   const record = GRAPH_ENTRYPOINT_RECORD;
   const names = [...Object.keys(sources), record];
@@ -66,7 +74,7 @@ export async function installGraphEntrypoints(root: string): Promise<GraphPrepar
   if (missing.length > 0 || Object.keys(previous).length === 0)
     await replaceWhole(path.join(directory, record), ownership);
   return {
-    files: missing.map((name) => path.posix.join(...directorySegments, name)),
+    files: missing.map((name) => path.posix.join(relativeDirectory, name)),
     conflicts: [],
   };
 }
@@ -86,12 +94,12 @@ async function replaceWhole(target: string, text: string): Promise<void> {
   }
 }
 
-function wrapper(bundle: string, entry: string): string {
+function wrapper(bundle: string, entry: string, rootUrl: string): string {
   return [
     'import { fileURLToPath } from "node:url";',
     'import { realpath } from "node:fs/promises";',
     'import path from "node:path";',
-    'const root = await realpath(fileURLToPath(new URL("../../", import.meta.url)));',
+    `const root = await realpath(fileURLToPath(new URL(${JSON.stringify(rootUrl)}, import.meta.url)));`,
     "const cwd = await realpath(process.cwd());",
     "const relative = path.relative(root, cwd);",
     'if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {',
@@ -107,13 +115,4 @@ function wrapper(bundle: string, entry: string): string {
 
 function object(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function conflict(): GraphPreparedFiles {
-  return {
-    files: [],
-    conflicts: [
-      "Retain edited graph entrypoints. Review .qfai/tools before repairing the graph CLI.",
-    ],
-  };
 }
