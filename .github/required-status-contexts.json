@@ -261,7 +261,7 @@
         "scripts/pin-shipped-workflow-cost.mjs": "a33c2be8e176c175e7d539d1031d551c3ec42d5e61dbb3d5e4b78629a8b87ea4",
         "scripts/pin-shipped-workflows.mjs": "9ed67c855cee815d75c32491a10ad3d9dc746deb084b9821713460b8ca88143b",
         "scripts/pin-verification-bodies.mjs": "66b19968747ef95c0ce262beee96fa31063d0cb92fded7a4c897c73f64ec8d1c",
-        "scripts/pr-threads.mjs": "f7f36cd68d3b7e769fd1a6489804bbc41e29cd656cfa3485d56be67dbbfcf34a",
+        "scripts/pr-threads.mjs": "9e3eca3b97592b2d172b09aa3ed5363ed31759db7e95fb9ba59ea15496ebecde",
         "scripts/prepare-graph-tools.mjs": "8b238a011cd01dd7c903a7f4f8a4f8e220055fcefb2e72c2cfb5f25d63c9eeca",
         "scripts/regen-shipped-entry.mjs": "cf57bbec844314dc3fb8e02d5244abc8d0eaca337200d1ae2a00bf894347cc11",
         "scripts/release-merge-ask.mjs": "75be953008fde9e9e98b8a4f4c24841151ec6f0dc12dce23e3821dbf8f2e9cab",
@@ -419,7 +419,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "810c6e4eb7fbe80d",
-        "Verify the toolchain action before running it": "96a0821835168df1",
+        "Verify the toolchain action before running it": "0e58c6f9f4292f8a",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "4e1c94497dc6f58d",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "c660aaa773071813",
