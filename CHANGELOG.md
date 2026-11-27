@@ -792,6 +792,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A run started in a subdirectory compares authorized deliverables and staged
   entries using the same paths relative to the Git root.
 
+- **Verification stages authorized filenames literally.** The shipped commit
+  procedure treats each filename as one argument and disables Git pathspec
+  interpretation, so a filename cannot select an unrelated path.
+
 - **`qfai sdd preflight` no longer says "Nothing was written" after creating
   directories.** When its output-directory check failed after it had created
   `<outDir>/preflight/`, the error still said nothing was written. A check that
