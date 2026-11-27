@@ -340,7 +340,7 @@ describe("migration catalog move", () => {
       [];
     expect(notes).toHaveLength(rowCount);
     const expected = (index: number): string =>
-      `.qfai/spec/01_policy/constraint.md ## Technical Constraints: rewrite TC-${index + 1} of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`;
+      `.qfai/spec/01_policy/constraint.md ## Technical Constraints: rewrite TC-${index + 1} of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`;
     const mismatch = notes.findIndex((note, index) => note !== expected(index));
     expect(
       mismatch,
@@ -485,13 +485,13 @@ describe("migration catalog move", () => {
       `${target}: move what the "Impact" column of "## Constraints" in ${source} states to the contract or tech.md that owns it, or drop it`,
     );
     expect(result.output).toContain(
-      `${target} ## Technical Constraints: rewrite TC-02 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
+      `${target} ## Technical Constraints: rewrite TC-02 of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`,
     );
     expect(result.output).toContain(
-      `${target} ## Operational Constraints: rewrite OC-01 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
+      `${target} ## Operational Constraints: rewrite OC-01 of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`,
     );
     expect(result.output).toContain(
-      `${target} ## Business Constraints: rewrite BC-01 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
+      `${target} ## Business Constraints: rewrite BC-01 of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`,
     );
     const constraint = await readFile(
       path.join(context.specsDir, "01_policy", "constraint.md"),
