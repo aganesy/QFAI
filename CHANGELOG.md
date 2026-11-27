@@ -4319,12 +4319,18 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   change request. A settled question row may then
   be deleted once a decision row names its ID; until one does, the row stays.
 
-  Before removing Status, check the decision register and its pages for
-  `Test exception:` entries marked `SUPERSEDED (by DEC-…)`. Reword their
-  Content to start with `Former test exception:` and keep their IDs and
-  history. In 2.4.0, the `Test exception:` prefix activates the exemption
-  again after the Status cell is removed. If you already upgraded, find
-  those entries in the pre-upgrade register and reword them in the current one.
+  Before removing Status, check `Test exception:` entries in the decision
+  register and its pages. In 2.2.1, only `DONE` made an exception active. After
+  removing Status for 2.4.0, the `Test exception:` prefix grants an exemption
+  for each cited BF, AC or EX ID that still exists in the story tree.
+
+  Keep `Test exception:` on intentional `DONE` exemptions. For every other
+  status, including `REJECTED`, `SUPERSEDED` and `PARTLY SUPERSEDED`, change the
+  Content prefix to `Former test exception:` and keep the decision ID. Record
+  the old status and any superseding decision in Approach before dropping
+  Status, especially when the Status cell alone names the superseding decision.
+  If you already upgraded, recover the legacy statuses from the pre-upgrade
+  register and apply the same guidance to the current rows.
 
 - **A decision row may be restated under its ID.** The `drift` profile of
   `qfai validate` now reports only a decision row the base holds that the
