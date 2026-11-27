@@ -16,6 +16,7 @@ import { toRelativePath } from "../paths.js";
 import { isGlobExclusion } from "../testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue } from "../types.js";
+import { maskJsNonCode } from "./jsSourceMask.js";
 import { STUB_SOURCE_EXTENSIONS } from "./testTodoStubs.js";
 import { issue } from "./utils.js";
 
@@ -325,8 +326,8 @@ export async function validateStoryTreeObligations(
   return issues;
 }
 
-// A standalone comment mark. Requiring the prefix keeps references in prose,
-// imports and single-line string literals from counting as implementations.
+// The prefix identifies a standalone comment-shaped line. A caller examining JavaScript or
+// TypeScript source also checks that the line survives literal masking.
 function businessRuleAnnotation(comment: RegExp): RegExp {
   return new RegExp(
     String.raw`^[ \t]*(?:${comment.source})[ \t]*QFAI:(BR-(?:UI|API|DB)-\d{4}-\d{4})(?=[ \t\r\n]|\*\/|-->|$)`,
@@ -346,6 +347,7 @@ export function businessRuleCitations(text: string): string[] {
 }
 
 const LISP_RULE_ANNOTATION = businessRuleAnnotation(/;+/);
+const JS_TS_SOURCE = /^\.(?:[cm]?[jt]s|[jt]sx)$/;
 const RULE_ANNOTATION_BY_EXTENSION: ReadonlyMap<string, RegExp> = new Map([
   [".clj", LISP_RULE_ANNOTATION],
   [".cljs", LISP_RULE_ANNOTATION],
@@ -396,11 +398,17 @@ async function validateAbstractRuleCoverage(
     refs: Set<string>,
     role: "implementation" | "test",
   ) => {
-    const annotation =
-      RULE_ANNOTATION_BY_EXTENSION.get(path.extname(file).toLowerCase()) ??
-      BUSINESS_RULE_ANNOTATION;
-    for (const [, id] of content.matchAll(annotation)) {
-      if (!id) continue;
+    const extension = path.extname(file).toLowerCase();
+    const annotation = RULE_ANNOTATION_BY_EXTENSION.get(extension) ?? BUSINESS_RULE_ANNOTATION;
+    const unquoted =
+      JS_TS_SOURCE.test(extension) && content.includes("QFAI:BR-")
+        ? maskJsNonCode(content, { comments: false, templateSubstitutions: true })
+        : content;
+    for (const match of content.matchAll(annotation)) {
+      const [line, id] = match;
+      // Match the original line first so that removing a literal cannot make an inline comment
+      // appear standalone. The mask keeps offsets stable.
+      if (!id || unquoted.slice(match.index, match.index + line.length) !== line) continue;
       if (known.has(id)) refs.add(id);
       else
         issues.push(

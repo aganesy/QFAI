@@ -114,7 +114,7 @@ function endOfQuoted(source: string, start: number, quote: string, multiline = f
   for (let i = start + 1; i < source.length; i += 1) {
     const ch = source[i] ?? "";
     if (ch === "\\") {
-      i += 1;
+      i += source.startsWith("\r\n", i + 1) ? 2 : 1;
       continue;
     }
     if (ch === "\n" && !multiline) {
@@ -127,6 +127,21 @@ function endOfQuoted(source: string, start: number, quote: string, multiline = f
   return source.length;
 }
 
+/** The next delimiter in a run of literal template text. */
+function readTemplateText(source: string, start: number): { end: number; substitution: boolean } {
+  for (let i = start; i < source.length; i += 1) {
+    const ch = source[i];
+    if (ch === "\\") {
+      i += 1;
+    } else if (ch === "`") {
+      return { end: i + 1, substitution: false };
+    } else if (ch === "$" && source[i + 1] === "{") {
+      return { end: i + 2, substitution: true };
+    }
+  }
+  return { end: source.length, substitution: false };
+}
+
 /**
  * End of a template literal, treated as opaque.
  *
@@ -136,19 +151,12 @@ function endOfQuoted(source: string, start: number, quote: string, multiline = f
  * code after it as a literal, which hides every comment in between.
  */
 function endOfTemplate(source: string, start: number): number {
-  for (let i = start + 1; i < source.length; i += 1) {
-    const ch = source[i] ?? "";
-    if (ch === "\\") {
-      i += 1;
-      continue;
-    }
-    if (ch === "`") {
-      return i + 1;
-    }
-    if (ch === "$" && source[i + 1] === "{") {
-      const end = endOfSubstitution(source, i + 2);
-      if (end !== -1) i = end - 1;
-    }
+  let cursor = start + 1;
+  while (cursor < source.length) {
+    const { end, substitution } = readTemplateText(source, cursor);
+    if (!substitution) return end;
+    const afterSubstitution = endOfSubstitution(source, end);
+    cursor = afterSubstitution === -1 ? end : afterSubstitution;
   }
   return source.length;
 }
@@ -445,6 +453,9 @@ function endOfTripleQuoted(source: string, start: number, fence: string, raw = f
 
 /** Which span kinds {@link maskJsNonCode} blanks. */
 export type JsMaskOptions = {
+  /** Keep template substitution code visible to the lexer while blanking literal template text. */
+  readonly templateSubstitutions?: boolean;
+
   /**
    * Blank comment spans. Default `true`.
    *
@@ -681,6 +692,9 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
   // stay linear and counted parens inside strings and comments on the way. The stack is exact and
   // costs nothing, because the pass has already skipped those spans by the time it gets here.
   const controlHeader: boolean[] = [];
+  // Braces inside an expression nest within that substitution. Comments and strings have already
+  // been consumed by the time a brace reaches this stack.
+  const substitutionBraces: number[] = [];
   // The span the heredoc openers on the current line have queued. The
   // header line is scanned to its end, because `[<<A, <<B]` opens two; the
   // bodies are then jumped over rather than read, since a blanked body's own
@@ -696,6 +710,17 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
     }
     const ch = source[i] ?? "";
     const next = source[i + 1] ?? "";
+    const substitutionIndex = substitutionBraces.length - 1;
+    const closesSubstitution = ch === "}" && substitutionBraces[substitutionIndex] === 0;
+    if (options.templateSubstitutions && !rawBacktick && (ch === "`" || closesSubstitution)) {
+      if (closesSubstitution) substitutionBraces.pop();
+      const { end, substitution } = readTemplateText(source, i + 1);
+      i = blank(out, i, end);
+      if (substitution) substitutionBraces.push(0);
+      endsExpression = !substitution;
+      lastWord = "";
+      continue;
+    }
     if (svelteBlocks && ch === "{" && (next === "#" || next === ":")) {
       SVELTE_EXPRESSION_PREFIX.lastIndex = i;
       if (SVELTE_EXPRESSION_PREFIX.test(source)) {
@@ -832,6 +857,10 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       lastWord = source.slice(start, i);
       endsExpression = !regexAfterWords.has(lastWord);
     } else {
+      const depth = substitutionBraces[substitutionIndex];
+      if (depth !== undefined && (ch === "{" || ch === "}")) {
+        substitutionBraces[substitutionIndex] = depth + (ch === "{" ? 1 : -1);
+      }
       if (!SPACE.test(ch)) {
         if (ch === "(") {
           controlHeader.push(CONTROL_STATEMENT_KEYWORDS.has(lastWord));

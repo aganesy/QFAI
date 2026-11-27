@@ -686,6 +686,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Business-rule coverage ignores comment-shaped text inside JavaScript and
+  TypeScript strings. Standalone comments in template substitutions still count.
+
 - Specification tables inside a list item's HTML comment block are ignored.
   Inline comments are removed only within their own table cells, preserving the
   boundaries and visible content of adjacent cells.
