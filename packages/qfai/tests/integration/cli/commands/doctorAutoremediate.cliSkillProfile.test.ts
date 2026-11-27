@@ -98,6 +98,7 @@ afterEach(async () => {
 
 // QFAI:EX-0003-0009-01
 describe("doctor CLI threads skillProfile into autoremediate", () => {
+  // QFAI:AC-0003-0009-07
   // QFAI:EX-0003-0009-19
   it("leaves a converged repair pass unchanged", async (test) => {
     const root = await newTempDir("converged");
@@ -115,12 +116,22 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     const wrapper = path.join(root, ".claude", "skills", SHIPPED_SKILL);
     const backup = wrapper + ".qfai-repair-4242";
     const backupNote = path.join(backup, "project-note.md");
-    const runLog = path.join(root, ".qfai", "report", "run-20260401120000001");
+    const report = path.join(root, ".qfai", "report");
+    const runLog = path.join(report, "run-20260401120000001");
+    const newestRun = path.join(report, "run-20260402120000002");
     const runNote = path.join(runLog, "notes.md");
     await mkdir(backup);
     await mkdir(runLog, { recursive: true });
+    await mkdir(newestRun);
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "report:\n  staleTtlDays: 14\n  keepLatestRuns: 1\n",
+      "utf-8",
+    );
     await writeFile(backupNote, "Owned by the project.\n", "utf-8");
     await writeFile(runNote, "Recent run.\n", "utf-8");
+    const recent = new Date(Date.now() - 60_000);
+    await utimes(runLog, recent, recent);
 
     const installRunner = vi.fn<autoremediateModule.InstallRunner>().mockResolvedValue(undefined);
     const real = autoremediateModule.runAutoremediate;
@@ -151,14 +162,15 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
       wrapperInode: (await lstat(wrapper)).ino,
       backup: await readFile(backupNote),
       runLog: await readFile(runNote),
+      newestRunInode: (await stat(newestRun)).ino,
     });
     const before = await snapshot();
     stderr.mockClear();
     expect(await run()).toBe(0);
 
-    expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
-      "autoremediate: runtimeDependencies — all installed",
-    );
+    const output = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
+    expect(output).toContain("autoremediate: runtimeDependencies — all installed");
+    expect(output).toContain("autoremediate: run logs pruned=0, in-ttl=1, kept-latest=1");
     expect(installRunner).not.toHaveBeenCalled();
     expect(await snapshot()).toEqual(before);
   });
