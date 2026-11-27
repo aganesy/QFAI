@@ -105,7 +105,6 @@ const NON_CREATING_TAG_FLAGS = new Set([
   "--list",
   "-v",
   "--verify",
-  "-n",
   "--contains",
   "--no-contains",
   "--merged",
@@ -171,7 +170,27 @@ function canonicalLongTagFlag(flag: string): string {
   return matches.length === 1 ? (matches[0] ?? flag) : flag;
 }
 
-function shortTagOption(arg: string): "mode" | "separate-value" | "attached-value" | undefined {
+/** Git parses the attached -n count as a signed base-0 integer with an optional scale. */
+function tagAnnotationCount(count: string): number | undefined {
+  if (count === "") return 1;
+  const match = /^[ \t]*([+-]?)(0x[0-9a-f]+|0[0-7]*|[1-9]\d*)([kmg]?)$/i.exec(count);
+  if (match === null) return undefined;
+  const [, sign = "", digits = "", unit = ""] = match;
+  const radix = digits.toLowerCase().startsWith("0x") ? 16 : digits.startsWith("0") ? 8 : 10;
+  const scale = 1024 ** ["", "k", "m", "g"].indexOf(unit.toLowerCase());
+  const value = Number.parseInt(digits, radix) * scale * (sign === "-" ? -1 : 1);
+  return value >= -0x80000000 && value <= 0x7fffffff ? value : undefined;
+}
+
+function shortTagOption(
+  arg: string,
+):
+  | "mode"
+  | "separate-value"
+  | "attached-value"
+  | "annotation-count"
+  | "annotation-unset"
+  | undefined {
   // The first option that uses a value owns the rest of its word.
   const option = /^-[aesfi]*([dlvnmFu])(.*)$/.exec(arg);
   if (option === null) return undefined;
@@ -180,8 +199,11 @@ function shortTagOption(arg: string): "mode" | "separate-value" | "attached-valu
     case "F":
     case "u":
       return option[2] === "" ? "separate-value" : "attached-value";
-    case "n":
-      return /^\d*$/.test(option[2] ?? "") ? "mode" : undefined;
+    case "n": {
+      const count = tagAnnotationCount(option[2] ?? "");
+      if (count === undefined) return undefined;
+      return count === -1 ? "annotation-unset" : "annotation-count";
+    }
     case "d":
     case "l":
     case "v":
@@ -207,6 +229,7 @@ function readTagCommand(command: string): {
   let operands: string[] = [];
   let hasListModifier = false;
   let hasPointsAtFilter = false;
+  let hasAnnotationCount = false;
   let optionsKnown = true;
 
   for (let index = 0; index < args.length; index++) {
@@ -226,6 +249,12 @@ function readTagCommand(command: string): {
     if (NON_CREATING_TAG_FLAGS.has(flag) || shortOption === "mode") {
       // An earlier unknown option may consume this apparent mode switch.
       return { creates: !optionsKnown, operands: [], optionsKnown };
+    }
+    // Git checks the final count after parsing the options.
+    if (shortOption === "annotation-count" || shortOption === "annotation-unset") {
+      hasAnnotationCount = shortOption === "annotation-count";
+      hasListModifier ||= shortOption === "annotation-unset";
+      continue;
     }
 
     const clearsPointsAt = flag === "--no-points-at" && value === undefined;
@@ -253,11 +282,13 @@ function readTagCommand(command: string): {
     }
   }
 
-  // A continued command may name the tag on its next physical line.
+  // A continued command may clear the count or name the tag on its next line.
+  const continued = command.endsWith("\\");
   const creates =
     !optionsKnown ||
     (!hasPointsAtFilter &&
-      (operands.length > 0 || (args.length > 0 && (!hasListModifier || command.endsWith("\\")))));
+      (!hasAnnotationCount || continued) &&
+      (operands.length > 0 || (args.length > 0 && (!hasListModifier || continued))));
   return { creates, operands, optionsKnown };
 }
 
@@ -606,6 +637,37 @@ describe("the project layer describes the repository it is in", () => {
     expect(canonicalLongTagFlag("--mess")).toBe("--message");
     expect(canonicalLongTagFlag("--me")).toBe("--me");
     expect(canonicalLongTagFlag("--l")).toBe("--l");
+  });
+
+  it.each(["1k", "2M", "1g", "+2K", "0x10k", "010", "0"])(
+    "treats grouped -n%s as listing",
+    (count) => {
+      expect(tagCreations(`git tag -in${count} example`)).toEqual([]);
+    },
+  );
+
+  it("keeps the final annotation count and the message option's attached value", () => {
+    const creation = "git tag -in1k -n-1 vX.Y.Z <SHA>";
+    const message = "git tag -imn1k vX.Y.Z <SHA>";
+    const invalid = "git tag -in2g vX.Y.Z <SHA>";
+
+    expect(tagCreations(creation)).toEqual([creation]);
+    expect(namesItsCommit(creation)).toBe(true);
+    expect(tagCreations("git tag -in-1 -n1k example")).toEqual([]);
+    expect(tagCreations("git tag -lin1k -n-1 example")).toEqual([]);
+    expect(tagCreations("git tag -n-1")).toEqual([]);
+    expect(tagCreations(message)).toEqual([message]);
+    expect(namesItsCommit(message)).toBe(true);
+    expect(tagCreations(invalid)).toEqual([invalid]);
+    expect(namesItsCommit(invalid)).toBe(false);
+  });
+
+  it("keeps an annotation count in scope when a continuation can clear it", () => {
+    const firstLine = "git tag -in1k";
+    const command = [firstLine + " \\", "  -n-1 vX.Y.Z"].join("\n");
+    const candidates = tagCreations(command);
+    expect(candidates).toEqual([firstLine]);
+    expect(candidates.filter(namesItsCommit)).toEqual([]);
   });
 
   // Pasted as separate lines, the block tagged even when the ancestry check
