@@ -49,4 +49,17 @@ Feature: Send session feedback to QFAI when the work is complete
     And it proposes nothing where an equivalent rule, skill or hook already exists, for a correction given once, or for a procedure pasted fewer than three times
     And it writes nothing until the user says yes, and files none of it with QFAI
     And under a no-question mode it writes nothing and puts the proposals in the final report
+
+  # AC-0001-0231-08
+  Scenario: Review findings on the session's work are analysed for what QFAI could have prevented
+    Given the agent follows `.agents/rules/session-feedback.md` at the end of the session
+    When a reviewer sub-agent returned findings during the session under any verdict, or a pull request the session opened, or replied to or pushed a fix for a review of, carries inline review comments, review bodies or conversation comments by the time of the review
+    Then the agent reads each finding and asks whether QFAI's design, specification, implementation, test or verification guidance should have prevented it, such as a design flaw a design step let through, a defect, or a boundary value no example fixed
+    And each such finding becomes a draft that reports the gap in QFAI's guidance, never the project's defect, names the shipped skill, step, rule, template, command, hook or agent definition that should change, and is generalised as AC-0001-0231-03 requires, quoting no code, path or name of the project or the name or handle of a reviewer
+    And a finding whose cause lies only in the project, with no QFAI guidance that applied, is not drafted, while a lapse against shipped text that was never loaded when it applied is drafted against the `AGENTS.md` line, skill step or reminder that should have loaded it
+    And a security finding is drafted only once its fix has reached the users it affects, on the project's default branch and, where the project releases or deploys, shown by the evidence in the production environment or the distribution channel those users get, naming the class of defect and never where it was; a preview deployment or another channel's release does not count, and where the evidence cannot show it, or cannot show whether the project releases or deploys at all, the finding stays held back
+    And an unfixed one is held back and named to the user in the review's own message by a number alone, such as held-back security finding 1; only where the host shows the message reaches the user alone does it also name the class of defect, say where it is, name its pull request and suggest asking for its draft once the fix counts as fixed; otherwise it does none of the four and tells the user to continue the session where only they will see the answer and ask about the finding there, an answer that gives the four under the same condition and otherwise repeats the advice
+    And under a no-question mode the final report names it by its number alone, and tells the user to ask about it where only they will see the answer
+    And a finding is judged a loading gap only where the evidence shows the text was not loaded when it applied, the session counts being a hint only, and one whose loading the evidence cannot show is not drafted
+    And the review reads no pull request the session did not open or answer review on, except the pull request of a held-back security finding the user later asks about, and where the forge cannot be read it skips the pull request comments and says so in one line
 ```

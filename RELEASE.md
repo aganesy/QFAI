@@ -31,7 +31,7 @@ it is the release notes adopters read before they upgrade.
   Prepare release opens, or after the bump on the manual path. Run it from
   `packages/qfai` after a build (the runner's header gives the Codex form):
   `QFAI_EVAL_HOST=claude-code QFAI_EVAL_COMMAND='["claude", "-p", "{prompt}"]' node node_modules/vitest/vitest.mjs run --config tests/eval/vitest.config.ts`
-- Supported: Node.js >= 20.19.0 / Tested: Node.js 20 / Recommended: Node.js 20 LTS or later
+- The release supports Node.js `^20.19.0 || ^22.13.0 || >=24.0.0`. Its floor suite uses the lowest version in that range.
 
 ### Using the automated path
 

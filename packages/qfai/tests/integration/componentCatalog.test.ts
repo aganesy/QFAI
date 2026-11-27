@@ -4,7 +4,17 @@
  * `typescript` package the way an adopter's does.
  */
 
-import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  symlink,
+  truncate,
+  writeFile,
+} from "node:fs/promises";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
@@ -455,6 +465,42 @@ describe("a stale catalogue is a warning, and no catalogue asks nothing", () => 
       ["QFAI-COMP-004", "warning", CATALOG],
     ]);
     expect(findings[0]?.message).toContain(CATALOG + " is not a file.");
+  });
+
+  // QFAI:EX-0001-0307-28
+  // QFAI:EX-0001-0307-29
+  it("reports the catalogue byte limit and still reads a file at the limit", async () => {
+    const limit = 8 * 1024 * 1024;
+    const prefix = "components: []\n#";
+    const root = await projectWith({
+      [CATALOG]: prefix + "x".repeat(limit + 1 - prefix.length),
+    });
+    const file = path.join(root, ...CATALOG.split("/"));
+    const reason = `The component catalogue exceeds ${limit} bytes.`;
+
+    const findings = await comp(root);
+    expect(findings.map(({ code, severity, file }) => [code, severity, file])).toEqual([
+      ["QFAI-COMP-004", "warning", CATALOG],
+    ]);
+    expect(findings[0]?.message).toBe(`Could not read the component catalogue: ${reason}`);
+
+    const check = await cli(["catalog", "components", "--check", "--root", root]);
+    expect(check.code).toBe(1);
+    expect(check.err).toContain(`could not read ${CATALOG}, so nothing was compared: ${reason}`);
+    expect((await stat(file)).size).toBe(limit + 1);
+
+    await truncate(file, limit);
+    const atLimit = await comp(root);
+    expect(atLimit.map(({ code, message }) => [code, message])).toEqual([
+      [
+        "QFAI-COMP-004",
+        "The component catalogue is out of date with the components the surface files export.",
+      ],
+    ]);
+    const compared = await cli(["catalog", "components", "--check", "--root", root]);
+    expect(compared.code).toBe(1);
+    expect(compared.err).toContain(`${CATALOG} is out of date with the source.`);
+    expect((await stat(file)).size).toBe(limit);
   });
 
   // QFAI:EX-0001-0307-11

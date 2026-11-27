@@ -6,6 +6,7 @@ import path from "node:path";
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
+import { nodeEngineFloor } from "../../../../.github/actions/setup/node-engine-floor.mjs";
 import { runInit } from "../helpers/legacyInit.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
@@ -572,8 +573,8 @@ describe("assets guardrails", () => {
       "utf-8",
     );
     const nodeEngine = /"engines"\s*:\s*\{[^}]*"node"\s*:\s*"([^"]+)"/.exec(packageJsonText)?.[1];
-    expect(nodeEngine).toBeTruthy();
-    expect(content).toContain(`\`engines: "${nodeEngine}"\``);
+    if (nodeEngine === undefined) throw new Error("The package declares no Node range");
+    expect(content).toContain(`minimum Node ${nodeEngineFloor(nodeEngine)}.`);
     expect(content).not.toContain('">=18.0.0"');
   });
 
@@ -973,6 +974,9 @@ describe("assets guardrails", () => {
         /\bunion\b/i,
         /\bbase branch\b/i,
         /\blocally\b/i,
+        /\brestore(?:s|d)?\b[^.]*\bopen-question row\b/i,
+        /\bdelete\b[^.]*\bseparate commit\b[^.]*\bbefore pushing\b/i,
+        /\bother register rows and IDs\b/i,
       ];
       for (const term of terms) {
         expect(comment, `${file}: the comment must say why (${String(term)})`).toMatch(term);

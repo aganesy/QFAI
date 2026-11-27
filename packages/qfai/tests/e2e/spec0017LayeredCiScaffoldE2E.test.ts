@@ -541,7 +541,7 @@ describe(
         // The documented literal, not "any leading digit". Round 2 pointed out that the integration
         // row at `tests/integration/shippedWorkflowPortability.test.ts` asserts the exact value, and
         // that an E2E row claiming to have added a behavioural check should not be the weaker of the
-        // two. The value is the `engines: ">=20.19.0"` floor the shipped comment names.
+        // two. The value is the Node major line containing the floor the shipped comment names.
         expect
           .soft(
             fallback.outputs["version"],
