@@ -14,7 +14,11 @@ Only the post-build guard follows `files`, by asking `npm pack --dry-run` for
 the list. The other two scan targets of their own, so a path added to `files`
 is not covered by them until they are extended:
 
-- the pre-build lint scans `src/**/*.ts` comments and `assets/init/**`;
+- the pre-build lint scans `src/**/*.ts` comments and `assets/init/**`. A standalone
+  `// QFAI:BR-<KIND>-NNNN-NNNN` line in implementation source records a UI, API or DB
+  rule. The package build strips these comments and emits source maps without embedded
+  source text. The exception is for the source check only; the published files must
+  pass the same post-build guard;
 - the smoke test scans the tree `qfai init` writes, which is only what init
   copies out of `assets/`.
 

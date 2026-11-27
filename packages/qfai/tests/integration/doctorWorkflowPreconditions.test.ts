@@ -431,6 +431,7 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(manifestUnread[0]?.severity).toBe("warning");
     expect(manifestUnread[0]?.message).toContain("package.json");
     expect(manifestUnread[0]?.message).toContain("EACCES: controlled read failure");
+    expect(manifestUnread[0]?.message).toContain("Make it readable, then run doctor again.");
     expect(manifestUnread[0]?.details).toMatchObject({ path: "package.json", code: "EACCES" });
     expect(manifestFindings.map((check) => check.id)).not.toContain("workflows.packageManager");
 
@@ -463,7 +464,11 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
 
   // QFAI:EX-0003-0011-47
   // QFAI:BR-CLI-0008-0037
-  it.each(["EACCES", "EIO"])("reports a workflow directory listing failure (%s)", async (code) => {
+  it.each([
+    ["EACCES", "Make it readable, then run doctor again."],
+    ["EIO", "Make it readable, then run doctor again."],
+    ["ENOTDIR", "Check that .github/workflows and its ancestors are directories."],
+  ])("reports a workflow directory listing failure (%s)", async (code, recovery) => {
     // QFAI:AC-0003-0011-08
     const root = await project({
       packageJson: { engines: { node: ">=20.19.0" } },
@@ -480,6 +485,7 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
       message: expect.stringContaining(".github/workflows cannot be listed"),
       details: { path: ".github/workflows", code, cause: `${code}: controlled listing failure` },
     });
+    expect(unread[0]?.message).toContain(recovery);
     expect(findings.map((check) => check.id)).toContain("workflows.nodeVersionFile");
     expect(findings.map((check) => check.id)).not.toContain("workflows.nodePin");
   });

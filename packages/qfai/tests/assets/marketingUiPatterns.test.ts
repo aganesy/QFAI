@@ -236,7 +236,7 @@ describe("a marketing screen is read against its own entries", () => {
         "It covers application screens: a screen whose UI contract declares `surface: marketing` is none of these types.",
       );
       expect(procurement).toContain(
-        "lists them for an application screen and `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has` for a marketing screen.",
+        "The application and marketing patterns are described in `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` and `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`.",
       );
     });
   }

@@ -338,8 +338,15 @@ describe("migration catalog move", () => {
       plan.forAPerson?.filter((note) => note.includes("## Technical Constraints: rewrite TC-")) ??
       [];
     expect(notes).toHaveLength(rowCount);
-    expect(notes[0]).toContain(`rewrite TC-1 of "## Constraints" in ${source}`);
-    expect(notes.at(-1)).toContain(`rewrite TC-${rowCount} of "## Constraints" in ${source}`);
+    const expected = (index: number): string =>
+      `.qfai/spec/01_policy/constraint.md ## Technical Constraints: rewrite TC-${index + 1} of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`;
+    const mismatch = notes.findIndex((note, index) => note !== expected(index));
+    expect(
+      mismatch,
+      mismatch === -1
+        ? undefined
+        : `Constraint note ${mismatch} should be ${expected(mismatch)} but was ${notes[mismatch] ?? "missing"}`,
+    ).toBe(-1);
   });
 
   // QFAI:EX-0004-0006-11
@@ -477,13 +484,13 @@ describe("migration catalog move", () => {
       `${target}: move what the "Impact" column of "## Constraints" in ${source} states to the contract or tech.md that owns it, or drop it`,
     );
     expect(result.output).toContain(
-      `${target} ## Technical Constraints: rewrite TC-02 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
+      `${target} ## Technical Constraints: rewrite TC-02 of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`,
     );
     expect(result.output).toContain(
-      `${target} ## Operational Constraints: rewrite OC-01 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
+      `${target} ## Operational Constraints: rewrite OC-01 of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`,
     );
     expect(result.output).toContain(
-      `${target} ## Business Constraints: rewrite BC-01 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
+      `${target} ## Business Constraints: rewrite BC-01 of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`,
     );
     const constraint = await readFile(
       path.join(context.specsDir, "01_policy", "constraint.md"),
