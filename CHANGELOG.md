@@ -2541,11 +2541,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   requirements before init runs rather than only after it fails.
 
 - **The mdschema approval advice names the key current pnpm writes.** The
-  README and the `qfai doctor` fix for a checker that does not run said pnpm
-  records the approval under `onlyBuiltDependencies`, a setting pnpm 11
-  removed. Both now recommend `pnpm approve-builds` and say it records the
-  approval under `allowBuilds` for pnpm 10.31 or later and
-  `onlyBuiltDependencies` for earlier pnpm 10.
+  README and `qfai doctor` recommend `pnpm approve-builds` when the checker
+  does not run. The next entry describes where pnpm records the approval for
+  each version and workspace configuration covered by the guidance.
 
 - **`qfai doctor` explains where pnpm records mdschema approval.** pnpm 10
   updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
