@@ -640,6 +640,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
 
+- `gh-budget` also discards a partial job log when a signal stops GitHub CLI.
+  It keeps the rate-limit reading if the headers arrived in full.
+
 - Plain `qfai init` preserves an assistant `VERSION` marker another writer creates
   during initialization.
 
@@ -1095,6 +1098,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   constraint table, and step 4 keeps every non-goal of a large old story.
   Both preserve the original order.
 
+- Migration step 3 also keeps large structure catalogue results, contract
+  index notes and changed constraint identifiers in order without exceeding
+  the JavaScript argument limit.
+
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
   `analysis` folder. When a file inside it could not be read, the copy threw:
@@ -1149,6 +1156,13 @@ decisions` headings appeared anywhere in the file, so a record with several
 - **`qfai init --force` reports a directory in a template file's place.**
   The directory is listed as refused and its contents are preserved. The copy
   continues with the other template files. A dry run reports the same refusal.
+
+- Template copies keep nested file and selected-path order even when a
+  subtree has more files than JavaScript accepts as function arguments.
+
+- The template refusal warning names the two places to inspect. A directory
+  or special entry can occupy the destination, and a link or non-directory
+  can block a parent path.
 
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
@@ -1313,6 +1327,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - `check-mdschema --scope changed` includes new Markdown documents before
   staging and respects Git's ignore rules. A failed Git file listing widens
   the check and prints a warning.
+
+- The changed-scope schema check requests only untracked Markdown paths from
+  Git, regardless of extension case. Unrelated untracked files no longer fill
+  the captured Git output and trigger a full-tree check.
 
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
@@ -2149,6 +2167,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   prints one line naming the operation that failed, such as resolving a
   given thread, and exits 2 (#4737).
 
+- **`scripts/pr-threads.mjs` reports invalid GitHub JSON as an error.** A
+  malformed response now produces an operation-specific diagnostic and exit
+  status 2. A deferral stops before proceeding to its next write (#5882).
+
 - **`qfai init --force` keeps a project's own wrapper when the link replacing
   it cannot be written.** A file or directory of the project's at a skill or
   agent wrapper path was deleted before the link was created, so a refused
@@ -2565,6 +2587,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - The turn-end hook clears the saved failure for the current session and agent
   when the gate is disabled or `tech.md` is missing. If the check becomes
   available again, a failing command blocks the turn as a fresh failure.
+
+- The turn-end hook also clears that session and agent's saved failure when
+  it finds no `qfai.config.yaml`. The stop stays silent, and the same failing
+  command can block again after the configuration returns.
 
 - **The turn-end check tells a failure in another worktree from a repeat.**
   When a continued turn failed with the same output it had blocked on, the

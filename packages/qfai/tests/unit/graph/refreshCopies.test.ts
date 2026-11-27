@@ -103,8 +103,11 @@ it("makes one refresh copy when a code query finds the analysis not current and 
         fixture.calls.push({ command, args });
         return { exitCode: 0, stdout: '{"initialized":false}' };
       }
-      if (args.includes("--version") || args.includes("--liftoff-only"))
+      if (args.includes("--liftoff-only")) {
+        fixture.calls.push({ command, args });
         return { exitCode: 1, stdout: "" };
+      }
+      if (args.includes("--version")) return { exitCode: 1, stdout: "" };
       return fixture.run(command, args, options);
     };
     await expect(
@@ -116,6 +119,14 @@ it("makes one refresh copy when a code query finds the analysis not current and 
         path.basename(call.args[2] ?? "").startsWith(".refreshing-codegraph-"),
     );
     expect(refreshChecks).toHaveLength(1);
+    const replacementAttempts = fixture.calls.filter(
+      ({ args }) =>
+        args[0] === "--liftoff-only" &&
+        args.length === 4 &&
+        path.basename(args[1] ?? "") === "codegraph-native.mjs" &&
+        path.basename(args[3] ?? "").startsWith(".preparing-codegraph-"),
+    );
+    expect(replacementAttempts).toHaveLength(1);
     expect(await readFile(activeSource, "utf8")).toBe(priorSource);
   } finally {
     await fixture.dispose();
