@@ -198,7 +198,7 @@ describe("qfai init", () => {
       );
 
       expect(output).toContain(
-        `${path.join(".qfai", "spec", "01_policy", "objective.md")} was not written. An incompatible destination or parent path blocked the write.`,
+        `${path.join(".qfai", "spec", "01_policy", "objective.md")} was not written. Check whether a directory or special entry occupies the destination, or a symbolic link or non-directory blocks a parent path.`,
       );
     } finally {
       await removeTempTree(root);
@@ -219,7 +219,7 @@ describe("qfai init", () => {
       );
 
       expect(output).toContain(
-        `${relative} was not written. An incompatible destination or parent path blocked the write. Check the path before retrying.`,
+        `${relative} was not written. Check whether a directory or special entry occupies the destination, or a symbolic link or non-directory blocks a parent path.`,
       );
       expect(await readFile(ownedFile, "utf-8")).toBe("project content\n");
       expect((await lstat(path.join(root, ".agents", "rules", "user-questions.md"))).isFile()).toBe(

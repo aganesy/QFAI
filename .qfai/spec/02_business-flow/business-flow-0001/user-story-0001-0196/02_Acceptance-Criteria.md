@@ -136,6 +136,7 @@ Feature: Install or upgrade and get the free-text entry
     When `qfai init` runs
     Then `.gitattributes` sets `merge=union` on `.qfai/spec/decisions.md`, `.qfai/spec/decisions/page-*.md` and `.qfai/spec/open-questions.md`, and on no other path
     And its comment says that new register rows are appended and a row keeps its ID, though a decision row's wording may be restated, and that a register conflict is resolved by merging the base branch locally
+    And if the union merge restores an open-question row deleted on one side, the comment says to delete that row again in a separate commit before pushing and to preserve all other register rows and IDs
     And an existing `.gitattributes` is left as it is
 
   # AC-0001-0196-16
