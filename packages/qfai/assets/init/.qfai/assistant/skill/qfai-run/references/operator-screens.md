@@ -138,8 +138,10 @@ edit. Once made, a later branch move does not repeat it.
   name its symptom, at most five, joined with `OR`. Each term is a bare word of
   letters, digits, `.`, `-`, `_` or `/`; drop any other character, so no quote
   or shell metacharacter reaches the query. GitHub allows at most five `OR`
-  operators and 256 characters in a query. On GitHub:
-  `gh api -X GET search/issues -f q='repo:<owner>/<name> is:open <terms>'`.
+  operators and 256 characters in a query. GitHub uses the issue-only fallback
+  so the same query works with GitHub App user tokens:
+  `gh api -X GET search/issues -f q='repo:<owner>/<name> is:open is:issue <terms>'`.
+  Pull requests are outside this GitHub search's scope.
 - **What a match is.** A returned issue or pull request whose title or body
   describes the same problem, as the session judges from the result. A hit that
   only shares words is not a match. Neither is the issue or pull request the
