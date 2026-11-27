@@ -219,6 +219,19 @@ describe("reading a contract's own DDL", () => {
     expect(references.size).toBe(0);
   });
 
+  // QFAI:EX-0001-0039-75
+  it("reads the real REFERENCES after a continued escape string", () => {
+    const sql = [
+      "CREATE TABLE t (note TEXT DEFAULT E'prefix'",
+      String.raw`  'it\'s REFERENCES sessions', parent_id int REFERENCES orders(id));`,
+    ].join("\n");
+    const { references } = readTableEdges(sql);
+
+    expect([...references.keys()]).toEqual(["orders"]);
+    expect(blankSqlNoise(sql)).toHaveLength(sql.length);
+    expect(blankSqlNoise(sql).split("\n")).toHaveLength(2);
+  });
+
   it("lets a backslash escape nothing in a standard string or after a longer name", () => {
     // Only a lone `E` or `e` opens an escape string. `'C:\'` is a whole
     // standard string, and in `name'x\'` the `e` belongs to the name.

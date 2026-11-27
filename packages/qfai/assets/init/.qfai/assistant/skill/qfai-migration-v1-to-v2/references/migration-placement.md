@@ -41,9 +41,9 @@ Flow order and story order determine the new IDs.
   names several stories, or the two disagree.
 - **`contract`.** A contract path is relative to the configured contracts
   directory, lies under `cli/`, `api/`, `db/` or `ui/`, and names the contract
-  file as it is before step 3 renames it. A Markdown file under `api/`, `db/`
-  or `ui/` and a file under `design/` hold no contract, so a rule cannot be
-  placed in one.
+  file as it is before step 3 renames it. Use `<kind>/<kind>-NNNN-<slug>.md` for an existing
+  Markdown API, DB or UI contract. A rule cannot be placed in an unnumbered
+  Markdown note under these directories or in a file under `design/`.
 - **`binds: none` and `retire`.** A rule with no contract takes one of these
   instead of `contract`. `binds: none` is allowed only where the rule's
   `Contract-Refs` cell is `-`. `retire` takes a reason. Step 7 removes such a
@@ -147,10 +147,10 @@ the file to match:
 Step 3 gives no ID to a file that is not a 2.x contract, and does not write it
 into the new tree:
 
-| Old file                                     | Why it is not a contract                                                                                |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| A Markdown file under `api/`, `db/` or `ui/` | Those directories hold OpenAPI YAML or JSON, SQL and UI YAML contracts                                  |
-| Any file under `design/`                     | The directory no longer exists: the brand belongs in the root `DESIGN.md`, a screen in a `ui/` contract |
+| Old file                                                                         | Why it is not a contract                                                                                                              |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| A Markdown note outside the canonical naming scheme under `api/`, `db/` or `ui/` | Markdown contracts use `<kind>/<kind>-NNNN-<slug>.md`. The legacy forms are OpenAPI YAML or JSON for API, SQL for DB and YAML for UI. |
+| Any file under `design/`                                                         | The directory no longer exists: the brand belongs in the root `DESIGN.md`, a screen in a `ui/` contract                               |
 
 Step 3 deletes each one, `design/` as one directory, and lists each file under
 `## For a person`. Rewrite what the file stated, from git history, in the form

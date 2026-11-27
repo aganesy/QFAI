@@ -29,7 +29,7 @@ Nothing. The CLI checks are read-only.
   `npx qfai doctor --profile prototyping` to surface the resolved set. With
   zero UI-bearing contracts the run ends here, writes nothing, and says that no
   UI-bearing UI contract was resolved.
-- Confirm `<contractsDir>/ui/` holds a `*.yaml` or `*.yml` contract.
+- Confirm `<contractsDir>/ui/` holds a Markdown UI responsibility or a structured YAML contract with screens.
 - Run `common-design-md` § Check before building
   (`.qfai/assistant/step/common-design-md/STEP.md#check-before-building`). It
   stops on a missing, unparseable or sample `DESIGN.md`. Run only that section:

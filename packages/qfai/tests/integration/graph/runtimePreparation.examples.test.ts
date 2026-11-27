@@ -174,9 +174,11 @@ it("repairs only a missing runtime component and retains unrelated settings", as
     await expect(access(paths.python)).resolves.toBeUndefined();
     expect(await readFile(paths.codegraph)).toEqual(codegraphBytes);
     expect(await readFile(settings, "utf8")).toBe(original);
-    expect(fixture.calls.some((call) => call.args.includes("@colbymchenry/codegraph@1.6.2"))).toBe(
-      false,
-    );
+    expect(
+      fixture.calls.some((call) =>
+        call.args.some((argument) => /^@colbymchenry\/codegraph(?:@|$)/.test(argument)),
+      ),
+    ).toBe(false);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
