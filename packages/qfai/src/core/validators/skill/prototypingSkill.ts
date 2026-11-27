@@ -109,7 +109,10 @@ const UI_CONTRACT_ID_PLACEHOLDER = /(?<![\w-])ui-nnnn(?![\w-])/;
 
 export function hasUiContractScope(content: string): boolean {
   const lower = content.toLowerCase();
-  const statements = lower.split(/[.!?]\s+|\n\s*\n/).map((statement) => statement.trim());
+  const statements = lower
+    .replace(/^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+/gm, "\n\n")
+    .split(/[.!?]\s+|\n\s*\n/)
+    .map((statement) => statement.trim().replace(/\s+/g, " "));
   const markdownEligibility =
     /^(?:a\s+)?markdown ui contracts?\s+(?:suppl(?:y|ies)|provides?|must declare)\s+(?:a|its|their)\s+(?:declared\s+)?responsibilit(?:y|ies)\b/;
   const legacyEligibility =

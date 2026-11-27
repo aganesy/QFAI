@@ -16,6 +16,7 @@ import { toRelativePath } from "../paths.js";
 import { isGlobExclusion } from "../testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue } from "../types.js";
+import { STUB_SOURCE_EXTENSIONS } from "./testTodoStubs.js";
 import { issue } from "./utils.js";
 
 export type StoryTestFile = {
@@ -326,8 +327,39 @@ export async function validateStoryTreeObligations(
 
 // A standalone comment mark. Requiring the prefix keeps references in prose,
 // imports and single-line string literals from counting as implementations.
-const BUSINESS_RULE_ANNOTATION =
-  /^[ \t]*(?:\/\/|\/\*+|\*|#|--|<!--)[ \t]*QFAI:(BR-(?:UI|API|DB)-\d{4}-\d{4})(?=[ \t\r\n]|\*\/|-->|$)/gm;
+function businessRuleAnnotation(comment: RegExp): RegExp {
+  return new RegExp(
+    String.raw`^[ \t]*(?:${comment.source})[ \t]*QFAI:(BR-(?:UI|API|DB)-\d{4}-\d{4})(?=[ \t\r\n]|\*\/|-->|$)`,
+    "gm",
+  );
+}
+
+const BUSINESS_RULE_ANNOTATION = businessRuleAnnotation(/\/\/|\/\*+|\*|#|--|<!--/);
+const LISP_RULE_ANNOTATION = businessRuleAnnotation(/;+/);
+const RULE_ANNOTATION_BY_EXTENSION: ReadonlyMap<string, RegExp> = new Map([
+  [".clj", LISP_RULE_ANNOTATION],
+  [".cljs", LISP_RULE_ANNOTATION],
+  [".erl", businessRuleAnnotation(/%+/)],
+  [".hs", businessRuleAnnotation(/--+/)],
+  [".pl", businessRuleAnnotation(/#/)],
+  [".vb", businessRuleAnnotation(/'|[Rr][Ee][Mm](?=[ \t])/)],
+]);
+
+// Gherkin describes examples. The other recognized test languages can also implement a rule.
+const IMPLEMENTATION_SOURCE_EXTENSIONS = [
+  ...STUB_SOURCE_EXTENSIONS.filter((ext) => ext !== "feature"),
+  "vue",
+  "svelte",
+  "astro",
+  "html",
+  "css",
+  "scss",
+  "sql",
+  "h",
+  "hpp",
+  "fsx",
+  "sh",
+];
 
 async function validateAbstractRuleCoverage(
   root: string,
@@ -354,7 +386,10 @@ async function validateAbstractRuleCoverage(
     refs: Set<string>,
     role: "implementation" | "test",
   ) => {
-    for (const [, id] of content.matchAll(BUSINESS_RULE_ANNOTATION)) {
+    const annotation =
+      RULE_ANNOTATION_BY_EXTENSION.get(path.extname(file).toLowerCase()) ??
+      BUSINESS_RULE_ANNOTATION;
+    for (const [, id] of content.matchAll(annotation)) {
       if (!id) continue;
       if (known.has(id)) refs.add(id);
       else
@@ -380,9 +415,7 @@ async function validateAbstractRuleCoverage(
   const src = resolvePath(root, config, "srcDir");
   try {
     const result = await collectFilesByGlobs(src, {
-      globs: [
-        "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,vue,svelte,astro,html,css,scss,sql,py,rb,php,go,rs,swift,kt,kts,java,groovy,c,cc,cpp,h,hpp,m,cs,fs,fsx,dart,lua,sh,ex,exs,scala}",
-      ],
+      globs: [`**/*.{${IMPLEMENTATION_SOURCE_EXTENSIONS.join(",")}}`],
       ignore: [
         ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
         "**/{test,tests,__tests__}/**",
