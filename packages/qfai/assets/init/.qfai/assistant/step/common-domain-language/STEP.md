@@ -27,16 +27,21 @@ It runs in the discussion stage between `discussion-research` and
   words they already use for each thing.
 - `.qfai/assistant/skill/qfai-grilling/references/glossary-check.md`, for how
   a clash is raised and where a settled term is written.
+- `.qfai/assistant/rule/references/deliberation-record.md` and
+  `.qfai/assistant/step/common-grilling-record/STEP.md`, for the rows a round
+  writes.
+- `.agents/rules/document-schema.md`, before writing `01_policy/glossary.md`.
 
 ## Writes
 
-| Stage         | Writes                                                                                                                                                  |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Discussion    | An Interview row of the run's deliberation record for each question put, and one `open-questions.md` row per settled term, naming it and its definition |
-| Specification | The settled rows of `01_policy/glossary.md`, its Avoid and Context cells and its `## Contexts` table included                                           |
+| Stage         | Writes                                                                                                                                                                                                                                                                                                                           |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Discussion    | An Interview row of the run's deliberation record for each question put, and one `open-questions.md` row for each node left open and each settled term, naming the term and its definition                                                                                                                                       |
+| Specification | An Interview row of the run's deliberation record for each question put, one `open-questions.md` row for each node left open, the settled rows of `01_policy/glossary.md` with its Avoid and Context cells and its `## Contexts` table, and the deletion of each settled-term `open-questions.md` row it wrote into the glossary |
 
-The discussion stage writes no glossary row: `/qfai-sdd` writes each term
-from its `open-questions.md` row and deletes the row. Nothing else is written.
+The discussion stage writes no glossary row. The specification stage writes
+each settled-term row a discussion left in `open-questions.md` into the
+glossary, then deletes that row. Nothing else is written.
 
 ## Procedure
 
@@ -45,13 +50,13 @@ from its `open-questions.md` row and deletes the row. Nothing else is written.
    general programming word is not a candidate.
 2. **Read each against the glossary.** Put every candidate in one of these:
 
-   | Reading      | What it is                                                     | What happens                                                   |
-   | ------------ | -------------------------------------------------------------- | -------------------------------------------------------------- |
-   | Matches      | A term the glossary defines, used in that meaning              | Nothing                                                        |
-   | Rejected     | A word a row lists under Avoid                                 | Corrected to the row's term, and noted in the round; not asked |
-   | Synonym      | Another word for a term the glossary defines                   | Proposed for that row's Avoid cell                             |
-   | Two meanings | One word the request, the tree or the code uses for two things | A decision: one meaning, or one row per bounded context        |
-   | New          | A word the glossary does not hold that a decision turns on     | Defined in the round                                           |
+   | Reading      | What it is                                                     | What happens                                                                                                   |
+   | ------------ | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+   | Matches      | A term the glossary defines, used in that meaning              | Nothing                                                                                                        |
+   | Rejected     | A word a row lists under Avoid                                 | Corrected to the row's term, and noted in the round; not asked                                                 |
+   | Synonym      | Another word for a term the glossary defines                   | Corrected to that term and noted; adding it to the row's Avoid cell is an item of the round's grouped question |
+   | Two meanings | One word the request, the tree or the code uses for two things | A decision: one meaning, or one row per bounded context                                                        |
+   | New          | A word the glossary does not hold that a decision turns on     | Defined in the round                                                                                           |
 
    A candidate no decision turns on is left out.
 
@@ -75,10 +80,11 @@ from its `open-questions.md` row and deletes the row. Nothing else is written.
 
 ## Passes when
 
-Read first: the request, the glossary, and the run's deliberation record. The
-step passes when the run already settled its terms in an earlier stage, or when
-every candidate of step 1 matches the glossary and none is a rejected synonym.
-The pass names the record row or the glossary rows it read.
+Read first: the request, the glossary, the run's deliberation record and
+`open-questions.md`. The step passes when no settled-term row waits in
+`open-questions.md` and no candidate of step 1 is new, a synonym or read two
+ways; a rejected synonym it only corrects in its own reading does not stop the
+pass. The pass names the glossary rows it read.
 
 ## Gate
 

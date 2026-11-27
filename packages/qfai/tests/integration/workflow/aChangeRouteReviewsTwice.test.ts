@@ -541,3 +541,22 @@ it("The entry skill's review step states the same count as the review step", asy
   expect(run).toContain("a behaviour fix gets one re-review, as `common-review-cycle` says.");
   expect(run).not.toMatch(/flows served by a UI contract/);
 });
+
+it("adds no specification stage that would hold only the domain-language step", () => {
+  const plan: WorkflowPlanFile = {
+    route: "project-route",
+    family: "change",
+    stages: [
+      {
+        id: "edit",
+        kind: "sdd",
+        steps: [{ name: "sdd-triage" }, { name: "sdd-story" }, { name: "sdd-contract" }],
+        after: [],
+      },
+      { id: "build", kind: "implement", steps: [{ name: "implement-tdd" }], after: ["edit"] },
+    ],
+    decisionPoints: [],
+    branchPoints: [],
+  };
+  expect(withSpecStage(plan, ["spec", "code"])).toBe(plan);
+});

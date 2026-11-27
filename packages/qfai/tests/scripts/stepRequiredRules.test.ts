@@ -54,6 +54,7 @@ const REQUIRED: Readonly<Record<string, readonly string[]>> = {
   "triage-request-info": ["untrusted-content"],
   "triage-security-intake": ["untrusted-content"],
   "sdd-flow": ["document-schema"],
+  "common-domain-language": ["document-schema"],
   "sdd-story": ["document-schema", "documentation-clarity"],
   "sdd-contract": ["document-schema"],
 };

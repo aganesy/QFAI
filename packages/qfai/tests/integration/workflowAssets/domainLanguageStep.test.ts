@@ -73,6 +73,18 @@ describe("what the step file says", () => {
   });
 });
 
+describe("terms a discussion settled", () => {
+  // QFAI:EX-0001-0318-05
+  it("are written into the glossary by the specification stage, which does not pass while one waits", async () => {
+    const text = await readShipped(`step/${STEP}/STEP.md`);
+    expect(flat(text)).toMatch(
+      /specification stage writes each settled-term row .* into the glossary, then deletes that row/i,
+    );
+    expect(flat(sectionOf(text, "## Passes when"))).toMatch(/no settled-term row waits/i);
+    expect(flat(text)).toMatch(/discussion stage writes no glossary row/i);
+  });
+});
+
 describe("the skills that list the step", () => {
   // QFAI:AC-0001-0318-03
   // QFAI:EX-0001-0318-04

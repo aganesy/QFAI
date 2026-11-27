@@ -44,7 +44,9 @@ export function withSpecStage(
   const { stages } = plan;
   const present = new Set(stages.flatMap((stage) => stage.steps.map((step) => step.name)));
   const steps = SPEC_STEPS.filter((step) => !present.has(step.name));
-  if (steps.length === 0 || stages.some((stage) => stage.id === SPEC_STAGE_ID)) return plan;
+  // A stage holding only the pass-through domain-language step would review nothing written.
+  const onlyDomainLanguage = steps.every((step) => step.name === "common-domain-language");
+  if (onlyDomainLanguage || stages.some((stage) => stage.id === SPEC_STAGE_ID)) return plan;
   const lastSdd = lastIndex(stages, (stage) => stage.kind === "sdd");
   const at = lastSdd >= 0 ? lastSdd + 1 : stages.findIndex(writesSomething);
   const previous = stages[at - 1];
