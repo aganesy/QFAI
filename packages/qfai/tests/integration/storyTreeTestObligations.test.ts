@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { Issue, ValidationProfile } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
+import { runCliCaptured } from "../helpers/cliCapture.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const roots: string[] = [];
@@ -42,10 +43,12 @@ function decisions(...rows: string[]): string {
 
 /**
  * A story tree with one flow and one story holding two criteria, each with one
- * example, plus the given extra files, in a project whose test globs select
- * every `*.test.ts` file under `tests/`.
+ * example, plus the given extra files and configurable traceability globs.
  */
-async function project(extra: Record<string, string> = {}): Promise<string> {
+async function project(
+  extra: Record<string, string> = {},
+  testFileGlobs: readonly string[] = ["tests/**/*.test.ts"],
+): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-test-obligations-"));
   roots.push(root);
   const files: Record<string, string> = {
@@ -56,7 +59,7 @@ async function project(extra: Record<string, string> = {}): Promise<string> {
       "validation:",
       "  traceability:",
       "    testFileGlobs:",
-      '      - "tests/**/*.test.ts"',
+      ...testFileGlobs.map((glob) => `      - ${JSON.stringify(glob)}`),
       "",
     ].join("\n"),
     [flowFile]: "# BF-0001: Flow\n",
@@ -168,6 +171,44 @@ describe("layer-specific test obligations", () => {
     expect(await owed(covered, "tdd")).not.toContain("EX-0001-0001-01");
     expect(await owed(covered, "tdd")).toContain("EX-0001-0001-02");
   });
+
+  const scriptTest = testOf("EX-0001-0001-01");
+  const templateMark = annotation("EX-0001-0001-02");
+
+  // QFAI:EX-0001-0056-14
+  it.each([
+    {
+      extension: "vue",
+      component: `<template><slot :name='"${templateMark}"' /></template>\n<script setup>\n${scriptTest}</script>\n`,
+    },
+    {
+      extension: "svelte",
+      component: `<script>\n${scriptTest}</script>\n{#if "${templateMark}"}<p>Example</p>{/if}\n`,
+    },
+  ])(
+    "counts only the script example in a selected $extension test",
+    async ({ extension, component }) => {
+      const root = await project(
+        { [path.join("tests", "unit", `component.test.${extension}`)]: component },
+        [`tests/**/*.test.${extension}`],
+      );
+      const { out, code } = await runCliCaptured([
+        "validate",
+        "--root",
+        root,
+        "--profile",
+        "tdd",
+        "--format",
+        "github",
+        "--fail-on",
+        "error",
+      ]);
+      expect(code).toBe(1);
+      const missing = out.split("\n").filter((line) => line.includes("::QFAI-STORY-006: EX-"));
+      expect(missing).toHaveLength(1);
+      expect(missing[0]).toContain("EX-0001-0001-02 is missing a test annotation");
+    },
+  );
 
   // QFAI:AC-0001-0056-04
   // QFAI:EX-0001-0056-04

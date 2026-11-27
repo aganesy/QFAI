@@ -31,6 +31,8 @@ import { parse as parseYaml } from "yaml";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const LAYER = ".instruction/02_project";
+const NODE_RANGE_CLAIM =
+  /(?:\^|>=)\s*\d+(?:\.\d+){0,2}(?:\s*\|\|\s*(?:\^|>=)\s*\d+(?:\.\d+){0,2})*/g;
 
 /**
  * A backticked repository-relative path: one that starts at a root-level entry
@@ -106,20 +108,20 @@ const NON_CREATING_TAG_FLAGS = new Set([
   "-n",
   "--contains",
   "--no-contains",
-  "--points-at",
   "--merged",
   "--no-merged",
   "--with",
   "--without",
 ]);
 
-/** The tag creation options whose next word is their value. */
+/** Tag options that take an attached or separate value. */
 const VALUE_TAKING_TAG_FLAGS = new Set([
   "--message",
   "--file",
   "--local-user",
   "--trailer",
   "--cleanup",
+  "--points-at",
 ]);
 
 /** Sorting and formatting do not switch a command with a tag operand into list mode. */
@@ -139,6 +141,19 @@ const TAG_SWITCHES = new Set([
   "--no-color",
   "--omit-empty",
   "--ignore-case",
+  // Git supports these unsets without a value. Message and mode switches
+  // such as --list opt out of negation in Git's option definitions.
+  "--no-annotate",
+  "--no-force",
+  "--no-edit",
+  "--no-ignore-case",
+  "--no-omit-empty",
+  "--no-file",
+  "--no-cleanup",
+  "--no-local-user",
+  "--no-sort",
+  "--no-format",
+  "--no-points-at",
 ]);
 
 // Include switches that do not consume a word when checking for ambiguous prefixes.
@@ -191,6 +206,7 @@ function readTagCommand(command: string): {
   );
   let operands: string[] = [];
   let hasListModifier = false;
+  let hasPointsAtFilter = false;
   let optionsKnown = true;
 
   for (let index = 0; index < args.length; index++) {
@@ -212,17 +228,24 @@ function readTagCommand(command: string): {
       return { creates: !optionsKnown, operands: [], optionsKnown };
     }
 
+    const clearsPointsAt = flag === "--no-points-at" && value === undefined;
+    // Git lets a later unset clear the points-at filter before choosing tag mode.
+    if (flag === "--points-at" || clearsPointsAt) hasPointsAtFilter = !clearsPointsAt;
+
     const listModifier = TAG_LIST_MODIFIERS.has(flag);
-    hasListModifier ||= listModifier;
+    hasListModifier ||= listModifier || clearsPointsAt;
     const longWithValue = listModifier || VALUE_TAKING_TAG_FLAGS.has(flag);
+    const knownSwitch =
+      TAG_SWITCHES.has(flag) && (value === undefined || !flag.startsWith("--no-"));
     const takesSeparateValue =
       (longWithValue && value === undefined) || shortOption === "separate-value";
     if (takesSeparateValue) {
       index++;
-      if (index === args.length) optionsKnown = false;
+      // A final --points-at without a value uses HEAD in Git.
+      if (index === args.length && flag !== "--points-at") optionsKnown = false;
     } else if (
       !longWithValue &&
-      !TAG_SWITCHES.has(flag) &&
+      !knownSwitch &&
       shortOption !== "attached-value" &&
       !/^-[aesfi]+$/.test(arg)
     ) {
@@ -233,8 +256,8 @@ function readTagCommand(command: string): {
   // A continued command may name the tag on its next physical line.
   const creates =
     !optionsKnown ||
-    operands.length > 0 ||
-    (args.length > 0 && (!hasListModifier || command.endsWith("\\")));
+    (!hasPointsAtFilter &&
+      (operands.length > 0 || (args.length > 0 && (!hasListModifier || command.endsWith("\\")))));
   return { creates, operands, optionsKnown };
 }
 
@@ -309,6 +332,10 @@ function releaseTaggingStatements(guide: string): string[] {
   return statements.filter((statement) => tagCreations(statement).length > 0);
 }
 
+function releaseBuildBlock(guide: string): string | undefined {
+  return releaseShellBlocks(guide).find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
+}
+
 describe("the project layer describes the repository it is in", () => {
   it("names no repository path that does not exist", async () => {
     const missing: string[] = [];
@@ -349,8 +376,10 @@ describe("the project layer describes the repository it is in", () => {
     const disagreeing: string[] = [];
     for (const name of await layerFiles()) {
       const text = await readFile(path.join(repoRoot, LAYER, name), "utf-8");
-      for (const [stated] of text.matchAll(/>=\s*\d+(?:\.\d+)*(?:\.\d+)?/g)) {
-        if (stated.replace(/\s+/g, "") !== engines) disagreeing.push(`${name}: ${stated}`);
+      for (const [stated] of text.matchAll(NODE_RANGE_CLAIM)) {
+        if (stated.replace(/\s+/g, "") !== engines?.replace(/\s+/g, "")) {
+          disagreeing.push(`${name}: ${stated}`);
+        }
       }
     }
 
@@ -368,13 +397,13 @@ describe("the project layer describes the repository it is in", () => {
     expect(engines, "package.json declares no Node range").not.toBeUndefined();
 
     const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
-    const stated = [...withoutFencedBlocks(guide).matchAll(/>=\s*\d+(?:\.\d+)*/g)].map(([match]) =>
-      match.replace(/\s+/g, ""),
+    const stated = [...withoutFencedBlocks(guide).matchAll(NODE_RANGE_CLAIM)].map(
+      ([match]) => match,
     );
 
     expect(stated.length, "the release guide states no Node floor to check").toBeGreaterThan(0);
     expect(
-      stated.filter((floor) => floor !== engines),
+      stated.filter((range) => range.replace(/\s+/g, "") !== engines?.replace(/\s+/g, "")),
       `the declared Node range is ${String(engines)}`,
     ).toEqual([]);
   });
@@ -457,6 +486,44 @@ describe("the project layer describes the repository it is in", () => {
     expect(
       namesItsCommit('git tag -m Release --trailer "Change-Id: X" --cleanup verbatim vX.Y.Z <SHA>'),
     ).toBe(true);
+  });
+
+  it.each(["--no-annotate", "--no-edit", "--no-file", "--no-sort"])(
+    "checks an explicit commit after the valid tag unset %s",
+    (option) => {
+      const command = `git tag ${option} vX.Y.Z <SHA>`;
+      expect(tagCreations(command)).toEqual([command]);
+      expect(namesItsCommit(command)).toBe(true);
+    },
+  );
+
+  it.each([
+    "--no-message",
+    "--no-trailer",
+    "--no-list",
+    "--no-unknown",
+    "--no-file=unused",
+    "--no-edit=",
+    "--no-points-at=<SHA>",
+  ])("holds the commit check for an invalid tag unset %s", (option) => {
+    const command = `git tag ${option} vX.Y.Z <SHA>`;
+    expect(tagCreations(command)).toEqual([command]);
+    expect(namesItsCommit(command)).toBe(false);
+  });
+
+  it("uses the last points-at filter when checking tag creation", () => {
+    const implicit = "git tag --points-at=HEAD --no-points-at vX.Y.Z";
+    expect(tagCreations(implicit)).toEqual([implicit]);
+    expect(namesItsCommit(implicit)).toBe(false);
+
+    const explicit = "git tag --points-at HEAD --no-points-at vX.Y.Z <SHA>";
+    expect(tagCreations(explicit)).toEqual([explicit]);
+    expect(namesItsCommit(explicit)).toBe(true);
+
+    expect(tagCreations("git tag --no-points-at --points-at HEAD vX.Y.Z")).toEqual([]);
+    expect(tagCreations("git tag --no-points-at")).toEqual([]);
+    expect(tagCreations("git tag --points-at")).toEqual([]);
+    expect(tagCreations("git tag --no-points-at --points-at")).toEqual([]);
   });
 
   it.each(["git tag vX.Y.Z --me --contains", "git tag --me --sort vX.Y.Z"])(
@@ -641,12 +708,30 @@ describe("the project layer describes the repository it is in", () => {
     expect(guide, "the guide runs the build check with bare node").not.toMatch(
       /^\s*node (?:\.\/)?scripts\/check-build-warnings\.mjs/m,
     );
-    const block = [...guide.matchAll(/^\s*```sh\n([\s\S]*?)^\s*```/gm)]
-      .map(([, body]) => body ?? "")
-      .find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
+    const block = releaseBuildBlock(guide);
     expect(block, "no shell block runs corepack pnpm ci:gate:build").toBeDefined();
     expect(block, "the block runs verify:pack a second time").not.toMatch(/^\s*pnpm verify:pack$/m);
   });
+
+  it.each([
+    ["sh", "\n"],
+    ["bash", "\n"],
+    ["shell", "\n"],
+    ["sh", "\r\n"],
+    ["bash", "\r\n"],
+    ["shell", "\r\n"],
+  ])(
+    "finds the build command and its neighboring lines in a %s fence with %j",
+    (shell, newline) => {
+      const build = "corepack pnpm ci:gate:build";
+      const duplicate = "pnpm verify:pack";
+      const guide = ["```" + shell, build, duplicate, "```"].join(newline);
+      const block = releaseBuildBlock(guide);
+      expect(block).toBeDefined();
+      expect(block).toContain(build);
+      expect(block).toMatch(/^\s*pnpm verify:pack$/m);
+    },
+  );
 
   // The host command lists under `.instruction/03_ai-agents/` were copied from
   // another project: `generate:graphql`, `apply:backend`, `test:e2e` and `seed`
