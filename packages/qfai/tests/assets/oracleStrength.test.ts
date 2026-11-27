@@ -28,6 +28,20 @@ describe.each(trees)("%s oracle strength", (tree) => {
     expect(proof).toContain("assertions on a mock's own input");
   });
 
+  it.each([
+    [
+      "asserts the operative words",
+      "When a test guards prose or a table, assert the operative words of each clause.",
+    ],
+    [
+      "probes each new clause independently",
+      "Before handoff, delete each new clause once in isolation and confirm its assertion fails.",
+    ],
+  ])("%s for tests of prose or tables", async (_case, clause) => {
+    const proof = await read(tree, "assistant/skill/qfai-implement/references/oracle-strength.md");
+    expect(proof.replace(/\s+/g, " ")).toContain(clause);
+  });
+
   it("attributes a proof to one example and routes a shared boundary", async () => {
     const proof = await read(tree, "assistant/skill/qfai-implement/references/oracle-strength.md");
     const text = proof.replace(/\s+/g, " ");
