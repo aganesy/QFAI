@@ -237,7 +237,7 @@
         "scripts/fresh-init-findings.json": "99c2f17ebcb315ed3c4324f36afda738a36cbcae7939dd582ab01e7896197dae",
         "scripts/fresh-init-findings.mjs": "032493d612d6999edef2233ef94718a84d7c21843722c4c5050f2b879d165331",
         "scripts/gen-codex-agents.mjs": "6ccb467893b21e280f5edbe18352737940b55faf86506693afb036ec7341bb15",
-        "scripts/gh-budget.mjs": "ad0ef1d0d0806541ad94e2d20e534c36d62a83e31b3c9e44610291872efdf594",
+        "scripts/gh-budget.mjs": "44f23da60e15be3c705439a34bd94e73353c1ba4252ca9a1fab9756d4baf7d4d",
         "scripts/lib/always-loaded-footprint.mjs": "fe10fc25e9136494bf0c85779249f538c404f2e9fc30eb621773ff7057dc4b45",
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
         "scripts/lib/git-quoted-path.mjs": "c8a928b67c4cea521080c7b1de2427ad0d82eecff1ed50c5bb59aa4ceaa5ee48",
@@ -418,7 +418,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "810c6e4eb7fbe80d",
-        "Verify the toolchain action before running it": "8f1bdaf4bc145b86",
+        "Verify the toolchain action before running it": "7023103821f73906",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "4e1c94497dc6f58d",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "c660aaa773071813",
