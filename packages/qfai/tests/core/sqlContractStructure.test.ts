@@ -107,6 +107,7 @@ describe("the statement splitter knows SQL's quoting rules", () => {
   it.each([
     ["\n", ""],
     ["\r\n", ""],
+    ["\r", ""],
     ["\n", " -- comment with ) and ;"],
   ])("keeps an E string's continuation across %j after %j", (lineEnding, comment) => {
     const sql = [

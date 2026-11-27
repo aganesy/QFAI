@@ -64,6 +64,11 @@ export async function resolveToolPackageDir(): Promise<string | null> {
  * `node_modules` of the project, or of the directory that declares qfai: the
  * link points where the project chose ({@link reachedThroughLinkedNodeModules}).
  *
+ * The active Yarn Plug'n'Play resolver also proves ownership when it reports
+ * the declaring project's absolute directory and selects a QFAI package that
+ * matches the running copy's directory, resolving real paths where available.
+ * This covers a copy in an external package cache.
+ *
  * One package directory with no such segment is still reported: one reached
  * through the nearest `node_modules/qfai` at or above `root`, a link, where that
  * `node_modules` directory really lies outside `root`. A workspace dependency
