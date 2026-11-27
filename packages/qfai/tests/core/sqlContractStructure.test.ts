@@ -618,6 +618,10 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
       ["k", "app.U&\"a!!b\" UESCAPE '!'"],
       ["k", 'app."a!b"'],
       ["g", String.raw`app.U&"A\+00002e\002d\0022"`],
+      ["custom_escape_default", "app.custom_type"],
+      ["custom_escape_default", "app.U&\"custom=005ftype\" UESCAPE '='DEFAULT NULL"],
+      ["parenthesized_default", "app.custom_type"],
+      ["parenthesized_default", String.raw`app.U&"custom\005ftype" DEFAULT(NULL)`],
     ] as const;
     const sql = routines
       .map(
@@ -633,11 +637,13 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
       { kind: "FUNCTION", name: "g", lines: [6, 7] },
       { kind: "FUNCTION", name: "h", lines: [9, 10, 11] },
       { kind: "FUNCTION", name: "k", lines: [12, 13] },
+      { kind: "FUNCTION", name: "custom_escape_default", lines: [15, 16] },
+      { kind: "FUNCTION", name: "parenthesized_default", lines: [17, 18] },
     ]);
     const issues = await runOn(HEADER + sql);
     expect(
       issues.filter((issue) => issue.code === "QFAI-DB-002").map((issue) => issue.severity),
-    ).toEqual(["error", "error", "error", "error"]);
+    ).toEqual(["error", "error", "error", "error", "error", "error"]);
   });
 
   it("distinguishes parentheses inside a type name from its modifiers", () => {
