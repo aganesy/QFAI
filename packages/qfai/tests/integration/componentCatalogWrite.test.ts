@@ -150,7 +150,7 @@ it("writes at the UTF-8 limit and preserves the catalogue when output is larger"
   expect(stderr.join("")).toContain("Shorten catalogue tags");
   expect(stderr.join("")).toContain("uiux.surfacePaths");
   expect((await readFile(catalogFile(root))).equals(previous)).toBe(true);
-}, 30_000);
+});
 
 // QFAI:EX-0001-0307-29
 it("stops reading the verified catalogue descriptor when the file grows past the limit", async () => {
