@@ -579,7 +579,7 @@ describe("migration CLI contract shape", () => {
     expect((await run(step03, root)).output).toMatch(/## Operations\r?\nnone/);
   });
 
-  const legacySectionHeading = /(?<!#)## Legacy ([1-9]\d*)(?=$|[\s"'`,;:.)])/;
+  const legacySectionHeading = /"## Legacy ([^"]*)"/;
   const destinationPrefix = `${NEW}:`;
   const legacyContractPath = new RegExp(
     String.raw`\b(?:of|from|in)\s+["']?${escapeRegExp(OLD)}(?=$|[\s"',;:)]|\.(?=\s|$))`,
@@ -604,6 +604,9 @@ describe("migration CLI contract shape", () => {
     expect(matchesCliRewriteNote(`${NEW}: rewrite "## Legacy 10" of ${OLD} by hand`, 1)).toBe(
       false,
     );
+    expect(matchesCliRewriteNote(`${NEW}: rewrite "## Legacy 1 extra" of ${OLD} by hand`, 1)).toBe(
+      false,
+    );
     expect(matchesCliRewriteNote(`${NEW}: keep "## Legacy 1" of ${OLD} by hand`, 1)).toBe(false);
     expect(
       matchesCliRewriteNote(`${NEW}: manually rewrite section "## Legacy 1" from ${OLD}`, 1),
@@ -625,7 +628,7 @@ describe("migration CLI contract shape", () => {
     );
 
     const plan = await planContracts(await context(root));
-    const notes = plan.forAPerson.filter((note) => legacySectionHeading.test(note));
+    const notes = plan.forAPerson.filter((note) => note.includes('"## Legacy '));
     expect(notes).toHaveLength(sectionCount);
     const mismatch = notes.findIndex((note, index) => !matchesCliRewriteNote(note, index + 1));
     expect(mismatch).toBe(-1);
