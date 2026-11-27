@@ -636,6 +636,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Markdown contract reviews cover both contract formats and give rule-specific repair steps.**
+  Validation reads Groovy and Objective-C implementation annotations and tells
+  authors where to add or correct a business-rule annotation. Prototyping
+  guidance checks both Markdown responsibilities and structured screen lists.
+  Accessibility walkthroughs use the web routes each role can reach in the
+  running application or prototype for Markdown UI responsibilities.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to

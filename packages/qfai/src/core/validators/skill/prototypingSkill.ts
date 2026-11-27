@@ -109,11 +109,18 @@ const UI_CONTRACT_ID_PLACEHOLDER = /(?<![\w-])ui-nnnn(?![\w-])/;
 
 export function hasUiContractScope(content: string): boolean {
   const lower = content.toLowerCase();
-  return (
-    UI_CONTRACT_ID_PLACEHOLDER.test(lower) &&
-    lower.includes("screens[]") &&
-    (lower.includes("only") || lower.includes("excluded"))
+  const statements = lower.split(/[.!?]/);
+  const mentionsMarkdown = statements.some(
+    (statement) =>
+      /\bmarkdown ui contracts?\b/.test(statement) && /\bresponsibilit(?:y|ies)\b/.test(statement),
   );
+  const mentionsLegacy = statements.some(
+    (statement) =>
+      /\b(?:legacy yaml|structured) contracts?\b/.test(statement) &&
+      statement.includes("non-empty") &&
+      statement.includes("screens[]"),
+  );
+  return UI_CONTRACT_ID_PLACEHOLDER.test(lower) && mentionsMarkdown && mentionsLegacy;
 }
 
 export function hasDelegationScopeTable(content: string): boolean {
