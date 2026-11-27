@@ -230,6 +230,33 @@ describe("validateDesignContractReadiness — unreplaced sample (QFAI-DCON-034)"
  * screens is the design-readiness signal.
  */
 describe("story-tree visual design readiness", () => {
+  it.each([
+    ["cli", false],
+    ["web", true],
+    ["mobile", true],
+    ["desktop", true],
+    ["mixed", true],
+  ] as const)("uses the %s surface for a Markdown UI responsibility", async (surface, visual) => {
+    const root = await newTempDir();
+    const contracts = path.join(root, defaultConfig.paths.contractsDir);
+    await mkdir(path.join(contracts, "ui"), { recursive: true });
+    await writeFile(path.join(contracts, "ui", "ui-0001-status.md"), "# UI-0001: Status\n");
+    await writeFile(
+      path.join(contracts, "tech.md"),
+      [
+        "# Technology",
+        "",
+        "## Stack",
+        "",
+        "| Component | Choice |",
+        "| --- | --- |",
+        `| Surface | \`${surface}\` |`,
+      ].join("\n"),
+    );
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((issue) => issue.code)).toEqual(visual ? ["QFAI-DCON-030"] : []);
+  });
+
   it("a project without UI contracts requires no root DESIGN.md", async () => {
     const root = await newTempDir();
     const codes = (await validateDesignContractReadiness(root, defaultConfig)).map(
