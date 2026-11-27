@@ -280,8 +280,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   where the message reaches the user alone, and otherwise the user is advised to
   ask about it in this session where only they see the answer. No record of a
   held-back finding is kept: a later session asks the user for its pull request
-  and finds it again there. The `qfai session-review` command still reads local
-  transcripts only.
+  and finds it again in that pull request's review comments. The `qfai
+session-review` command still reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A

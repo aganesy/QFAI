@@ -154,11 +154,17 @@ final report names it by its number alone, since others may read that report. It
 tells the user to ask about it in a session where only they will see the answer
 and to name there the pull request it may have come from.
 
-No record of a held-back finding is kept, so that no file holds an unfixed
-defect. A later session asked about one it has no record of says so and asks the
-user which pull request it came from. It then reads that pull request's review
-comments, as the exception above allows, and finds the finding there again. A
-finding from a reviewer sub-agent has no pull request and cannot be found again.
+No record of a held-back finding is kept, so that no file records an unfixed
+defect. A later session asked about a held-back finding it has no record of says
+so. Only where the host shows that the session reaches the user alone does it
+ask which pull request the finding came from; otherwise it asks for nothing and
+repeats the advice above. Where the user's number could also be one that session
+handed out, it first confirms which finding is meant. It then reads that pull
+request's review comments, as the pull-request exception in this section's
+reading list allows, and finds the finding there again, then treats it as above.
+Where the finding is not there, or the forge cannot be read, it says so. A
+finding from a reviewer sub-agent has no pull request and cannot be found again,
+so the message about it says it can be asked about only in this session.
 
 ## 3. What a draft holds
 
@@ -245,7 +251,7 @@ Nothing is asked and nothing is filed or written. No proposal is added either.
 The drafts and the proposals of § 4 and § 8 go in the final report, and the
 report says none was filed or added, and that the proposals of § 8 were not
 written. A held-back security finding goes there too, named by its number alone,
-with the advice to ask about it where only the user will see the answer.
+with the advice § 2 gives for a no-question mode.
 
 ## 8. Corrections to keep in the project
 
