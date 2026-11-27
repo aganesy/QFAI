@@ -312,6 +312,21 @@ function releaseBuildBlock(guide: string): string | undefined {
 }
 
 describe("the project layer describes the repository it is in", () => {
+  it("declares the same Node range in the workspace and published package", async () => {
+    const workspacePath = path.join(repoRoot, "package.json");
+    const publishedPath = path.join(repoRoot, "packages", "qfai", "package.json");
+    const [workspace, published] = await Promise.all([
+      readFile(workspacePath, "utf-8"),
+      readFile(publishedPath, "utf-8"),
+    ]);
+    const publishedRange = declaredNodeRange(JSON.parse(published));
+
+    expect(publishedRange, "packages/qfai/package.json#engines.node").toBeDefined();
+    expect(declaredNodeRange(JSON.parse(workspace)), "package.json#engines.node").toBe(
+      publishedRange,
+    );
+  });
+
   it("names no repository path that does not exist", async () => {
     const missing: string[] = [];
     for (const name of await layerFiles()) {
