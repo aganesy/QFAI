@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Specification tables inside a list item's HTML comment block are ignored.
+  Inline comments are removed only within their own table cells, preserving the
+  boundaries and visible content of adjacent cells.
+
 - **Specification table checks respect list fences and row boundaries.**
   Tables within fenced list examples are ignored, and comment-like text
   in one table row can no longer hide subsequent visible rows.

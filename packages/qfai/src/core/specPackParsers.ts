@@ -96,6 +96,9 @@ export function maskLineComments(
 /** Start of a CommonMark type-2 HTML block: a comment opening the line. */
 const COMMENT_BLOCK_START = /^ {0,3}<!--/;
 
+/** A pipe directly after a backslash belongs to its table cell. */
+const TABLE_CELL_SEPARATOR = /(?<!\\)\|/;
+
 /** A top-level indented code block: four spaces or a tab, per CommonMark. */
 const INDENTED_CODE_LINE = /^(?: {4}|\t)/;
 
@@ -194,7 +197,7 @@ function listContentLine(
  * - Type 4: a declaration, `<!` and an ASCII letter, to `>`.
  * - Type 5: a CDATA section, `<![CDATA[` to `]]>`.
  *
- * Type 2, the comment, is carried by {@link maskLineComments} instead.
+ * Type-2 comment blocks are handled by {@link maskNonSpecRegions} instead.
  */
 const END_TERMINATED_HTML_BLOCKS: readonly { start: RegExp; end: RegExp }[] = [
   {
@@ -346,9 +349,12 @@ function endsParagraph(line: string): boolean {
  * line that {@link endsParagraph} starts a new block, so an inline comment
  * cannot reach past one, nor close on a `-->` that line holds.
  */
-function paragraphClosers(lines: readonly string[]): boolean[] {
+function paragraphClosers(
+  lines: readonly string[],
+  tableRows: ReadonlySet<number>,
+  commentStarts: ReadonlySet<number>,
+): boolean[] {
   const ahead: boolean[] = new Array<boolean>(lines.length).fill(false);
-  const tableRows = tableRowLines(lines);
   let closer = false;
   for (let index = lines.length - 1; index >= 0; index -= 1) {
     if (tableRows.has(index)) {
@@ -357,7 +363,7 @@ function paragraphClosers(lines: readonly string[]): boolean[] {
     }
     ahead[index] = closer;
     const line = lines[index] ?? "";
-    if (endsParagraph(line)) {
+    if (commentStarts.has(index) || endsParagraph(line)) {
       closer = false;
     } else if (line.includes("-->")) {
       closer = true;
@@ -366,9 +372,13 @@ function paragraphClosers(lines: readonly string[]): boolean[] {
   return ahead;
 }
 
-/** A table row cannot carry an inline comment into the next row. */
-function tableRowLines(lines: readonly string[]): Set<number> {
-  const rows = new Set<number>();
+/** Locate table rows and comment block starts relative to list item content. */
+function tableRowsAndCommentStarts(lines: readonly string[]): {
+  tableRows: Set<number>;
+  commentStarts: Set<number>;
+} {
+  const tableRows = new Set<number>();
+  const commentStarts = new Set<number>();
   const listIndents: number[] = [];
   let paragraphOpen = false;
   let headerAt = -1;
@@ -381,14 +391,16 @@ function tableRowLines(lines: readonly string[]): Set<number> {
       listIndents,
       paragraphOpen,
     );
-    paragraphOpen = contentOffset !== undefined && !endsParagraph(line.slice(contentOffset));
+    const content = contentOffset === undefined ? "" : line.slice(contentOffset);
+    paragraphOpen = !endsParagraph(content);
+    if (COMMENT_BLOCK_START.test(content)) commentStarts.add(index);
     if (contentOffset === undefined || !looksLikeTableRow(line)) {
       headerAt = -1;
       tableContainer = undefined;
       continue;
     }
     if (tableContainer === container) {
-      rows.add(index);
+      tableRows.add(index);
       continue;
     }
     tableContainer = undefined;
@@ -398,8 +410,8 @@ function tableRowLines(lines: readonly string[]): Set<number> {
         delimiterCells.every((cell) => cell.length > 0) &&
         splitMarkdownRow(lines[headerAt] ?? "").length === delimiterCells.length
       ) {
-        rows.add(headerAt);
-        rows.add(index);
+        tableRows.add(headerAt);
+        tableRows.add(index);
         tableContainer = container;
         continue;
       }
@@ -407,7 +419,23 @@ function tableRowLines(lines: readonly string[]): Set<number> {
     headerAt = index;
     headerContainer = container;
   }
-  return rows;
+  return { tableRows, commentStarts };
+}
+
+/** Mask each cell independently and keep its physical separators intact. */
+function maskTableRowComments(line: string): string {
+  const cells = line.split(TABLE_CELL_SEPARATOR);
+  return cells
+    .map((cell, index) => {
+      const visible = maskLineComments(cell, false, false).text;
+      if (visible === cell) return cell;
+      // Keep an emptied edge cell and prevent a newly adjacent backslash
+      // from escaping the next separator.
+      if (visible.trim().length === 0) return index === cells.length - 1 ? " |" : " ";
+      if (visible.endsWith("\\") && index < cells.length - 1) return `${visible} `;
+      return visible;
+    })
+    .join("|");
 }
 
 /**
@@ -429,15 +457,15 @@ function tableRowLines(lines: readonly string[]): Set<number> {
  *
  * **A comment that opens a line is an HTML block**, as CommonMark reads it:
  * every line through the one holding `-->` is blanked whole, and with no `-->`
- * it runs to the end of the document. A `<!--` after the block's `-->` on that
+ * it runs to the end of its list item or the document. A `<!--` after the block's `-->` on that
  * line is raw block text and opens nothing. **One opened inside a line is
  * inline:** only the comment is removed and the text after its `-->` stays. It
  * cannot outlive its paragraph, so a `<!--` whose `-->` does not follow before
  * the next line that starts a block — a blank line, a heading, a thematic
  * break, a fence, an HTML block, a block quote or a list item — is literal text.
  *
- * A table row ends the inline comment scan for that row. Delimiters on
- * separate rows remain visible. Text after an inline `-->` that would read
+ * Each table cell ends its own inline comment scan. Delimiters in separate
+ * cells or rows remain visible. Text after an inline `-->` that would read
  * as a heading or thematic break is blanked rather than kept as paragraph text.
  *
  * **Raw HTML blocks are blanked too**, all seven CommonMark types. A `<pre>`, a
@@ -454,11 +482,11 @@ export function maskNonSpecRegions(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   let open: { marker: string; length: number; container: number } | null = null;
   let inComment = false;
-  // Whether the open comment opened a line, and so is an HTML block.
-  let inBlockComment = false;
+  let commentBlockContainer: number | undefined;
   // Per line, whether a `-->` follows on a later line of the same paragraph:
   // the closer an inline comment opened on that line can still reach.
-  const closerAhead = paragraphClosers(lines);
+  const { tableRows, commentStarts } = tableRowsAndCommentStarts(lines);
+  const closerAhead = paragraphClosers(lines, tableRows, commentStarts);
   let inIndentedCode = false;
   let rawHtmlEnd: RegExp | null = null;
   let inBlankTerminatedHtml = false;
@@ -466,7 +494,8 @@ export function maskNonSpecRegions(text: string): string {
   let prevBlank = true;
   // Whether the last visible line can continue a paragraph in its container.
   let paragraphOpen = false;
-  // Type-7 HTML keeps the document-level paragraph rule used by this reader.
+  // SIMPLIFIED: a visible table row keeps the type-7 HTML paragraph flag open.
+  // Lift when a standalone custom element immediately after a table must open a block.
   let htmlParagraphOpen = false;
 
   const maskLine = (line: string, index: number): string => {
@@ -487,6 +516,15 @@ export function maskNonSpecRegions(text: string): string {
         }
         return "";
       }
+    }
+
+    if (commentBlockContainer !== undefined) {
+      if (blank || indentation.columns >= commentBlockContainer) {
+        prevBlank = blank;
+        if (line.includes("-->")) commentBlockContainer = undefined;
+        return "";
+      }
+      commentBlockContainer = undefined;
     }
 
     if (rawHtmlEnd !== null) {
@@ -543,28 +581,22 @@ export function maskNonSpecRegions(text: string): string {
       }
     }
 
-    // A comment that opens a line is a CommonMark HTML block, which runs to the
-    // end of the document when nothing closes it; only a comment opened inside
-    // a line needs a `-->` later in its own paragraph to be one.
-    const blockStart = !inComment && COMMENT_BLOCK_START.test(line);
-    const masked = maskLineComments(line, inComment, blockStart || closerAhead[index] === true);
-    const inInlineComment = inComment && !inBlockComment;
-    // A line that opens with a comment, or that a comment opened at the start
-    // of a line runs into, is comment through its end: CommonMark makes it an
-    // HTML block up to the line holding `-->`. Stripping the comment alone
-    // would hand back what follows it at the start of a line, so
-    // `<!-- note --> ## Risks` would read as a heading and a ```` ``` ````
-    // after a closing `-->` as a fence that hides the rest of the document.
-    const commentLine = blockStart || (inComment && inBlockComment);
-    // A comment block ends on the line holding its `-->`, so a `<!--` after
-    // that on the same line is raw block text and leaves nothing open.
-    const blockEnds = commentLine && line.includes("-->");
-    inComment = masked.open && !blockEnds;
-    inBlockComment = inComment && commentLine;
-    if (commentLine) {
+    if (
+      !inComment &&
+      contentOffset !== undefined &&
+      COMMENT_BLOCK_START.test(line.slice(contentOffset))
+    ) {
+      if (!line.includes("-->", contentOffset)) commentBlockContainer = container;
       return "";
     }
-    if (inInlineComment) {
+
+    const wasInComment = inComment;
+    const masked =
+      tableRows.has(index) && !inComment
+        ? { text: maskTableRowComments(line), open: false }
+        : maskLineComments(line, inComment, closerAhead[index] === true);
+    inComment = masked.open;
+    if (wasInComment) {
       // A comment opened inside a line ends inside one, so what follows its
       // `-->` continues that paragraph or table row and cannot open a block.
       // Blanking it whole cut a table at the row a cell's comment closed in.
@@ -694,29 +726,9 @@ export function escapeTableCell(value: string): string {
  *   MUST be extended with the new character class.
  */
 export function splitMarkdownRow(line: string): string[] {
-  const trimmed = line.trim();
-  const inner = trimEdgePipes(trimmed);
-  const cells: string[] = [];
-  let current = "";
-
-  for (let index = 0; index < inner.length; index += 1) {
-    const ch = inner[index];
-    if (ch === undefined) continue;
-    const next = inner[index + 1];
-    if (ch === "\\" && next === "|") {
-      current += "|";
-      index += 1;
-      continue;
-    }
-    if (ch === "|") {
-      cells.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += ch;
-  }
-  cells.push(current.trim());
-  return cells;
+  return trimEdgePipes(line.trim())
+    .split(TABLE_CELL_SEPARATOR)
+    .map((cell) => cell.replace(/\\\|/g, "|").trim());
 }
 
 /**
