@@ -324,6 +324,13 @@ describe("retrying a deferral that stopped part way", () => {
     vi.restoreAllMocks();
   });
 
+  it("distinguishes a parameterized attached-method read from an attached write", () => {
+    const endpoint = "repos/example/project/issues/40/comments";
+    const write = ["gh", "api", endpoint, "--method=POST"];
+    calls.list.push(["gh", "api", endpoint, "--method=GET", "-F", "per_page=100"], write);
+    expect(deferralWrites()).toEqual([write.join(" ")]);
+  });
+
   const answer = (isResolved: boolean, replies: string[]): string =>
     JSON.stringify({
       data: {
