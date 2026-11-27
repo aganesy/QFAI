@@ -652,6 +652,8 @@ const ARRAY_TYPE_SUFFIX = /(?: array(?:\[\d*\])?|(?:\[\d*\])+)$/i;
 
 const ROUTINE_TYPE_PARTS = /"(?:[^"]|"")*"|[^"]+/g;
 const BARE_IDENTIFIER = new RegExp(`^${IDENTIFIER_START_CLASS}${IDENTIFIER_CHAR_CLASS}*$`);
+const UNICODE_QUOTED_IDENTIFIER = /^u&"(?:[^"]|"")*"$/i;
+const UNICODE_ESCAPE_CHARACTER = /^'[^0-9a-f+"'\s]'$/iu;
 
 /** Compare only complete qualified names and keep quotes whose contents affect identity. */
 function qualifiedArgumentName(type: string): string | undefined {
@@ -708,6 +710,16 @@ function identityArgumentTypes(argumentText: string, kind: string): string {
     const words = normalized.match(/(?:"(?:[^"]|"")*"|[^"\s])+/g) ?? [];
     let mode = "in";
     const leadingMode = words[0]?.toLowerCase() ?? "";
+    const nameIndex = ARGUMENT_MODES.has(leadingMode) ? 1 : 0;
+    if (
+      UNICODE_QUOTED_IDENTIFIER.test(words[nameIndex] ?? "") &&
+      words[nameIndex + 1]?.toLowerCase() === "uescape" &&
+      UNICODE_ESCAPE_CHARACTER.test(words[nameIndex + 2] ?? "")
+    ) {
+      // The escape clause is part of the identifier that precedes the type.
+      const name = words.slice(nameIndex, nameIndex + 3).join(" ");
+      words.splice(nameIndex, 3, name);
+    }
     const namedMode = words[1]?.toLowerCase() ?? "";
     if (ARGUMENT_MODES.has(leadingMode)) {
       mode = leadingMode;
@@ -756,8 +768,8 @@ function splitTopLevel(text: string): string[] {
 
 /** An argument without its `DEFAULT <expr>` or `= <expr>` tail. */
 function stripDefault(argument: string): string {
-  for (const match of argument.matchAll(/"(?:[^"]|"")*"|\s+default(?=\s|$)|=/gi)) {
-    if (match[0].startsWith('"')) continue;
+  for (const match of argument.matchAll(/"(?:[^"]|"")*"|'(?:[^']|'')*'|\s+default(?=\s|$)|=/gi)) {
+    if (match[0].startsWith('"') || match[0].startsWith("'")) continue;
     const declaration = argument.slice(0, match.index);
     // A reserved word after a qualification dot is an identifier in PostgreSQL.
     if (match[0] === "=" || !declaration.trimEnd().endsWith(".")) return declaration;

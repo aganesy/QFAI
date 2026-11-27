@@ -559,6 +559,7 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
 
   it.each([
     { parameter: `U&"n!0061me" UESCAPE '!'`, type: "int", signature: "integer" },
+    { parameter: `U&"n=0061me" UESCAPE '='`, type: "int", signature: "integer" },
     {
       parameter: `IN u&"n!0061me" uescape '!'`,
       type: "app.custom_type",
