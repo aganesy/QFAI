@@ -636,12 +636,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **Markdown contract reviews cover both contract formats and give rule-specific repair steps.**
-  Validation reads Groovy and Objective-C implementation annotations and tells
-  authors where to add or correct a business-rule annotation. Prototyping
-  guidance checks both Markdown responsibilities and structured screen lists.
-  Accessibility walkthroughs use the web routes each role can reach in the
-  running application or prototype for Markdown UI responsibilities.
+- **`qfai doctor` explains a workflow path that cannot be listed.** For
+  `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
+  ancestors are directories. Other read failures retain the existing guidance.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
@@ -2229,6 +2226,13 @@ decisions` headings appeared anywhere in the file, so a record with several
   read it before removing that line, which is not JSON, so it found no rules
   and reported `Invalid structured contract`. The declaration line is now
   removed first, and the rest is read as JSON. Closes #4707.
+
+- **Markdown contract reviews cover both contract formats and give rule-specific repair steps.**
+  Validation reads Groovy and Objective-C implementation annotations and tells
+  authors where to add or correct a business-rule annotation. Prototyping
+  guidance checks both Markdown responsibilities and structured screen lists.
+  Accessibility walkthroughs use the web routes each role can reach in the
+  running application or prototype for Markdown UI responsibilities.
 
 - **A null `requires:` is no longer read as an empty step list.** In a
   step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
