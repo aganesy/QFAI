@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Each entry of the component catalogue that `qfai catalog components` writes
+  now lists, under `realizes`, the business rules its declaration cites on
+  standalone `QFAI:BR-UI-`, `QFAI:BR-API-` or `QFAI:BR-DB-` comment lines,
+  so an agent can find the component that already realises a rule before
+  building a region for it. A committed catalogue of components that cite rules
+  is out of date until `qfai catalog components` runs again; rerun it and
+  commit the result.
+
 - UI, API and database contracts can now describe responsibilities, inputs,
   outcomes and business rules in Markdown. Validation checks their document
   structure, example references, and the business-rule annotations in source

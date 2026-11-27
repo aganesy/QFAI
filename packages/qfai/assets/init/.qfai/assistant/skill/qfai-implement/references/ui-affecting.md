@@ -48,6 +48,10 @@ installed, and a component whose `@pattern` is an interactive widget `ui-procure
 `@a11y` (`QFAI-COMP-001` to `QFAI-COMP-006`). `npx qfai catalog components --check` fails CI on an
 out-of-date catalogue.
 
+A component that realises a UI business rule carries the rule's `QFAI:BR-UI-NNNN-NNNN` comment line
+inside its declaration or on its leading comment lines, so the catalogue's `realizes` lists the
+rule. Before writing a region for a rule, look for a listed component whose `realizes` holds it.
+
 The widget `@pattern` names it reads, compared without case, spaces, hyphens or underscores, are
 `dialog`, `alert dialog`, `drawer`, `sheet`, `menu`, `menu button`, `tabs`, `combobox`,
 `autocomplete`, `listbox`, `select`, `tooltip`, `popover`, `toast`, `date picker`, `disclosure` and

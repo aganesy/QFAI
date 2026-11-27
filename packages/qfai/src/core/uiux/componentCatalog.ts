@@ -30,6 +30,7 @@ import {
   type TsNode,
   type UiPlainTextOptions,
 } from "../validators/uiPlainText.js";
+import { businessRuleCitations } from "../validators/storyTreeObligations.js";
 import { readSafe } from "../validators/utils.js";
 
 /** Where the catalogue is written and read, relative to the project root. */
@@ -89,6 +90,8 @@ export type CatalogComponent = {
   states?: string[];
   pattern?: string;
   a11y?: string;
+  /** The business-rule IDs its declaration cites on standalone comment lines, sorted. */
+  realizes?: string[];
 };
 
 /** A raw `<button>`, `<input>` or `<select>` in a surface file. */
@@ -181,6 +184,7 @@ export function renderCatalog(components: readonly CatalogComponent[]): string {
       const value = component[tag];
       if (value !== undefined) entry[tag] = value;
     }
+    if (component.realizes) entry.realizes = component.realizes;
     return entry;
   });
   return HEADER + stringify({ components: entries }, { lineWidth: 0 });
@@ -287,6 +291,11 @@ function catalogComponentOf(item: unknown): CatalogComponent | null {
   if (states !== undefined) {
     if (!isStringList(states)) return null;
     component.states = states;
+  }
+  const realizes = record.get("realizes");
+  if (realizes !== undefined) {
+    if (!isStringList(realizes)) return null;
+    component.realizes = realizes;
   }
   for (const tag of ["source", "reason", "pattern", "a11y"] as const) {
     const value = record.get(tag);
@@ -427,6 +436,8 @@ function componentsOfFile(
     fn: TsNode | undefined;
     declared?: TsNode;
     initializer?: TsNode;
+    /** The one declarator of a `const` list that holds this component. */
+    declarator?: TsNode;
   };
   const candidates = new Map<string, Candidate>();
   const exported = new Set<string>();
@@ -443,6 +454,7 @@ function componentsOfFile(
         candidates.set(name.getText(), {
           statement,
           fn: functionOf(declaration.initializer),
+          declarator: declaration,
           ...(declaration.type ? { declared: declaration.type } : {}),
           ...(declaration.initializer ? { initializer: declaration.initializer } : {}),
         });
@@ -460,6 +472,16 @@ function componentsOfFile(
       if (target && target.kind === k.Identifier) exported.add(target.getText());
     }
   }
+  // The text a component's citations are read from: its statement's leading comment lines, then
+  // its own declarator of a `const` list or the whole function. Each part starts at the beginning
+  // of the line its first character is on, so a comment after code on that line, which belongs
+  // to the code before it, stays a line that opens with code and is not counted.
+  const fromLineStart = (start: number, end: number): string =>
+    source.slice(source.lastIndexOf("\n", start - 1) + 1, end);
+  const declarationText = ({ statement, declarator }: Candidate): string =>
+    declarator === undefined
+      ? fromLineStart(statement.pos, statement.end)
+      : `${fromLineStart(statement.pos, statement.getStart())}\n${fromLineStart(declarator.pos, declarator.end)}`;
   // Ceiling: a class component is not listed; reading `render` methods lifts it.
   const components: CatalogComponent[] = [];
   for (const name of exported) {
@@ -467,11 +489,13 @@ function componentsOfFile(
     if (!candidate || !/^[A-Z]/.test(name) || !containsJsx(candidate.fn)) continue;
     const props = propsOf(candidate.fn, candidate.declared, candidate.initializer);
     const { statement } = candidate;
+    const realizes = [...new Set(businessRuleCitations(declarationText(candidate)))].sort(compare);
     components.push({
       name,
       file,
       ...(props ? { props } : {}),
       ...docFields(source.slice(statement.pos, statement.getStart())),
+      ...(realizes.length > 0 ? { realizes } : {}),
     });
   }
 

@@ -108,6 +108,7 @@ type Candidate = { line: number; text: string; reason: Reason | null };
 export type TsNode = {
   kind: number;
   pos: number;
+  end: number;
   parent?: TsNode;
   getStart(): number;
   getText(): string;

@@ -247,3 +247,92 @@ describe("the scanner lists exported components", () => {
     expect(scan).toEqual({ readable: false, unread: 2 });
   });
 });
+
+describe("each component lists the business rules its declaration cites", () => {
+  // QFAI:EX-0001-0307-31
+  it("records the IDs each declaration cites, once each and sorted, as the last key", async () => {
+    const found = await components({
+      "src/ui/order.tsx": [
+        "/**",
+        " * @pattern status",
+        " */",
+        "// QFAI:BR-UI-0003-0002",
+        "export function OrderStatus() {",
+        "  // QFAI:BR-UI-0003-0001",
+        "  // QFAI:BR-UI-0003-0002",
+        "  return <p />;",
+        "}",
+        "",
+        "export function OrderTotal() {",
+        "  return <p />;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+    expect(found).toEqual([
+      {
+        name: "OrderStatus",
+        file: "src/ui/order.tsx",
+        pattern: "status",
+        realizes: ["BR-UI-0003-0001", "BR-UI-0003-0002"],
+      },
+      { name: "OrderTotal", file: "src/ui/order.tsx" },
+    ]);
+    const text = renderCatalog(found);
+    expect(text).toContain(
+      [
+        "    pattern: status",
+        "    realizes:",
+        "      - BR-UI-0003-0001",
+        "      - BR-UI-0003-0002",
+        "  - name: OrderTotal",
+      ].join("\n"),
+    );
+  });
+
+  // QFAI:EX-0001-0307-32
+  it("records no ID held in a string, after code or in a JSX comment", async () => {
+    const found = await components({
+      "src/ui/thing.tsx": [
+        "export function Thing() {",
+        '  const id = "QFAI:BR-UI-0003-0001";',
+        "  doThing(); // QFAI:BR-UI-0003-0002",
+        "  return (",
+        "    <div>",
+        "      {/* see QFAI:BR-UI-0003-0003 */}",
+        "    </div>",
+        "  );",
+        "}",
+        "",
+      ].join("\n"),
+    });
+    expect(found).toEqual([{ name: "Thing", file: "src/ui/thing.tsx" }]);
+  });
+
+  // QFAI:EX-0001-0307-34
+  it("credits no ID after the previous statement or in another declarator", async () => {
+    expect(
+      await components({
+        "src/ui/pair.tsx": [
+          "export function First() {",
+          "  return <p />;",
+          "} // QFAI:BR-UI-0003-0004",
+          "export function Second() {",
+          "  return <p />;",
+          "}",
+          "",
+          "export const Left = () => { // QFAI:BR-UI-0003-0005",
+          "  // QFAI:BR-UI-0003-0006",
+          "  return <p />;",
+          "}, Right = () => <p />;",
+          "",
+        ].join("\n"),
+      }),
+    ).toEqual([
+      { name: "First", file: "src/ui/pair.tsx" },
+      { name: "Left", file: "src/ui/pair.tsx", realizes: ["BR-UI-0003-0006"] },
+      { name: "Right", file: "src/ui/pair.tsx" },
+      { name: "Second", file: "src/ui/pair.tsx" },
+    ]);
+  });
+});

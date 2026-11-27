@@ -634,3 +634,62 @@ describe("the procurement rule names the widgets that are not hand-authored", ()
     );
   });
 });
+
+// QFAI:AC-0001-0307-11
+describe("each component lists the business rules its declaration cites", () => {
+  // QFAI:EX-0001-0307-31
+  it("writes realizes through the CLI, passes --check and leaves the catalogue readable to validate", async () => {
+    const root = await projectWith({
+      "src/ui/order.tsx": [
+        "/**",
+        " * @source authored",
+        " * @reason no catalogue item shows an order status",
+        " */",
+        "// QFAI:BR-UI-0003-0002",
+        "export function OrderStatus() {",
+        "  // QFAI:BR-UI-0003-0001",
+        "  return <p />;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+    expect((await cli(["catalog", "components", "--root", root])).code).toBe(0);
+    expect(await readCatalogText(root)).toContain(
+      [
+        "    reason: no catalogue item shows an order status",
+        "    realizes:",
+        "      - BR-UI-0003-0001",
+        "      - BR-UI-0003-0002",
+        "",
+      ].join("\n"),
+    );
+    expect((await cli(["catalog", "components", "--check", "--root", root])).code).toBe(0);
+    expect(await comp(root)).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0307-33
+  it("ships the realizes lookup in the UI guidance", async () => {
+    const guidance = await readFile(
+      path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "..",
+        "assets",
+        "init",
+        ".qfai",
+        "assistant",
+        "skill",
+        "qfai-implement",
+        "references",
+        "ui-affecting.md",
+      ),
+      "utf-8",
+    );
+    const section = guidance.slice(
+      guidance.indexOf("## Component catalogue"),
+      guidance.indexOf("\n## ", guidance.indexOf("## Component catalogue") + 1),
+    );
+    expect(section).toContain("`realizes`");
+    expect(section).toContain("`QFAI:BR-UI-");
+  });
+});
