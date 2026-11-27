@@ -136,6 +136,19 @@ const TAG_SWITCHES = new Set([
   "--no-column",
   "--create-reflog",
   "--no-create-reflog",
+  // Git supports these unsets without a value. Message and mode switches
+  // such as --list opt out of negation in Git's option definitions.
+  "--no-annotate",
+  "--no-force",
+  "--no-edit",
+  "--no-ignore-case",
+  "--no-omit-empty",
+  "--no-file",
+  "--no-trailer",
+  "--no-cleanup",
+  "--no-local-user",
+  "--no-sort",
+  "--no-format",
 ]);
 
 function readTagCommand(command: string): {
@@ -176,16 +189,14 @@ function readTagCommand(command: string): {
     const listModifier = TAG_LIST_MODIFIERS.has(flag);
     hasListModifier ||= listModifier;
     const longWithValue = listModifier || VALUE_TAKING_TAG_FLAGS.has(flag);
+    const knownSwitch =
+      TAG_SWITCHES.has(flag) && (value === undefined || !flag.startsWith("--no-"));
     const takesSeparateValue =
       (longWithValue && value === undefined) || /^-[aesfi]*[mFu]$/.test(arg);
     if (takesSeparateValue) {
       index++;
       if (index === args.length) optionsKnown = false;
-    } else if (
-      !longWithValue &&
-      !TAG_SWITCHES.has(flag) &&
-      !/^-[aesfi]*(?:[mFu].+|[aesfi])$/.test(arg)
-    ) {
+    } else if (!longWithValue && !knownSwitch && !/^-[aesfi]*(?:[mFu].+|[aesfi])$/.test(arg)) {
       optionsKnown = false;
     }
   }
@@ -218,9 +229,9 @@ function splitShellCommands(line: string): string[] {
 }
 
 /**
- * Every `git tag` command in `markdown` that creates a tag: whole lines and
- * inline code spans alike, split at `&&`, `||`, `;` and `|` so a chained or
- * piped command is read on its own. A bare `git tag` lists and is left out.
+ * The `git tag` commands in `markdown` that may create a tag, including
+ * commands with unknown options. Read whole lines and inline code spans.
+ * Split at `&&`, `||`, `;` and `|` so each command is checked on its own.
  */
 function tagCreations(markdown: string): string[] {
   const spans = Array.from(markdown.matchAll(/`([^`\n]+)`/g), (m) => m[1] ?? "");
@@ -399,6 +410,24 @@ describe("the project layer describes the repository it is in", () => {
       namesItsCommit('git tag -m Release --trailer "Change-Id: X" --cleanup verbatim vX.Y.Z <SHA>'),
     ).toBe(true);
   });
+
+  it.each(["--no-annotate", "--no-edit", "--no-file", "--no-sort"])(
+    "checks an explicit commit after the valid tag unset %s",
+    (option) => {
+      const command = `git tag ${option} vX.Y.Z <SHA>`;
+      expect(tagCreations(command)).toEqual([command]);
+      expect(namesItsCommit(command)).toBe(true);
+    },
+  );
+
+  it.each(["--no-message", "--no-list", "--no-unknown", "--no-file=unused", "--no-edit="])(
+    "holds the commit check for an invalid tag unset %s",
+    (option) => {
+      const command = `git tag ${option} vX.Y.Z <SHA>`;
+      expect(tagCreations(command)).toEqual([command]);
+      expect(namesItsCommit(command)).toBe(false);
+    },
+  );
 
   it.each(["git tag vX.Y.Z --mess --contains", "git tag --mess --sort vX.Y.Z"])(
     "checks the commit even when an unknown option may consume a flag in %s",
