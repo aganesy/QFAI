@@ -358,11 +358,9 @@ describe("the minimal-implementation rule names the four shapes an addition take
       "and, on an application screen, the business-screen floor in `interface-clarity.md#what-a-business-screen-always-has`",
     );
     expect(flat).toContain(
-      "When two or more UI contracts name the same region, the shared component is extracted at its first use.",
+      "When two or more screens need the same region, the shared component is extracted at its first use.",
     );
-    expect(flat).toContain(
-      "A shared component no UI contract names yet stays out; installing the catalogue `tech.md` names is not one.",
-    );
+    expect(flat).toContain("Extract it when the repeated need is known.");
     expect(flat).toContain("where the logic is not self-evident");
     expect(flat).toContain("Nothing here removes what § 2 keeps");
     expect(flat).toContain("Article VII of `.qfai/assistant/rule/constitution.md`");

@@ -18,6 +18,7 @@ import {
   type GraphProcessResult,
 } from "../../../src/core/graph/process.js";
 
+// QFAI:BR-UI-0001-0002
 // QFAI:EX-0001-0237-05
 // Mutation: packages/qfai/src/core/graph/prepare.ts `Install Python ${GRAPHIFY_PYTHON_MINIMUM} or later and uv, then run qfai init again.` -> `Install Python 3.9 and uv, then run qfai init again.` fails "reports an unmet interpreter prerequisite with a recovery action"
 it("reports an unmet interpreter prerequisite with a recovery action", async () => {
@@ -97,6 +98,7 @@ it("reports current code analysis without starting another analysis or document 
   }
 });
 
+// QFAI:BR-UI-0001-0001
 // QFAI:EX-0001-0237-20
 // Mutation: packages/qfai/src/core/graph/presentation.ts `${preparation.documents}` -> `${preparation.code}` fails "distinguishes installed tools from unset document processing"
 it("distinguishes installed tools from unset document processing", async () => {

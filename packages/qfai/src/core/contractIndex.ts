@@ -3,13 +3,12 @@ import path from "node:path";
 
 import type { QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
+import { collectContractFiles } from "./discovery.js";
 import {
-  collectApiContractFiles,
-  collectDbContractFiles,
-  collectUiContractFiles,
-  collectThemaContractFiles,
-} from "./discovery.js";
-import { extractDeclaredContractIds, extractDeclaredDependencies } from "./contractsDecl.js";
+  declaredContractId,
+  extractDeclaredContractIds,
+  extractDeclaredDependencies,
+} from "./contractsDecl.js";
 
 export type ContractIndex = {
   ids: Set<string>;
@@ -30,31 +29,25 @@ export async function buildContractIndex(root: string, config: QfaiConfig): Prom
   const apiRoot = path.join(contractsRoot, "api");
   const dbRoot = path.join(contractsRoot, "db");
 
-  const [uiFiles, themaFiles, apiFiles, dbFiles] = await Promise.all([
-    collectUiContractFiles(uiRoot),
-    collectThemaContractFiles(),
-    collectApiContractFiles(apiRoot),
-    collectDbContractFiles(dbRoot),
-  ]);
-
+  const files = await collectContractFiles(uiRoot, apiRoot, dbRoot);
   const index: ContractIndex = {
-    ids: new Set<string>(),
-    idToFiles: new Map<string, Set<string>>(),
-    idToDependencies: new Map<string, Set<string>>(),
-    files: { ui: uiFiles, thema: themaFiles, api: apiFiles, db: dbFiles },
+    ids: new Set(),
+    idToFiles: new Map(),
+    idToDependencies: new Map(),
+    files,
   };
-
-  await indexContractFiles(uiFiles, index);
-  await indexContractFiles(themaFiles, index);
-  await indexContractFiles(apiFiles, index);
-  await indexContractFiles(dbFiles, index);
-
+  for (const paths of Object.values(files)) await indexContractFiles(paths, index);
   return index;
 }
 
 async function indexContractFiles(files: string[], index: ContractIndex): Promise<void> {
   for (const file of files) {
     const text = await readFile(file, "utf-8");
+    if (path.extname(file).toLowerCase() === ".md") {
+      const id = declaredContractId(file, text);
+      if (id) record(index, id, file);
+      continue;
+    }
     // One file declares one id (`QFAI-CONTRACT-011`), so its dependency list
     // belongs to that id without ambiguity.
     const dependencies = extractDeclaredDependencies(text, file);
