@@ -2163,6 +2163,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   prints one line naming the operation that failed, such as resolving a
   given thread, and exits 2 (#4737).
 
+- **`scripts/pr-threads.mjs` reports invalid GitHub JSON as an error.** A
+  malformed response now produces an operation-specific diagnostic and exit
+  status 2. A deferral stops before proceeding to its next write (#5882).
+
 - **`qfai init --force` keeps a project's own wrapper when the link replacing
   it cannot be written.** A file or directory of the project's at a skill or
   agent wrapper path was deleted before the link was created, so a refused
