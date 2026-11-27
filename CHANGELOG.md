@@ -702,6 +702,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Validation accepts the QFAI copy selected by Yarn Plug’n’Play for the project,
   including a copy loaded from a shared cache outside the project directory.
+  The resolver must report an absolute location for the declaring package.
 
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
