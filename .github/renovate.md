@@ -143,11 +143,7 @@ waiting on a human, it is the place to look when a dependency you expected to mo
 
 `vitest` is the one package the bot does not offer.
 
-Every runner release since its third major declares an engine range that excludes at least one odd
-Node line. `constraintsFiltering` drops each of them against the Node range this repository
-declares, so an enabled runner would never be offered and nothing would say so.
-
-It is also the program CI runs to judge its own update. A release that reported success would be
+It is the program CI runs to judge its own update. A release that reported success could be
 automerged without anyone reading it, and then run on every developer machine.
 
 **Raising it is a manual step.** Check for a new release during the maintainer review below.

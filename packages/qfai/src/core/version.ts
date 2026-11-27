@@ -2,6 +2,7 @@ import { readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { resolveActivePnpPackage } from "./pnpProvenance.js";
 import { isInside } from "./validators/utils.js";
 
 declare const __QFAI_TOOL_VERSION__: string | undefined;
@@ -80,8 +81,9 @@ export async function resolveToolPackageDir(): Promise<string | null> {
  */
 export async function locateToolAgainstProject(
   root: string,
+  toolPackageDir?: string | null,
 ): Promise<{ packageDir: string; outside: boolean; declaredElsewhere: boolean } | null> {
-  const packageDir = await resolveToolPackageDir();
+  const packageDir = toolPackageDir === undefined ? await resolveToolPackageDir() : toolPackageDir;
   if (packageDir === null) return null;
   // `npx` walks the directory as typed, which on Windows can pass through a
   // junction, so the walks start there. Containment is judged on real paths.
@@ -105,13 +107,15 @@ export async function locateToolAgainstProject(
   );
   const outside =
     classified && !(await reachedThroughLinkedNodeModules(realRoot, realPackageDir, walkFrom));
+  const declaringDir = outside ? await findDeclaringDir(walkFrom) : null;
+  const pnpPackage = declaringDir === null ? null : resolveActivePnpPackage(declaringDir);
+  const pnpMatch =
+    pnpPackage !== null && path.relative(realPackageDir, await toRealPath(pnpPackage)) === "";
   return {
     packageDir,
-    outside,
-    // Only asked when the answer can matter. A copy resolved from inside the
-    // project is the declared one by construction, and reading a manifest to
-    // confirm that would be work on every clean run.
-    declaredElsewhere: outside ? await resolvesAgainstDeclaration(walkFrom, realPackageDir) : false,
+    outside: outside && !pnpMatch,
+    declaredElsewhere:
+      !pnpMatch && (await resolvesAgainstDeclaration(declaringDir, realPackageDir)),
   };
 }
 
@@ -163,8 +167,10 @@ export async function findOwnCopyProjectDir(
  * version comparison: the version a lockfile pins is not readable from the
  * running process, and the directory is.
  */
-async function resolvesAgainstDeclaration(walkFrom: string, packageDir: string): Promise<boolean> {
-  const declaringDir = await findDeclaringDir(walkFrom);
+async function resolvesAgainstDeclaration(
+  declaringDir: string | null,
+  packageDir: string,
+): Promise<boolean> {
   return (
     declaringDir !== null &&
     classifyAgainstDeclaration(declaringDir, packageDir) &&
