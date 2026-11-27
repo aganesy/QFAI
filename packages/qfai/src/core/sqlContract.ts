@@ -704,7 +704,7 @@ function canonicalArgumentType(type: string): string {
 function identityArgumentTypes(argumentText: string, kind: string): string {
   const types: string[] = [];
   for (const argument of splitTopLevel(argumentText)) {
-    const normalized = stripDefault(argument).replace(ROUTINE_TYPE_PARTS, (part) =>
+    const normalized = readArgumentDeclaration(argument).replace(ROUTINE_TYPE_PARTS, (part) =>
       part.startsWith('"') ? part : part.replace(/\s*([.(),[\]])\s*/g, "$1"),
     );
     const words = normalized.match(/(?:"(?:[^"]|"")*"|[^"\s])+/g) ?? [];
@@ -761,26 +761,70 @@ function splitTopLevel(text: string): string[] {
   return parts;
 }
 
-const ARGUMENT_DEFAULT_TOKEN = new RegExp(
-  '"(?:[^"]|"")*"|' + IDENTIFIER_START_CLASS + IDENTIFIER_CHAR_CLASS + "*|\\S",
-  "g",
+const ARGUMENT_DECLARATION_TOKEN = new RegExp(
+  String.raw`(?<unicode>U&"(?:[^"]|"")*")(?:\s*UESCAPE(?!${IDENTIFIER_CHAR_CLASS})\s*(?<escape>'(?:[^']|'')*'))?|` +
+    String.raw`"(?:[^"]|"")*"|${IDENTIFIER_START_CLASS}${IDENTIFIER_CHAR_CLASS}*|\S`,
+  "gi",
 );
 
-/** An argument without its `DEFAULT <expr>` or `= <expr>` tail. */
-function stripDefault(argument: string): string {
+/** Decode a Unicode-delimited identifier to the ordinary quoted spelling. */
+function decodeUnicodeIdentifier(token: string, escape: string): string | undefined {
+  if (escape.length !== 1 || escape.charCodeAt(0) > 127 || /[0-9a-f+"'\s]/i.test(escape)) {
+    return undefined;
+  }
+  const raw = token.slice(3, -1).replace(/""/g, '"');
+  let decoded = "";
+  for (let index = 0; index < raw.length; index += 1) {
+    const character = raw.charAt(index);
+    if (character !== escape) {
+      decoded += character;
+      continue;
+    }
+    if (raw[index + 1] === escape) {
+      decoded += escape;
+      index += 1;
+      continue;
+    }
+    const longEscape = raw[index + 1] === "+";
+    const start = index + (longEscape ? 2 : 1);
+    const length = longEscape ? 6 : 4;
+    const digits = raw.slice(start, start + length);
+    if (digits.length !== length || !/^[0-9a-f]+$/i.test(digits)) return undefined;
+    const point = Number.parseInt(digits, 16);
+    if (point === 0 || point > 0x10ffff) return undefined;
+    decoded += String.fromCodePoint(point);
+    index = start + length - 1;
+  }
+  // In Unicode mode this matches an isolated surrogate, but not a composed pair.
+  if (!decoded || decoded.includes("\0") || /[\uD800-\uDFFF]/u.test(decoded)) return undefined;
+  return `"${decoded.replace(/"/g, '""')}"`;
+}
+
+/** An argument declaration with qualified Unicode parts decoded and defaults removed. */
+function readArgumentDeclaration(argument: string): string {
+  let decoded = "";
+  let copied = 0;
   let previousToken = "";
-  for (const match of argument.matchAll(ARGUMENT_DEFAULT_TOKEN)) {
+  for (const match of argument.matchAll(ARGUMENT_DECLARATION_TOKEN)) {
     const token = match[0];
-    // A dot makes even a keyword spelling part of a qualified type name.
-    if (
-      token === "=" ||
-      (previousToken !== "" && previousToken !== "." && token.toLowerCase() === "default")
-    ) {
-      return argument.slice(0, match.index);
+    const start = match.index;
+    const afterDot = previousToken === ".";
+    if (token === "=" || (previousToken !== "" && !afterDot && token.toLowerCase() === "default")) {
+      return decoded + argument.slice(copied, start);
     }
     previousToken = token;
+    const unicode = match.groups?.["unicode"];
+    if (unicode === undefined) continue;
+    const end = start + token.length;
+    if (!afterDot && argument[skipSpaces(argument, end)] !== ".") continue;
+    const escape = match.groups?.["escape"]?.slice(1, -1) ?? "\\";
+    const quoted = decodeUnicodeIdentifier(unicode, escape);
+    if (quoted !== undefined) {
+      decoded += argument.slice(copied, start) + quoted;
+      copied = end;
+    }
   }
-  return argument;
+  return decoded + argument.slice(copied);
 }
 
 /**

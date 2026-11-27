@@ -70,8 +70,7 @@ describe("README facts", () => {
       typeof engines === "object" && engines !== null && "node" in engines
         ? String(engines.node)
         : "";
-    const minimum = /^>=(\d+\.\d+\.\d+)$/.exec(node)?.[1];
-    expect(minimum, "packages/qfai/package.json#engines.node").toBeDefined();
+    expect(node, "packages/qfai/package.json#engines.node").not.toBe("");
 
     for (const readmePath of READMES) {
       const readme = await readFile(readmePath, "utf-8");
@@ -86,7 +85,7 @@ describe("README facts", () => {
       ).toBeGreaterThan(start);
       const quickStart = readme.slice(start, init);
       for (const fact of [
-        `Node.js ${minimum} or later`,
+        `Node.js version matching \`${node}\``,
         `Python ${GRAPHIFY_PYTHON_MINIMUM} or later`,
         "`uv`",
         "npm registry",
