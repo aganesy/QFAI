@@ -236,6 +236,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Breaking: the glossary records each term's rejected synonyms and bounded
+  context, and `qfai validate` holds the story tree and test titles to them.**
+  The `## Terms` table of `01_policy/glossary.md` has the columns Term,
+  Definition, Avoid and Context. Avoid lists, comma-separated, the words a term
+  rejects; Context names the bounded context a row belongs to, and an optional
+  `## Contexts` table of Name and Purpose declares each context named.
+  - `qfai validate --profile sdd` reports a `## Terms` table without the four
+    columns (`QFAI-DOCSCHEMA-001`), a rejected synonym in a document under
+    `paths.specsDir` or `paths.contractsDir` (`QFAI-STORY-022`, error; the
+    glossary and the decision and open-question registers are not read), and
+    a Context that `## Contexts` does not declare (`QFAI-STORY-023`).
+  - In `verify` and `full`, a rejected synonym in the title of a JavaScript or
+    TypeScript test is also `QFAI-STORY-022`.
+  - `validation.staleTerms` and its `QFAI-STORY-016` warning are unchanged.
+  - Migration: add the Avoid and Context columns to the `## Terms` table of
+    `01_policy/glossary.md`, leaving their cells empty, so that the header
+    reads `| Term | Definition | Avoid | Context |`. A glossary the 1.x
+    migration writes already has them.
+
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A

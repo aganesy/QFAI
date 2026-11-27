@@ -24,7 +24,13 @@ type PolicyDocument = (typeof POLICY_DOCUMENTS)[number];
 type SectionShape =
   | { kind: "list"; keys?: readonly string[] }
   | { kind: "paragraph" }
-  | { kind: "table"; columns: readonly string[]; aliases?: Readonly<Record<string, string[]>> };
+  | {
+      kind: "table";
+      columns: readonly string[];
+      aliases?: Readonly<Record<string, string[]>>;
+      /** Columns a source table may lack; each such cell is written empty. */
+      optional?: readonly string[];
+    };
 
 type PolicyRules = {
   /** The shape of each section the template declares. */
@@ -116,7 +122,13 @@ const RULES: Readonly<Record<PolicyDocument, PolicyRules>> = {
     },
   },
   "glossary.md": {
-    shapes: { Terms: { kind: "table", columns: ["Term", "Definition"] } },
+    shapes: {
+      Terms: {
+        kind: "table",
+        columns: ["Term", "Definition", "Avoid", "Context"],
+        optional: ["Avoid", "Context"],
+      },
+    },
     routes: { terms: "Terms" },
   },
   "constraint.md": {
@@ -244,6 +256,7 @@ export function tableRows(
   body: string,
   columns: readonly string[],
   aliases: Readonly<Record<string, string[]>> = {},
+  optional: readonly string[] = [],
 ): { rows: string[][]; dropped: string[] } | null {
   const piped: string[] = [];
   for (const line of body.replace(/\r\n/g, "\n").trim().split("\n")) {
@@ -267,10 +280,14 @@ export function tableRows(
       .map((name) => headers.indexOf(name.toLowerCase()))
       .find((index) => index >= 0),
   );
-  if (indexes.some((index) => index === undefined)) return null;
+  if (indexes.some((index, at) => index === undefined && !optional.includes(columns[at] ?? ""))) {
+    return null;
+  }
   const used = new Set(indexes);
   const dropped = table.headers.filter((_header, index) => !used.has(index));
-  const rows = table.rows.map((row) => indexes.map((index) => (row[index ?? -1] ?? "").trim()));
+  const rows = table.rows.map((row) =>
+    indexes.map((index) => (index === undefined ? "" : (row[index] ?? "").trim())),
+  );
   return { rows, dropped };
 }
 
@@ -324,7 +341,7 @@ export function movePolicySection(draft: PolicyDraft, section: PolicySection): s
     addUnique(draft.paragraphs, into, paragraphs, sameText);
     return [];
   }
-  const table = tableRows(section.body, shape.columns, shape.aliases);
+  const table = tableRows(section.body, shape.columns, shape.aliases, shape.optional);
   if (table === null) return [rewrite(draft, section, into)];
   addUnique(draft.rows, into, table.rows, sameRow);
   return table.dropped.map(

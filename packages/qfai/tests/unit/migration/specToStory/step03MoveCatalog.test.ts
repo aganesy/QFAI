@@ -157,6 +157,7 @@ describe("migration catalog move", () => {
   });
 
   // QFAI:EX-0004-0006-09
+  // QFAI:EX-0001-0317-02
   it("writes every policy document in its template's shape from sections of the same kind", async () => {
     const context = await fixture();
     await put(
@@ -204,7 +205,7 @@ describe("migration catalog move", () => {
       "## Product / Mission\n\n- Summary: An order service.\n- Value: Buyers get receipts.\n\n## Axioms (Non-negotiable)\n\n- An order is never lost.\n",
     );
     expect(await policy("glossary.md")).toBe(
-      "# Glossary\n\n## Terms\n\n| Term | Definition |\n| --- | --- |\n| Order | An accepted request with a receipt. |\n",
+      "# Glossary\n\n## Terms\n\n| Term | Definition | Avoid | Context |\n| --- | --- | --- | --- |\n| Order | An accepted request with a receipt. |  |  |\n",
     );
     expect(await policy("constraint.md")).toBe(
       "# Constraints\n\n## Technical Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Node 22 | Runtime |\n\n## Operational Constraints\n\n| ID  | Constraint | Rationale |\n| --- | ---------- | --------- |\n\n## Business Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| BC-01 | EU data | Contract |\n\n## Quality targets\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| QT-01 | Answers in two seconds | Users wait |\n\n## Legal and Compliance Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| LC-01 | Data is kept one year | Retention law |\n",
@@ -986,6 +987,7 @@ describe("migration catalog move", () => {
   });
 
   // QFAI:EX-0004-0006-19
+  // QFAI:EX-0001-0317-02
   it("moves a table written without its outer pipes and writes it with them", async () => {
     const context = await fixture();
     await put(
@@ -1003,7 +1005,7 @@ describe("migration catalog move", () => {
     const policy = (name: string): Promise<string> =>
       readFile(path.join(context.specsDir, "01_policy", name), "utf8");
     expect(await policy("glossary.md")).toBe(
-      "# Glossary\n\n## Terms\n\n| Term | Definition |\n| --- | --- |\n| Order | A request |\n| Receipt | Proof of a \\| paid order |\n",
+      "# Glossary\n\n## Terms\n\n| Term | Definition | Avoid | Context |\n| --- | --- | --- | --- |\n| Order | A request |  |  |\n| Receipt | Proof of a \\| paid order |  |  |\n",
     );
     expect(await policy("constraint.md")).toContain(
       "## Technical Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Node 22 | Runtime |\n",
