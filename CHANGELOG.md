@@ -667,11 +667,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
   ancestors are directories. Other read failures retain the existing guidance.
 
+- QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
+
 - Component catalogue generation respects the same UTF-8 byte limit as
   validation and preserves the existing file when rendered output exceeds it.
   Small catalogue reads use a buffer that grows with the bytes read.
-
-- QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Restoring or publishing a completed document graph reuses the safety check
   on each copy during native freshness validation.
