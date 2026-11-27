@@ -8,11 +8,7 @@ import { maskNonSpecRegions, parseRenderedMarkdownTables } from "../specPackPars
 import { extractFencedCodeBlocks } from "../validators/mermaidUtils.js";
 import { parseContractRules, type ContractRule } from "./contractRules.js";
 import { nextId, type StoryTreeIdKind } from "./ids.js";
-import {
-  directoryOutsideContractKinds,
-  markdownOutsideContractForm,
-  resolveStoryTreeRoots,
-} from "./layout.js";
+import { directoryOutsideContractKinds, resolveStoryTreeRoots } from "./layout.js";
 import {
   parseDecisionRegister,
   parseRecordTable,
@@ -239,7 +235,7 @@ export function buildStoryTreeModel(
     if (!relative.includes("/") && relative !== "tech.md") continue;
     model.contractFiles.push(file);
     // Listed for the index check to report, but it declares no ID and no rule.
-    if (markdownOutsideContractForm(relative) || directoryOutsideContractKinds(relative)) continue;
+    if (directoryOutsideContractKinds(relative)) continue;
     if (relative.startsWith("cli/")) model.additionalContractFiles.push(file);
     const contractId = relative.includes("/") ? declaredContractId(file, text) : null;
     if (contractId) model.contracts.push({ id: contractId, file });
