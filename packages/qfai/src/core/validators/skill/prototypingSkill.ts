@@ -109,10 +109,18 @@ const UI_CONTRACT_ID_PLACEHOLDER = /(?<![\w-])ui-nnnn(?![\w-])/;
 
 export function hasUiContractScope(content: string): boolean {
   const lower = content.toLowerCase();
+  const statements = lower
+    .replace(/^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+/gm, "\n\n")
+    .split(/[.!?]\s+|\n\s*\n/)
+    .map((statement) => statement.trim().replace(/\s+/g, " "));
+  const markdownEligibility =
+    /^(?:a\s+)?markdown ui contracts?\s+(?:suppl(?:y|ies)|provides?|must declare)\s+(?:a|its|their)\s+(?:declared\s+)?responsibilit(?:y|ies)\b/;
+  const legacyEligibility =
+    /^(?:a\s+)?(?:legacy yaml|structured)(?: ui)? contracts?\s+(?:suppl(?:y|ies)|provides?|requires?|must declare)\s+a\s+non-empty\s+`?screens\[\]`?(?=\s|[.!?]|$)/;
   return (
     UI_CONTRACT_ID_PLACEHOLDER.test(lower) &&
-    lower.includes("screens[]") &&
-    (lower.includes("only") || lower.includes("excluded"))
+    statements.some((statement) => markdownEligibility.test(statement)) &&
+    statements.some((statement) => legacyEligibility.test(statement))
   );
 }
 
@@ -259,9 +267,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     issues.push(
       skillIssue(
         "QFAI-PROTOSKILL-011",
-        "Prototyping skill must limit execution to UI contracts with a full UI-NNNN ID and non-empty screens[].",
+        "Prototyping scope needs a full UI-NNNN ID for Markdown responsibilities and a non-empty screens[] list for structured contracts.",
         "error",
-        "State that only UI contracts with a full UI-NNNN ID and non-empty screens[] are eligible.",
+        "Describe Markdown UI responsibilities and the screens[] requirement for structured contracts.",
       ),
     );
   }

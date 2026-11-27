@@ -1,5 +1,7 @@
 # UI Contract Authoring Guide
 
+This guide applies to existing structured UI contracts. For new screens, use `templates/spec/03_contract/ui/ui-NNNN-title.md`.
+
 Write UI contracts under `<paths.contractsDir>/ui/**/*.{yaml,yml}`, each named `ui-NNNN-<slug>.yaml` after its ID. A UI-bearing contract declares exactly one full `# QFAI-CONTRACT-ID: UI-NNNN` and a nonempty `screens[]` list. Add its row to `<paths.contractsDir>/contracts.md` in the same change.
 The flows a UI contract serves are the flows whose examples its rules cite; the file name does not select them.
 

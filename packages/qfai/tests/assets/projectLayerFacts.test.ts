@@ -24,6 +24,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import fg from "fast-glob";
+import MarkdownIt from "markdown-it";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
@@ -285,12 +286,27 @@ function namesItsCommit(command: string): boolean {
   );
 }
 
+const releaseMarkdown = new MarkdownIt("commonmark");
+
+function releaseShellBlocks(guide: string): string[] {
+  return releaseMarkdown
+    .parse(guide, {})
+    .filter(
+      ({ type, info }) => type === "fence" && /^(?:sh|bash|shell)(?:[ \t]|$)/.test(info.trim()),
+    )
+    .map(({ content }) => content);
+}
+
 function releaseTaggingStatements(guide: string): string[] {
-  const statements = [...guide.matchAll(/^\s*```(?:sh|bash|shell)[ \t]*\r?\n([\s\S]*?)^\s*```/gm)]
-    .map(([, body]) => (body ?? "").replace(/&&[ \t]*\r?\n\s*/g, "&& "))
+  const statements = releaseShellBlocks(guide)
+    .map((body) => body.replace(/&&[ \t]*\r?\n\s*/g, "&& "))
     .flatMap((body) => body.split(/\r?\n/))
     .map((line) => line.trim());
   return statements.filter((statement) => tagCreations(statement).length > 0);
+}
+
+function releaseBuildBlock(guide: string): string | undefined {
+  return releaseShellBlocks(guide).find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
 }
 
 describe("the project layer describes the repository it is in", () => {
@@ -540,6 +556,20 @@ describe("the project layer describes the repository it is in", () => {
     expect(releaseTaggingStatements(guide)).toEqual([]);
   });
 
+  it.each(["~~~", "````"])("reads shell statements in %s fences", (fence) => {
+    const check = "git merge-base --is-ancestor <SHA> origin/main";
+    const tag = "git tag vX.Y.Z <SHA>";
+    const guide = [fence + "sh", check + " &&", "  " + tag, fence].join("\n");
+    expect(releaseTaggingStatements(guide)).toEqual([check + " && " + tag]);
+  });
+
+  it("ignores literal shell examples until the enclosing Markdown fence closes", () => {
+    const example = "git tag illustrative HEAD";
+    const tag = "git tag vX.Y.Z <SHA>";
+    const guide = ["````markdown", "```sh", example, "```", "~~~~", "`````", "~~~sh", tag, "~~~~"];
+    expect(releaseTaggingStatements(guide.join("\n"))).toEqual([tag]);
+  });
+
   // npm installs into the nearest directory holding a `package.json`. The smoke
   // check made a fixed `tmp/` directory inside the checkout and initialised no
   // package there, so the install landed in the repository root, and a second
@@ -584,12 +614,30 @@ describe("the project layer describes the repository it is in", () => {
     expect(guide, "the guide runs the build check with bare node").not.toMatch(
       /^\s*node (?:\.\/)?scripts\/check-build-warnings\.mjs/m,
     );
-    const block = [...guide.matchAll(/^\s*```sh\n([\s\S]*?)^\s*```/gm)]
-      .map(([, body]) => body ?? "")
-      .find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
+    const block = releaseBuildBlock(guide);
     expect(block, "no shell block runs corepack pnpm ci:gate:build").toBeDefined();
     expect(block, "the block runs verify:pack a second time").not.toMatch(/^\s*pnpm verify:pack$/m);
   });
+
+  it.each([
+    ["sh", "\n"],
+    ["bash", "\n"],
+    ["shell", "\n"],
+    ["sh", "\r\n"],
+    ["bash", "\r\n"],
+    ["shell", "\r\n"],
+  ])(
+    "finds the build command and its neighboring lines in a %s fence with %j",
+    (shell, newline) => {
+      const build = "corepack pnpm ci:gate:build";
+      const duplicate = "pnpm verify:pack";
+      const guide = ["```" + shell, build, duplicate, "```"].join(newline);
+      const block = releaseBuildBlock(guide);
+      expect(block).toBeDefined();
+      expect(block).toContain(build);
+      expect(block).toMatch(/^\s*pnpm verify:pack$/m);
+    },
+  );
 
   // The host command lists under `.instruction/03_ai-agents/` were copied from
   // another project: `generate:graphql`, `apply:backend`, `test:e2e` and `seed`
