@@ -617,8 +617,12 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(created)).toEqual([{ kind: "FUNCTION", name: "f", lines: [1, 3] }]);
   });
 
+  // QFAI:EX-0001-0039-83
   it.each([
     { parameter: `U&"n!0061me" UESCAPE '!'`, type: "int", signature: "integer" },
+    { parameter: `U&"n!0061me" UESCAPE'!'`, type: "int", signature: "integer" },
+    { parameter: `U&"n!0061me"UESCAPE '!'`, type: "int", signature: "integer" },
+    { parameter: `U&"n!0061me"UESCAPE'!'`, type: "int", signature: "integer" },
     { parameter: `U&"n=0061me" UESCAPE '='`, type: "int", signature: "integer" },
     {
       parameter: `IN u&"n!0061me" uescape '!'`,
@@ -626,7 +630,7 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
       signature: "app.custom_type",
     },
   ])(
-    "ignores a Unicode-quoted parameter name before $type",
+    "ignores Unicode-quoted parameter $parameter before $type",
     async ({ parameter, type, signature }) => {
       const sql =
         `CREATE FUNCTION f(${parameter} ${type}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +

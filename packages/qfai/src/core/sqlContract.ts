@@ -654,8 +654,7 @@ const ARRAY_TYPE_SUFFIX = /(?: array(?:\[\d*\])?|(?:\[\d*\])+)$/i;
 
 const ROUTINE_TYPE_PARTS = /"(?:[^"]|"")*"|[^"]+/g;
 const BARE_IDENTIFIER = new RegExp(`^${IDENTIFIER_START_CLASS}${IDENTIFIER_CHAR_CLASS}*$`);
-const UNICODE_QUOTED_IDENTIFIER = /^u&"(?:[^"]|"")*"$/i;
-const UNICODE_ESCAPE_CHARACTER = /^'[^0-9a-f+"'\s]'$/iu;
+const ARGUMENT_WORD = /(?:"(?:[^"]|"")*"|[^"\s])+/g;
 
 /** Compare only complete qualified names and keep quotes whose contents affect identity. */
 function qualifiedArgumentName(type: string): string | undefined {
@@ -709,19 +708,9 @@ function identityArgumentTypes(argumentText: string, kind: string): string {
     const normalized = readArgumentDeclaration(argument).replace(ROUTINE_TYPE_PARTS, (part) =>
       part.startsWith('"') ? part : part.replace(/\s*([.(),[\]])\s*/g, "$1"),
     );
-    const words = normalized.match(/(?:"(?:[^"]|"")*"|[^"\s])+/g) ?? [];
+    const words = argumentWords(normalized);
     let mode = "in";
     const leadingMode = words[0]?.toLowerCase() ?? "";
-    const nameIndex = ARGUMENT_MODES.has(leadingMode) ? 1 : 0;
-    if (
-      UNICODE_QUOTED_IDENTIFIER.test(words[nameIndex] ?? "") &&
-      words[nameIndex + 1]?.toLowerCase() === "uescape" &&
-      UNICODE_ESCAPE_CHARACTER.test(words[nameIndex + 2] ?? "")
-    ) {
-      // The escape clause is part of the identifier that precedes the type.
-      const name = words.slice(nameIndex, nameIndex + 3).join(" ");
-      words.splice(nameIndex, 3, name);
-    }
     const namedMode = words[1]?.toLowerCase() ?? "";
     if (ARGUMENT_MODES.has(leadingMode)) {
       mode = leadingMode;
@@ -778,6 +767,21 @@ const ARGUMENT_DECLARATION_TOKEN = new RegExp(
     String.raw`"(?:[^"]|"")*"|${IDENTIFIER_START_CLASS}${IDENTIFIER_CHAR_CLASS}*|\S`,
   "gi",
 );
+
+/** Keep a leading Unicode name and its escape clause in the same word. */
+function argumentWords(declaration: string): string[] {
+  const tokens = declaration.matchAll(ARGUMENT_DECLARATION_TOKEN);
+  const first = tokens.next().value;
+  const mode = first && ARGUMENT_MODES.has(first[0].toLowerCase()) ? first[0] : undefined;
+  const name = mode === undefined ? first : tokens.next().value;
+  if (name?.groups?.["escape"] === undefined || name.index === undefined) {
+    return declaration.match(ARGUMENT_WORD) ?? [];
+  }
+
+  const rest = declaration.slice(name.index + name[0].length);
+  const words = rest.match(ARGUMENT_WORD) ?? [];
+  return mode === undefined ? [name[0], ...words] : [mode, name[0], ...words];
+}
 
 /** Decode a Unicode-delimited identifier to the ordinary quoted spelling. */
 function decodeUnicodeIdentifier(token: string, escape: string): string | undefined {
