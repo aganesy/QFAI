@@ -106,27 +106,23 @@ async function printBrief(root: string): Promise<number> {
   const lines = componentBriefLines(committed.text, target);
   const tokens = await briefRead(root, DESIGN_TOKENS_PATH);
   if (tokens === null) return EXIT_CODES.findings;
+  const theme = await briefRead(root, DESIGN_THEME_PATH);
+  if (theme === null) return EXIT_CODES.findings;
   if (tokens.state === "read") {
-    const line = await tokenLine(root, tokens.text);
-    if (line === null) return EXIT_CODES.findings;
-    lines.push(line);
+    lines.push(tokenLine(tokens.text, theme.state === "read"));
   }
   info(lines.join("\n"));
   return EXIT_CODES.ok;
 }
 
-/**
- * The token count and, when it is there, where the theme is; null once a failure to read the
- * theme has been reported.
- */
-async function tokenLine(root: string, text: string): Promise<string | null> {
+/** The token count or parse warning, with the theme path when present. */
+function tokenLine(text: string, hasTheme: boolean): string {
   const file = DESIGN_TOKENS_PATH.split(path.sep).join("/");
+  const where = hasTheme ? `; theme: ${DESIGN_THEME_PATH.split(path.sep).join("/")}` : "";
   const count = tokenFileCount(text);
-  if (count === null) return `Design tokens: ${file} does not parse. Run \`qfai catalog design\`.`;
-  const theme = await briefRead(root, DESIGN_THEME_PATH);
-  if (theme === null) return null;
-  const where =
-    theme.state === "read" ? `; theme: ${DESIGN_THEME_PATH.split(path.sep).join("/")}` : "";
+  if (count === null) {
+    return `Design tokens: ${file} does not parse${where}. Run \`qfai catalog design\`.`;
+  }
   return `Design tokens: ${count} in ${file}${where}`;
 }
 

@@ -31,7 +31,8 @@ function componentLine(entry: Record<string, unknown>): string {
   const leading = LEADING_KEYS.filter((key) => keys.includes(key));
   const rest = keys.filter((key) => !LEADING_KEYS.some((lead) => lead === key));
   const fields = [...leading, ...rest].map((key) => `${key}: ${valueText(entry[key], ", ")}`);
-  return fields.length === 0 ? head : `${head}: ${fields.join("; ")}`;
+  const line = fields.length === 0 ? head : `${head}: ${fields.join("; ")}`;
+  return line.replace(/\r\n|[\r\n\u2028\u2029]/g, " ");
 }
 
 function valueText(value: unknown, separator: string): string {
