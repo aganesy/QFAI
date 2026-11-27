@@ -395,42 +395,46 @@ function compare(a: string, b: string): number {
   return a < b ? -1 : 1;
 }
 
-/** The components, raw elements and imported names of one file. */
-/** Mask literal text before matching citation lines, preserving line boundaries and offsets. */
-function withoutCitationLiterals(root: TsNode, source: string, kind: TsApi["SyntaxKind"]): string {
-  const literalKinds = new Set([
-    kind.StringLiteral,
-    kind.NoSubstitutionTemplateLiteral,
-    kind.TemplateHead,
-    kind.TemplateMiddle,
-    kind.TemplateTail,
-    kind.JsxText,
-    kind.JsxTextAllWhiteSpaces,
-    kind.RegularExpressionLiteral,
-  ]);
-  const parts: string[] = [];
+/** Mask everything outside compiler-recognized comments without moving line or token boundaries. */
+function citationCommentSource(ts: TsApi, root: TsNode, source: string): string {
+  const kind = ts.SyntaxKind;
+  const comments = new Map<number, number>();
   const pending = [root];
-  let offset = 0;
   for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
-    if (!literalKinds.has(node.kind)) {
-      const children = node.getChildren();
-      for (let index = children.length - 1; index >= 0; index--) {
-        const child = children[index];
-        if (child !== undefined) pending.push(child);
-      }
+    // JSX text is a token, and a JSDoc subtree contains text inside a comment found in trivia.
+    if (
+      node.kind === kind.JsxText ||
+      node.kind === kind.JsxTextAllWhiteSpaces ||
+      node.kind === kind.JSDocComment
+    ) {
       continue;
     }
-    const start = Math.max(offset, node.getStart());
-    if (start >= node.end) continue;
-    parts.push(source.slice(offset, start));
-    // A non-whitespace marker keeps a trailing comment from becoming a standalone line.
-    parts.push(source.slice(start, node.end).replace(/[^\r\n\u2028\u2029 \t]/g, "x"));
-    offset = node.end;
+    const start = node.getStart();
+    if (node.pos < start) {
+      const ranges = [
+        ...(ts.getTrailingCommentRanges(source, node.pos) ?? []),
+        ...(ts.getLeadingCommentRanges(source, node.pos) ?? []),
+      ];
+      for (const range of ranges) {
+        if (range.end <= start) comments.set(range.pos, range.end);
+      }
+    }
+    for (const child of node.getChildren()) pending.push(child);
   }
-  parts.push(source.slice(offset));
+
+  const mask = (text: string): string => text.replace(/[^\r\n\u2028\u2029 \t]/g, "x");
+  const parts: string[] = [];
+  let offset = 0;
+  for (const [start, end] of [...comments].sort(([left], [right]) => left - right)) {
+    if (end <= offset) continue;
+    parts.push(mask(source.slice(offset, start)), source.slice(Math.max(offset, start), end));
+    offset = end;
+  }
+  parts.push(mask(source.slice(offset)));
   return parts.join("");
 }
 
+/** The components, raw elements and imported names of one file. */
 function componentsOfFile(
   ts: TsApi,
   file: string,
@@ -454,6 +458,16 @@ function componentsOfFile(
       localTypes.set(statement.name.getText(), statement.type);
     }
   }
+  // Generic arguments are not substituted. A type parameter must not resolve to an unrelated
+  // file-level declaration of the same name.
+  const localTypeOf = (reference: TsNode, name: string): TsNode | undefined => {
+    for (let scope = reference.parent; scope !== undefined; scope = scope.parent) {
+      if (scope.typeParameters?.some((parameter) => parameter.name?.getText() === name)) {
+        return undefined;
+      }
+    }
+    return localTypes.get(name);
+  };
 
   const containsJsx = (node: TsNode | undefined): boolean => {
     if (!node) return false;
@@ -496,6 +510,7 @@ function componentsOfFile(
   type PropsMembers = { all: TsNode[]; constraints: Map<string, TsNode[]>; complete: boolean };
   const membersOf = (type: TsNode | undefined, seen: Set<string>): PropsMembers | undefined => {
     if (!type) return undefined;
+    if (type.kind === k.ParenthesizedType) return membersOf(type.type, seen);
     if (type.kind === k.TypeLiteral || type.kind === k.InterfaceDeclaration) {
       const own = (type.members ?? []).filter((member) => memberName(member) !== undefined);
       const bases = (type.heritageClauses ?? [])
@@ -503,7 +518,7 @@ function componentsOfFile(
         .map((base) => {
           const name = base.expression?.getText();
           if (name === undefined || seen.has(name)) return undefined;
-          return membersOf(localTypes.get(name), new Set([...seen, name]));
+          return membersOf(localTypeOf(base, name), new Set([...seen, name]));
         });
       const inherited = bases.filter((base) => base !== undefined);
       const constraints = new Map<string, TsNode[]>();
@@ -525,7 +540,7 @@ function componentsOfFile(
     if (type.kind === k.TypeReference && type.typeName) {
       const name = type.typeName.getText();
       if (seen.has(name)) return undefined;
-      return membersOf(localTypes.get(name), new Set([...seen, name]));
+      return membersOf(localTypeOf(type, name), new Set([...seen, name]));
     }
     if (type.kind === k.IntersectionType) {
       const resolved = (type.types ?? []).map((part) => membersOf(part, seen));
@@ -554,7 +569,7 @@ function componentsOfFile(
     if (type.kind === k.TypeReference && type.typeName) {
       const name = type.typeName.getText();
       if (seen.has(name)) return undefined;
-      return literalValues(localTypes.get(name), new Set([...seen, name]));
+      return literalValues(localTypeOf(type, name), new Set([...seen, name]));
     }
     if (type.kind !== k.UnionType) return undefined;
     const values: string[] = [];
@@ -667,8 +682,8 @@ function componentsOfFile(
   // When a declaration starts partway through a line, only indentation may precede a citation
   // on that line. Inspect the prefix without including text from a different declaration.
   const citationSource = source.includes("QFAI:")
-    ? withoutCitationLiterals(sourceFile, source, k)
-    : source;
+    ? citationCommentSource(ts, sourceFile, source)
+    : "";
   const citationSlice = (start: number, end: number): string => {
     const { character } = sourceFile.getLineAndCharacterOfPosition(start);
     const prefix = source.slice(start - character, start);

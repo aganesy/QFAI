@@ -123,6 +123,7 @@ export type TsNode = {
   initializer?: TsNode;
   modifiers?: readonly TsNode[];
   parameters?: readonly TsNode[];
+  typeParameters?: readonly TsNode[];
   members?: readonly TsNode[];
   elements?: readonly TsNode[];
   typeArguments?: readonly TsNode[];
@@ -151,6 +152,14 @@ export type TsApi = {
     setParents: boolean,
     kind: number,
   ): TsNode & { getLineAndCharacterOfPosition(pos: number): { line: number; character: number } };
+  getLeadingCommentRanges(
+    text: string,
+    pos: number,
+  ): readonly { pos: number; end: number }[] | undefined;
+  getTrailingCommentRanges(
+    text: string,
+    pos: number,
+  ): readonly { pos: number; end: number }[] | undefined;
   SyntaxKind: Record<string, number>;
   NodeFlags: { Let: number; Const: number; Using?: number };
   ScriptTarget: { Latest: number };

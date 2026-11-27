@@ -272,6 +272,23 @@ describe("each component lists the business rules its declaration cites", () => 
     expect(component?.realizes).toEqual(["BR-UI-0003-0002"]);
   });
 
+  // QFAI:EX-0001-0307-32
+  it("counts block-comment lines and ignores comment prefixes in incomplete expressions", async () => {
+    const [component] = await components({
+      "src/ui/progress.tsx": [
+        "export function Progress() {",
+        "  const progress = 2",
+        "    * QFAI:BR-UI-0003-0001 ;",
+        "  /*",
+        "   * QFAI:BR-UI-0003-0002",
+        "   */",
+        "  return <p />;",
+        "}",
+      ].join("\n"),
+    });
+    expect(component?.realizes).toEqual(["BR-UI-0003-0002"]);
+  });
+
   // QFAI:EX-0001-0307-31
   it("records the IDs each declaration cites, once each and sorted, as the last key", async () => {
     const found = await components({
@@ -464,14 +481,29 @@ describe("each component lists the string literal values its props take", () => 
         'type Right = { variant: "common" | "right"; exclusive: "three" | "four" };',
         "export const LeftFirst = (props: Left & Right) => <div />;",
         "export const RightFirst = (props: Right & Left) => <div />;",
+        "export const Grouped = (props: Left & (Right)) => <div />;",
         "export const Unresolved = (props: Left & External) => <div />;",
       ].join("\n"),
     });
     expect(found.map(({ variants }) => variants)).toEqual([
       { variant: ["common"] },
       { variant: ["common"] },
+      { variant: ["common"] },
       undefined,
     ]);
+  });
+
+  // QFAI:EX-0001-0307-35
+  it("keeps a generic prop without using a shadowed alias as its variants", async () => {
+    const [component] = await components({
+      "src/ui/shadowed.tsx": [
+        'type Tone = "info" | "warn";',
+        "type Props<Tone> = { tone: Tone };",
+        'export const Widget = (props: Props<"local">) => <div />;',
+      ].join("\n"),
+    });
+    expect(component).toMatchObject({ props: ["tone"] });
+    expect(component?.variants).toBeUndefined();
   });
 
   // QFAI:EX-0001-0307-35
