@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- UI, API and database contracts can now describe responsibilities, inputs,
+  outcomes and business rules in Markdown. Validation checks their document
+  structure, example references, and the business-rule annotations in source
+  and tests. Existing structured contracts can migrate individually.
+- Browser guidance records the reason and fallback when an implementation uses
+  a feature beyond its supported browser target.
+
 - **`qfai catalog design` derives the design tokens and the Tailwind theme
   from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
   Design Tokens Community Group 2025.10 format, with the colours, their
@@ -628,6 +635,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   refresh the workflow, or leave it: the removed branch never ran. Closes #4670.
 
 ### Fixed
+
+- **`qfai doctor` explains a workflow path that cannot be listed.** For
+  `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
+  ancestors are directories. Other read failures retain the existing guidance.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
@@ -2547,6 +2558,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   removed. Both now recommend `pnpm approve-builds` and say it records the
   approval under `allowBuilds` for pnpm 10.31 or later and
   `onlyBuiltDependencies` for earlier pnpm 10.
+
+- **`qfai doctor` explains where pnpm records mdschema approval.** pnpm 10
+  updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
+  From 10.31.0 it can also create the map when neither legacy list is set.
+  Other pnpm 10 configurations use `onlyBuiltDependencies`, and pnpm 11
+  uses `allowBuilds` by default.
 
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
