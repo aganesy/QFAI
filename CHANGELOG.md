@@ -659,6 +659,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
+- Restoring or publishing a completed document graph reuses the safety check
+  on each copy during native freshness validation.
+
 - Turn-end checks keep independent failure counts for distinct sessions and
   agents. An active turn with only an old state file starts a fresh count
   after upgrade.
@@ -671,6 +674,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
+
+- **Specification table checks respect list fences and row boundaries.**
+  Tables within fenced list examples are ignored, and comment-like text
+  in one table row can no longer hide subsequent visible rows.
 
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
@@ -1158,6 +1165,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   index notes and changed constraint identifiers in order without exceeding
   the JavaScript argument limit.
 
+- Migration step 3 retains all notes from large CLI contracts and combines
+  large batches of Skeleton commands without repeatedly scanning the list.
+
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
   `analysis` folder. When a file inside it could not be read, the copy threw:
@@ -1325,6 +1335,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   such as `ARRAY[[1,2],[3,4]]` still parse, and a `[` left open is reported.
   Closes #5136.
 
+- DB SQL validation reports physical line numbers in contracts that use
+  bare carriage returns, including after comments and multiline literals.
+
 - **A failed code graph refresh keeps the previous graph with the files it
   was built from.** Checking whether the code graph was current copied the
   changed project files into the active analysis first, so when the
@@ -1454,6 +1467,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `e` before the quote opens an escape string, in which a backslash escapes
   the next character. Closes #5137.
 
+- The DB apply-order check keeps foreign keys that follow comments in
+  contracts with bare carriage returns. Masked regions retain their original
+  line separators and offsets.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
@@ -1465,6 +1482,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   such as `CREATE PUBLICATION feed FOR TABLE orders` made its contract the owner
   of `orders`. Only the PostgreSQL modifiers `TEMP`, `TEMPORARY`, `GLOBAL`,
   `LOCAL` and `UNLOGGED` may now sit there.
+
+- DB apply-order validation ignores references inside nested PostgreSQL
+  block comments and retains references that follow the outer comment.
 
 - **A package.json QFAI cannot read is reported as unreadable.** While
   locating its init templates (for `qfai init`, `qfai doctor` and the graph
@@ -4427,6 +4447,14 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   reads a base that still holds the column without it, so that change needs no
   change request. A settled question row may then
   be deleted once a decision row names its ID; until one does, the row stays.
+
+  Before removing Status, check the decision register and its pages for
+  `Test exception:` entries marked `SUPERSEDED (by DEC-…)`. Reword their
+  Content to start with `Former test exception:` and keep their IDs and
+  history. In 2.4.0, the `Test exception:` prefix activates the exemption
+  again after the Status cell is removed. If you already upgraded, find
+  those entries in the pre-upgrade register and reword them in the current one.
+
 - **A decision row may be restated under its ID.** The `drift` profile of
   `qfai validate` now reports only a decision row the base holds that the
   branch removes or renumbers (`QFAI-STORY-010`); a row whose Content or
