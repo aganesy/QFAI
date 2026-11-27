@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 
 import type { QfaiConfig } from "../config.js";
 import { isUnreplacedDesignMdSample, parseDesignMd } from "../design/designMd.js";
-import { readUiContractInventory } from "../prototyping/specResolution.js";
+import { requiresVisualBrowserEvidenceSurface } from "../domain/surface.js";
+import { readProjectSurface, readUiContractInventory } from "../prototyping/specResolution.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -50,12 +51,16 @@ export async function validateRootDesignMdParseOutsideReadiness(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  return (await hasUiContractScreens(root, config)) ? [] : validateRootDesignMdParse(root);
+  return (await hasVisualUiContract(root, config)) ? [] : validateRootDesignMdParse(root);
 }
 
-/** True when a UI contract of the project declares a screen. */
-async function hasUiContractScreens(root: string, config: QfaiConfig): Promise<boolean> {
-  return (await readUiContractInventory(root, config)).some((entry) => entry.hasScreens);
+/** Structured screens retain their original gate. A Markdown responsibility takes its surface from tech.md. */
+async function hasVisualUiContract(root: string, config: QfaiConfig): Promise<boolean> {
+  const contracts = await readUiContractInventory(root, config);
+  if (contracts.some((entry) => entry.hasScreens)) return true;
+  if (!contracts.some((entry) => entry.contractPath.endsWith(".md"))) return false;
+  const surface = await readProjectSurface(root, config);
+  return surface !== undefined && requiresVisualBrowserEvidenceSurface(surface);
 }
 
 /**
@@ -92,7 +97,7 @@ export async function validateDesignContractReadiness(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  const uiBearing = await hasUiContractScreens(root, config);
+  const uiBearing = await hasVisualUiContract(root, config);
 
   // The unreplaced-sample gate runs first. Every other check runs only for a
   // UI-bearing project, known once SDD has authored UI contracts; the sample

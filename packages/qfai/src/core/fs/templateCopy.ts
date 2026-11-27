@@ -60,7 +60,7 @@ export async function copyTemplatePaths(
   for (const relPath of relativePaths) {
     const fullPath = path.join(sourceRoot, relPath);
     const files = await collectTemplateFiles(fullPath);
-    allFiles.push(...files);
+    for (const file of files) allFiles.push(file);
   }
 
   return copyListedTemplateFiles(allFiles, sourceRoot, destRoot, options);
@@ -305,7 +305,7 @@ export async function collectTemplateFiles(root: string): Promise<string[]> {
     const fullPath = path.join(root, item.name);
     if (item.isDirectory()) {
       const nested = await collectTemplateFiles(fullPath);
-      entries.push(...nested);
+      for (const file of nested) entries.push(file);
       continue;
     }
     if (item.isFile()) {
