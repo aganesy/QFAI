@@ -692,7 +692,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Actions job log.
 
 - `gh-budget` also discards a partial job log when a signal stops GitHub CLI.
-  It keeps the rate-limit reading if the headers arrived in full.
+  It keeps the rate-limit reading if the headers arrived in full and tells the
+  operator to rerun the same command once the interruption clears.
 
 - Plain `qfai init` preserves an assistant `VERSION` marker another writer creates
   during initialization.
