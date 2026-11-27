@@ -110,20 +110,23 @@ Where it should, find the shipped surface that let it through:
 
 The draft names the shipped surface that should change and what it should say,
 with the finding as its evidence, restated as § 3 says: no code, path, branch,
-ID or name of the project or of a reviewer is quoted from a review comment or a
-reviewer's finding. The draft reports the gap in QFAI's guidance, never the project's
-defect. Several findings with one cause are one draft. A finding QFAI could not
-have prevented, or the project's own defect, is not drafted: one whose cause
-lies only in the project, such as its domain, its own conventions or its code
-history, with no QFAI guidance that applied. A finding the session already
-fixed is still drafted where QFAI should have prevented it: the fix closed it
-here, not in QFAI. The `qfai session-review` report's file reads and
-reminders show whether the forbidding text was loaded. A security finding is
-drafted only once the project has fixed it, and its evidence names only the
-class of defect, never where it was: the draft is public and filed under the user's own
-account. Fixed means the fix has merged in the project. An unfixed one is named
-to the user in the final report instead, as held back, without saying where it
-is.
+ID or name of the project or of a reviewer is quoted from a review comment or
+a reviewer's finding. The draft reports the gap in QFAI's guidance, never the
+project's defect. Several findings with one cause are one draft. A finding
+QFAI could not have prevented, or the project's own defect, is not drafted:
+one whose cause lies only in the project, such as its domain, its own
+conventions or its code history, with no QFAI guidance that applied. A finding
+the session already fixed is still drafted where QFAI should have prevented
+it: the fix closed it here, not in QFAI. The `qfai session-review` report's
+file reads and reminders show whether the forbidding text was loaded.
+
+A security finding is drafted only once the project has fixed it, and its
+evidence names only the class of defect, never where it was: the draft is
+public and filed under the user's own account. Fixed means the fix is on the
+project's default branch. An unfixed one is named to the user in the review's
+own message instead, as held back, without saying where it is: beside the § 5
+question, or in its one line when nothing else is worth reporting, and in the
+final report under a no-question mode.
 
 ## 3. What a draft holds
 
@@ -139,8 +142,8 @@ language the session used. `documentation-clarity.md` sets the writing standard.
 
 A draft carries none of these: the name of the project or its organisation, a
 repository address, source code, a path of the project's own, a secret, personal
-data, a reviewer's name, or the user's words beyond what the problem needs. A path under what QFAI
-ships is fine. Generalise the rest.
+data, a reviewer's name, or the user's words beyond what the problem needs. A
+path under what QFAI ships is fine. Generalise the rest.
 
 A message quoted from the session has the project's paths, IDs and names
 replaced by placeholders. Nothing else is quoted from the project's files or
