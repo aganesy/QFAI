@@ -724,8 +724,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Closes #4530.
 
 - **Graph setup distinguishes tracked output from an ineffective ignore rule.**
-  Its warning shows how to inspect the index and stop tracking selected
-  generated files while keeping them in the working tree.
+  Its warning tells operators to run both recovery commands from the
+  initialized project directory to stop tracking selected generated files
+  while keeping them in the working tree.
 
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read

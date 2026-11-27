@@ -154,9 +154,22 @@ describe("AC-0001-0236-06", () => {
       const projectRoot = path.join(repository.root, projectName);
       const git = (args: string[], cwd = repository.root) => runGraphProcess("git", args, { cwd });
       expect((await git(["init", "--quiet"])).exitCode).toBe(0);
-      for (const [directory, name] of [
-        [repository.root, "other.json"],
-        [projectRoot, "project.json"],
+      await mkdir(projectRoot);
+      const initializeProject = () =>
+        captureStdout(() =>
+          runInit(
+            { dir: projectRoot, force: false, dryRun: false, yes: true },
+            {},
+            (command, args, options) =>
+              command === "git"
+                ? runGraphProcess(command, args, options)
+                : repository.fixture.run(command, args, options),
+          ),
+        );
+      await initializeProject();
+      for (const { directory, name } of [
+        { directory: repository.root, name: "other.json" },
+        { directory: projectRoot, name: "project.json" },
       ]) {
         const tools = path.join(directory, ".qfai", "tools");
         await mkdir(tools, { recursive: true });
@@ -166,6 +179,7 @@ describe("AC-0001-0236-06", () => {
         (
           await git([
             "add",
+            "--force",
             "--",
             ".qfai/tools/other.json",
             path.posix.join(projectName, ".qfai", "tools", "project.json"),
@@ -176,15 +190,27 @@ describe("AC-0001-0236-06", () => {
       const listing = await git(["ls-files", "--", ".qfai/tools/"], projectRoot);
       expect(listing.exitCode).toBe(0);
       expect(listing.stdout.trim()).toBe(".qfai/tools/project.json");
-      const recovery = await ensureGraphGitignore(projectRoot, runGraphProcess);
-      expect(recovery.conflicts).toHaveLength(1);
-      expect(recovery.conflicts[0]).toContain(
+      const nestedFile = path.join(projectRoot, ".qfai", "tools", "project.json");
+      await writeFile(nestedFile, "Project working copy");
+      const before = await git(["ls-files", "--stage", "-z"]);
+      expect(before.exitCode).toBe(0);
+
+      const output = await initializeProject();
+      expect(output).toContain("Managed graph CLI entrypoint: ready");
+      expect(output).toContain(
         "From the directory initialized by `qfai init`, review the indexed paths with `git ls-files -- .qfai/tools/`.",
       );
-      expect(recovery.conflicts[0]).toContain(
+      expect(output).toContain(
         "From that same directory, use `git --literal-pathspecs rm --cached -- <path>`",
       );
-      expect(recovery.conflicts[0]).toContain("one exact path relative to that directory");
+      expect(output).toContain("one exact path relative to that directory");
+      const after = await git(["ls-files", "--stage", "-z"]);
+      expect(after.exitCode).toBe(0);
+      expect(after.stdout).toBe(before.stdout);
+      expect(await readFile(nestedFile, "utf8")).toBe("Project working copy");
+      expect(
+        await readFile(path.join(repository.root, ".qfai", "tools", "other.json"), "utf8"),
+      ).toBe("other.json");
     } finally {
       await repository.dispose();
     }
