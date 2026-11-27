@@ -972,8 +972,7 @@ describe("assets guardrails", () => {
         /\brestated\b/i,
         /\bunion\b/i,
         /\bconflict confined to the registers\b[^.]*\bbase branch locally\b/i,
-        /\brestore(?:s|d)?\b[^.]*\bopen-question row deleted on one side\b/i,
-        /\bdelete\b[^.]*\bseparate commit\b[^.]*\bbefore pushing\b/i,
+        /\bif\b[^.]*\brestores\b[^.]*\bopen-question row deleted on one side,\s*delete (?:that row|it)\b[^.]*\bseparate commit\b[^.]*\bbefore pushing\b/i,
         /\bleave\b[^.]*\bother register rows and IDs\b[^.]*\bas the merge left them\b/i,
       ];
       for (const term of terms) {

@@ -71,9 +71,6 @@ describe("story-tree initialization", () => {
     expect(seeded).toContain("/.qfai/spec/decisions/page-*.md -text merge=union");
     expect(seeded).toContain("/.qfai/spec/open-questions.md merge=union");
     expect(seeded).not.toMatch(/^\*\s/m);
-    expect(seeded.replace(/\r?\n# /g, " ")).toContain(
-      "conflict confined to the registers, merge the base branch locally",
-    );
     expect(seeded).toBe(
       await readFile(path.join(getInitAssetsDir(), "root", ".gitattributes"), "utf-8"),
     );
