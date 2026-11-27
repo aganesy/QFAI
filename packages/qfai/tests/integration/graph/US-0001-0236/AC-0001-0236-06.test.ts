@@ -107,6 +107,9 @@ describe("AC-0001-0236-06", () => {
       expect(output).toContain("one exact path relative to the repository root");
       expect(output).toContain("quote it for your shell");
       expect(output).toContain("This keeps the files in your working tree.");
+      expect(output).toContain(
+        "If Git refuses because the staged content differs, review and preserve the staged version before retrying.",
+      );
       expect(output).not.toContain("Git still sees");
       expect(await readFile(ignoreFile, "utf8")).toBe(effectiveIgnore);
       expect(await readFile(trackedFile, "utf8")).toBe("Working copy edits");
