@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- UI, API and database contracts can now describe responsibilities, inputs,
+  outcomes and business rules in Markdown. Validation checks their document
+  structure, example references, and the business-rule annotations in source
+  and tests. Existing structured contracts can migrate individually.
+- Browser guidance records the reason and fallback when an implementation uses
+  a feature beyond its supported browser target.
+
 - **`qfai catalog design` derives the design tokens and the Tailwind theme
   from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
   Design Tokens Community Group 2025.10 format, with the colours, their
@@ -629,10 +636,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **The shipped docs workflow installs patched KaTeX for Mermaid.** Its
-  temporary npm tool directory selects KaTeX 0.18.2 for
-  GHSA-238p-pmpm-9mq7. The workflow verifies the resolved version before
-  checking diagram syntax.
+- **`qfai doctor` explains a workflow path that cannot be listed.** For
+  `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
+  ancestors are directories. Other read failures retain the existing guidance.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
@@ -733,6 +739,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `<!-- mermaid-lint:ignore -->` could not be written there; an `.mdx` file
   now uses `{/* mermaid-lint:ignore */}` on the line above the fence instead.
   Closes #5341.
+
+- **The shipped docs workflow installs patched KaTeX for Mermaid.** Its
+  temporary npm tool directory selects KaTeX 0.18.2 for
+  GHSA-238p-pmpm-9mq7. The workflow verifies the resolved version before
+  checking diagram syntax.
 
 - **The prototyping doctor probes the project Playwright shim first.** It uses
   `npx --no-install playwright --version` if the shim is unavailable or fails.
