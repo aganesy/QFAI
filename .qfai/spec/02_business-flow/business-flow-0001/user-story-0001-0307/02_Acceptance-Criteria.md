@@ -11,6 +11,7 @@ Feature: Catalogue the components a project already has
     Then it writes `.qfai/catalog/components.yaml` listing each top-level function or `const` whose name starts with an upper-case letter and that holds JSX, exported on its declaration, through an `export { ... }` list or as `export default` of its name, with its name, file, props when they can be read, and the `@source`, `@reason`, `@states`, `@pattern` and `@a11y` its doc comment gives
     And it lists nothing from a test, spec or story file and no export that is not a component
     And the list is sorted by file and then by name, two runs over the same source write the same bytes, and the command prints one summary line, saying so when no `.tsx` or `.jsx` file is selected, and exits 0
+    And generation succeeds as above at or below 8388608 UTF-8 bytes. Above the limit it exits 1 naming the limit, tells the reader how to reduce the selected component metadata, and leaves any existing catalogue as it was
 
   # AC-0001-0307-02
   Scenario: The check mode compares and writes nothing
@@ -47,7 +48,7 @@ Feature: Catalogue the components a project already has
     When `qfai validate` runs in one of those profiles
     Then a committed catalogue that differs from what `qfai catalog components` would write, or does not parse as a list of components, raises one `QFAI-COMP-004` at warning naming the file and the command
     And a catalogue path with a symbolic link, including a broken link, or an existing catalogue entry that cannot be read as a regular file also raises one `QFAI-COMP-004` at warning naming the reason, without reading through the link
-    And a catalogue above 8388608 bytes is unreadable and raises the same warning naming the byte limit
+    And a catalogue above 8388608 bytes is unreadable and raises the same warning naming the byte limit and how to reduce the selected component metadata
     And a missing catalogue on an otherwise allowed path raises no `QFAI-COMP` finding other than `QFAI-COMP-005` where a registry is declared, and the other profiles raise none
 
   # AC-0001-0307-07

@@ -48,9 +48,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A fix could run every step, reviews and full suite included, while an open
   issue or pull request already covered the same problem, and the work was
   thrown away when the other change merged first. After its announcement and
-  before any edit, `qfai-run` now makes one REST search of the forge for open
-  issues and pull requests naming the request's files or symptom, leaving out
-  the one the request itself names. A match is a result that describes the
+  before any edit, `qfai-run` now makes one REST search for the request's
+  files or symptom, leaving out the item the request itself names. The
+  GitHub query uses `is:issue` so it works with GitHub App user tokens.
+  Forges with combined search include open issues and pull requests.
+  A match is a result that describes the
   same problem, not one that only shares words. On a match it writes nothing
   and asks the user, with at most three matches, whether to continue or to
   leave the problem to that work. Without a
@@ -663,11 +665,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Specification tables inside a list item's HTML comment block are ignored.
+  Inline comments are removed only within their own table cells, preserving the
+  boundaries and visible content of adjacent cells.
+
 - **`qfai doctor` explains a workflow path that cannot be listed.** For
   `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
   ancestors are directories. Other read failures retain the existing guidance.
 
+- Document graph cache restore checks the analysis directory and its processing
+  settings before native inventory. An ineligible snapshot leaves local analysis
+  available.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
+
+- Component catalogue generation respects the same UTF-8 byte limit as
+  validation and preserves the existing file when rendered output exceeds it.
+  Small catalogue reads use a buffer that grows with the bytes read.
 
 - Restoring or publishing a completed document graph reuses the safety check
   on each copy during native freshness validation.
@@ -676,11 +690,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   agents. An active turn with only an old state file starts a fresh count
   after upgrade.
 
+- The shipped-workflow pin command identifies malformed YAML declarations
+  and reports the expected shape before it refreshes any pins.
+
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 
-- Migration step 3 names contract IDs in the instructions for rewriting a
-  rejected constraint in plain words.
+- Migration step 3 asks authors to rewrite rejected constraints in plain
+  words and omit contract IDs.
 
 - Commands using the general CLI help format print full help when explicitly
   given `--help` or `-h` alongside a refused argument. The refusal still
@@ -777,7 +794,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Graph setup distinguishes tracked output from an ineffective ignore rule.**
   Its warning tells operators to run both recovery commands from the
   initialized project directory to stop tracking selected generated files
-  while keeping them in the working tree.
+  while keeping them in the working tree. It also tells operators to preserve
+  staged content if Git refuses the removal.
 
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read
@@ -808,6 +826,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `<!-- mermaid-lint:ignore -->` could not be written there; an `.mdx` file
   now uses `{/* mermaid-lint:ignore */}` on the line above the fence instead.
   Closes #5341.
+
+- **The shipped docs workflow installs patched KaTeX for Mermaid.** Its
+  temporary npm tool directory selects KaTeX 0.18.2 for
+  GHSA-238p-pmpm-9mq7. The workflow verifies the resolved version before
+  checking diagram syntax.
 
 - **The prototyping doctor probes the project Playwright shim first.** It uses
   `npx --no-install playwright --version` if the shim is unavailable or fails.
@@ -1413,6 +1436,9 @@ decisions` headings appeared anywhere in the file, so a record with several
 - Qualified SQL routine argument types compare the schema and type identifiers
   separately. Equivalent ordinary double-quoted and bare spellings match. Case and
   punctuation that distinguish quoted identifiers are preserved.
+
+- SQL routine identity ignores a Unicode-quoted parameter name together with
+  its `UESCAPE` clause and retains the full input type.
 
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
@@ -2676,18 +2702,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
-- **The mdschema approval advice names the key current pnpm writes.** The
-  README and the `qfai doctor` fix for a checker that does not run said pnpm
-  records the approval under `onlyBuiltDependencies`, a setting pnpm 11
-  removed. Both now recommend `pnpm approve-builds` and say it records the
-  approval under `allowBuilds` for pnpm 10.31 or later and
-  `onlyBuiltDependencies` for earlier pnpm 10.
-
-- **`qfai doctor` explains where pnpm records mdschema approval.** pnpm 10
+- **The README and `qfai doctor` explain mdschema approval on pnpm.**
+  The `pnpm approve-builds` command is available from pnpm 10.1.0. pnpm 10
   updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
   From 10.31.0 it can also create the map when neither legacy list is set.
-  Other pnpm 10 configurations use `onlyBuiltDependencies`, and pnpm 11
-  uses `allowBuilds` by default.
+  In other configurations on pnpm 10.1.0 or later in the 10.x series, the
+  command uses `onlyBuiltDependencies`. pnpm 11 uses `allowBuilds` by default.
 
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
@@ -4490,12 +4510,18 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   change request. A settled question row may then
   be deleted once a decision row names its ID; until one does, the row stays.
 
-  Before removing Status, check the decision register and its pages for
-  `Test exception:` entries marked `SUPERSEDED (by DEC-…)`. Reword their
-  Content to start with `Former test exception:` and keep their IDs and
-  history. In 2.4.0, the `Test exception:` prefix activates the exemption
-  again after the Status cell is removed. If you already upgraded, find
-  those entries in the pre-upgrade register and reword them in the current one.
+  Before removing Status, check `Test exception:` entries in the decision
+  register and its pages. In 2.2.1, only `DONE` made an exception active. After
+  removing Status for 2.4.0, the `Test exception:` prefix grants an exemption
+  for each cited BF, AC or EX ID that still exists in the story tree.
+
+  Keep `Test exception:` on intentional `DONE` exemptions. For every other
+  status, including `REJECTED`, `SUPERSEDED` and `PARTLY SUPERSEDED`, change the
+  Content prefix to `Former test exception:` and keep the decision ID. Record
+  the old status and any superseding decision in Approach before dropping
+  Status, especially when the Status cell alone names the superseding decision.
+  If you already upgraded, recover the legacy statuses from the pre-upgrade
+  register and apply the same guidance to the current rows.
 
 - **A decision row may be restated under its ID.** The `drift` profile of
   `qfai validate` now reports only a decision row the base holds that the

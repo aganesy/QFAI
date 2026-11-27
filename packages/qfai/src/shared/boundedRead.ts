@@ -217,17 +217,27 @@ export async function readHandleWithin(
   handle: PositionalReader,
   maxBytes: number,
 ): Promise<Buffer | undefined> {
-  const buffer = Buffer.alloc(maxBytes + 1);
+  let buffer = Buffer.alloc(Math.min(maxBytes + 1, SCAN_CHUNK_BYTES));
   let filled = 0;
   while (filled < buffer.length) {
     const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
-    if (bytesRead === 0) break;
+    if (bytesRead === 0) return buffer.subarray(0, filled);
     filled += bytesRead;
+    if (filled < buffer.length || filled > maxBytes) continue;
+
+    if (filled === maxBytes) {
+      // Probe the next byte without reallocating a full buffer at the limit.
+      const extra = await handle.read(Buffer.alloc(1), 0, 1, filled);
+      return extra.bytesRead === 0 ? buffer : undefined;
+    }
+    const larger = Buffer.alloc(Math.min(maxBytes, buffer.length * 2));
+    buffer.copy(larger);
+    buffer = larger;
   }
   return filled > maxBytes ? undefined : buffer.subarray(0, filled);
 }
 
-/** How much of a streamed file is held at once. */
+/** Block size for streaming scans and initial capacity for bounded reads. */
 const SCAN_CHUNK_BYTES = 64 * 1024;
 
 /** How a scan ended; see {@link scanBoundedRegularFile}. */

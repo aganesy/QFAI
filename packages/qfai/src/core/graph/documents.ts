@@ -171,22 +171,31 @@ async function replaceDocumentAnalysis(
   approveExternal: ApproveExternalProcessing,
   environment?: GraphReuseEnvironment,
 ): Promise<DocumentPreparation> {
-  const inspect = async (analysis: string, refresh: boolean, checked: CheckedCorpus) =>
-    (await inspectDocumentScopeAt(root, analysis, run, refresh ? "in-place" : "none", checked))
-      .current;
   const processing = await readGraphProcessing(root);
+  const inspect = async (analysis: string, refresh: boolean, checked: CheckedCorpus) =>
+    (
+      await inspectDocumentScopeAt(
+        root,
+        analysis,
+        run,
+        refresh ? "in-place" : "none",
+        checked,
+        refresh && processing === undefined,
+      )
+    ).current;
   // Restoration calls no backend, so only new generation needs one configured. A malformed
   // configuration is refused, and the inspection refuses a snapshot whose definition differs from
   // the configured one. Without a configuration only a snapshot made with the defaults (the
   // local Ollama endpoint over the whole corpus, no credential) is accepted, so a narrower or
   // remote snapshot from another worktree is never restored as this one's analysis.
-  const restoreInspect = processing
-    ? inspect
-    : async (analysis: string, refresh: boolean, checked: CheckedCorpus) =>
-        (await recordsDefaultProcessing(analysis)) && inspect(analysis, refresh, checked);
+  const restoreAccepts = async (analysis: string) => {
+    const recorded = await readCompatibleDocumentProcessing(root, analysis, processing);
+    return recorded !== undefined && (processing !== undefined || isDefaultProcessing(recorded));
+  };
   if (
     (processing || (await processingConfigurationAbsent(root))) &&
-    (await restoreCompletedDocumentAnalysis(root, run, restoreInspect, environment)) === "restored"
+    (await restoreCompletedDocumentAnalysis(root, run, restoreAccepts, inspect, environment)) ===
+      "restored"
   )
     return { status: "prepared", source: "restored" };
   if (!processing) {
@@ -334,12 +343,8 @@ async function replaceDocumentAnalysis(
 
 const DEFAULT_PROCESSING_ENDPOINT = "http://127.0.0.1:11434/v1";
 
-async function recordsDefaultProcessing(analysis: string): Promise<boolean> {
-  const managed = await readOptionalJson(path.join(analysis, "graphify-out", "managed.json"));
-  if (!object(managed)) return false;
-  const recorded = managed.processing;
+function isDefaultProcessing(recorded: GraphProcessing): boolean {
   return (
-    validGraphProcessing(recorded) &&
     recorded.backend === "ollama" &&
     (recorded.endpoint === undefined ||
       new URL(recorded.endpoint).href === DEFAULT_PROCESSING_ENDPOINT) &&
@@ -439,31 +444,21 @@ async function inspectDocumentScopeAt(
   run: GraphProcess,
   refresh: InputRefresh,
   checkedCopy?: CheckedCorpus,
+  requireDefaultProcessing = false,
 ): Promise<DocumentScopeStatus> {
-  const managed = await readOptionalJson(path.join(analysis, "graphify-out", "managed.json"));
-  const selected = await readGraphProcessing(root);
-  const processing = await processingForCompletedQuery(
+  const processing = await readCompatibleDocumentProcessing(
     root,
-    selected,
-    object(managed) ? managed.processing : undefined,
+    analysis,
+    await readGraphProcessing(root),
   );
-  if (
-    !object(managed) ||
-    Object.keys(managed).length !== 3 ||
-    managed.engineVersion !== GRAPH_VERSIONS.graphify ||
-    managed.scope !== "documents" ||
-    !sameProcessing(managed.processing, processing)
-  )
+  if (!processing || (requireDefaultProcessing && !isDefaultProcessing(processing)))
     return notCurrent();
   // Reuse the check on this private copy. The same check also covers the corpus walks below.
   const checked = checkedCopy?.covers(analysis)
     ? checkedCopy
     : await safeDocumentCopy(root, analysis, run);
   if (!checked) return notCurrent();
-  const scope =
-    object(processing) && validDocumentScope(processing.scope)
-      ? slashScope(processing.scope)
-      : undefined;
+  const scope = processing.scope === undefined ? undefined : slashScope(processing.scope);
   if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope, checked)))
     return refreshStagedDocumentScope(root, analysis, run, scope);
   if (refresh === "in-place") await mirrorGraphCorpus(root, analysis, scope, checked);
@@ -491,13 +486,30 @@ async function refreshStagedDocumentScope(
 
 async function processingForCompletedQuery(
   root: string,
-  selected: unknown,
+  selected: GraphProcessing | undefined,
   recorded: unknown,
-): Promise<unknown> {
+): Promise<GraphProcessing | undefined> {
   if (selected !== undefined) return selected;
   if (!(await processingConfigurationAbsent(root))) return undefined;
   if (!validGraphProcessing(recorded)) return undefined;
   return recorded;
+}
+
+async function readCompatibleDocumentProcessing(
+  root: string,
+  analysis: string,
+  selected: GraphProcessing | undefined,
+): Promise<GraphProcessing | undefined> {
+  const managed = await readOptionalJson(path.join(analysis, "graphify-out", "managed.json"));
+  if (
+    !object(managed) ||
+    Object.keys(managed).length !== 3 ||
+    managed.engineVersion !== GRAPH_VERSIONS.graphify ||
+    managed.scope !== "documents"
+  )
+    return undefined;
+  const processing = await processingForCompletedQuery(root, selected, managed.processing);
+  return sameProcessing(managed.processing, processing) ? processing : undefined;
 }
 
 async function processingConfigurationAbsent(root: string): Promise<boolean> {

@@ -5,6 +5,7 @@
  */
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { validateProject } from "../../src/core/validate.js";
 
 const roots: string[] = [];
+const packageRequire = createRequire(import.meta.url);
 
 afterEach(async () => {
   while (roots.length > 0) {
@@ -166,8 +168,16 @@ describe("the files read are the current prototype and the declared surface", ()
 
 // QFAI:AC-0001-0297-05
 describe("JSX needs the TypeScript compiler the project installs", () => {
-  it("raises one 003 when the project cannot load typescript", async () => {
-    const root = await projectWith({ "src/a.tsx": "export const A = () => <p>Hi</p>;\n" });
+  it("raises one 003 when the project cannot load typescript despite an ancestor installation", async () => {
+    const workspace = await projectWith({
+      "node_modules/typescript/package.json": '{"main":"index.cjs"}',
+      "node_modules/typescript/index.cjs": `module.exports = require(${JSON.stringify(packageRequire.resolve("typescript"))});\n`,
+      // A blocked root export keeps this fixture from loading the ancestor compiler.
+      "project/node_modules/typescript/package.json": '{"exports":{".":null}}',
+      "project/qfai.config.yaml": 'uiux:\n  surfacePaths: ["src/**"]\n',
+      "project/src/a.tsx": "export const A = () => <p>Hi</p>;\n",
+    });
+    const root = path.join(workspace, "project");
     const found = await uitext(root);
     expect(found.map((item) => [item.code, item.file])).toEqual([
       ["QFAI-UITEXT-003", "qfai.config.yaml"],

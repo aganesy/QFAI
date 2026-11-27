@@ -965,18 +965,16 @@ describe("assets guardrails", () => {
         .join(" ");
       // The comment's content, not its sentences: new rows are appended and a row keeps its ID,
       // so union merging keeps both branches' rows; a decision row's wording may be restated; and
-      // a conflict a host shows is resolved by merging the base branch locally. A pinned sentence
-      // would turn a restatement of the comment into a red build.
+      // only conflicts confined to the registers use a local base merge. The comment also
+      // describes which rows to remove after the merge and which to keep.
       const terms = [
         /\bappended\b/i,
         /\bID\b/,
         /\brestated\b/i,
         /\bunion\b/i,
-        /\bbase branch\b/i,
-        /\blocally\b/i,
-        /\brestore(?:s|d)?\b[^.]*\bopen-question row\b/i,
-        /\bdelete\b[^.]*\bseparate commit\b[^.]*\bbefore pushing\b/i,
-        /\bother register rows and IDs\b/i,
+        /\bconflict confined to the registers\b[^.]*\bbase branch locally\b/i,
+        /\bif\b[^.]*\brestores\b[^.]*\bopen-question row deleted on one side,\s*delete (?:that row|it)\b[^.]*\bseparate commit\b[^.]*\bbefore pushing\b/i,
+        /\bleave\b[^.]*\bother register rows and IDs\b[^.]*\bas the merge left them\b/i,
       ];
       for (const term of terms) {
         expect(comment, `${file}: the comment must say why (${String(term)})`).toMatch(term);

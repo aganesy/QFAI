@@ -434,7 +434,7 @@ describe("a question answered without a change", () => {
       "If the head changes, repeat the base refresh, checks, review and final base fetch for the new head before attempting the conditional merge again.",
     );
     expect(mergeRequest).toContain(
-      "If the forge cannot enforce the precondition, report `needs-change`.",
+      "If the forge cannot enforce the precondition, report `needs-change` and stop without merging.",
     );
     expect(procedure).not.toContain("only then merge");
     expect(procedure).not.toContain("ask for no new review of that merge");
