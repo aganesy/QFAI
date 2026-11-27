@@ -182,20 +182,21 @@ Otherwise:
    package manifest, install it as one with the project's package manager.
 3. When no selected test file calls axe, write the spec
    `.qfai/assistant/skill/qfai-implement/references/accessibility-check.md`
-   gives under `<testsDir>/e2e/`. Fill its route map from the role-to-screen
-   mapping § Per-role navigation journey uses: each role with the route of
-   every screen it counts that starts with `/`.
-4. When the spec already exists, add to its route map each route starting
-   with `/` that the current flow's UI contracts declare and the map lacks,
-   under every role that mapping gives the screen.
+   gives under `<testsDir>/e2e/`. For Markdown UI responsibilities, fill its
+   route map from the running app or prototype with the web routes each role
+   can reach. For structured contracts, use the role-to-screen mapping
+   § Per-role navigation journey uses and the routes starting with `/` that
+   the contracts declare.
+4. When the spec already exists, apply the same route inventory for the
+   current flow and add any missing routes under the roles that can reach them.
 5. The spec signs in through the E2E layer's sign-in for each role it names.
    Record each such role that signs in as an authenticated actor, as
    § Procedure item 4 says. A visitor role that does not sign in is not an
    actor: it runs signed out.
 
 The check needs no setup when the dependency is installed, a selected test
-file calls axe, and its route map holds every route starting with `/` that
-the current flow's UI contracts declare, or when a run already reported that
+file calls axe, and its route map covers each role's web routes identified
+above for the current flow, or when a run already reported that
 the E2E layer does not run Playwright for JavaScript or TypeScript and the
 layer has not changed since.
 
