@@ -247,39 +247,50 @@ describe("the delivered document lane installs its checkers outside the project'
   });
 
   it.skipIf(!HAS_BASH).each([
-    ["0.18.2", 0],
-    ["0.18.1", 1],
-  ])("checks Mermaid's resolved KaTeX %s before parsing diagrams", async (version, status) => {
-    const body = await runBody("Check Mermaid diagram syntax");
-    const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-int-docs-katex-"));
-    try {
-      const tools = path.join(stage, TOOLS_DIR, "node_modules");
-      const katex = path.join(tools, "mermaid", "node_modules", "katex");
-      const scripts = path.join(tools, "qfai", "assets", "scripts");
-      await mkdir(katex, { recursive: true });
-      await mkdir(scripts, { recursive: true });
-      await writeFile(path.join(katex, "package.json"), JSON.stringify({ version }), "utf-8");
-      await writeFile(
-        path.join(scripts, "check-mermaid.mjs"),
-        'console.log("Mermaid checker ran");',
-        "utf-8",
-      );
-      const child = spawnSync("bash", ["-e", "-o", "pipefail", "-c", body], {
-        cwd: stage,
-        encoding: "utf-8",
-      });
-      if (child.error !== undefined) throw child.error;
-      expect(child.status, child.stderr).toBe(status);
-      if (status === 0) {
-        expect(child.stdout).toContain("Mermaid checker ran");
-      } else {
-        expect(child.stdout).not.toContain("Mermaid checker ran");
-        expect(child.stderr).toContain(`Mermaid resolved KaTeX ${version}, expected 0.18.2`);
+    ["0.18.2", true, 0],
+    ["0.18.1", true, 1],
+    ["0.18.2", false, 1],
+  ])(
+    "checks KaTeX %s and Mermaid entry (%s) before parsing diagrams",
+    async (version, entry, status) => {
+      const body = await runBody("Check Mermaid diagram syntax");
+      const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-int-docs-katex-"));
+      try {
+        const tools = path.join(stage, TOOLS_DIR, "node_modules");
+        const mermaid = path.join(tools, "mermaid");
+        const katex = path.join(mermaid, "node_modules", "katex");
+        const scripts = path.join(tools, "qfai", "assets", "scripts");
+        await mkdir(katex, { recursive: true });
+        await mkdir(scripts, { recursive: true });
+        if (entry) {
+          await writeFile(path.join(mermaid, "package.json"), '{"main":"index.cjs"}', "utf-8");
+          await writeFile(path.join(mermaid, "index.cjs"), "", "utf-8");
+        }
+        await writeFile(path.join(katex, "package.json"), JSON.stringify({ version }), "utf-8");
+        await writeFile(
+          path.join(scripts, "check-mermaid.mjs"),
+          'console.log("Mermaid checker ran");',
+          "utf-8",
+        );
+        const child = spawnSync("bash", ["-e", "-o", "pipefail", "-c", body], {
+          cwd: stage,
+          encoding: "utf-8",
+        });
+        if (child.error !== undefined) throw child.error;
+        expect(child.status, child.stderr).toBe(status);
+        if (status === 0) {
+          expect(child.stdout).toContain("Mermaid checker ran");
+        } else {
+          expect(child.stdout).not.toContain("Mermaid checker ran");
+          expect(child.stderr).toContain(
+            entry ? `Mermaid resolved KaTeX ${version}, expected 0.18.2` : "Cannot find module",
+          );
+        }
+      } finally {
+        await removeTempTree(stage);
       }
-    } finally {
-      await removeTempTree(stage);
-    }
-  });
+    },
+  );
 
   it.skipIf(!HAS_BASH || process.env.GITHUB_ACTIONS !== "true")(
     "installs patched KaTeX and parses a real diagram with the delivered docs steps",
