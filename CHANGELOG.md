@@ -1476,6 +1476,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   of `orders`. Only the PostgreSQL modifiers `TEMP`, `TEMPORARY`, `GLOBAL`,
   `LOCAL` and `UNLOGGED` may now sit there.
 
+- DB apply-order validation ignores references inside nested PostgreSQL
+  block comments and retains references that follow the outer comment.
+
 - **A package.json QFAI cannot read is reported as unreadable.** While
   locating its init templates (for `qfai init`, `qfai doctor` and the graph
   commands), a nearest `package.json` that failed to read or parse
