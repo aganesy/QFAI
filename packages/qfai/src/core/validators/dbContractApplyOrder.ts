@@ -23,7 +23,7 @@
 import path from "node:path";
 
 import { declaredContractId, extractDeclaredDependencies } from "../contractsDecl.js";
-import { CREATE_TABLE_MODIFIERS, DOLLAR_QUOTE_MARKER, opensEscapeString } from "../sqlContract.js";
+import { CREATE_TABLE_MODIFIERS, DOLLAR_QUOTE_MARKER, readSqlQuotedToken } from "../sqlContract.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -110,38 +110,9 @@ export function tableName(raw: string): TableName {
  * quoted identifier is matched so that a `$tag$`, `'` or `--` inside it opens
  * nothing; it is kept, not blanked, because it may be the table a key names.
  * A string is matched by its opening quote alone and read on by
- * {@link stringLiteralEnd}, because where it ends depends on what precedes it.
+ * {@link readSqlQuotedToken}, because where it ends depends on what precedes it.
  */
 const SQL_NOISE = String.raw`--[^\n]*|\/\*[\s\S]*?\*\/|'|${QUOTED_IDENTIFIER}|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`;
-
-/**
- * The offset just past the string literal whose opening quote is at `quoteAt`,
- * or undefined when it never closes.
- *
- * Read by the rule the statement splitter follows: `''` stands for one quote,
- * and in an `E'…'` escape string a backslash escapes the next character, so
- * `E'it\'s'` is one literal.
- */
-function stringLiteralEnd(sql: string, quoteAt: number): number | undefined {
-  const escapes = opensEscapeString(sql, quoteAt);
-  let cursor = quoteAt + 1;
-  while (cursor < sql.length) {
-    const ch = sql[cursor];
-    if (escapes && ch === "\\") {
-      cursor += 2;
-      continue;
-    }
-    if (ch === "'") {
-      if (sql[cursor + 1] !== "'") {
-        return cursor + 1;
-      }
-      cursor += 2;
-      continue;
-    }
-    cursor += 1;
-  }
-  return undefined;
-}
 
 /**
  * SQL with its comments and string literals blanked, keeping every offset.
@@ -160,11 +131,11 @@ export function blankSqlNoise(sql: string): string {
     const start = match.index;
     let end = start + match[0].length;
     if (match[0] === "'") {
-      const close = stringLiteralEnd(sql, start);
-      if (close === undefined) {
+      const { close } = readSqlQuotedToken(sql, start);
+      if (close === -1) {
         continue;
       }
-      end = close;
+      end = close + 1;
       noise.lastIndex = end;
     }
     if (sql[start] === '"') {
