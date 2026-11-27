@@ -61,7 +61,7 @@ it("keeps concurrent worktree copies and their native operations independent", a
 });
 
 // QFAI:EX-0001-0236-05
-// Mutation: packages/qfai/src/core/graph/layout.ts `const directory = path.join(root, ".qfai", "tools", "runtimes", graphEnvironmentKey(environment));` -> `const directory = path.join(root, ".qfai", "tools", "runtimes", graphEnvironmentKey({ ...environment, platform: "win32" }));` fails "separates Windows and WSL runtime analysis and native home state for the same root"
+// Mutation: packages/qfai/src/core/graph/layout.ts `path.join(graphToolsDirectory(root), "runtimes", graphEnvironmentKey(environment)),` -> `path.join(graphToolsDirectory(root), "runtimes", graphEnvironmentKey({ ...environment, platform: "win32" })),` fails "separates Windows and WSL runtime analysis and native home state for the same root"
 it("separates Windows and WSL runtime analysis and native home state for the same root", () => {
   const root = path.resolve("same-worktree");
   const windows = { platform: "win32", architecture: "x64" };

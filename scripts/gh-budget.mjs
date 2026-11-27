@@ -510,7 +510,7 @@ export function ghApi(apiPath, execute = execFileSync) {
       return {
         error: overflow
           ? `The GitHub response is too large. The limit is ${String(MAX_RESPONSE_BYTES)} bytes.`
-          : `The GitHub CLI was interrupted (${signal}).`,
+          : `The GitHub CLI was interrupted (${signal}). Rerun the same command once the interruption clears.`,
         reading: head === stdout ? undefined : readingFrom(head),
       };
     }

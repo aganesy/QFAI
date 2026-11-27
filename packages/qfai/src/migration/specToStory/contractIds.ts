@@ -317,7 +317,7 @@ export async function planContracts(context: MigrationContext): Promise<Contract
         source: contractRepoPath(context, relative),
       });
       text = shaped.content;
-      forAPerson.push(...shaped.forAPerson);
+      for (const note of shaped.forAPerson) forAPerson.push(note);
     }
     if (oldText !== null)
       operations.push(...renameOperations(context, relative, entry, text, current));
