@@ -44,10 +44,12 @@ Feature: Unified SDD Workflow
     Then the rule sits inside the contract file that enforces it, in that file type's form, with an ID, a statement and at least one EX. No separate rules file is written, and a rule that several contracts rely on is defined once, in the contract authoritative for it, and cited by no other contract.
 
   # AC-0001-0147-07
-  Scenario: qfai-sdd Cites Assistant Documents Where They Live
-    Given the assistant tree,
-    When the `qfai-sdd` skill cites the change-classification or the requirements-decomposition document,
-    Then it cites `.qfai/assistant/rule/change-classification.md` and `<paths.skillsDir>/qfai-sdd/references/requirements-decomposition.md`, and each citation resolves to a file that exists.
+  Scenario: SDD steps cite their reference documents where they live
+    Given the shipped `qfai-sdd` skill and its SDD steps,
+    When their change-classification and requirements-decomposition citations are read,
+    Then `sdd-triage` cites both `.qfai/assistant/rule/change-classification.md` and `<paths.skillsDir>/qfai-sdd/references/requirements-decomposition.md`,
+    And `sdd-flow` cites `<paths.skillsDir>/qfai-sdd/references/requirements-decomposition.md`,
+    And every citation of either document in those surfaces uses its canonical location and resolves to an existing file.
 
   # AC-0001-0147-08
   Scenario: The Rules Are Checked Against The Examples Before The Gate

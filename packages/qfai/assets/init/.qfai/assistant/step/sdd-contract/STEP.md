@@ -73,7 +73,7 @@ states.
    other contract restates or cites it: only code and tests cite a BR.
 5. Name no implementation file in a contract. The implementation points at the
    contract, never the other way round.
-6. Reconcile API and DB fields, state transitions, errors and persisted
+6. For Markdown, reconcile semantic inputs, outcomes and guarantees across contracts. For existing structured contracts, reconcile API and DB fields, state transitions, errors and persisted
    attributes, and run the executable DB contract checks
    `contract-artifact-rules.md` requires. Record the command and result under
    Contract executability in the SDD report.
@@ -83,6 +83,8 @@ states.
    says or why it stays.
 
 ## UI contracts
+
+Start each new UI contract from the Markdown template in `templates/spec/03_contract/ui/`. Define the role, information, outcomes and BRs. Derive the actual screen and its interactions during prototyping. The following YAML-specific instructions apply only when maintaining an existing structured contract.
 
 For a UI-bearing flow, write the screen contracts under
 `<paths.contractsDir>/ui/` as the UI guides above state. A visual prototyping

@@ -56,6 +56,13 @@ describe("token drift", () => {
     expect(await driftFindings(withTokensDir("tokens"))).toEqual(["error"]);
   });
 
+  it("audits concrete styles after the UI responsibility migrates to Markdown", async () => {
+    await put(`${contractsDir}/ui/ui-0001-home.md`, "# UI-0001: Home");
+    await put(`${contractsDir}/ui/home.html`, MOCK);
+    await put("tokens/tokens.yaml", TOKENS);
+    expect(await driftFindings(withTokensDir("tokens"))).toEqual(["error"]);
+  });
+
   it("audits the mocks under an absolute paths.contractsDir", async () => {
     outside = await mkdtemp(path.join(os.tmpdir(), "qfai-token-drift-contracts-"));
     await mkdir(path.join(outside, "ui"), { recursive: true });

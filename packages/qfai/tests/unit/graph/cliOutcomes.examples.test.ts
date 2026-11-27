@@ -62,6 +62,7 @@ it("refuses invalid init arguments with exit two before provisioning", async () 
   }
 });
 
+// QFAI:BR-UI-0001-0003
 // QFAI:EX-0001-0237-17
 // Mutation: packages/qfai/src/core/graph/presentation.ts `"Graph tools preview",` -> `"Graph tools",` fails "previews graph preparation without writes or graph processes"
 it("previews graph preparation without writes or graph processes", async () => {
