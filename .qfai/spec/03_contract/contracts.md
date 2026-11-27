@@ -10,7 +10,7 @@
 | CLI-0004 | Delivery Workflow | `.qfai/spec/03_contract/cli/cli-0004-delivery-workflow.md` | - | - | Acceptance tests, implementation and verification handoffs. |
 | CLI-0005 | `qfai atdd scaffold` | `.qfai/spec/03_contract/cli/cli-0005-qfai-atdd-scaffold.md` | - | - | BF and AC acceptance tests with empty, passing bodies. |
 | CLI-0007 | Deliberation record | `.qfai/spec/03_contract/cli/cli-0007-deliberation-record.md` | - | - | Where a run records its questions and choices, and who reads the record. |
-| CLI-0008 | `qfai doctor` | `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md` | - | - | Environment and asset checks with repair guidance. |
+| CLI-0008 | `qfai doctor` | `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md` | - | - | Environment and asset checks, repair guidance and the scope of requested writes. |
 | CLI-0009 | `qfai init` | `.qfai/spec/03_contract/cli/cli-0009-qfai-init.md` | - | - | Project seed, paths, and assistant integration. |
 | CLI-0010 | `/qfai-migration-v1-to-v2` scripts | `.qfai/spec/03_contract/cli/cli-0010-qfai-migration-v1-to-v2.md` | - | - | Bundled migration steps, the free-text entry they install and check, and their write boundary. |
 | CLI-0011 | Prototyping | `.qfai/spec/03_contract/cli/cli-0011-qfai-prototyping.md` | - | - | UI contract loop, review scoring, user confirmation and handoff. |
@@ -23,7 +23,7 @@
 | CLI-0019 | Story-Tree Authoring | `.qfai/spec/03_contract/cli/cli-0019-story-tree-authoring.md` | - | - | SDD and migration authoring boundaries. |
 | CLI-0020 | Workflow Files | `.qfai/spec/03_contract/cli/cli-0020-workflow-files.md` | - | - | Plan files and schemas. |
 | CLI-0021 | Graph exploration | `.qfai/spec/03_contract/cli/cli-0021-graph-exploration.md` | - | UI-0001 | CLI-only graph routing, graph-first guidance, native freshness and independent completed reuse. |
-| UI-0001 | Graph exploration terminal surfaces | `.qfai/spec/03_contract/ui/ui-0001-graph-exploration.yaml` | - | CLI-0009, CLI-0021 | CLI preparation, preview and query-result presentation. |
+| UI-0001 | Graph exploration terminal surfaces | `.qfai/spec/03_contract/ui/ui-0001-graph-exploration.md` | - | CLI-0009, CLI-0021 | CLI preparation, preview and query-result presentation. |
 | CLI-0023 | `qfai sdd merge-docs` | `.qfai/spec/03_contract/cli/cli-0023-qfai-sdd-merge-docs.md` | - | - | Sentence-level merge of conflicted story-tree documents. |
 | CLI-0024 | `qfai session-review` | `.qfai/spec/03_contract/cli/cli-0024-qfai-session-review.md` | - | - | Local transcript counts for the session review. |
 | CLI-0025 | `qfai catalog components` | `.qfai/spec/03_contract/cli/cli-0025-qfai-catalog-components.md` | - | - | The component catalogue written from the UI source, and how the implementer keeps it. |

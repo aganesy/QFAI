@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
+import { nodeEngineFloor } from "../../../../.github/actions/setup/node-engine-floor.mjs";
 import { isRecord, loadShippedWorkflows } from "../helpers/shippedWorkflowFixtures.js";
 
 // tests/integration/<this file> -> tests -> packages/qfai
@@ -569,10 +570,7 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
     if (typeof enginesNode !== "string") {
       throw new Error("package.json#engines.node is missing — the floor oracle has no baseline");
     }
-    const declared = enginesNode.match(/>=\s*([0-9]+(?:\.[0-9]+){0,2})/)?.[1];
-    if (declared === undefined) {
-      throw new Error(`package engines.node "${enginesNode}" declares no >=X.Y.Z floor`);
-    }
+    const declared = nodeEngineFloor(enginesNode);
     const violations: string[] = [];
     for (const [name, body] of await loadShippedWorkflows()) {
       body.split(/\r?\n/).forEach((line, index) => {

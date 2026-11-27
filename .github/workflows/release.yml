@@ -642,8 +642,9 @@ jobs:
           # The expected value is READ from the manifest the `engines-manifest` input above names,
           # which is where the action derives it from. A version literal here would be a second
           # answer to the same question, and the repository allows exactly one Node literal.
-          range="$(node -p "require('./packages/qfai/package.json').engines.node")"
-          expected="v${range#>=}"
+          # SHIPPED-CI: not-applicable
+          # Because: this verifies the Node floor of the package the release gate will publish.
+          expected="v$(node .ci-actions/.github/actions/setup/node-engine-floor.mjs packages/qfai/package.json)"
           actual="$(node --version)"
           echo "gate-floor: engines floor ${expected}, running ${actual}"
           if [ "$actual" != "$expected" ]; then
@@ -708,8 +709,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          range="$(node -p "require('./packages/qfai/package.json').engines.node")"
-          expected="v${range#>=}"
+          expected="v$(node .ci-actions/.github/actions/setup/node-engine-floor.mjs packages/qfai/package.json)"
           actual="$(node --version)"
           echo "gate-floor-whole: engines floor ${expected}, running ${actual}"
           if [ "$actual" != "$expected" ]; then
