@@ -160,6 +160,8 @@ On every screen it applies to:
   next.
 - Feedback after every change.
 
+For a Markdown UI contract, use its responsibility and required outcomes to identify the screen pattern. Record any omitted part or unreachable state in the prototype handoff or implementation review. The following `omitted`, `states` and `surface` fields apply to legacy YAML contracts.
+
 Leaving one of these out needs a reason recorded in the `omitted` list of the
 UI contract of the screen it is missing from: one entry naming the part and
 the reason. A state the screen cannot be in is recorded under that contract's
@@ -177,8 +179,7 @@ section below instead, and a part of this list missing from it is not a defect.
 
 ## What a marketing screen always has
 
-A screen whose UI contract declares `surface: marketing` has these whether or
-not its UI contract names them.
+A marketing screen has these requirements whether its purpose comes from a Markdown responsibility or a legacy `surface: marketing` declaration.
 
 - **No invented proof.** A figure, customer count, testimonial, quote or logo
   the page shows is read from the product or confirmed by the project's owner,
@@ -199,7 +200,7 @@ not its UI contract names them.
 - **Required notices.** The legal notices the jurisdiction requires are linked
   from every page and from the point of sign-up or payment.
 
-Leaving out a state or a notice needs a reason recorded in the screen's UI
+For a Markdown contract, record an omitted state or notice in the prototype handoff or implementation review. For a legacy YAML contract, leaving out a state or a notice needs a reason recorded in the screen's UI
 contract: a state under its `states`, a notice in its `omitted` list. Invented proof, an unlabelled example and a new unsourced image have
 no such reason.
 

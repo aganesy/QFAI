@@ -19,23 +19,23 @@ The constraints a component must meet are rows of `01_policy/constraint.md`.
 
 ## The ladder
 
-The ladder decides where a region comes from, not whether it exists. A region
-the screen contract names is in scope, and so is a region its pattern implies,
-as `.agents/rules/interface-clarity.md#what-a-business-screen-always-has`
-lists them for an application screen and
-`.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has` for a
-marketing screen. Leaving an implied region out needs the reason in the screen's UI
-contract. Dropping a region the contract names is a specification change for
-its owner rather than a choice made here.
+Derive screen regions from the UI contract's responsibility, inputs, outcomes and
+business rules. Use the screen pattern to choose regions in the prototype or
+implementation. The application and marketing patterns are described in
+`.agents/rules/interface-clarity.md#what-a-business-screen-always-has` and
+`.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`.
+If an expected region is omitted, explain the choice in the prototype handoff
+or the implementation review. A change to required behaviour belongs to the
+contract owner.
 
 Per screen region, stop at the first rung that holds.
 
 1. **Does the project already have a component for it?** Reuse it. The
    component catalogue lists what exists
    (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#component-catalogue`). When
-   two or more UI contracts name the same region, extract a shared component at
-   the region's first use. When only one UI contract names a region and it then
-   appears on a second screen that no shared component serves, extract one then. Either
+   two or more screens need the same region, extract a shared component at
+   the region's first use. When a region later appears on a second screen
+   and no shared component serves it, extract one then. Either
    way, wrap whatever rung 2, 3 or 4 supplied and use it on every screen,
    rather than authoring the region again.
 2. **Does a native platform element do it?** Examples on the web are
