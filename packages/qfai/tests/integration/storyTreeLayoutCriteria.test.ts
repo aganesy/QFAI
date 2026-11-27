@@ -416,15 +416,15 @@ describe("the document schema entries of the story tree", () => {
   }
 
   // QFAI:AC-0001-0011-01
-  it("gives each of the sixteen fixed files and the CLI contract one entry and one template", async () => {
+  it("gives each of the sixteen fixed files and four contract kinds one entry and one template", async () => {
     const manifest = await readFile(MANIFEST, "utf8");
     const entries: { id: string; schema: string; pattern: string }[] = parseManifest(manifest);
     const fixed = storyTreeMarkdownPatterns("docs/spec", "docs/contracts");
     expect(fixed).toHaveLength(16);
-    expect(entries).toHaveLength(17);
+    expect(entries).toHaveLength(20);
 
     const templates = await sampleFiles();
-    expect(templates).toHaveLength(17);
+    expect(templates).toHaveLength(20);
     const tree = templates.map((relative) => {
       const concrete = relative.replaceAll("NNNN", "0001");
       return relative.startsWith("03_contract/")
@@ -445,7 +445,7 @@ describe("the document schema entries of the story tree", () => {
         .replace("page-*", "page-NNNN")
         .replace("business-flow-*", "business-flow-NNNN")
         .replace("user-story-*", "user-story-NNNN-NNNN")
-        .replace("cli/*.md", "cli/cli-NNNN-title.md"),
+        .replace(/^(03_contract\/)(cli|api|db|ui)\/\*\.md$/, "$1$2/$2-NNNN-title.md"),
     );
     expect([...paired].sort()).toEqual(templates);
     for (const entry of entries) {
@@ -504,7 +504,7 @@ describe("the document schema entries of the story tree", () => {
 
     const schema = lane("check-mdschema.mjs", ["--root", root, "--scope", "all"]);
     expect(schema.status, schema.stderr).toBe(0);
-    expect(schema.stdout).toContain("17 file(s) conform");
+    expect(schema.stdout).toContain("20 file(s) conform");
     const mermaid = lane("check-mermaid.mjs", [root]);
     expect(mermaid.status, mermaid.stderr).toBe(0);
     expect(mermaid.stdout).toMatch(/\d+ diagram\(s\) parsed/);
