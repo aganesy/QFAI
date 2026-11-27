@@ -261,14 +261,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The end-of-session feedback review reads review findings too.** Besides
-  the session itself, it reads the findings reviewer sub-agents returned and
-  the review comments on the pull requests the session opened or answered
-  review on. Each finding QFAI's design, specification, implementation, test
-  or verification guidance should have prevented becomes an issue draft that
-  names the shipped skill, step, rule, template or command to change. A
-  finding whose cause lies only in the project is not drafted, and
-  `qfai session-review` still reads local transcripts only.
+- **The end-of-session feedback review reads review findings too.** Besides the
+  session itself, it reads the findings reviewer sub-agents returned and the
+  inline review comments, review bodies and conversation comments on the pull
+  requests the session opened or answered review on. Each finding QFAI's design,
+  specification, implementation, test or verification guidance should have
+  prevented becomes an issue draft that names the shipped skill, step, rule,
+  template, command, hook or agent definition to change. A lapse against
+  guidance that was never loaded when it applied is drafted against what should
+  have loaded it. A finding whose cause lies only in the project is not drafted.
+  The `qfai session-review` counts only hint at what was loaded. A security
+  finding is drafted only once its fix has reached the users it affects in
+  production or their distribution channel, and an unfixed one is named to the
+  user instead, with its location only where the message reaches the user alone.
+  The `qfai session-review` command still reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A
@@ -671,6 +677,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 
+- Migration step 3 names contract IDs in the instructions for rewriting a
+  rejected constraint in plain words.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
@@ -735,6 +744,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runtime installation.** If a project-edited entrypoint needs manual
   recovery, the summary marks it as not ready and preserves the edited file.
   Closes #4530.
+
+- **Graph setup distinguishes tracked output from an ineffective ignore rule.**
+  Its warning tells operators to run both recovery commands from the
+  initialized project directory to stop tracking selected generated files
+  while keeping them in the working tree.
 
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read
