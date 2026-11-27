@@ -123,10 +123,15 @@ it("makes one refresh copy when a code query finds the analysis not current and 
       ({ args }) =>
         args[0] === "--liftoff-only" &&
         args.length === 4 &&
-        path.basename(args[1] ?? "") === "codegraph-native.mjs" &&
-        path.basename(args[3] ?? "").startsWith(".preparing-codegraph-"),
+        path.basename(args[1] ?? "") === "codegraph-native.mjs",
     );
     expect(replacementAttempts).toHaveLength(1);
+    const target = replacementAttempts[0]?.args[3];
+    if (target === undefined) throw new Error("CodeGraph generation did not receive a target");
+    const targetPath = path.resolve(target);
+    const activePath = path.resolve(fixture.analysis);
+    expect(targetPath).not.toBe(activePath);
+    expect(path.dirname(targetPath)).toBe(path.dirname(activePath));
     expect(await readFile(activeSource, "utf8")).toBe(priorSource);
   } finally {
     await fixture.dispose();

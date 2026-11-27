@@ -9,14 +9,14 @@
 
 import { randomUUID } from "node:crypto";
 import type * as fsPromises from "node:fs/promises";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, truncate, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { waitForCatalogueWriteHold } from "../helpers/catalogWriteHold.js";
+import { withCatalogueWriteHold } from "../helpers/catalogWriteHold.js";
 
 type FsPromises = typeof fsPromises;
 
@@ -24,7 +24,11 @@ const fault = vi.hoisted(
   (): {
     lstat: ((file: string) => boolean) | null;
     pause: ((from: string, to: string) => Promise<void>) | null;
-  } => ({ lstat: null, pause: null }),
+    catalogueRead: {
+      file: string;
+      beforeRead: (position: number, length: number) => Promise<void>;
+    } | null;
+  } => ({ lstat: null, pause: null, catalogueRead: null }),
 );
 
 vi.mock("node:fs/promises", async () => {
@@ -40,6 +44,18 @@ vi.mock("node:fs/promises", async () => {
         );
       }
       return actual.lstat(...args);
+    },
+    open: async (...args: Parameters<FsPromises["open"]>): ReturnType<FsPromises["open"]> => {
+      const handle = await actual.open(...args);
+      const probe = fault.catalogueRead;
+      if (probe?.file !== String(args[0])) return handle;
+      const read = handle.read.bind(handle);
+      return Object.assign(handle, {
+        read: async (buffer: Buffer, offset: number, length: number, position: number) => {
+          await probe.beforeRead(position, length);
+          return read(buffer, offset, length, position);
+        },
+      });
     },
     rename: async (...args: Parameters<FsPromises["rename"]>): Promise<void> => {
       // A run held just before this rename, while another run starts.
@@ -58,6 +74,7 @@ const CATALOG = ".qfai/catalog/components.yaml";
 afterEach(async () => {
   fault.lstat = null;
   fault.pause = null;
+  fault.catalogueRead = null;
   vi.restoreAllMocks();
   while (roots.length > 0) {
     const root = roots.pop();
@@ -106,6 +123,30 @@ const packageRequire = createRequire(import.meta.url);
 const loadTypescript = (): unknown => packageRequire("typescript");
 
 const catalogFile = (root: string): string => path.join(root, ...CATALOG.split("/"));
+
+// QFAI:EX-0001-0307-29
+it("stops reading the verified catalogue descriptor when the file grows past the limit", async () => {
+  const root = await project();
+  const file = catalogFile(root);
+  const limit = 8 * 1024 * 1024;
+  const grownSize = limit + 128;
+  let requestedEnd = 0;
+  fault.catalogueRead = {
+    file,
+    beforeRead: async (position, length) => {
+      if (requestedEnd === 0) await truncate(file, grownSize);
+      requestedEnd = Math.max(requestedEnd, position + length);
+    },
+  };
+
+  const checked = await cli(["catalog", "components", "--check", "--root", root]);
+  expect(checked.code).toBe(1);
+  expect(checked.err).toContain(`The component catalogue exceeds ${limit} bytes.`);
+  expect(requestedEnd).toBeGreaterThan(0);
+  expect(requestedEnd).toBeLessThanOrEqual(limit + 1);
+  expect((await stat(file)).size).toBe(grownSize);
+});
+
 const lockFile = (root: string): string =>
   path.join(root, ".qfai", "tools", "state", "component-catalog.lock");
 
@@ -172,11 +213,16 @@ describe("one run at a time scans and writes the catalogue", () => {
     const hold = holdBeforeRename();
     const err = collectStderr();
     const first = runCatalogComponents({ root, loadTypescript });
-    await waitForCatalogueWriteHold(hold.held, first, err);
-    await addComponent(root, "Beta", "b.tsx");
-    const second = await runCatalogComponents({ root, loadTypescript });
-    hold.resume();
-    expect(await first).toBe(0);
+    const { value: second, writerCode } = await withCatalogueWriteHold(
+      hold,
+      first,
+      err,
+      async () => {
+        await addComponent(root, "Beta", "b.tsx");
+        return runCatalogComponents({ root, loadTypescript });
+      },
+    );
+    expect(writerCode).toBe(0);
     vi.restoreAllMocks();
     expect(second).toBe(1);
     expect(err.join("")).toBe(
@@ -213,12 +259,11 @@ describe("one run at a time scans and writes the catalogue", () => {
     await addComponent(root, "Alpha", "a.tsx");
     const hold = holdBeforeRename();
     const err = collectStderr();
-    const running = runCatalogComponents({ root, loadTypescript });
-    await waitForCatalogueWriteHold(hold.held, running, err);
     const lock = otherRecord(process.pid);
-    await writeFile(lockFile(root), lock, "utf-8");
-    hold.resume();
-    const code = await running;
+    const running = runCatalogComponents({ root, loadTypescript });
+    const { writerCode: code } = await withCatalogueWriteHold(hold, running, err, () =>
+      writeFile(lockFile(root), lock, "utf-8"),
+    );
     vi.restoreAllMocks();
     expect(code).toBe(1);
     expect(err.join("")).toBe(

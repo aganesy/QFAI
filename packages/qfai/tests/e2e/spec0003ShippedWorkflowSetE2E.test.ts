@@ -32,6 +32,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
+import { nodeEngineFloor } from "../../../../.github/actions/setup/node-engine-floor.mjs";
 import { runInit } from "../helpers/legacyInit.js";
 import {
   collectJobSteps,
@@ -305,20 +306,15 @@ describe(
       );
       const engines =
         isRecord(manifest) && isRecord(manifest["engines"]) ? manifest["engines"] : {};
-      const declared = String(engines["node"] ?? "");
-      expect(declared, "the package declares no Node engines range to compare against").not.toBe(
-        "",
-      );
+      const declared = engines["node"];
+      if (typeof declared !== "string") throw new Error("The package declares no Node range");
 
       const rows = parseHeaderTable(headerComment(await workflowText(VALIDATE)));
       const floor = (rows.get("node support floor") ?? []).join(" ");
-      expect(floor, "the delivered header states no Node support floor").not.toBe("");
-      // The claim and its source, compared. A header that names a different range than the package
-      // ships is exactly the drifted assertion this story removed.
-      expect(
-        floor,
-        `header floor row does not quote the package engines range ${declared}`,
-      ).toContain(declared);
+      const documented = /\bminimum Node (\d+\.\d+\.\d+)\b/.exec(floor)?.[1];
+      expect(documented, `the delivered header must state the lowest version of ${declared}`).toBe(
+        nodeEngineFloor(declared),
+      );
     });
 
     it("preserves the lockfile detection behind the cache through delivery", async () => {

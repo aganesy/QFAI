@@ -21,6 +21,7 @@ import {
 import { step03 } from "../../../../src/migration/specToStory/step03MoveCatalog.js";
 import * as policyDocuments from "../../../../src/migration/specToStory/policyDocuments.js";
 import { routeStructureCatalog } from "../../../../src/migration/specToStory/structureCatalog.js";
+import { addTechCommands } from "../../../../src/migration/specToStory/techDocument.js";
 
 const roots: string[] = [];
 const LARGE_REPORT_COUNT = 200_000;
@@ -487,13 +488,13 @@ describe("migration catalog move", () => {
       `${target}: move what the "Impact" column of "## Constraints" in ${source} states to the contract or tech.md that owns it, or drop it`,
     );
     expect(result.output).toContain(
-      `${target} ## Technical Constraints: rewrite TC-02 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
+      `${target} ## Technical Constraints: rewrite TC-02 of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`,
     );
     expect(result.output).toContain(
-      `${target} ## Operational Constraints: rewrite OC-01 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
+      `${target} ## Operational Constraints: rewrite OC-01 of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`,
     );
     expect(result.output).toContain(
-      `${target} ## Business Constraints: rewrite BC-01 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`,
+      `${target} ## Business Constraints: rewrite BC-01 of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`,
     );
     const constraint = await readFile(
       path.join(context.specsDir, "01_policy", "constraint.md"),
@@ -635,6 +636,42 @@ describe("migration catalog move", () => {
     expect(result.output).toContain(
       `.qfai/spec/03_contract/tech.md ## Architecture: order the layers of "## Architecture" in ${source} from the uppermost down by hand, ${reason}`,
     );
+  });
+
+  // QFAI:EX-0004-0006-37
+  it("merges a large batch of Skeleton commands in order without repeatedly scanning the list", () => {
+    const heading = "Standard commands (copy-paste)";
+    const draft = policyDocuments.newPolicyDraft(".qfai/spec/03_contract/tech.md");
+    const repeated = "- Skeleton: `existing` -> `pnpm smoke`";
+    const original = ["- Test: `pnpm test`", repeated, repeated];
+    const batch = Array.from(
+      { length: 20_000 },
+      (_, index) => `- Skeleton: \`entry-${index + 1}\` -> \`run entry-${index + 1}\``,
+    );
+    const expected = [...original, ...batch];
+    const readBudget = (original.length + batch.length) * 3;
+    let indexedReads = 0;
+    let measuring = true;
+    const commands = new Proxy(original, {
+      get(target, property, receiver) {
+        if (measuring && typeof property === "string" && /^(?:0|[1-9]\d*)$/.test(property)) {
+          indexedReads += 1;
+          if (indexedReads > readBudget)
+            throw new Error("Skeleton merge exceeded its list-read budget");
+        }
+        const value: unknown = Reflect.get(target, property, receiver);
+        return value;
+      },
+    });
+    draft.lists.set(heading, commands);
+
+    addTechCommands(draft, [repeated, ...batch, repeated, ...batch.slice(-2)]);
+    measuring = false;
+
+    expect(indexedReads).toBeLessThanOrEqual(readBudget);
+    const merged = draft.lists.get(heading) ?? [];
+    expect(merged).toHaveLength(expected.length);
+    expect(merged.findIndex((line, index) => line !== expected[index])).toBe(-1);
   });
 
   // QFAI:EX-0004-0006-29

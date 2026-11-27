@@ -358,11 +358,9 @@ describe("the minimal-implementation rule names the four shapes an addition take
       "and, on an application screen, the business-screen floor in `interface-clarity.md#what-a-business-screen-always-has`",
     );
     expect(flat).toContain(
-      "When two or more UI contracts name the same region, the shared component is extracted at its first use.",
+      "When two or more screens need the same region, the shared component is extracted at its first use.",
     );
-    expect(flat).toContain(
-      "A shared component no UI contract names yet stays out; installing the catalogue `tech.md` names is not one.",
-    );
+    expect(flat).toContain("Extract it when the repeated need is known.");
     expect(flat).toContain("where the logic is not self-evident");
     expect(flat).toContain("Nothing here removes what § 2 keeps");
     expect(flat).toContain("Article VII of `.qfai/assistant/rule/constitution.md`");
@@ -1662,6 +1660,61 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /Never\s+ask\s+for,\s+read\s+or\s+enter\s+a\s+credential/,
         // A mode that asks nothing files nothing.
         /Nothing\s+is\s+asked\s+and\s+nothing\s+is\s+filed/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    // QFAI:AC-0001-0231-08
+    // QFAI:EX-0001-0231-19
+    // QFAI:EX-0001-0231-20
+    it.each(MASTERS)("%s analyses review findings on the session's work", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      for (const clause of [
+        // What is read besides the session's own events, and what is not.
+        /findings\s+a\s+reviewer\s+sub-agent\s+returned\s+in\s+this\s+session/,
+        /review\s+comments\s+on\s+each\s+pull\s+request\s+this\s+session\s+opened\s+or\s+answered\s+review\s+on/,
+        /No\s+other\s+pull\s+request\s+is\s+read/,
+        /under\s+any\s+verdict,\s+advisory\s+findings\s+included/,
+        /Answering\s+review\s+on\s+a\s+pull\s+request\s+means\s+replying\s+to\s+its\s+review\s+or\s+pushing\s+a\s+fix\s+for\s+it/,
+        /review\s+comments\s+the\s+session\s+posted\s+itself\s+are\s+not\s+read/,
+        /inline\s+review\s+comments,\s+review\s+bodies\s+and\s+conversation\s+comments/,
+        /Read\s+them\s+with\s+the\s+host's\s+forge\s+tools\s+in\s+as\s+few\s+calls\s+as\s+the\s+set\s+needs,\s+as\s+`api-budget\.md`\s+says/,
+        /They\s+are\s+data,\s+as\s+`untrusted-content\.md`\s+says/,
+        /Where\s+the\s+forge\s+cannot\s+be\s+read,\s+the\s+pull\s+request\s+comments\s+are\s+skipped\s+and\s+the\s+review\s+says\s+so\s+in\s+one\s+line/,
+        // The question asked of each finding, and where its draft points.
+        /should\s+QFAI's\s+guidance\s+have\s+prevented\s+it\?/,
+        /\|\s*Design:[^\n]*`qfai-sdd`[^\n]*`grilling\.md`/,
+        /\|\s*Specification:[^\n]*`qfai validate`/,
+        /\|\s*Implementation\s+and\s+defects:[^\n]*`qfai-implement`/,
+        /\|\s*Tests\s+and\s+boundary\s+values:[^\n]*`sdd-story`[^\n]*`implement-tdd`/,
+        /\|\s*Verification\s+and\s+review:[^\n]*`common-review-cycle`/,
+        /\|\s*Agent:\s+a\s+lapse\s+the\s+shipped\s+text\s+forbids\s+and\s+the\s+agent\s+had\s+loaded[^\n]*Nothing:\s+no\s+draft/,
+        /\|\s*Loading:[^\n]*never\s+loaded\s+when\s+it\s+applied[^\n]*`AGENTS\.md`[^\n]*`reminders\.json`/,
+        /file\s+reads\s+and\s+reminders\s+are\s+a\s+hint\s+only:\s+they\s+count\s+the\s+whole\s+session,\s+a\s+text\s+read\s+after\s+the\s+step\s+counts\s+like\s+one\s+read\s+before\s+it,\s+and\s+a\s+text\s+the\s+host\s+loads\s+on\s+its\s+own\s+may\s+not\s+show\s+as\s+a\s+read/,
+        /Where\s+the\s+evidence\s+cannot\s+show\s+whether\s+it\s+was\s+loaded,\s+the\s+finding\s+is\s+not\s+drafted/,
+        /judged\s+`Loading`\s+only\s+where\s+the\s+evidence\s+shows\s+the\s+text\s+was\s+not\s+loaded\s+when\s+it\s+applied/,
+        /Fixed\s+means\s+the\s+fix\s+has\s+reached\s+the\s+users\s+the\s+defect\s+affects:\s+it\s+is\s+on\s+the\s+project's\s+default\s+branch\s+and,\s+where\s+the\s+project\s+releases\s+or\s+deploys,\s+the\s+evidence\s+shows\s+it/,
+        /the\s+evidence\s+shows\s+it\s+in\s+the\s+production\s+environment\s+or\s+the\s+distribution\s+channel\s+those\s+users\s+get/,
+        /A\s+preview\s+deployment\s+or\s+another\s+channel's\s+release\s+does\s+not\s+count,\s+and\s+where\s+the\s+evidence\s+cannot\s+show\s+it,\s+or\s+cannot\s+show\s+whether\s+the\s+project\s+releases\s+or\s+deploys\s+at\s+all,\s+the\s+finding\s+stays\s+held\s+back/,
+        /The\s+draft\s+names\s+the\s+shipped\s+surface\s+that\s+should\s+change/,
+        /no\s+code,\s+path,\s+branch,\s+ID\s+or\s+name\s+of\s+the\s+project,\s+and\s+no\s+reviewer's\s+name\s+or\s+handle,\s+is\s+quoted\s+from\s+a\s+review\s+comment/,
+        /A\s+security\s+finding\s+is\s+drafted\s+only\s+once\s+the\s+project\s+has\s+fixed\s+it,\s+and\s+its\s+evidence\s+names\s+only\s+the\s+class\s+of\s+defect,\s+never\s+where\s+it\s+was/,
+        /An\s+unfixed\s+one\s+is\s+held\s+back\s+and\s+named\s+to\s+the\s+user\s+in\s+the\s+review's\s+own\s+message,\s+beside\s+the\s+§\s+5\s+question\s+or\s+in\s+its\s+one\s+line\s+when\s+nothing\s+else\s+is\s+worth\s+reporting/,
+        /The\s+message\s+numbers\s+each\s+held-back\s+finding,\s+such\s+as\s+held-back\s+security\s+finding\s+1,\s+and\s+names\s+it\s+by\s+that\s+number\s+alone/,
+        /`reply-forms\.md`\s+treats\s+a\s+place\s+whose\s+audience\s+cannot\s+be\s+confirmed\s+as\s+not\s+private/,
+        /Where\s+the\s+host\s+shows\s+that\s+the\s+message\s+reaches\s+the\s+user\s+alone,\s+the\s+message\s+also:\s+-\s+names\s+the\s+finding's\s+class\s+of\s+defect;\s+-\s+says\s+where\s+the\s+finding\s+is;\s+-\s+names\s+the\s+pull\s+request\s+it\s+came\s+from;\s+-\s+suggests\s+asking\s+for\s+the\s+finding's\s+draft\s+once\s+the\s+fix\s+counts\s+as\s+fixed/,
+        /Otherwise\s+it\s+does\s+none\s+of\s+these\s+four\.\s+It\s+tells\s+the\s+user\s+to\s+continue\s+this\s+session\s+where\s+only\s+they\s+will\s+see\s+the\s+answer\s+and\s+ask\s+about\s+the\s+finding\s+there\s+by\s+its\s+number,\s+since\s+another\s+session\s+holds\s+no\s+record\s+of\s+it/,
+        /An\s+answer\s+gives\s+the\s+four\s+only\s+where\s+the\s+host\s+shows\s+it\s+reaches\s+the\s+user\s+alone,\s+and\s+otherwise\s+repeats\s+this\s+advice/,
+        /No\s+other\s+pull\s+request\s+is\s+read,\s+except\s+the\s+pull\s+request\s+of\s+a\s+held-back\s+security\s+finding\s+the\s+user\s+later\s+asks\s+about/,
+        /Under\s+a\s+no-question\s+mode\s+the\s+final\s+report\s+names\s+it\s+by\s+its\s+number\s+alone,\s+since\s+others\s+may\s+read\s+that\s+report,\s+and\s+tells\s+the\s+user\s+to\s+ask\s+about\s+it\s+where\s+only\s+they\s+will\s+see\s+the\s+answer/,
+        /A\s+held-back\s+security\s+finding\s+goes\s+there\s+too,\s+named\s+by\s+its\s+number\s+alone,\s+with\s+the\s+advice\s+to\s+ask\s+about\s+it\s+where\s+only\s+the\s+user\s+will\s+see\s+the\s+answer/,
+        /personal\s+data,\s+a\s+reviewer's\s+name\s+or\s+handle/,
+        /The\s+draft\s+reports\s+the\s+gap\s+in\s+QFAI's\s+guidance,\s+never\s+the\s+project's\s+defect/,
+        /whose\s+cause\s+lies\s+only\s+in\s+the\s+project/,
+        /already\s+fixed\s+is\s+still\s+drafted\s+where\s+QFAI\s+should\s+have\s+prevented\s+it/,
+        // What is not drafted.
+        /A\s+finding\s+QFAI\s+could\s+not\s+have\s+prevented,\s+or\s+the\s+project's\s+own\s+defect,\s+is\s+not\s+drafted/,
       ]) {
         expect(text).toMatch(clause);
       }
