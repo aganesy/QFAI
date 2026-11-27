@@ -483,6 +483,9 @@ describe("a stale catalogue is a warning, and no catalogue asks nothing", () => 
       ["QFAI-COMP-004", "warning", CATALOG],
     ]);
     expect(findings[0]?.message).toBe(`Could not read the component catalogue: ${reason}`);
+    expect(findings[0]?.suggested_action).toContain("Shorten catalogue tags");
+    expect(findings[0]?.suggested_action).toContain("uiux.surfacePaths");
+    expect(findings[0]?.suggested_action).toContain("qfai catalog components");
 
     const check = await cli(["catalog", "components", "--check", "--root", root]);
     expect(check.code).toBe(1);
@@ -677,6 +680,218 @@ describe("the procurement rule names the widgets that are not hand-authored", ()
     const record = text.slice(text.indexOf("## Recording what was procured"));
     expect(record).toContain(
       "also names its APG pattern and the keyboard behaviour it implements, in its `@a11y` tag, and the test that covers that behaviour",
+    );
+  });
+});
+
+// QFAI:AC-0001-0307-11
+describe("each component lists the business rules its declaration cites", () => {
+  // QFAI:EX-0001-0307-31
+  it("writes realizes through the CLI, passes --check and leaves the catalogue readable to validate", async () => {
+    const root = await projectWith({
+      "src/ui/order.tsx": [
+        "/**",
+        " * @source authored",
+        " * @reason no catalogue item shows an order status",
+        " */",
+        "// QFAI:BR-UI-0003-0002",
+        "export function OrderStatus() {",
+        "  // QFAI:BR-UI-0003-0001",
+        "  return <p />;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+    expect((await cli(["catalog", "components", "--root", root])).code).toBe(0);
+    expect(await readCatalogText(root)).toContain(
+      [
+        "    reason: no catalogue item shows an order status",
+        "    realizes:",
+        "      - BR-UI-0003-0001",
+        "      - BR-UI-0003-0002",
+        "",
+      ].join("\n"),
+    );
+    expect((await cli(["catalog", "components", "--check", "--root", root])).code).toBe(0);
+    expect(await comp(root)).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0307-33
+  it("ships the realizes lookup in the UI guidance", async () => {
+    const guidance = await readFile(
+      path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "..",
+        "assets",
+        "init",
+        ".qfai",
+        "assistant",
+        "skill",
+        "qfai-implement",
+        "references",
+        "ui-affecting.md",
+      ),
+      "utf-8",
+    );
+    const section = guidance.slice(
+      guidance.indexOf("## Component catalogue"),
+      guidance.indexOf("\n## ", guidance.indexOf("## Component catalogue") + 1),
+    );
+    expect(section).toContain("`realizes`");
+    expect(section).toContain("`QFAI:BR-UI-");
+  });
+});
+
+// QFAI:AC-0001-0307-13
+describe("each component lists the theme variables its declaration references", () => {
+  // QFAI:EX-0001-0307-38
+  it("writes tokens through the CLI, passes --check and leaves the catalogue readable to validate", async () => {
+    const root = await projectWith({
+      "src/ui/badge.tsx": [
+        "/**",
+        " * @source authored",
+        " * @reason no catalogue item shows a badge",
+        " */",
+        "// QFAI:BR-UI-0003-0001",
+        "export function Badge() {",
+        '  return <span className="bg-[var(--color-brand)] text-[var(--color-text)]" />;',
+        "}",
+        "",
+      ].join("\n"),
+    });
+    expect((await cli(["catalog", "components", "--root", root])).code).toBe(0);
+    expect(await readCatalogText(root)).toContain(
+      [
+        "    reason: no catalogue item shows a badge",
+        "    tokens:",
+        "      - --color-brand",
+        "      - --color-text",
+        "    realizes:",
+        "      - BR-UI-0003-0001",
+        "",
+      ].join("\n"),
+    );
+    expect((await cli(["catalog", "components", "--check", "--root", root])).code).toBe(0);
+    expect(await comp(root)).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0307-39
+  it("reports a catalogue whose tokens value is not a list of names as not a components list", async () => {
+    const root = await projectWith({
+      "src/ui/badge.tsx": component("Badge", ["@source authored", "@reason none fits"]),
+      [CATALOG]: [
+        "components:",
+        "  - name: Badge",
+        "    file: src/ui/badge.tsx",
+        "    tokens: --color-brand",
+        "",
+      ].join("\n"),
+    });
+    expect((await comp(root)).map((found) => found.message)).toContain(
+      "The component catalogue is not a `components:` list of entries with a `name` and a `file`.",
+    );
+  });
+
+  // QFAI:EX-0001-0307-40
+  it("ships the var(--name) reference in the UI guidance", async () => {
+    const guidance = await readFile(
+      path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "..",
+        "assets",
+        "init",
+        ".qfai",
+        "assistant",
+        "skill",
+        "qfai-implement",
+        "references",
+        "ui-affecting.md",
+      ),
+      "utf-8",
+    );
+    const start = guidance.indexOf("## Component catalogue");
+    const section = guidance.slice(start, guidance.indexOf("\n## ", start + 1));
+    expect(section).toContain("`tokens`");
+    expect(section).toContain("`var(--");
+  });
+});
+
+// QFAI:AC-0001-0307-12
+describe("each component lists the string literal values its props take", () => {
+  // QFAI:EX-0001-0307-37
+  it("writes variants through the CLI, passes --check, and validate reads it back or finds it malformed", async () => {
+    const root = await projectWith({
+      "src/ui/button.tsx": [
+        'type Size = "sm" | "lg";',
+        'interface ButtonProps { variant?: "primary" | "ghost"; size: Size }',
+        "/**",
+        " * @source authored",
+        " * @reason no catalogue item has these variants",
+        " */",
+        "export function Button(props: ButtonProps) {",
+        "  return <button />;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+    expect((await cli(["catalog", "components", "--root", root])).code).toBe(0);
+    const text = await readCatalogText(root);
+    expect(text).toContain(
+      [
+        "    props:",
+        "      - variant",
+        "      - size",
+        "    variants:",
+        "      variant:",
+        "        - primary",
+        "        - ghost",
+        "      size:",
+        "        - sm",
+        "        - lg",
+        "    source: authored",
+        "",
+      ].join("\n"),
+    );
+    expect((await cli(["catalog", "components", "--check", "--root", root])).code).toBe(0);
+    expect(await comp(root)).toEqual([]);
+
+    for (const malformed of ["    variants: [primary]\n", "    variants:\n      size: sm\n"]) {
+      await writeFile(
+        path.join(root, ...CATALOG.split("/")),
+        text.replace(/ {4}variants:\n(?: {6}.*\n)+/, malformed),
+        "utf-8",
+      );
+      const findings = await comp(root);
+      expect(findings.map(({ code, file }) => [code, file])).toEqual([["QFAI-COMP-004", CATALOG]]);
+      expect(findings[0]?.message).toContain("is not a `components:` list");
+    }
+  });
+
+  // QFAI:EX-0001-0307-48
+  it("ships the guidance to pass a listed variants value rather than restyle", async () => {
+    const guidance = await readFile(
+      path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "..",
+        "assets",
+        "init",
+        ".qfai",
+        "assistant",
+        "skill",
+        "qfai-implement",
+        "references",
+        "ui-affecting.md",
+      ),
+      "utf-8",
+    );
+    const start = guidance.indexOf("## Component catalogue");
+    const end = guidance.indexOf("\n## ", start + 1);
+    const section = guidance.slice(start, end).replace(/\s+/g, " ");
+    expect(section).toContain(
+      "Pass one of a prop's listed `variants` values rather than restyling",
     );
   });
 });
