@@ -663,6 +663,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Specification tables inside a list item's HTML comment block are ignored.
+  Inline comments are removed only within their own table cells, preserving the
+  boundaries and visible content of adjacent cells.
+
 - **`qfai doctor` explains a workflow path that cannot be listed.** For
   `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
   ancestors are directories. Other read failures retain the existing guidance.
