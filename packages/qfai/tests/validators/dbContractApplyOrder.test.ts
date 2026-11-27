@@ -219,6 +219,19 @@ describe("reading a contract's own DDL", () => {
     expect(references.size).toBe(0);
   });
 
+  // QFAI:EX-0001-0039-75
+  it("reads the real REFERENCES after a continued escape string", () => {
+    const sql = [
+      "CREATE TABLE t (note TEXT DEFAULT E'prefix'",
+      String.raw`  'it\'s REFERENCES sessions', parent_id int REFERENCES orders(id));`,
+    ].join("\n");
+    const { references } = readTableEdges(sql);
+
+    expect([...references.keys()]).toEqual(["orders"]);
+    expect(blankSqlNoise(sql)).toHaveLength(sql.length);
+    expect(blankSqlNoise(sql).split("\n")).toHaveLength(2);
+  });
+
   // QFAI:EX-0001-0052-15
   it.each(["\n", "\r\n", "\r"])(
     "preserves %j boundaries while masking SQL noise",
