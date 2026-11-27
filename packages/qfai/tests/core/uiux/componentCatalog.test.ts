@@ -335,4 +335,30 @@ describe("each component lists the business rules its declaration cites", () => 
       { name: "Second", file: "src/ui/pair.tsx" },
     ]);
   });
+
+  // QFAI:EX-0001-0307-34
+  it.each([
+    { name: "LF", lineEnding: "\n" },
+    { name: "CR", lineEnding: "\r" },
+  ])(
+    "keeps a citation before another declarator with $name line endings",
+    async ({ lineEnding }) => {
+      const found = await components({
+        "src/ui/pair.tsx": [
+          "export const First = () => {",
+          "  /* QFAI:BR-UI-0003-0007 */ return <p />; }, Second = () => <p />;",
+          "",
+          "export function Third() {",
+          "  return <p />;",
+          "}",
+          "",
+        ].join(lineEnding),
+      });
+      expect(found).toEqual([
+        { name: "First", file: "src/ui/pair.tsx", realizes: ["BR-UI-0003-0007"] },
+        { name: "Second", file: "src/ui/pair.tsx" },
+        { name: "Third", file: "src/ui/pair.tsx" },
+      ]);
+    },
+  );
 });
