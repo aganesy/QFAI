@@ -106,7 +106,9 @@ describe("prototyping skill validator", () => {
 
   it.each([
     [MARKDOWN_SCOPE, "Markdown UI contracts do not need a declared responsibility."],
+    [MARKDOWN_SCOPE, "No Markdown UI contract supplies a declared responsibility."],
     [LEGACY_SCOPE, "Legacy YAML contracts do not require a non-empty screens[] list."],
+    [LEGACY_SCOPE, "No legacy YAML contract requires a non-empty screens[] list."],
   ])("flags the skill when it contradicts %s", (scope, contradiction) => {
     const content = VALID_SKILL_CONTENT.replace(scope, contradiction);
     expect(validatePrototypingSkillContent(content).issues.map((item) => item.code)).toContain(

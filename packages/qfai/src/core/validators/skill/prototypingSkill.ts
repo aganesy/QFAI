@@ -109,14 +109,15 @@ const UI_CONTRACT_ID_PLACEHOLDER = /(?<![\w-])ui-nnnn(?![\w-])/;
 
 export function hasUiContractScope(content: string): boolean {
   const lower = content.toLowerCase();
+  const statements = lower.split(/[.!?]\s+|\n\s*\n/).map((statement) => statement.trim());
   const markdownEligibility =
-    /\bmarkdown ui contracts?\s+(?:suppl(?:y|ies)|provides?|must declare)\s+(?:a|its|their)\s+(?:declared\s+)?responsibilit(?:y|ies)\b/;
+    /^(?:a\s+)?markdown ui contracts?\s+(?:suppl(?:y|ies)|provides?|must declare)\s+(?:a|its|their)\s+(?:declared\s+)?responsibilit(?:y|ies)\b/;
   const legacyEligibility =
-    /\b(?:legacy yaml|structured)(?: ui)? contracts?\s+(?:suppl(?:y|ies)|provides?|requires?|must declare)\s+a\s+non-empty\s+`?screens\[\]`?(?=\s|[.!?]|$)/;
+    /^(?:a\s+)?(?:legacy yaml|structured)(?: ui)? contracts?\s+(?:suppl(?:y|ies)|provides?|requires?|must declare)\s+a\s+non-empty\s+`?screens\[\]`?(?=\s|[.!?]|$)/;
   return (
     UI_CONTRACT_ID_PLACEHOLDER.test(lower) &&
-    markdownEligibility.test(lower) &&
-    legacyEligibility.test(lower)
+    statements.some((statement) => markdownEligibility.test(statement)) &&
+    statements.some((statement) => legacyEligibility.test(statement))
   );
 }
 
