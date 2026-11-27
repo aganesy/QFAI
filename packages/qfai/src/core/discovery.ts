@@ -29,10 +29,10 @@ export async function collectContractFiles(
   dbRoot: string,
 ): Promise<ContractFiles> {
   const [ui, thema, api, db] = await Promise.all([
-    collectUiContractFiles(uiRoot),
+    collectFiles(uiRoot, { extensions: [".md", ".yaml", ".yml"] }),
     collectThemaContractFiles(),
-    collectApiContractFiles(apiRoot),
-    collectDbContractFiles(dbRoot),
+    collectFiles(apiRoot, { extensions: [".md", ".yaml", ".yml", ".json"] }),
+    collectFiles(dbRoot, { extensions: [".md", ".sql"] }),
   ]);
   return { ui, thema, api, db };
 }
