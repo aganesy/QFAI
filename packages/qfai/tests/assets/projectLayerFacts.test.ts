@@ -108,20 +108,20 @@ const NON_CREATING_TAG_FLAGS = new Set([
   "-n",
   "--contains",
   "--no-contains",
-  "--points-at",
   "--merged",
   "--no-merged",
   "--with",
   "--without",
 ]);
 
-/** The tag creation options whose next word is their value. */
+/** Tag options that take an attached or separate value. */
 const VALUE_TAKING_TAG_FLAGS = new Set([
   "--message",
   "--file",
   "--local-user",
   "--trailer",
   "--cleanup",
+  "--points-at",
 ]);
 
 /** Sorting and formatting do not switch a command with a tag operand into list mode. */
@@ -141,6 +141,19 @@ const TAG_SWITCHES = new Set([
   "--no-color",
   "--omit-empty",
   "--ignore-case",
+  // Git supports these unsets without a value. Message and mode switches
+  // such as --list opt out of negation in Git's option definitions.
+  "--no-annotate",
+  "--no-force",
+  "--no-edit",
+  "--no-ignore-case",
+  "--no-omit-empty",
+  "--no-file",
+  "--no-cleanup",
+  "--no-local-user",
+  "--no-sort",
+  "--no-format",
+  "--no-points-at",
 ]);
 
 // Include switches that do not consume a word when checking for ambiguous prefixes.
@@ -193,6 +206,7 @@ function readTagCommand(command: string): {
   );
   let operands: string[] = [];
   let hasListModifier = false;
+  let hasPointsAtFilter = false;
   let optionsKnown = true;
 
   for (let index = 0; index < args.length; index++) {
@@ -214,17 +228,24 @@ function readTagCommand(command: string): {
       return { creates: !optionsKnown, operands: [], optionsKnown };
     }
 
+    const clearsPointsAt = flag === "--no-points-at" && value === undefined;
+    // Git lets a later unset clear the points-at filter before choosing tag mode.
+    if (flag === "--points-at" || clearsPointsAt) hasPointsAtFilter = !clearsPointsAt;
+
     const listModifier = TAG_LIST_MODIFIERS.has(flag);
-    hasListModifier ||= listModifier;
+    hasListModifier ||= listModifier || clearsPointsAt;
     const longWithValue = listModifier || VALUE_TAKING_TAG_FLAGS.has(flag);
+    const knownSwitch =
+      TAG_SWITCHES.has(flag) && (value === undefined || !flag.startsWith("--no-"));
     const takesSeparateValue =
       (longWithValue && value === undefined) || shortOption === "separate-value";
     if (takesSeparateValue) {
       index++;
-      if (index === args.length) optionsKnown = false;
+      // A final --points-at without a value uses HEAD in Git.
+      if (index === args.length && flag !== "--points-at") optionsKnown = false;
     } else if (
       !longWithValue &&
-      !TAG_SWITCHES.has(flag) &&
+      !knownSwitch &&
       shortOption !== "attached-value" &&
       !/^-[aesfi]+$/.test(arg)
     ) {
@@ -235,8 +256,8 @@ function readTagCommand(command: string): {
   // A continued command may name the tag on its next physical line.
   const creates =
     !optionsKnown ||
-    operands.length > 0 ||
-    (args.length > 0 && (!hasListModifier || command.endsWith("\\")));
+    (!hasPointsAtFilter &&
+      (operands.length > 0 || (args.length > 0 && (!hasListModifier || command.endsWith("\\")))));
   return { creates, operands, optionsKnown };
 }
 
@@ -260,9 +281,9 @@ function splitShellCommands(line: string): string[] {
 }
 
 /**
- * Every `git tag` command in `markdown` that creates a tag: whole lines and
- * inline code spans alike, split at `&&`, `||`, `;` and `|` so a chained or
- * piped command is read on its own. A bare `git tag` lists and is left out.
+ * The `git tag` commands in `markdown` that may create a tag, including
+ * commands with unknown options. Read whole lines and inline code spans.
+ * Split at `&&`, `||`, `;` and `|` so each command is checked on its own.
  */
 function tagCreations(markdown: string): string[] {
   const spans = Array.from(markdown.matchAll(/`([^`\n]+)`/g), (m) => m[1] ?? "");
@@ -461,6 +482,44 @@ describe("the project layer describes the repository it is in", () => {
     expect(
       namesItsCommit('git tag -m Release --trailer "Change-Id: X" --cleanup verbatim vX.Y.Z <SHA>'),
     ).toBe(true);
+  });
+
+  it.each(["--no-annotate", "--no-edit", "--no-file", "--no-sort"])(
+    "checks an explicit commit after the valid tag unset %s",
+    (option) => {
+      const command = `git tag ${option} vX.Y.Z <SHA>`;
+      expect(tagCreations(command)).toEqual([command]);
+      expect(namesItsCommit(command)).toBe(true);
+    },
+  );
+
+  it.each([
+    "--no-message",
+    "--no-trailer",
+    "--no-list",
+    "--no-unknown",
+    "--no-file=unused",
+    "--no-edit=",
+    "--no-points-at=<SHA>",
+  ])("holds the commit check for an invalid tag unset %s", (option) => {
+    const command = `git tag ${option} vX.Y.Z <SHA>`;
+    expect(tagCreations(command)).toEqual([command]);
+    expect(namesItsCommit(command)).toBe(false);
+  });
+
+  it("uses the last points-at filter when checking tag creation", () => {
+    const implicit = "git tag --points-at=HEAD --no-points-at vX.Y.Z";
+    expect(tagCreations(implicit)).toEqual([implicit]);
+    expect(namesItsCommit(implicit)).toBe(false);
+
+    const explicit = "git tag --points-at HEAD --no-points-at vX.Y.Z <SHA>";
+    expect(tagCreations(explicit)).toEqual([explicit]);
+    expect(namesItsCommit(explicit)).toBe(true);
+
+    expect(tagCreations("git tag --no-points-at --points-at HEAD vX.Y.Z")).toEqual([]);
+    expect(tagCreations("git tag --no-points-at")).toEqual([]);
+    expect(tagCreations("git tag --points-at")).toEqual([]);
+    expect(tagCreations("git tag --no-points-at --points-at")).toEqual([]);
   });
 
   it.each(["git tag vX.Y.Z --me --contains", "git tag --me --sort vX.Y.Z"])(
