@@ -75,36 +75,50 @@ describe("shared setup in shipped workflows", () => {
     }
   });
 
-  it("rejects an extra destination step before writing either workflow", async () => {
+  it.each([
+    {
+      description: "an extra destination step",
+      newline: "\n",
+      change: (text: string) => {
+        const install = "      - name: Install dependencies (lockfile-aware)";
+        return text.replace(
+          install,
+          `      - name: Docs-only setup\n        run: echo docs-only\n${install}`,
+        );
+      },
+      error: /interrupted in qfai-docs\.yml/u,
+    },
+    {
+      description: "mixed line endings before a destination-only step",
+      newline: "\r\n",
+      change: (text: string) => {
+        const step = "      - name: Install the document-shape and diagram checkers";
+        return text.replace(`\r\n${step}`, `\n${step}`);
+      },
+      error: /mixed line endings in qfai-docs\.yml/u,
+    },
+  ])("rejects $description before writing either workflow", async ({ newline, change, error }) => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "qfai-shipped-toolchain-"));
     try {
       const source = await readFile(path.join(workflows, validate), "utf8");
+      const changedSource = source.replace("it never computed.", "without running.");
+      expect(changedSource).not.toBe(source);
       const originalTests = await readFile(path.join(workflows, tests), "utf8");
       const originalDocs = (await readFile(path.join(workflows, docs), "utf8")).replace(
         /\r?\n/g,
-        "\n",
+        newline,
       );
-      const install = "      - name: Install dependencies (lockfile-aware)";
-      const interrupted = originalDocs.replace(
-        install,
-        `      - name: Docs-only setup\n        run: echo docs-only\n${install}`,
-      );
-      expect(interrupted).not.toBe(originalDocs);
+      const changedDocs = change(originalDocs);
+      expect(changedDocs).not.toBe(originalDocs);
       await Promise.all([
-        writeFile(
-          path.join(directory, validate),
-          source.replace("it never computed.", "without running."),
-          "utf8",
-        ),
+        writeFile(path.join(directory, validate), changedSource, "utf8"),
         writeFile(path.join(directory, tests), originalTests, "utf8"),
-        writeFile(path.join(directory, docs), interrupted, "utf8"),
+        writeFile(path.join(directory, docs), changedDocs, "utf8"),
       ]);
 
-      expect(() => syncShippedWorkflowToolchain(directory)).toThrow(
-        /interrupted in qfai-docs\.yml/u,
-      );
+      expect(() => syncShippedWorkflowToolchain(directory)).toThrow(error);
       expect(await readFile(path.join(directory, tests), "utf8")).toBe(originalTests);
-      expect(await readFile(path.join(directory, docs), "utf8")).toBe(interrupted);
+      expect(await readFile(path.join(directory, docs), "utf8")).toBe(changedDocs);
     } finally {
       await removeTempTree(directory);
     }
