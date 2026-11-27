@@ -773,17 +773,22 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
   );
 
   // QFAI:EX-0001-0039-76
-  it.each(["DEFAULT(NULL)", "DEFAULT'text'", "DEFAULT E'text'"])(
-    "recognizes %s as a clause after a qualified type named default",
-    async (defaultClause) => {
+  it.each([
+    { type: "app.default", defaultClause: "DEFAULT(NULL)" },
+    { type: "app.default", defaultClause: "DEFAULT'text'" },
+    { type: "app.default", defaultClause: "DEFAULT E'text'" },
+    { type: '"Default"', defaultClause: "DEFAULT(NULL)" },
+  ])(
+    "recognizes $defaultClause as a clause after the type $type",
+    async ({ type, defaultClause }) => {
       const sql =
-        `CREATE FUNCTION f(value app.default ${defaultClause}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
-        `CREATE OR REPLACE FUNCTION f(value app.default DEFAULT NULL) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`;
+        `CREATE FUNCTION f(value ${type} ${defaultClause}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE OR REPLACE FUNCTION f(value ${type} DEFAULT NULL) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`;
       const { statements, errors } = parseSqlContract(sql);
       expect(errors).toEqual([]);
       expect(collectCreatedObjects(statements).map((object) => object.signature)).toEqual([
-        "app.default",
-        "app.default",
+        type,
+        type,
       ]);
       const redefinitions = (await runOn(HEADER + sql)).filter(
         (issue) => issue.code === "QFAI-DB-002",
