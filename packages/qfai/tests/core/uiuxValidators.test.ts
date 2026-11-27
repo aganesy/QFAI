@@ -418,6 +418,11 @@ describe("uiux validators", () => {
         "```text",
         "stateDiagram",
         "```",
+        "",
+        "```mermaid",
+        "flowchart LR",
+        "  A --> B",
+        "```",
       ].join("\n"),
       "utf-8",
     );
