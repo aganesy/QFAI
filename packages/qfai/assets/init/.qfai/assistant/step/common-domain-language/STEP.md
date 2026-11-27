@@ -81,8 +81,8 @@ glossary, then deletes that row. Nothing else is written.
 ## Passes when
 
 Read first: the request, the glossary, the run's deliberation record and
-`open-questions.md`. The step passes when no settled-term row waits in
-`open-questions.md` and no candidate of step 1 is new, a synonym or read two
+`open-questions.md`. The step passes when, in the specification stage, no
+settled-term row waits in `open-questions.md`, and in either stage no candidate of step 1 is new, a synonym or read two
 ways; a rejected synonym it only corrects in its own reading does not stop the
 pass. The pass names the glossary rows it read.
 
