@@ -461,9 +461,16 @@ describe.each(TREES)("%s", (tree) => {
 
   it("probes the project's Playwright launcher and reports a missing one instead of installing it", async () => {
     const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
-    expect(preflight).toContain(
+    const launcherProbe = preflight.match(
+      /- Probe the project's own Playwright launcher.*?(?= - When that check fails)/,
+    )?.[0];
+    expect(launcherProbe).toContain(
       "Probe the project's own Playwright launcher through the `prototyping.playwrightCli` check of `npx qfai doctor --profile prototyping`.",
     );
+    expect(launcherProbe).toContain(
+      "It probes `node_modules/.bin/playwright`, including its Windows variants, then `npx --no-install playwright --version`.",
+    );
+    expect(launcherProbe).not.toMatch(/scripts\/|\bPATH\b/);
     expect(preflight).toContain(
       "When that check fails, install nothing. The step stops and reports the missing Playwright launcher as a prerequisite",
     );

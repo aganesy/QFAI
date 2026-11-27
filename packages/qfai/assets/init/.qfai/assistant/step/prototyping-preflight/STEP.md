@@ -57,10 +57,9 @@ Nothing. The CLI checks are read-only.
   test stops the run, naming the contract and the ID.
 - Probe the project's own Playwright launcher through the
   `prototyping.playwrightCli` check of `npx qfai doctor --profile prototyping`.
-  It tries a project wrapper under `scripts/`, then
-  `node_modules/.bin/playwright`, then PATH, then
-  `npx --no-install playwright`. The loop runs the launcher the check resolved,
-  never a bare `npx playwright`, which can install a package mid-run.
+  It probes `node_modules/.bin/playwright`, including its Windows variants,
+  then `npx --no-install playwright --version`. Use the resolved launcher
+  throughout the loop. A bare `npx playwright` can install a package mid-run.
 - When that check fails, install nothing. The step stops and reports the
   missing Playwright launcher as a prerequisite, quoting the check's message.
   Installing it is separate setup the user authorizes, run with the project's

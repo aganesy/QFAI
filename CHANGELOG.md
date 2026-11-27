@@ -686,6 +686,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   given `--help` or `-h` alongside a refused argument. The refusal still
   writes its reason to stderr and exits 2. A version request takes precedence.
 
+- The shipped prototyping preflight lists Doctor's Playwright probe order:
+  the project-local shim, then `npx --no-install playwright --version`.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
