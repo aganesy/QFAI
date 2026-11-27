@@ -1266,11 +1266,11 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-005":
     "Every business rule and contract reference resolves, and a rule numbered BR-<KIND>-NNNN-NNNN names the kind and number of the contract that declares it.",
   "QFAI-STORY-006":
-    "The selected profile's story obligations have test annotations: BF and AC in ATDD, EX in TDD.",
+    "ATDD checks BF and AC annotations. TDD checks EX annotations and separate implementation and test references for each abstract contract rule.",
   "QFAI-STORY-007":
     "The selected profile checks its story annotations in the required test layers: BF and AC in ATDD, EX in TDD.",
   "QFAI-STORY-008":
-    "The selected profile's BF, AC, or EX test annotations name declared story-tree IDs.",
+    "Story annotations name declared IDs, including BR references in source and tests for abstract contracts.",
   "QFAI-STORY-009":
     "Each test exception cites a declared BF, AC, or EX ID in a Test exception: decision row.",
   "QFAI-STORY-010":
@@ -1540,7 +1540,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROTOSKILL-009": "The prototyping skill has every required section.",
   "QFAI-PROTOSKILL-010": "The prototyping skill states the static-first, file-based default.",
   "QFAI-PROTOSKILL-011":
-    "The prototyping skill limits execution to UI contracts that have a full UI ID and a non-empty `screens[]`.",
+    "UI responsibilities have a full UI ID. Structured UI contracts also declare their screens.",
   "QFAI-SAAS-003":
     "Every gate the SaaS-package profile skips is named, so a pass on that profile is not read as a full DONE.",
 };
