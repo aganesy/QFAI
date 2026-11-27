@@ -16,6 +16,7 @@ import { toRelativePath } from "../paths.js";
 import { isGlobExclusion } from "../testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue } from "../types.js";
+import { STUB_SOURCE_EXTENSIONS } from "./testTodoStubs.js";
 import { issue } from "./utils.js";
 
 export type StoryTestFile = {
@@ -318,5 +319,153 @@ export async function validateStoryTreeObligations(
   // Findings name files relative to the project, so the text a run prints is the
   // same on every machine.
   const files = scan.files.map((file) => ({ ...file, file: toRelativePath(root, file.file) }));
-  return validateStoryTreeObligationsModel(tree, files, profile);
+  const issues = validateStoryTreeObligationsModel(tree, files, profile);
+  if (profile === "tdd")
+    issues.push(...(await validateAbstractRuleCoverage(root, config, tree, scan.files)));
+  return issues;
+}
+
+// A standalone comment mark. Requiring the prefix keeps references in prose,
+// imports and single-line string literals from counting as implementations.
+function businessRuleAnnotation(comment: RegExp): RegExp {
+  return new RegExp(
+    String.raw`^[ \t]*(?:${comment.source})[ \t]*QFAI:(BR-(?:UI|API|DB)-\d{4}-\d{4})(?=[ \t\r\n]|\*\/|-->|$)`,
+    "gm",
+  );
+}
+
+const BUSINESS_RULE_ANNOTATION = businessRuleAnnotation(/\/\/|\/\*+|\*|#|--|<!--/);
+const LISP_RULE_ANNOTATION = businessRuleAnnotation(/;+/);
+const RULE_ANNOTATION_BY_EXTENSION: ReadonlyMap<string, RegExp> = new Map([
+  [".clj", LISP_RULE_ANNOTATION],
+  [".cljs", LISP_RULE_ANNOTATION],
+  [".erl", businessRuleAnnotation(/%+/)],
+  [".hs", businessRuleAnnotation(/--+/)],
+  [".pl", businessRuleAnnotation(/#/)],
+  [".vb", businessRuleAnnotation(/'|[Rr][Ee][Mm](?=[ \t])/)],
+]);
+
+// Gherkin describes examples. The other recognized test languages can also implement a rule.
+const IMPLEMENTATION_SOURCE_EXTENSIONS = [
+  ...STUB_SOURCE_EXTENSIONS.filter((ext) => ext !== "feature"),
+  "vue",
+  "svelte",
+  "astro",
+  "html",
+  "css",
+  "scss",
+  "sql",
+  "h",
+  "hpp",
+  "fsx",
+  "sh",
+];
+
+async function validateAbstractRuleCoverage(
+  root: string,
+  config: QfaiConfig,
+  model: StoryTreeModel,
+  tests: readonly StoryTestFile[],
+): Promise<Issue[]> {
+  const abstract = model.rules.filter(
+    (rule) => path.extname(rule.file).toLowerCase() === ".md" && /^BR-(UI|API|DB)-/.test(rule.id),
+  );
+  if (
+    !model.contracts.some(
+      ({ id, file }) => !id.startsWith("CLI-") && path.extname(file).toLowerCase() === ".md",
+    )
+  )
+    return [];
+  const known = new Set(model.rules.map((rule) => rule.id));
+  const issues: Issue[] = [];
+  const sourceRefs = new Set<string>();
+  const testRefs = new Set<string>();
+  const record = (
+    content: string,
+    file: string,
+    refs: Set<string>,
+    role: "implementation" | "test",
+  ) => {
+    const annotation =
+      RULE_ANNOTATION_BY_EXTENSION.get(path.extname(file).toLowerCase()) ??
+      BUSINESS_RULE_ANNOTATION;
+    for (const [, id] of content.matchAll(annotation)) {
+      if (!id) continue;
+      if (known.has(id)) refs.add(id);
+      else
+        issues.push(
+          issue(
+            "QFAI-STORY-008",
+            `Undeclared annotation ${id} in ${file}`,
+            "error",
+            file,
+            "storyTree.undeclaredAnnotation",
+            [id],
+            "canonical",
+            `Use a declared business rule ID in this ${role} file or remove the stale QFAI annotation.`,
+          ),
+        );
+    }
+  };
+  const testPaths = new Set(tests.map((test) => path.resolve(root, test.file)));
+  for (const test of tests) {
+    if (test.selectedForExample)
+      record(test.content, toRelativePath(root, test.file), testRefs, "test");
+  }
+  const src = resolvePath(root, config, "srcDir");
+  try {
+    const result = await collectFilesByGlobs(src, {
+      globs: [`**/*.{${IMPLEMENTATION_SOURCE_EXTENSIONS.join(",")}}`],
+      ignore: [
+        ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+        "**/{test,tests,__tests__}/**",
+        "**/*.{test,spec}.*",
+      ],
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+    });
+    if (result.truncated) throw new Error("Source file limit reached");
+    for (const file of result.files) {
+      if (!testPaths.has(path.resolve(file)))
+        record(
+          await readFile(file, "utf8"),
+          toRelativePath(root, file),
+          sourceRefs,
+          "implementation",
+        );
+    }
+  } catch (err) {
+    return [
+      ...issues,
+      issue(
+        "QFAI-SCAN-002",
+        `BR source scan incomplete: ${String(err)}`,
+        "error",
+        src,
+        "storyTree.sourceScan",
+      ),
+    ];
+  }
+  for (const rule of abstract) {
+    for (const [role, refs] of [
+      ["implementation", sourceRefs],
+      ["test", testRefs],
+    ] as const) {
+      if (!refs.has(rule.id))
+        issues.push(
+          issue(
+            "QFAI-STORY-006",
+            `${rule.id} has no ${role} annotation`,
+            "error",
+            rule.file,
+            "storyTree.ruleCoverage",
+            [rule.id],
+            "canonical",
+            role === "implementation"
+              ? `Add a QFAI:${rule.id} comment to an implementation file under paths.srcDir.`
+              : `Add a QFAI:${rule.id} comment to a test file selected by validation.traceability.testFileGlobs.`,
+          ),
+        );
+    }
+  }
+  return issues;
 }
