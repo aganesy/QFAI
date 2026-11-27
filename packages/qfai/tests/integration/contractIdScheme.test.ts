@@ -417,6 +417,65 @@ describe("contract IDs and contract-scoped business rules", () => {
     );
   });
 
+  // QFAI:EX-0001-0052-07
+  it.each(["js", "ts"])(
+    "counts %s BR annotations in comments beside multiline literals",
+    async (ext) => {
+      const id = "BR-API-0003-0001";
+      const unknown = "BR-API-0003-9999";
+      const root = await contractTree([], {
+        "api/api-0003-refunds.md": contract("API-0003: Refunds", [
+          `| ${id} | Refund | EX-0001-0001-01 |`,
+        ]),
+      });
+      const config = {
+        ...defaultConfig,
+        validation: {
+          ...defaultConfig.validation,
+          traceability: {
+            ...defaultConfig.validation.traceability,
+            testFileGlobs: [`tests/**/*.${ext}`],
+          },
+        },
+      };
+      const messages = async () =>
+        (await validateStoryTreeObligations(root, config, "tdd"))
+          .filter(
+            (entry) =>
+              entry.rule === "storyTree.ruleCoverage" ||
+              entry.rule === "storyTree.undeclaredAnnotation",
+          )
+          .map((entry) => entry.message);
+      const literal = [
+        "const raw = `",
+        `// QFAI:${id}`,
+        `// QFAI:${unknown}`,
+        "`;",
+        'const quoted = "continued \\',
+        `// QFAI:${unknown} quoted text";`,
+      ].join("\r\n");
+      const src = `src/refund.${ext}`;
+      const test = `tests/refund.${ext}`;
+      await put(root, src, literal);
+      await put(root, test, literal);
+      expect(await messages()).toEqual([
+        `${id} has no implementation annotation`,
+        `${id} has no test annotation`,
+      ]);
+
+      const interpolation = [
+        "const rendered = `${(() => {",
+        "  /* A } here stays in the comment. */",
+        `  // QFAI:${id}`,
+        '  return `nested ${"value"}`;',
+        "})()}`;",
+      ].join("\n");
+      await put(root, src, [literal, interpolation].join("\n"));
+      await put(root, test, [literal, `// QFAI:${id}`].join("\n"));
+      expect(await messages()).toEqual([]);
+    },
+  );
+
   // QFAI:AC-0001-0064-01
   // QFAI:EX-0001-0064-02
   it("names each contract node of a flow graph by the contract ID its file declares", async () => {
