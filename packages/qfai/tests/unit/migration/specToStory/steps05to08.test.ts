@@ -1108,6 +1108,7 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  // QFAI:EX-0004-0010-09
   it.each([
     {
       file: "tests/integration/SlotCarrier.vue",
@@ -1141,7 +1142,7 @@ describe("migration steps 5 to 8", () => {
       ],
       literalLine: 6,
     },
-  ])("keeps quoted template data after # in $file", async ({ file, template, literalLine }) => {
+  ])("keeps Vue slot and Svelte block data in $file", async ({ file, template, literalLine }) => {
     const context = await fixture();
     context.config.validation.traceability.testFileGlobs = ["tests/**/*.vue", "tests/**/*.svelte"];
     const legacy = ["QFAI", "SPEC-0001", "TC-0001-0001"].join(":");
@@ -1157,13 +1158,7 @@ describe("migration steps 5 to 8", () => {
       content.replace("// " + legacy, "// " + example),
     );
     expect(reportSection(report.output.join(""), "Annotations kept")).toBe(
-      "- " +
-        file +
-        ":" +
-        String(literalLine) +
-        ": " +
-        legacy +
-        " (in a literal, left as test data)",
+      `- ${file}:${String(literalLine)}: ${legacy} (in a literal, left as test data)`,
     );
   });
 
