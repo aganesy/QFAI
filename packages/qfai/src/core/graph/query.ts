@@ -47,6 +47,7 @@ export async function exploreGraph(
   request: GraphQuestion,
   run: GraphProcess = runGraphProcess,
 ): Promise<GraphAnswer> {
+  // QFAI:BR-UI-0001-0005
   const requestedScope = Object.freeze({ ...request });
   try {
     return { ...(await exploreGraphScope(root, request, run)), requestedScope };
