@@ -267,6 +267,37 @@ describe("shipped schemas agree with the SDD templates", () => {
   }
 });
 
+describe.each(["api", "db", "ui"])("closed %s Markdown contract", (kind) => {
+  const name = `${kind}-NNNN-title`;
+  const template = readFileSync(
+    path.join(TEMPLATE_ROOT, "03_contract", kind, name + ".md"),
+    "utf8",
+  );
+  const schema = path.join(SCHEMA_ROOT, "story", "03_contract", kind, name + ".mdschema.yml");
+  it.each([
+    ["empty statement", template.replace(/^(\| BR-[^|]+\|)[^|]+/m, "$1 ")],
+    [
+      "reordered sections",
+      template
+        .replace("## Inputs", "## Swap")
+        .replace("## Outcomes", "## Inputs")
+        .replace("## Swap", "## Outcomes"),
+    ],
+    ["unknown section", template + "\n## Implementation details\n\nAn extra section.\n"],
+  ])("rejects %s", (_reason, invalid) => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "abstract-schema-"));
+    try {
+      const file = path.join(dir, "invalid.md");
+      writeFileSync(file, invalid, "utf8");
+      expect(
+        spawnSync(process.execPath, [MDSCHEMA_CLI, "check", "--schema", schema, file]).status,
+      ).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("a closed policy section rejects content of another kind", () => {
   /** What is inserted, into which document, after which text, and the text itself. */
   const variants: ReadonlyArray<readonly [string, string, string, string]> = [
@@ -525,7 +556,7 @@ describe("a table-only section holds its template's columns and nothing above th
   const noteAbove = variants((table) => ["| explanatory note", ...table]);
 
   it("finds every table of every template", () => {
-    expect(extraColumn.length).toBe(20);
+    expect(extraColumn.length).toBe(23);
   });
 
   // QFAI:EX-0001-0011-10

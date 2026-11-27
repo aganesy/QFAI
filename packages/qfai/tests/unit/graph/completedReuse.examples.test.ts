@@ -45,7 +45,7 @@ it("retains completed local document analysis when snapshot restoration is unsup
 });
 
 // QFAI:EX-0001-0236-01
-// Mutation: packages/qfai/src/core/graph/documentReuse.ts `if (await inspect(staged, true)) {` -> `if (!(await inspect(staged, true))) {` fails "publishes and independently restores a completed document graph after native freshness checks"
+// Mutation: packages/qfai/src/core/graph/documentReuse.ts `if (checked && (await inspect(staged, true, checked))) {` -> `if (checked && !(await inspect(staged, true, checked))) {` fails "publishes and independently restores a completed document graph after native freshness checks"
 it("publishes and independently restores a completed document graph after native freshness checks", async () => {
   const fixture = await documentAnalysisFixture();
   const common = await mkdtemp(path.join(os.tmpdir(), "qfai-document-cache-"));
@@ -220,7 +220,7 @@ it("restores a compatible completed local copy and confirms native freshness wit
 });
 
 // QFAI:EX-0001-0236-03
-// Mutation: packages/qfai/src/core/graph/reuse.ts `nativeRuntime.stdout.trim() !== "v24.16.0"` -> `false` fails "uses local generation for native copy combinations without independent restoration proof"
+// Mutation: packages/qfai/src/core/graph/reuse.ts `if (nativeRuntime.exitCode !== 0 || !verifiedNativeRelease(nativeRuntime.stdout)) return "cold";` -> `if (nativeRuntime.exitCode !== 0 || !verifiedNativeRelease(nativeRuntime.stdout)) return "restored";` fails "uses local generation for native copy combinations without independent restoration proof"
 it("uses local generation for native copy combinations without independent restoration proof", async () => {
   for (const platform of ["linux", "darwin"]) {
     const fixture = await completedCodeSnapshotFixture();
