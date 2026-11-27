@@ -85,6 +85,8 @@ export type CatalogComponent = {
   file: string;
   /** The members of its props type; absent when they cannot be read statically. */
   props?: string[];
+  /** Each prop typed as a union of string literals, with those values in written order. */
+  variants?: Record<string, string[]>;
   source?: string;
   reason?: string;
   states?: string[];
@@ -175,11 +177,12 @@ export async function scanComponents(
 /** The catalogue file's text for a list of components, byte-identical for the same list. */
 export function renderCatalog(components: readonly CatalogComponent[]): string {
   const entries = components.map((component) => {
-    const entry: Record<string, string | string[]> = {
+    const entry: Record<string, string | string[] | Record<string, string[]>> = {
       name: component.name,
       file: component.file,
     };
     if (component.props) entry.props = component.props;
+    if (component.variants) entry.variants = component.variants;
     for (const tag of DOC_TAGS) {
       const value = component[tag];
       if (value !== undefined) entry[tag] = value;
@@ -287,6 +290,16 @@ function catalogComponentOf(item: unknown): CatalogComponent | null {
     if (!isStringList(props)) return null;
     component.props = props;
   }
+  const variants = record.get("variants");
+  if (variants !== undefined) {
+    if (typeof variants !== "object" || variants === null || Array.isArray(variants)) return null;
+    const entries: [string, string[]][] = [];
+    for (const [prop, values] of new Map<string, unknown>(Object.entries(variants))) {
+      if (!isStringList(values)) return null;
+      entries.push([prop, values]);
+    }
+    component.variants = Object.fromEntries(entries);
+  }
   const states = record.get("states");
   if (states !== undefined) {
     if (!isStringList(states)) return null;
@@ -374,12 +387,14 @@ function componentsOfFile(
   // interfaces it extends) or type alias the same file declares, or an intersection of those.
   // Ceiling: a type imported from another module, or a part declared elsewhere, contributes no
   // names; resolving it through a type checker over the whole program lifts this.
-  const membersOf = (type: TsNode | undefined, seen: Set<string>): string[] | undefined => {
+  const memberName = (member: TsNode): string | undefined => {
+    const name = member.name?.getText().replace(/^["']|["']$/g, "");
+    return name === "" ? undefined : name;
+  };
+  const membersOf = (type: TsNode | undefined, seen: Set<string>): TsNode[] | undefined => {
     if (!type) return undefined;
     if (type.kind === k.TypeLiteral || type.kind === k.InterfaceDeclaration) {
-      const own = (type.members ?? [])
-        .map((member) => member.name?.getText().replace(/^["']|["']$/g, ""))
-        .filter((name): name is string => name !== undefined && name !== "");
+      const own = (type.members ?? []).filter((member) => memberName(member) !== undefined);
       const inherited = (type.heritageClauses ?? [])
         .flatMap((clause) => clause.types ?? [])
         .flatMap((base) => {
@@ -401,26 +416,74 @@ function componentsOfFile(
     }
     return undefined;
   };
+  // The string literal values a type allows: a union of string literal types, its `undefined` and
+  // `null` members dropped, or a reference to a same-file type alias that is one.
+  // Ceiling: a single literal, a parenthesised union, or a union part that is itself a reference
+  // gives no values; resolving each part through the same-file aliases lifts it.
+  const literalValues = (type: TsNode | undefined, seen: Set<string>): string[] | undefined => {
+    if (!type) return undefined;
+    if (type.kind === k.TypeReference && type.typeName) {
+      const name = type.typeName.getText();
+      if (seen.has(name)) return undefined;
+      return literalValues(localTypes.get(name), new Set([...seen, name]));
+    }
+    if (type.kind !== k.UnionType) return undefined;
+    const values: string[] = [];
+    for (const part of type.types ?? []) {
+      if (part.kind === k.UndefinedKeyword) continue;
+      const literal = part.kind === k.LiteralType ? part.literal : undefined;
+      if (literal?.kind === k.NullKeyword) continue;
+      if (!literal || literal.kind !== k.StringLiteral || literal.text === undefined) {
+        return undefined;
+      }
+      values.push(literal.text);
+    }
+    return values.length > 0 ? values : undefined;
+  };
+  // Each property member typed as a string literal union, by name, in the order of `members`;
+  // the first member of a name decides it, as an interface's own member overrides one it extends.
+  const variantsOf = (members: readonly TsNode[]): Record<string, string[]> | undefined => {
+    const entries: [string, string[]][] = [];
+    const named = new Set<string>();
+    for (const member of members) {
+      const name = memberName(member);
+      if (name === undefined || named.has(name)) continue;
+      named.add(name);
+      const values =
+        member.kind === k.PropertySignature ? literalValues(member.type, new Set()) : undefined;
+      if (values) entries.push([name, values]);
+    }
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+  };
   const propsOf = (
     fn: TsNode | undefined,
     declared: TsNode | undefined,
     initializer: TsNode | undefined,
-  ): string[] | undefined => {
+  ): Pick<CatalogComponent, "props" | "variants"> => {
+    const typed = (members: TsNode[]): Pick<CatalogComponent, "props" | "variants"> => {
+      const variants = variantsOf(members);
+      return {
+        props: members.flatMap((member) => memberName(member) ?? []),
+        ...(variants ? { variants } : {}),
+      };
+    };
     const parameter = fn?.parameters?.[0];
     const fromParameter = membersOf(parameter?.type, new Set());
-    if (fromParameter) return fromParameter;
+    if (fromParameter) return typed(fromParameter);
     const binding = parameter?.name;
     if (binding && binding.kind === k.ObjectBindingPattern) {
-      return (binding.elements ?? [])
-        .filter((element) => element.dotDotDotToken === undefined)
-        .map((element) => (element.propertyName ?? element.name)?.getText() ?? "")
-        .filter((name) => name !== "");
+      return {
+        props: (binding.elements ?? [])
+          .filter((element) => element.dotDotDotToken === undefined)
+          .map((element) => (element.propertyName ?? element.name)?.getText() ?? "")
+          .filter((name) => name !== ""),
+      };
     }
     // `const Button: FC<ButtonProps> = ...` names the props as the annotation's type argument.
-    return (
+    const annotated =
       membersOf(declared?.typeArguments?.[0], new Set()) ??
-      membersOf(callTypeArgument(initializer), new Set())
-    );
+      membersOf(callTypeArgument(initializer), new Set());
+    return annotated ? typed(annotated) : {};
   };
   const isExported = (statement: TsNode): boolean =>
     (statement.modifiers ?? []).some((modifier) => modifier.kind === k.ExportKeyword);
@@ -487,13 +550,12 @@ function componentsOfFile(
   for (const name of exported) {
     const candidate = candidates.get(name);
     if (!candidate || !/^[A-Z]/.test(name) || !containsJsx(candidate.fn)) continue;
-    const props = propsOf(candidate.fn, candidate.declared, candidate.initializer);
     const { statement } = candidate;
     const realizes = [...new Set(businessRuleCitations(declarationText(candidate)))].sort(compare);
     components.push({
       name,
       file,
-      ...(props ? { props } : {}),
+      ...propsOf(candidate.fn, candidate.declared, candidate.initializer),
       ...docFields(source.slice(statement.pos, statement.getStart())),
       ...(realizes.length > 0 ? { realizes } : {}),
     });

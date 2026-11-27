@@ -336,3 +336,82 @@ describe("each component lists the business rules its declaration cites", () => 
     ]);
   });
 });
+
+describe("each component lists the string literal values its props take", () => {
+  // QFAI:EX-0001-0307-35
+  it("records each string literal union prop's values, in order, right after props", async () => {
+    const found = await components({
+      "src/ui/button.tsx": [
+        'import type { Theme } from "./theme";',
+        'type Tone = "info" | "warn";',
+        "interface BaseProps {",
+        '  size?: "sm" | "lg" | undefined;',
+        "}",
+        "interface ButtonProps extends BaseProps {",
+        '  variant: "default" | "destructive" | "outline";',
+        "  tone: Tone;",
+        "  label: string;",
+        '  kind: "a" | 1;',
+        "  theme: Theme;",
+        '  state: "idle" | null | (string & {});',
+        "}",
+        "/**",
+        " * @pattern button",
+        " */",
+        "export function Button(props: ButtonProps) {",
+        "  return <button />;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+    expect(found).toEqual([
+      {
+        name: "Button",
+        file: "src/ui/button.tsx",
+        props: ["variant", "tone", "label", "kind", "theme", "state", "size"],
+        variants: {
+          variant: ["default", "destructive", "outline"],
+          tone: ["info", "warn"],
+          size: ["sm", "lg"],
+        },
+        pattern: "button",
+      },
+    ]);
+    expect(renderCatalog(found)).toContain(
+      [
+        "      - size",
+        "    variants:",
+        "      variant:",
+        "        - default",
+        "        - destructive",
+        "        - outline",
+        "      tone:",
+        "        - info",
+        "        - warn",
+        "      size:",
+        "        - sm",
+        "        - lg",
+        "    pattern: button",
+      ].join("\n"),
+    );
+  });
+
+  // QFAI:EX-0001-0307-36
+  it("records no variants for destructured props or props with no string literal union", async () => {
+    expect(
+      await components({
+        "src/ui/chip.tsx": [
+          'export const Chip = ({ size = "sm" }) => <i />;',
+          'type Size = "sm" | Wide;',
+          'export function Tag(props: { size: Size; label: string; one: "x" }) {',
+          "  return <b />;",
+          "}",
+          "",
+        ].join("\n"),
+      }),
+    ).toEqual([
+      { name: "Chip", file: "src/ui/chip.tsx", props: ["size"] },
+      { name: "Tag", file: "src/ui/chip.tsx", props: ["size", "label", "one"] },
+    ]);
+  });
+});

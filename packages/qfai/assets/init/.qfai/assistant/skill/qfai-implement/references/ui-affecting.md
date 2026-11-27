@@ -52,6 +52,9 @@ A component that realises a UI business rule carries the rule's `QFAI:BR-UI-NNNN
 inside its declaration or on its leading comment lines, so the catalogue's `realizes` lists the
 rule. Before writing a region for a rule, look for a listed component whose `realizes` holds it.
 
+A prop typed as a union of string literals, such as `variant: "default" | "outline"`, is listed
+under `variants` with its values. Pass one of those values rather than restyling the component.
+
 The widget `@pattern` names it reads, compared without case, spaces, hyphens or underscores, are
 `dialog`, `alert dialog`, `drawer`, `sheet`, `menu`, `menu button`, `tabs`, `combobox`,
 `autocomplete`, `listbox`, `select`, `tooltip`, `popover`, `toast`, `date picker`, `disclosure` and
