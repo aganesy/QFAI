@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- UI, API and database contracts can now describe responsibilities, inputs,
+  outcomes and business rules in Markdown. Validation checks their document
+  structure, example references, and the business-rule annotations in source
+  and tests. Existing structured contracts can migrate individually.
+- Browser guidance records the reason and fallback when an implementation uses
+  a feature beyond its supported browser target.
+
 - **`qfai catalog design` derives the design tokens and the Tailwind theme
   from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
   Design Tokens Community Group 2025.10 format, with the colours, their
@@ -2167,6 +2174,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   prints one line naming the operation that failed, such as resolving a
   given thread, and exits 2 (#4737).
 
+- **`scripts/pr-threads.mjs` reports invalid GitHub JSON as an error.** A
+  malformed response now produces an operation-specific diagnostic and exit
+  status 2. A deferral stops before proceeding to its next write (#5882).
+
 - **`qfai init --force` keeps a project's own wrapper when the link replacing
   it cannot be written.** A file or directory of the project's at a skill or
   agent wrapper path was deleted before the link was created, so a refused
@@ -2546,6 +2557,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   removed. Both now recommend `pnpm approve-builds` and say it records the
   approval under `allowBuilds` for pnpm 10.31 or later and
   `onlyBuiltDependencies` for earlier pnpm 10.
+
+- **`qfai doctor` explains where pnpm records mdschema approval.** pnpm 10
+  updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
+  From 10.31.0 it can also create the map when neither legacy list is set.
+  Other pnpm 10 configurations use `onlyBuiltDependencies`, and pnpm 11
+  uses `allowBuilds` by default.
 
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
