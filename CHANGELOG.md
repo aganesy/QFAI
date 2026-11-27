@@ -1277,6 +1277,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   such as `ARRAY[1, 2]` or a nested array now leaves the declared argument
   types intact when checking for `QFAI-DB-002`.
 
+- **`QFAI-DB-002` decodes Unicode escapes in qualified routine argument types.**
+  A `U&` spelling and its ordinary equivalent now identify the same type.
+  Case and punctuation still distinguish different quoted names.
+
 - **The graph ignore check covers every name graph setup writes under.** The
   paths `qfai init` checks against an existing managed graph block missed the
   CodeGraph install directory in its private home and most hidden directories
