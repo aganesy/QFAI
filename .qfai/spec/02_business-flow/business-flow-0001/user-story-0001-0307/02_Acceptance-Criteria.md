@@ -93,6 +93,7 @@ Feature: Catalogue the components a project already has
     When `qfai catalog components` runs
     Then each entry with such a member records `variants` right after `props`, mapping each such member, in the order `props` lists it, to its literal values as written, `undefined` and `null` aside
     And a member whose type is imported, mixed or a single literal records no variant, and an entry with none, a destructured one included, has no `variants` key
+    And an intersected property lists common values when every constraint is a supported union, and an unresolved intersection contributes no variants
     And a committed catalogue whose `variants` is not a mapping from names to lists of strings is reported as malformed
     And the shipped implementation UI guidance says to pass one of a prop's listed `variants` values rather than restyling the component
 

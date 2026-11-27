@@ -3,7 +3,16 @@
  * made from the committed catalogue and run through the CLI entry.
  */
 
-import { mkdir, mkdtemp, readdir, readFile, rm, truncate, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  symlink,
+  truncate,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -246,6 +255,20 @@ describe("the brief made from the committed catalogue", () => {
     expect(rejected.code).toBe(1);
     expect(rejected.out).toBe("");
     expect(rejected.err).toContain(`could not read ${TOKENS}: The file exceeds`);
+  });
+
+  // QFAI:EX-0001-0307-47
+  it.each([TOKENS, THEME])("refuses a linked optional artifact %s", async (artifact) => {
+    const root = await projectWith({ [CATALOG]: CATALOG_TEXT });
+    const directory = path.join(root, "empty-directory");
+    await mkdir(directory);
+    await symlink(directory, path.join(root, artifact), "junction");
+
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(1);
+    expect(brief.out).toBe("");
+    expect(brief.err.trimEnd().split("\n")).toHaveLength(1);
+    expect(brief.err).toContain(`could not read ${artifact}: ${artifact} is a symbolic link`);
   });
 
   // QFAI:EX-0001-0307-47

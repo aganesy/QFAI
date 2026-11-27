@@ -396,6 +396,41 @@ function compare(a: string, b: string): number {
 }
 
 /** The components, raw elements and imported names of one file. */
+/** Mask literal text before matching citation lines, preserving line boundaries and offsets. */
+function withoutCitationLiterals(root: TsNode, source: string, kind: TsApi["SyntaxKind"]): string {
+  const literalKinds = new Set([
+    kind.StringLiteral,
+    kind.NoSubstitutionTemplateLiteral,
+    kind.TemplateHead,
+    kind.TemplateMiddle,
+    kind.TemplateTail,
+    kind.JsxText,
+    kind.JsxTextAllWhiteSpaces,
+    kind.RegularExpressionLiteral,
+  ]);
+  const parts: string[] = [];
+  const pending = [root];
+  let offset = 0;
+  for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
+    if (!literalKinds.has(node.kind)) {
+      const children = node.getChildren();
+      for (let index = children.length - 1; index >= 0; index--) {
+        const child = children[index];
+        if (child !== undefined) pending.push(child);
+      }
+      continue;
+    }
+    const start = Math.max(offset, node.getStart());
+    if (start >= node.end) continue;
+    parts.push(source.slice(offset, start));
+    // A non-whitespace marker keeps a trailing comment from becoming a standalone line.
+    parts.push(source.slice(start, node.end).replace(/[^\r\n\u2028\u2029 \t]/g, "x"));
+    offset = node.end;
+  }
+  parts.push(source.slice(offset));
+  return parts.join("");
+}
+
 function componentsOfFile(
   ts: TsApi,
   file: string,
@@ -458,18 +493,34 @@ function componentsOfFile(
     const name = member.name?.getText().replace(/^["']|["']$/g, "");
     return name === "" ? undefined : name;
   };
-  const membersOf = (type: TsNode | undefined, seen: Set<string>): TsNode[] | undefined => {
+  type PropsMembers = { all: TsNode[]; constraints: Map<string, TsNode[]>; complete: boolean };
+  const membersOf = (type: TsNode | undefined, seen: Set<string>): PropsMembers | undefined => {
     if (!type) return undefined;
     if (type.kind === k.TypeLiteral || type.kind === k.InterfaceDeclaration) {
       const own = (type.members ?? []).filter((member) => memberName(member) !== undefined);
-      const inherited = (type.heritageClauses ?? [])
+      const bases = (type.heritageClauses ?? [])
         .flatMap((clause) => clause.types ?? [])
-        .flatMap((base) => {
+        .map((base) => {
           const name = base.expression?.getText();
-          if (name === undefined || seen.has(name)) return [];
-          return membersOf(localTypes.get(name), new Set([...seen, name])) ?? [];
+          if (name === undefined || seen.has(name)) return undefined;
+          return membersOf(localTypes.get(name), new Set([...seen, name]));
         });
-      return [...own, ...inherited];
+      const inherited = bases.filter((base) => base !== undefined);
+      const constraints = new Map<string, TsNode[]>();
+      for (const member of own) {
+        const name = memberName(member);
+        if (name !== undefined && !constraints.has(name)) constraints.set(name, [member]);
+      }
+      for (const base of inherited) {
+        for (const [name, members] of base.constraints) {
+          if (!constraints.has(name)) constraints.set(name, members);
+        }
+      }
+      return {
+        all: [...own, ...inherited.flatMap((base) => base.all)],
+        constraints,
+        complete: bases.every((base) => base?.complete),
+      };
     }
     if (type.kind === k.TypeReference && type.typeName) {
       const name = type.typeName.getText();
@@ -477,9 +528,20 @@ function componentsOfFile(
       return membersOf(localTypes.get(name), new Set([...seen, name]));
     }
     if (type.kind === k.IntersectionType) {
-      const parts = (type.types ?? []).map((part) => membersOf(part, seen));
-      if (parts.every((part) => part === undefined)) return undefined;
-      return parts.flatMap((part) => part ?? []);
+      const resolved = (type.types ?? []).map((part) => membersOf(part, seen));
+      const parts = resolved.filter((part) => part !== undefined);
+      if (parts.length === 0) return undefined;
+      const constraints = new Map<string, TsNode[]>();
+      const all = parts.flatMap((part) => part.all);
+      if (!resolved.every((part) => part?.complete)) return { all, constraints, complete: false };
+      for (const part of parts) {
+        for (const [name, members] of part.constraints) {
+          const combined = constraints.get(name);
+          if (combined === undefined) constraints.set(name, [...members]);
+          else for (const member of members) combined.push(member);
+        }
+      }
+      return { all, constraints, complete: true };
     }
     return undefined;
   };
@@ -507,18 +569,18 @@ function componentsOfFile(
     }
     return values.length > 0 ? values : undefined;
   };
-  // Each property member typed as a string literal union, by name, in the order of `members`;
-  // the first member of a name decides it, as an interface's own member overrides one it extends.
-  const variantsOf = (members: readonly TsNode[]): Record<string, string[]> | undefined => {
+  // Resolve inherited overrides before intersecting the choices imposed by independent types.
+  const variantsOf = (
+    constraints: PropsMembers["constraints"],
+  ): Record<string, string[]> | undefined => {
     const entries: [string, string[]][] = [];
-    const named = new Set<string>();
-    for (const member of members) {
-      const name = memberName(member);
-      if (name === undefined || named.has(name)) continue;
-      named.add(name);
-      const values =
-        member.kind === k.PropertySignature ? literalValues(member.type, new Set()) : undefined;
-      if (values) entries.push([name, values]);
+    for (const [name, members] of constraints) {
+      const [first, ...remaining] = members.map((member) =>
+        member.kind === k.PropertySignature ? literalValues(member.type, new Set()) : undefined,
+      );
+      if (!first) continue;
+      const values = first.filter((value) => remaining.every((part) => part?.includes(value)));
+      if (values.length > 0) entries.push([name, values]);
     }
     return entries.length > 0 ? Object.fromEntries(entries) : undefined;
   };
@@ -527,10 +589,10 @@ function componentsOfFile(
     declared: TsNode | undefined,
     initializer: TsNode | undefined,
   ): Pick<CatalogComponent, "props" | "variants"> => {
-    const typed = (members: TsNode[]): Pick<CatalogComponent, "props" | "variants"> => {
-      const variants = variantsOf(members);
+    const typed = (members: PropsMembers): Pick<CatalogComponent, "props" | "variants"> => {
+      const variants = variantsOf(members.constraints);
       return {
-        props: members.flatMap((member) => memberName(member) ?? []),
+        props: members.all.flatMap((member) => memberName(member) ?? []),
         ...(variants ? { variants } : {}),
       };
     };
@@ -604,10 +666,13 @@ function componentsOfFile(
   }
   // When a declaration starts partway through a line, only indentation may precede a citation
   // on that line. Inspect the prefix without including text from a different declaration.
+  const citationSource = source.includes("QFAI:")
+    ? withoutCitationLiterals(sourceFile, source, k)
+    : source;
   const citationSlice = (start: number, end: number): string => {
     const { character } = sourceFile.getLineAndCharacterOfPosition(start);
     const prefix = source.slice(start - character, start);
-    const text = source.slice(start, end);
+    const text = citationSource.slice(start, end);
     return /[^ \t]/.test(prefix) ? text.replace(/^[^\r\n\u2028\u2029]*/, "") : text;
   };
   const declarationText = ({ statement, declarator }: Candidate): string =>

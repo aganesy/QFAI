@@ -250,6 +250,28 @@ describe("the scanner lists exported components", () => {
 });
 
 describe("each component lists the business rules its declaration cites", () => {
+  // QFAI:EX-0001-0307-32
+  it("ignores comment-like template and JSX text while preserving real comments in substitutions", async () => {
+    const [component] = await components({
+      "src/ui/caption.tsx": [
+        "export function Caption() {",
+        "  const caption = `",
+        "    // QFAI:BR-UI-0003-0001",
+        "    ${(() => {",
+        "      // QFAI:BR-UI-0003-0002",
+        '      return "caption";',
+        "    })()}",
+        "    // QFAI:BR-UI-0003-0003",
+        "  `;",
+        "  return <p>{caption}",
+        "    // QFAI:BR-UI-0003-0004",
+        "  </p>;",
+        "}",
+      ].join("\n"),
+    });
+    expect(component?.realizes).toEqual(["BR-UI-0003-0002"]);
+  });
+
   // QFAI:EX-0001-0307-31
   it("records the IDs each declaration cites, once each and sorted, as the last key", async () => {
     const found = await components({
@@ -433,6 +455,25 @@ describe("each component lists the theme variables its declaration references", 
 });
 
 describe("each component lists the string literal values its props take", () => {
+  // QFAI:EX-0001-0307-35
+  it("records only common variant values from intersected properties in either operand order", async () => {
+    const found = await components({
+      "src/ui/intersection.tsx": [
+        'import type { External } from "./external";',
+        'type Left = { variant: "left" | "common"; exclusive: "one" | "two" };',
+        'type Right = { variant: "common" | "right"; exclusive: "three" | "four" };',
+        "export const LeftFirst = (props: Left & Right) => <div />;",
+        "export const RightFirst = (props: Right & Left) => <div />;",
+        "export const Unresolved = (props: Left & External) => <div />;",
+      ].join("\n"),
+    });
+    expect(found.map(({ variants }) => variants)).toEqual([
+      { variant: ["common"] },
+      { variant: ["common"] },
+      undefined,
+    ]);
+  });
+
   // QFAI:EX-0001-0307-35
   it("records each string literal union prop's values, in order, right after props", async () => {
     const found = await components({
