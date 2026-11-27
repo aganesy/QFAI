@@ -47,10 +47,12 @@
 # New register rows are appended and a row keeps its ID, so Git union merging
 # keeps both branches' rows. A decision row's wording may be restated; when both
 # branches restate one row, the union merge keeps both versions. When a host
-# shows a conflict in these files, merge the base branch locally and push,
-# changing no row in the merge. Validation still reports two rows left with one
-# ID. These paths assume the default paths.specsDir; update them if the project
-# moves its spec tree.
+# shows a conflict in these files, merge the base branch locally. If the union
+# merge restores an open-question row deleted on one side, delete that row again
+# in a separate commit before pushing. Leave all other register rows and IDs as
+# the merge left them. Push the updated branch. Validation still reports two
+# rows left with one ID. These paths assume the default paths.specsDir. Update
+# them if the project moves its spec tree.
 /.qfai/spec/decisions.md merge=union
 # Preserve reviewed page bytes; schema and duplicate checks still apply.
 /.qfai/spec/decisions/page-*.md -text merge=union
