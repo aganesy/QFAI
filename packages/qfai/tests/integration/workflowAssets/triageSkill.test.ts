@@ -60,7 +60,7 @@ describe("qfai-triage as a stage skill", () => {
     const description = String(front.description);
     expect(description).toMatch(/^Use when invoked by name or handed a QFAI work order\b/);
     expect(Array.from(`${String(front.name)}${description}`).length).toBeLessThanOrEqual(400);
-    expect(description).toContain("authorized cleanup of current-task temp dirs");
+    expect(description).toContain("authorized current-task temp dir cleanup");
     expect(description).not.toMatch(/[<>]/);
     expect(Object.keys(front)).not.toContain("disable-model-invocation");
     expect(Object.keys(front)).not.toContain("routing-profile");

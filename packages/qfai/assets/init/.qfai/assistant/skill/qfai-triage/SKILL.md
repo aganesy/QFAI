@@ -1,7 +1,7 @@
 ---
 name: qfai-triage
 title: QFAI Triage (Requests that end without a tracked change)
-description: "Use when invoked by name or handed a QFAI work order for a question, duplicate, missing information, split, automated or security report, operation only a person can run or the user named on finished work, or authorized cleanup of current-task temp dirs. Ordinary triage writes only its deliberation record, open questions and approval row. Authorized operations follow the Reviewer Gate."
+description: "Use when invoked by name or handed a QFAI work order for a question, duplicate, missing information, split, automated or security report, operation only a person can run or the user named on finished work, or authorized current-task temp dir cleanup. Ordinary triage writes only its deliberation record, open questions and approval row. Authorized operations follow the Reviewer Gate."
 argument-hint: "<the request, as it was reported>"
 allowed-tools: [Read, Glob, Grep, Write, Bash, TodoWrite, Task, Agent]
 steps:
