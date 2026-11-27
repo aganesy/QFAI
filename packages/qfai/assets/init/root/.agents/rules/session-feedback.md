@@ -133,21 +133,25 @@ project releases or deploys, the evidence shows it in the production environment
 or the distribution channel those users get. A preview deployment or another
 channel's release does not count, and where the evidence cannot show it, or
 cannot show whether the project releases or deploys at all, the finding stays
-held back. An unfixed one is held back and named to the user by its class of
-defect in the review's own message, beside the § 5 question or in its one line
-when nothing else is worth reporting. `reply-forms.md` treats a place whose
-audience cannot be confirmed as not private. Where the host shows that the
-message reaches the user alone, the message:
+held back. An unfixed one is held back and named to the user in the review's own
+message, beside the § 5 question or in its one line when nothing else is worth
+reporting. The message numbers each held-back finding, such as held-back
+security finding 1, and names it by that number alone. `reply-forms.md` treats a
+place whose audience cannot be confirmed as not private. Where the host shows
+that the message reaches the user alone, the message also:
 
+- names the finding's class of defect;
 - says where the finding is;
 - names the pull request it came from;
 - suggests asking for the finding's draft once the fix counts as fixed.
 
-Otherwise it does none of these three, and tells the user to ask about the
-finding where only they will see the answer. That answer is given under the same
-condition. Under a no-question mode the final report names it as held back by
-its class of defect, without saying where it is, since others may read that
-report, and tells the user to ask about it where only they will see the answer.
+Otherwise it does none of these four. It tells the user to continue this session
+where only they will see the answer and ask about the finding there by its
+number, since another session holds no record of it. An answer gives the four
+only where the host shows it reaches the user alone, and otherwise repeats this
+advice. Under a no-question mode the final report names it by its number alone,
+since others may read that report, and tells the user to ask about it where only
+they will see the answer.
 
 ## 3. What a draft holds
 
@@ -233,9 +237,8 @@ credential.
 Nothing is asked and nothing is filed or written. No proposal is added either.
 The drafts and the proposals of § 4 and § 8 go in the final report, and the
 report says none was filed or added, and that the proposals of § 8 were not
-written. A held-back security finding goes there too, named by its class of
-defect without saying where it is, with the advice to ask about it where only
-the user will see the answer.
+written. A held-back security finding goes there too, named by its number alone,
+with the advice to ask about it where only the user will see the answer.
 
 ## 8. Corrections to keep in the project
 
