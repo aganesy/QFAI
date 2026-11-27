@@ -1410,7 +1410,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // This digest covers the seed's raw UTF-8/LF bytes, including all union rules.
   // `qfai init` copies those bytes only when the destination does not exist.
-  [".gitattributes", "67d86eff0b259b483214106c7255d415083426dc31205f9fb23b7e1df1679cb0"],
+  [".gitattributes", "299d637d719d12bc35661b530b96d10cdb8d6ddd209662885b433fcdfef8f96f"],
   // The shipped `.gitignore` IS the generated managed block, so every line of it
   // moves this digest by construction. The block ignores `.qfai/evidence/` whole
   // and re-includes nothing under it; its only negations are `!.qfai/` and the
