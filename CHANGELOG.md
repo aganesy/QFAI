@@ -3327,8 +3327,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   was deleted in between. Closes #4504.
 
 - Automatic release tagging verifies that the pushed commit came from merging the
-  version's release branch within this repository. A skipped tag names the expected
-  release branch, target branch and pushed commit.
+  version's release branch within this repository. When no pull request satisfies
+  the association checks, the diagnostic names the expected release branch,
+  target branch, and pushed commit.
 
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the
