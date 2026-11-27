@@ -83,4 +83,12 @@ Feature: Catalogue the components a project already has
     Then each entry records `realizes` with the IDs its own declaration cites, once each and sorted, as its last key, and the component that cites none has no `realizes` key
     And an ID inside a single-line string, after code on the same line, or in another declarator of the same `const` list is not recorded
     And the shipped implementation UI guidance says to carry the rule's comment inside the declaration of the component that realises it or on its leading comment lines and to look up `realizes` before writing a region for a rule
+
+  # AC-0001-0307-15
+  Scenario: An agent's brief carries the committed catalogue
+    Given a committed `.qfai/catalog/components.yaml` and design token file
+    When `qfai catalog components --brief` runs
+    Then it writes nothing and prints one line per listed component with its name, file and every other key it holds, and one line with the token count and the theme
+    And a missing or invalid catalogue, or `--brief` with `--check`, exits 1 with one line
+    And the shipped implementation UI guidance and the prototyping generator prompt say to include that output in a screen unit's brief
 ```

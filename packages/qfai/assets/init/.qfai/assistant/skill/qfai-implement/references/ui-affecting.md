@@ -23,6 +23,9 @@ Read the flow, story, acceptance criterion, and example that the implementation 
 
 `.qfai/catalog/components.yaml` lists the components the `uiux.surfacePaths` files export, with their
 props and what their doc comments say. `npx qfai catalog components` writes it; commit the result.
+A brief that hands a screen unit to another agent includes the output of
+`npx qfai catalog components --brief`, one line per listed component and the design token count,
+rather than restating the components by hand.
 
 - Before writing a region, read the catalogue. Reuse a listed component whose `pattern` is that region,
   extending it if it lacks what the screen needs, rather than writing the region again.

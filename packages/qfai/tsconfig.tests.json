@@ -197,6 +197,7 @@
     "tests/integration/componentCatalog.test.ts",
     "tests/integration/legacyPatterns.test.ts",
     "tests/integration/componentCatalogWrite.test.ts",
+    "tests/integration/componentCatalogBrief.test.ts",
     "tests/integration/designCatalog.test.ts",
     "tests/helpers/cliCapture.ts",
     "tests/integration/designCatalogWrite.test.ts",

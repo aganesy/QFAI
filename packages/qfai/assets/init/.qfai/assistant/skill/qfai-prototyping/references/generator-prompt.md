@@ -55,6 +55,10 @@ identity.
    the feature is missing, as
    `.qfai/assistant/rule/ui-procurement.md#platform-features-and-the-browser-support-target`
    says. Consult the catalogue during feature selection. Only a feature beyond the browser-support target needs a selection record. Record why it is needed and its fallback in the region’s procurement record, then carry the exception into the handoff.
+9. When `.qfai/catalog/components.yaml` is committed, the output of
+   `npx qfai catalog components --brief`, which the session agent includes in
+   each screen unit's brief: one line per listed component and the design
+   token count. Build a region from the component listed for its pattern.
 
 ## HTML envelope (every iteration)
 
