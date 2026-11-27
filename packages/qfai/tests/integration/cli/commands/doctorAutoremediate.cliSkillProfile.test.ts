@@ -16,7 +16,18 @@
 // pre-fix bug lived in the CLI → autoremediate wire-up, not in the
 // autoremediate impl itself.
 
-import { access, mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
+import {
+  access,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readlink,
+  rm,
+  stat,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -25,6 +36,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
 import * as autoremediateModule from "../../../../src/core/doctor/autoremediate.js";
 import { recordAssistantVersion } from "../../../helpers/assistantVersion.js";
+import {
+  canCreateSymlink,
+  SHIPPED_SKILL,
+  wireProject,
+} from "../../../helpers/integrationWrapperFixture.js";
 
 const tempDirs: string[] = [];
 
@@ -82,6 +98,71 @@ afterEach(async () => {
 
 // QFAI:EX-0003-0009-01
 describe("doctor CLI threads skillProfile into autoremediate", () => {
+  // QFAI:EX-0003-0009-19
+  it("leaves a converged repair pass unchanged", async (test) => {
+    const root = await newTempDir("converged");
+    if (!(await canCreateSymlink(root))) test.skip();
+    await wireProject(root);
+    await recordAssistantVersion(root);
+
+    const skill = path.join(root, ".qfai", "assistant", "skill", SHIPPED_SKILL);
+    await writeFile(
+      path.join(skill, "manifest.json"),
+      JSON.stringify({ runtimeDependencies: ["playwright"] }),
+      "utf-8",
+    );
+    await mkdir(path.join(root, "node_modules", "playwright"), { recursive: true });
+    const wrapper = path.join(root, ".claude", "skills", SHIPPED_SKILL);
+    const backup = wrapper + ".qfai-repair-4242";
+    const backupNote = path.join(backup, "project-note.md");
+    const runLog = path.join(root, ".qfai", "report", "run-20260401120000001");
+    const runNote = path.join(runLog, "notes.md");
+    await mkdir(backup);
+    await mkdir(runLog, { recursive: true });
+    await writeFile(backupNote, "Owned by the project.\n", "utf-8");
+    await writeFile(runNote, "Recent run.\n", "utf-8");
+
+    const installRunner = vi.fn<autoremediateModule.InstallRunner>().mockResolvedValue(undefined);
+    const real = autoremediateModule.runAutoremediate;
+    vi.spyOn(autoremediateModule, "runAutoremediate").mockImplementation((options) =>
+      real({ ...options, installRunner }),
+    );
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const run = (): Promise<number> =>
+      runDoctor({
+        root,
+        rootExplicit: true,
+        autoremediate: true,
+        skillProfile: SHIPPED_SKILL,
+        yes: true,
+        format: "json",
+        failOn: "never",
+      });
+    expect(await run()).toBe(0);
+
+    const ignore = path.join(root, ".gitignore");
+    const earlier = new Date(2020, 0, 1);
+    await utimes(ignore, earlier, earlier);
+    const snapshot = async () => ({
+      ignore: await readFile(ignore),
+      ignoreModified: (await stat(ignore)).mtimeMs,
+      wrapperTarget: await readlink(wrapper),
+      wrapperInode: (await lstat(wrapper)).ino,
+      backup: await readFile(backupNote),
+      runLog: await readFile(runNote),
+    });
+    const before = await snapshot();
+    stderr.mockClear();
+    expect(await run()).toBe(0);
+
+    expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
+      "autoremediate: runtimeDependencies — all installed",
+    );
+    expect(installRunner).not.toHaveBeenCalled();
+    expect(await snapshot()).toEqual(before);
+  });
+
   it("invokes the install runner for the skill's runtimeDependencies via the CLI dispatch path", async () => {
     const root = await newTempDir("dispatch");
     const manifestDir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
