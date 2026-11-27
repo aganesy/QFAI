@@ -700,6 +700,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The recovery names `pnpm bootstrap` for QFAI source worktrees and explains
   how to replace an original `--root` while retaining the other options.
 
+- Validation accepts the QFAI copy selected by Yarn Plug’n’Play for the project,
+  including a copy loaded from a shared cache outside the project directory.
+
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
 
