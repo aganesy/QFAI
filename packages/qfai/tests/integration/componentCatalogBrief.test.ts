@@ -115,6 +115,42 @@ describe("the brief made from the committed catalogue", () => {
     expect(plain.out).not.toContain("Design tokens");
   });
 
+  // QFAI:EX-0001-0307-44
+  it("keeps multiline catalogue text on its component's line", async () => {
+    const root = await projectWith({
+      [CATALOG]: CATALOG_TEXT.replace(
+        "    a11y: APG button, Enter and Space activate",
+        [
+          "    a11y: |-",
+          "      Enter activates the button.",
+          "      Space also activates it.",
+        ].join("\n"),
+      ),
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    expect(brief.err).toBe("");
+    const lines = brief.out.trimEnd().split("\n");
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toBe("- Page (src/page.tsx)");
+    expect(lines[2]).toContain("a11y: Enter activates the button. Space also activates it.");
+  });
+
+  // QFAI:EX-0001-0307-44
+  it("names the readable theme when the design token file is malformed", async () => {
+    const root = await projectWith({
+      [CATALOG]: CATALOG_TEXT,
+      [TOKENS]: "{",
+      [THEME]: "@theme {}\n",
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    expect(brief.err).toBe("");
+    const lastLine = brief.out.trimEnd().split("\n").at(-1);
+    expect(lastLine).toContain(`${TOKENS} does not parse`);
+    expect(lastLine).toContain(THEME);
+  });
+
   // QFAI:EX-0001-0307-45
   it("refuses a missing or invalid catalogue in one line and --brief with --check as a usage error", async () => {
     const root = await projectWith({});
@@ -163,6 +199,23 @@ describe("the brief made from the committed catalogue", () => {
       expect(run.out).toBe("");
       expect(run.err).toMatch(couldNotRead(failing));
     }
+  });
+
+  // QFAI:EX-0001-0307-47
+  it.each([
+    { name: "absent", tokenText: null },
+    { name: "malformed", tokenText: "{" },
+  ])("reports an unreadable theme when the token file is $name", async ({ tokenText }) => {
+    const root = await projectWith({
+      [CATALOG]: CATALOG_TEXT,
+      ...(tokenText === null ? {} : { [TOKENS]: tokenText }),
+    });
+    await mkdir(path.join(root, ...THEME.split("/")), { recursive: true });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(1);
+    expect(brief.out).toBe("");
+    expect(brief.err.trimEnd().split("\n")).toHaveLength(1);
+    expect(brief.err).toContain(`qfai catalog components: could not read ${THEME}: `);
   });
 
   // QFAI:EX-0001-0307-46
