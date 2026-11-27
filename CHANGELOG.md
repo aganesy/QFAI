@@ -1349,6 +1349,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - The routine parser skips commas and parentheses inside quoted argument
   names and preserves quoted type names when checking for duplicate routines.
 
+- **DB SQL validation accepts punctuation after routine `DEFAULT`.** It
+  detects redefinitions with defaults such as `DEFAULT(NULL)` and preserves
+  qualified input types such as `app.default`.
+
 - Dollar-quoted and directly `E`- or `e`-prefixed defaults in SQL routines
   preserve the argument types that follow them. The duplicate check ignores
   punctuation inside these defaults when comparing the argument types.
