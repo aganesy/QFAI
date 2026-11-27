@@ -557,6 +557,11 @@ describe("the project layer describes the repository it is in", () => {
     expect(tagCreations("git tag --no-points-at")).toEqual([]);
     expect(tagCreations("git tag --points-at")).toEqual([]);
     expect(tagCreations("git tag --no-points-at --points-at")).toEqual([]);
+    expect(tagCreations("git tag --points-at HEAD --no-points-at --list vX.Y.Z")).toEqual([]);
+
+    const unknown = "git tag --no-unknown --points-at HEAD --no-points-at --list vX.Y.Z";
+    expect(tagCreations(unknown)).toEqual([unknown]);
+    expect(namesItsCommit(unknown)).toBe(false);
   });
 
   it.each(["git tag vX.Y.Z --me --contains", "git tag --me --sort vX.Y.Z"])(
