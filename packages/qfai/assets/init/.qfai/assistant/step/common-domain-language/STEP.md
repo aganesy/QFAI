@@ -77,8 +77,8 @@ glossary, then deletes that row. Nothing else is written.
    synonyms comma-separated, and the context only where the term splits. A
    context the row names is declared in `## Contexts`.
    A sentence that names a rejected word as a word, such as an old name or
-   what a user says, writes it in a code span, which the glossary check does
-   not read.
+   what a user says, writes it in a code span kept on one line, which
+   `npx qfai validate` does not read; a test title leaves the word out.
 
 ## Passes when
 

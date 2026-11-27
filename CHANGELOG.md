@@ -18,8 +18,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it leaves each settled term as an `open-questions.md` row; in the
   specification stage it writes the glossary. `qfai-discussion` and `qfai-sdd`
   list the step, and `npx qfai workflow plan` returns it. A sentence that names a
-  rejected word as a word writes it in a code span, which the glossary check
-  does not read.
+  rejected word as a word writes it in a code span kept on one line, which
+  the check does not read; a test title leaves the word out.
 
 - **`qfai catalog design` derives the design tokens and the Tailwind theme
   from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
