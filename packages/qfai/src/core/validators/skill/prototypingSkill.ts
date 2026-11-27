@@ -259,9 +259,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     issues.push(
       skillIssue(
         "QFAI-PROTOSKILL-011",
-        "Prototyping skill must limit execution to UI contracts with a full UI-NNNN ID and non-empty screens[].",
+        "Prototyping scope needs a full UI-NNNN ID for Markdown responsibilities and a non-empty screens[] list for structured contracts.",
         "error",
-        "State that only UI contracts with a full UI-NNNN ID and non-empty screens[] are eligible.",
+        "Describe Markdown UI responsibilities and the screens[] requirement for structured contracts.",
       ),
     );
   }
