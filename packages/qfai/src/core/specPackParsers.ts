@@ -96,11 +96,97 @@ export function maskLineComments(
 /** Start of a CommonMark type-2 HTML block: a comment opening the line. */
 const COMMENT_BLOCK_START = /^ {0,3}<!--/;
 
+/** A pipe directly after a backslash belongs to its table cell. */
+const TABLE_CELL_SEPARATOR = /(?<!\\)\|/;
+
 /** A top-level indented code block: four spaces or a tab, per CommonMark. */
 const INDENTED_CODE_LINE = /^(?: {4}|\t)/;
 
 /** A list item marker, which makes the indentation below it continuation. */
-const LIST_ITEM_LINE = /^\s*(?:[-*+]|\d+[.)])\s/;
+const LIST_ITEM_LINE = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]/;
+const LIST_ITEM_MARKER_AT = /(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$)/y;
+
+/** Measure indentation in columns so tabs use CommonMark's four-column stops. */
+function markdownIndent(
+  text: string,
+  offset = 0,
+  columns = 0,
+): { offset: number; columns: number } {
+  while (text[offset] === " " || text[offset] === "\t") {
+    columns += text[offset] === "\t" ? 4 - (columns % 4) : 1;
+    offset += 1;
+  }
+  return { offset, columns };
+}
+
+/** Find a thematic break at the end of a line in one pass, before reading list markers. */
+function thematicBreakOffset(line: string): number {
+  let offset = line.length - 1;
+  while (line[offset] === " " || line[offset] === "\t") offset -= 1;
+  const marker = line[offset];
+  if (marker !== "-" && marker !== "*" && marker !== "_") return -1;
+
+  let markers = 0;
+  let start = offset;
+  for (; offset >= 0; offset -= 1) {
+    const ch = line[offset];
+    if (ch === marker) {
+      markers += 1;
+      start = offset;
+    } else if (ch !== " " && ch !== "\t") {
+      break;
+    }
+  }
+  return markers >= 3 ? start : -1;
+}
+
+/** Locate block markup within the current list item and any new markers on this line. */
+function listContentLine(
+  line: string,
+  indentation: { offset: number; columns: number },
+  listIndents: number[],
+  paragraphOpen: boolean,
+): { container: number; contentOffset: number | undefined; continuesParagraph?: true } {
+  const previousContainer = listIndents.at(-1) ?? 0;
+  if (indentation.offset < line.length) {
+    while ((listIndents.at(-1) ?? 0) > indentation.columns) listIndents.pop();
+  }
+  let container = listIndents.at(-1) ?? 0;
+  if (indentation.columns - container > 3) return { container, contentOffset: undefined };
+
+  const thematicBreak = thematicBreakOffset(line);
+  let { offset, columns } = indentation;
+  for (;;) {
+    if (offset === thematicBreak) return { container, contentOffset: offset };
+    LIST_ITEM_MARKER_AT.lastIndex = offset;
+    const marker = LIST_ITEM_MARKER_AT.exec(line)?.[0];
+    if (!marker) return { container, contentOffset: offset };
+
+    const markerEnd = columns + marker.length;
+    const padding = markdownIndent(line, offset + marker.length, markerEnd);
+    const empty = padding.offset === line.length;
+    const interruptsParagraph =
+      paragraphOpen && container === previousContainer && offset === indentation.offset;
+    if (interruptsParagraph && empty) {
+      // A single dash here can underline a heading in the current paragraph.
+      // An empty item can start after leaving that paragraph's container.
+      return { container, contentOffset: undefined };
+    }
+    if (interruptsParagraph && marker.length > 1 && Number(marker.slice(0, -1)) !== 1) {
+      // An existing list can have later numbered items. A new list can
+      // interrupt this paragraph only if its first item starts at 1.
+      return { container, contentOffset: offset, continuesParagraph: true };
+    }
+    if (empty || padding.columns - markerEnd > 4) {
+      container = markerEnd + 1;
+      listIndents.push(container);
+      return { container, contentOffset: undefined };
+    }
+    ({ offset, columns } = padding);
+    container = columns;
+    listIndents.push(container);
+  }
+}
 
 /**
  * The CommonMark raw HTML blocks that run to an end marker regardless of blank
@@ -113,7 +199,7 @@ const LIST_ITEM_LINE = /^\s*(?:[-*+]|\d+[.)])\s/;
  * - Type 4: a declaration, `<!` and an ASCII letter, to `>`.
  * - Type 5: a CDATA section, `<![CDATA[` to `]]>`.
  *
- * Type 2, the comment, is carried by {@link maskLineComments} instead.
+ * Type-2 comment blocks are handled by {@link maskNonSpecRegions} instead.
  */
 const END_TERMINATED_HTML_BLOCKS: readonly { start: RegExp; end: RegExp }[] = [
   {
@@ -265,19 +351,93 @@ function endsParagraph(line: string): boolean {
  * line that {@link endsParagraph} starts a new block, so an inline comment
  * cannot reach past one, nor close on a `-->` that line holds.
  */
-function paragraphClosers(lines: readonly string[]): boolean[] {
+function paragraphClosers(
+  lines: readonly string[],
+  tableRows: ReadonlySet<number>,
+  commentStarts: ReadonlySet<number>,
+): boolean[] {
   const ahead: boolean[] = new Array<boolean>(lines.length).fill(false);
   let closer = false;
   for (let index = lines.length - 1; index >= 0; index -= 1) {
+    if (tableRows.has(index)) {
+      closer = false;
+      continue;
+    }
     ahead[index] = closer;
     const line = lines[index] ?? "";
-    if (endsParagraph(line)) {
+    if (commentStarts.has(index) || endsParagraph(line)) {
       closer = false;
     } else if (line.includes("-->")) {
       closer = true;
     }
   }
   return ahead;
+}
+
+/** Locate table rows and comment block starts relative to list item content. */
+function tableRowsAndCommentStarts(lines: readonly string[]): {
+  tableRows: Set<number>;
+  commentStarts: Set<number>;
+} {
+  const tableRows = new Set<number>();
+  const commentStarts = new Set<number>();
+  const listIndents: number[] = [];
+  let paragraphOpen = false;
+  let headerAt = -1;
+  let headerContainer: number | undefined;
+  let tableContainer: number | undefined;
+  for (const [index, line] of lines.entries()) {
+    const { container, contentOffset, continuesParagraph } = listContentLine(
+      line,
+      markdownIndent(line),
+      listIndents,
+      paragraphOpen,
+    );
+    const content = contentOffset === undefined ? "" : line.slice(contentOffset);
+    paragraphOpen = continuesParagraph || (contentOffset !== undefined && !endsParagraph(content));
+    if (COMMENT_BLOCK_START.test(content)) commentStarts.add(index);
+    if (contentOffset === undefined || !looksLikeTableRow(line)) {
+      headerAt = -1;
+      tableContainer = undefined;
+      continue;
+    }
+    if (tableContainer === container) {
+      tableRows.add(index);
+      continue;
+    }
+    tableContainer = undefined;
+    if (headerAt === index - 1 && headerContainer === container && isTableSeparator(line)) {
+      const delimiterCells = splitMarkdownRow(line);
+      if (
+        delimiterCells.every((cell) => cell.length > 0) &&
+        splitMarkdownRow(lines[headerAt] ?? "").length === delimiterCells.length
+      ) {
+        tableRows.add(headerAt);
+        tableRows.add(index);
+        tableContainer = container;
+        continue;
+      }
+    }
+    headerAt = index;
+    headerContainer = container;
+  }
+  return { tableRows, commentStarts };
+}
+
+/** Mask each cell independently and keep its physical separators intact. */
+function maskTableRowComments(line: string): string {
+  const cells = line.split(TABLE_CELL_SEPARATOR);
+  return cells
+    .map((cell, index) => {
+      const visible = maskLineComments(cell, false, false).text;
+      if (visible === cell) return cell;
+      // Keep an emptied edge cell and prevent a newly adjacent backslash
+      // from escaping the next separator.
+      if (visible.trim().length === 0) return index === cells.length - 1 ? " |" : " ";
+      if (visible.endsWith("\\") && index < cells.length - 1) return `${visible} `;
+      return visible;
+    })
+    .join("|");
 }
 
 /**
@@ -299,20 +459,16 @@ function paragraphClosers(lines: readonly string[]): boolean[] {
  *
  * **A comment that opens a line is an HTML block**, as CommonMark reads it:
  * every line through the one holding `-->` is blanked whole, and with no `-->`
- * it runs to the end of the document. A `<!--` after the block's `-->` on that
+ * it runs to the end of its list item or the document. A `<!--` after the block's `-->` on that
  * line is raw block text and opens nothing. **One opened inside a line is
  * inline:** only the comment is removed and the text after its `-->` stays. It
  * cannot outlive its paragraph, so a `<!--` whose `-->` does not follow before
  * the next line that starts a block — a blank line, a heading, a thematic
  * break, a fence, an HTML block, a block quote or a list item — is literal text.
  *
- * SIMPLIFIED: an inline comment runs across table rows, although GFM parses
- * each row on its own and shows a comment split over two rows as text; the
- * row it closes in keeps only the text after its `-->`. And text after an
- * inline `-->` that would read as a heading or thematic break is blanked
- * rather than kept as paragraph text.
- * Lift when: a document needs a table cell's comment shown as text, or reads
- * an ID from text after an inline comment's `-->`, which none in this tree does.
+ * Each table cell ends its own inline comment scan. Delimiters in separate
+ * cells or rows remain visible. Text after an inline `-->` that would read
+ * as a heading or thematic break is blanked rather than kept as paragraph text.
  *
  * **Raw HTML blocks are blanked too**, all seven CommonMark types. A `<pre>`, a
  * CDATA section, a `<div>` or a custom element such as `<review-note>` holds
@@ -320,42 +476,57 @@ function paragraphClosers(lines: readonly string[]): boolean[] {
  * `| TC-ID |` row inside one is not a table row — reading either as spec
  * content lets a document satisfy a gate with markup it never wrote.
  *
- * **Indented code is recognised only at the top level.** Under a list item,
- * four-space indentation is continuation rather than code, and telling the two
- * apart needs the list's content column. Rather than guess it, a block is code
- * only when no list is open — which closes the hole a document can be authored
- * into while never blanking a table someone indented under a bullet.
+ * Fenced blocks under a list item use the item's content column. Unclosed
+ * fences end with their item. Indented code blocks are recognised at the top
+ * level; under list items the reader preserves indented table continuations.
  */
 export function maskNonSpecRegions(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  let open: { marker: string; length: number } | null = null;
+  let open: { marker: string; length: number; container: number } | null = null;
   let inComment = false;
-  // Whether the open comment opened a line, and so is an HTML block.
-  let inBlockComment = false;
+  let commentBlockContainer: number | undefined;
   // Per line, whether a `-->` follows on a later line of the same paragraph:
   // the closer an inline comment opened on that line can still reach.
-  const closerAhead = paragraphClosers(lines);
+  const { tableRows, commentStarts } = tableRowsAndCommentStarts(lines);
+  const closerAhead = paragraphClosers(lines, tableRows, commentStarts);
   let inIndentedCode = false;
   let rawHtmlEnd: RegExp | null = null;
   let inBlankTerminatedHtml = false;
-  let listOpen = false;
+  const listIndents: number[] = [];
   let prevBlank = true;
-  // Whether the line before is visible paragraph text, which a type-7 block
-  // cannot interrupt.
-  //
-  // SIMPLIFIED: every visible line other than a heading, a setext underline or
-  // a thematic break counts as paragraph text, a table row included.
-  // Lift when: a document opens a custom-element block straight under a table
-  // row and needs it blanked, which none in this tree does.
+  // Whether the last visible line can continue a paragraph in its container.
   let paragraphOpen = false;
+  // SIMPLIFIED: a visible table row keeps the type-7 HTML paragraph flag open.
+  // Lift when: a standalone custom element immediately after a table must open a block.
+  let htmlParagraphOpen = false;
 
   const maskLine = (line: string, index: number): string => {
+    const previousParagraphOpen = paragraphOpen;
+    paragraphOpen = false;
+    const blank = line.trim().length === 0;
+    const indentation = markdownIndent(line);
     if (open !== null) {
-      const closing = FENCE_CLOSE_LINE.exec(line)?.[1];
-      if (closing && closing.charAt(0) === open.marker && closing.length >= open.length) {
+      if (!blank && indentation.columns < open.container) {
         open = null;
+      } else {
+        const closing =
+          indentation.columns - open.container <= 3
+            ? FENCE_CLOSE_LINE.exec(line.slice(indentation.offset))?.[1]
+            : undefined;
+        if (closing && closing.charAt(0) === open.marker && closing.length >= open.length) {
+          open = null;
+        }
+        return "";
       }
-      return "";
+    }
+
+    if (commentBlockContainer !== undefined) {
+      if (blank || indentation.columns >= commentBlockContainer) {
+        prevBlank = blank;
+        if (line.includes("-->")) commentBlockContainer = undefined;
+        return "";
+      }
+      commentBlockContainer = undefined;
     }
 
     if (rawHtmlEnd !== null) {
@@ -366,8 +537,6 @@ export function maskNonSpecRegions(text: string): string {
       }
       return "";
     }
-
-    const blank = line.trim().length === 0;
 
     if (inBlankTerminatedHtml) {
       // The blank line ends the block and is itself outside it, so it is kept
@@ -380,6 +549,12 @@ export function maskNonSpecRegions(text: string): string {
       return "";
     }
 
+    const { container, contentOffset, continuesParagraph } = listContentLine(
+      line,
+      indentation,
+      listIndents,
+      previousParagraphOpen,
+    );
     if (inIndentedCode) {
       // A blank line does not end the block — an indented sample may contain
       // one — but the first non-blank line at a shallower indent does.
@@ -388,64 +563,53 @@ export function maskNonSpecRegions(text: string): string {
         return "";
       }
       inIndentedCode = false;
-    } else if (!listOpen && prevBlank && !blank && INDENTED_CODE_LINE.test(line)) {
+    } else if (container === 0 && prevBlank && !blank && INDENTED_CODE_LINE.test(line)) {
       inIndentedCode = true;
       prevBlank = false;
       return "";
     }
 
-    if (LIST_ITEM_LINE.test(line)) {
-      listOpen = true;
-    } else if (!blank && !/^\s/.test(line)) {
-      // A non-blank line at column zero that is not a list item ends the list,
-      // so indentation after it is code again.
-      listOpen = false;
-    }
     prevBlank = blank;
 
     // The fence opener is read before the comment scan, because a `<!--` in
     // an info string labels the sample rather than opening a comment. Only
     // when a comment is already open does the scan come first: a fence marker
     // inside one is comment text.
-    if (!inComment) {
-      const opener = FENCE_LINE.exec(line)?.[1];
+    if (!inComment && contentOffset !== undefined) {
+      const opener = FENCE_LINE.exec(line.slice(contentOffset))?.[1];
       if (opener) {
-        open = { marker: opener.charAt(0), length: opener.length };
+        open = { marker: opener.charAt(0), length: opener.length, container };
         return "";
       }
     }
 
-    // A comment that opens a line is a CommonMark HTML block, which runs to the
-    // end of the document when nothing closes it; only a comment opened inside
-    // a line needs a `-->` later in its own paragraph to be one.
-    const blockStart = !inComment && COMMENT_BLOCK_START.test(line);
-    const masked = maskLineComments(line, inComment, blockStart || closerAhead[index] === true);
-    const inInlineComment = inComment && !inBlockComment;
-    // A line that opens with a comment, or that a comment opened at the start
-    // of a line runs into, is comment through its end: CommonMark makes it an
-    // HTML block up to the line holding `-->`. Stripping the comment alone
-    // would hand back what follows it at the start of a line, so
-    // `<!-- note --> ## Risks` would read as a heading and a ```` ``` ````
-    // after a closing `-->` as a fence that hides the rest of the document.
-    const commentLine = blockStart || (inComment && inBlockComment);
-    // A comment block ends on the line holding its `-->`, so a `<!--` after
-    // that on the same line is raw block text and leaves nothing open.
-    const blockEnds = commentLine && line.includes("-->");
-    inComment = masked.open && !blockEnds;
-    inBlockComment = inComment && commentLine;
-    if (commentLine) {
+    if (
+      !inComment &&
+      contentOffset !== undefined &&
+      COMMENT_BLOCK_START.test(line.slice(contentOffset))
+    ) {
+      if (!line.includes("-->", contentOffset)) commentBlockContainer = container;
       return "";
     }
-    if (inInlineComment) {
+
+    const wasInComment = inComment;
+    const masked =
+      tableRows.has(index) && !inComment
+        ? { text: maskTableRowComments(line), open: false }
+        : maskLineComments(line, inComment, closerAhead[index] === true);
+    inComment = masked.open;
+    if (wasInComment) {
       // A comment opened inside a line ends inside one, so what follows its
       // `-->` continues that paragraph or table row and cannot open a block.
       // Blanking it whole cut a table at the row a cell's comment closed in.
-      return NON_PARAGRAPH_LINE.test(masked.text) ? "" : masked.text;
+      const visible = NON_PARAGRAPH_LINE.test(masked.text) ? "" : masked.text;
+      paragraphOpen = previousParagraphOpen || visible.trim().length > 0;
+      return visible;
     }
 
     const fence = FENCE_LINE.exec(masked.text)?.[1];
     if (fence) {
-      open = { marker: fence.charAt(0), length: fence.length };
+      open = { marker: fence.charAt(0), length: fence.length, container };
       return "";
     }
 
@@ -461,19 +625,21 @@ export function maskNonSpecRegions(text: string): string {
     // the fence check, so `<div>` inside a fenced sample is sample text.
     if (
       BLANK_TERMINATED_HTML_START.test(masked.text) ||
-      (!paragraphOpen && SINGLE_TAG_HTML_START.test(masked.text))
+      (!htmlParagraphOpen && SINGLE_TAG_HTML_START.test(masked.text))
     ) {
       inBlankTerminatedHtml = true;
       return "";
     }
+    paragraphOpen =
+      continuesParagraph || !endsParagraph(masked.text.slice(contentOffset ?? indentation.offset));
     return masked.text;
   };
 
   return lines
     .map((line, index) => {
-      const visibleLine = maskLine(line, index);
-      paragraphOpen = visibleLine.trim().length > 0 && !NON_PARAGRAPH_LINE.test(visibleLine);
-      return visibleLine;
+      const visible = maskLine(line, index);
+      htmlParagraphOpen = visible.trim().length > 0 && !NON_PARAGRAPH_LINE.test(visible);
+      return visible;
     })
     .join("\n");
 }
@@ -563,29 +729,9 @@ export function escapeTableCell(value: string): string {
  *   MUST be extended with the new character class.
  */
 export function splitMarkdownRow(line: string): string[] {
-  const trimmed = line.trim();
-  const inner = trimEdgePipes(trimmed);
-  const cells: string[] = [];
-  let current = "";
-
-  for (let index = 0; index < inner.length; index += 1) {
-    const ch = inner[index];
-    if (ch === undefined) continue;
-    const next = inner[index + 1];
-    if (ch === "\\" && next === "|") {
-      current += "|";
-      index += 1;
-      continue;
-    }
-    if (ch === "|") {
-      cells.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += ch;
-  }
-  cells.push(current.trim());
-  return cells;
+  return trimEdgePipes(line.trim())
+    .split(TABLE_CELL_SEPARATOR)
+    .map((cell) => cell.replace(/\\\|/g, "|").trim());
 }
 
 /**

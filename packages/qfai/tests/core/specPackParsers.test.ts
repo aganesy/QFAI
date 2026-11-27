@@ -4,6 +4,7 @@ import {
   escapeTableCell,
   maskNonSpecRegions,
   parseAllMarkdownTables,
+  parseRenderedMarkdownTables,
   splitMarkdownRow,
 } from "../../src/core/specPackParsers.js";
 
@@ -84,6 +85,217 @@ describe("escapeTableCell ↔ splitMarkdownRow round-trip identity", () => {
   it("CRLF and CR line breaks collapse to a single space", () => {
     expect(roundTrip("line1\r\nline2", "line1\rline2")).toEqual(["line1 line2", "line1 line2"]);
   });
+});
+
+describe("parseRenderedMarkdownTables", () => {
+  const header = "| Label | Expected |";
+  const separator = "| --- | --- |";
+
+  // QFAI:EX-0001-0039-77
+  it.each([
+    ["123. Sample:\n     ```md", "     ```", "     "],
+    ["123. ```md", "", "     "],
+    ["1. First item\n2. ```md", "   ```", "   "],
+    ["A paragraph\n1. ```md", "   ```", "   "],
+    ["- - ~~~md", "    ~~~", "    "],
+    ["123.\n     ~~~md", "     ~~~", "     "],
+    ["- Heading\n  -\n    ~~~md", "    ~~~", "  "],
+    ["- Heading <!--\n  hidden prose\n  -->\n  -\n    ~~~md", "    ~~~", "  "],
+    ["- Prior paragraph\n-\n     ~~~md", "     ~~~", "  "],
+    ["- # Heading\n  -\n      ~~~md", "      ~~~", "    "],
+  ])("ignores a fenced table inside list content starting with %j", (opener, closer, indent) => {
+    const text = [
+      header,
+      separator,
+      "| Before | visible |",
+      "",
+      opener,
+      indent + header,
+      indent + separator,
+      indent + "| Inside | hidden |",
+      closer,
+      "",
+      header,
+      separator,
+      "| After | visible |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      { headers: ["Label", "Expected"], rows: [["Before", "visible"]] },
+      { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
+  it.each([
+    ["A paragraph\n2. ```md", "   "],
+    ["A paragraph\n2. Wrapped text\n3. ```md", "   "],
+    ["- A paragraph\n  2. ```md", "     "],
+  ])("keeps a visible table after a non-interrupting ordered marker in %j", (prefix, indent) => {
+    const text = [
+      prefix,
+      "",
+      indent + header,
+      indent + separator,
+      indent + "| Row | visible |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      { headers: ["Label", "Expected"], rows: [["Row", "visible"]] },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
+  it.each([
+    ["", ""],
+    ["123. Visible table:\n\n", "     "],
+  ])("keeps cells between incomplete comments on separate rows after %j", (prefix, indent) => {
+    const text =
+      prefix +
+      [
+        header,
+        separator,
+        "| Starts with <!-- | first |",
+        "| Changes | visible |",
+        "| Ends with --> | last |",
+      ]
+        .map((row) => indent + row)
+        .join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      {
+        headers: ["Label", "Expected"],
+        rows: [
+          ["Starts with <!--", "first"],
+          ["Changes", "visible"],
+          ["Ends with -->", "last"],
+        ],
+      },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
+  it.each(["", "     Intro <!-- unfinished"])(
+    "omits a comment block in a list after %j before the next visible table",
+    (preceding) => {
+      const text = [
+        "123. Example:",
+        preceding,
+        "     <!-- draft",
+        "     " + header,
+        "     " + separator,
+        "     | Hidden | draft |",
+        "     -->",
+        "",
+        "     " + header,
+        "     " + separator,
+        "     | After | visible |",
+      ].join("\n");
+
+      expect(parseRenderedMarkdownTables(text)).toEqual([
+        { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+      ]);
+    },
+  );
+
+  // QFAI:EX-0001-0039-77
+  it("ends a list comment block at a dedented table even without a closer", () => {
+    const text = [
+      "123. <!-- draft",
+      "     " + header,
+      "     " + separator,
+      "     | Hidden | draft |",
+      "",
+      header,
+      separator,
+      "| After | visible |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
+  it("masks only complete inline comments within a single table cell", () => {
+    const text = [
+      header,
+      separator,
+      "| Starts with <!-- | Ends with --> |",
+      "| Keep<!-- hidden \\| pipe --> visible | Next |",
+      "| `<!-- literal -->` | Another |",
+      "|<!-- hidden -->| Right |",
+      "| Left |<!-- hidden -->",
+      "| Text\\<!-- hidden -->| Right |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      {
+        headers: ["Label", "Expected"],
+        rows: [
+          ["Starts with <!--", "Ends with -->"],
+          ["Keep visible", "Next"],
+          ["`<!-- literal -->`", "Another"],
+          ["", "Right"],
+          ["Left", ""],
+          ["Text\\", "Right"],
+        ],
+      },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
+  it.each([
+    ["", ""],
+    ["- - -\n", "  "],
+  ])("omits tables in ordinary fences and HTML comment blocks after %j", (prefix, indent) => {
+    const text = [
+      prefix + indent + "~~~md",
+      header,
+      separator,
+      "| Fenced | hidden |",
+      indent + "~~~",
+      "",
+      "<!--",
+      header,
+      separator,
+      "| Commented | hidden |",
+      "-->",
+      "",
+      header,
+      separator,
+      "| After | visible |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
+  it.each([
+    ["unequal columns", "", "| --- |"],
+    ["four-column root indentation", "    ", separator],
+  ])(
+    "keeps a table candidate with %s inside its multiline inline comment",
+    (_case, indent, delimiter) => {
+      const text = [
+        "Before <!--",
+        indent + header,
+        indent + delimiter,
+        indent + "| Hidden | example |",
+        "--> after",
+        "",
+        header,
+        separator,
+        "| After | visible |",
+      ].join("\n");
+
+      expect(parseRenderedMarkdownTables(text)).toEqual([
+        { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+      ]);
+    },
+  );
 });
 
 describe("maskNonSpecRegions", () => {
@@ -255,11 +467,11 @@ describe("maskNonSpecRegions", () => {
     expect(visible(text)).toEqual(["## Scope"]);
   });
 
-  it("does not let a custom-element tag interrupt a paragraph", () => {
+  it.each(["Some prose.", "> lead"])("does not let a custom-element tag interrupt %j", (lead) => {
     // A type-7 block cannot interrupt a paragraph, so the tag line and what
     // follows it are paragraph text.
-    expect(visible(["Some prose.", "<review-note>", "## Scope"].join("\n"))).toEqual([
-      "Some prose.",
+    expect(visible([lead, "<review-note>", "## Scope"].join("\n"))).toEqual([
+      lead,
       "<review-note>",
       "## Scope",
     ]);
@@ -283,10 +495,7 @@ describe("maskNonSpecRegions", () => {
     ]);
   });
 
-  it("keeps the table rows after the row a cell's comment closes in", () => {
-    // Every line an open comment ran into was blanked whole, so the row
-    // holding `-->` became a blank line, the table ended there, and every row
-    // below it was lost.
+  it("keeps comment-like text when its delimiters are in separate table rows", () => {
     const text = [
       "| ID | Note |",
       "| --- | --- |",
@@ -296,13 +505,11 @@ describe("maskNonSpecRegions", () => {
     ].join("\n");
 
     const [table] = parseAllMarkdownTables(maskNonSpecRegions(text));
-    expect(table?.rows).toHaveLength(3);
-    expect(table?.rows[0]).toEqual(["CLI-0001", "a"]);
-    // The row the comment closes in keeps only the text after its `-->`, the
-    // simplification `maskNonSpecRegions` documents; GFM would show both rows'
-    // cells. Lifting it changes this row, so the test says so.
-    expect(table?.rows[1]).toEqual([""]);
-    expect(table?.rows[2]).toEqual(["CLI-0003", "c"]);
+    expect(table?.rows).toEqual([
+      ["CLI-0001", "a <!-- todo"],
+      ["CLI-0002", "b -->"],
+      ["CLI-0003", "c"],
+    ]);
   });
 
   it("ends the paragraph of a mid-line `<!--` at a line that starts another block", () => {

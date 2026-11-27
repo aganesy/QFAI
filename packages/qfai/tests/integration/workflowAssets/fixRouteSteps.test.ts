@@ -70,8 +70,10 @@ describe("a fix route from the diagnosis to the commit", () => {
     expect(step).toContain("Express the authorized deliverable paths relative to that root.");
     expect(step).toContain("Run the index comparisons and staging from the repository root.");
     expect(step).toMatch(
-      /stage exactly the (?:authorized )?tracked deliverables the run wrote, with `git add <those paths>`/i,
+      /stage exactly the (?:authorized )?tracked deliverables the run wrote with `git --literal-pathspecs add -- <those paths>`/i,
     );
+    expect(step).toMatch(/pass each filename as a separate argument/i);
+    expect(step).toMatch(/quote and escape the filename for that shell/i);
     expect(step).toMatch(/never `git add -A`/i);
     expect(step).toMatch(
       /already modified before the run and then written by it is committed whole; the final report names it/i,

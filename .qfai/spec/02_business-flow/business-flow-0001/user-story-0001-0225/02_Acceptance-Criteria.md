@@ -28,6 +28,7 @@ Feature: Review a change twice: the specification before the code, and the code 
     And lint, typecheck, build, the full tests and `qfai validate` run there and nowhere earlier in the route
     And for an ordinary verification commit, when every gate passed and both index checks confirm no unrelated staged paths, the change is committed locally, and nothing is pushed
     And an ordinary verification commit uses repository-root-relative paths and runs index checks and staging from the repository root
+    And staging treats each authorized filename literally, including characters that Git or the shell would otherwise interpret
     And an initial index read failure is reported and stops the run before staging
     And an ordinary verification commit with unrelated staged paths reports them and stops before committing, preserving their staged state
     And a gate delegated (CI-only or by instruction), under a user instruction or project policy covering the commit, may remain DELEGATED with its named check pending while a local commit transports only the session's tracked deliverables to CI

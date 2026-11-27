@@ -116,6 +116,22 @@ async function packagedMdschema(options: {
   await packagedChecker("", `{ command: process.execPath, args: [${JSON.stringify(command)}] }`);
 }
 
+function expectPnpmApprovalGuidance(message: string): void {
+  expect(message).toContain(
+    "On pnpm 10.1.0 or later, use `pnpm approve-builds` to approve @jackchuka/mdschema.",
+  );
+  expect(message).toContain("pnpm 11 records approvals under `allowBuilds` by default.");
+  expect(message).toContain(
+    "In `pnpm-workspace.yaml`, pnpm 10 updates an existing `allowBuilds` map from 10.26.0.",
+  );
+  expect(message).toContain(
+    "From 10.31.0, it also creates the map when neither `onlyBuiltDependencies` nor `ignoredBuiltDependencies` is configured.",
+  );
+  expect(message).toContain(
+    "Otherwise, on pnpm 10.1.0 or later in the 10.x series, the command records approvals under `onlyBuiltDependencies`.",
+  );
+}
+
 describe("qfai doctor reports whether the mdschema binary runs", () => {
   // QFAI:EX-0003-0011-22
   it("is ok when the binary answers --help, and starts it with that and nothing else", async () => {
@@ -219,9 +235,7 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     expect(check.message).toContain("mdschema binary not found at /nowhere");
     expect(check.message).toContain("optional dependenc");
     expect(check.message).toContain("npm approve-scripts");
-    expect(check.message).toContain("pnpm approve-builds");
-    expect(check.message).toContain("`allowBuilds` for pnpm 10.31 or later");
-    expect(check.message).toContain("`onlyBuiltDependencies` for earlier pnpm 10");
+    expectPnpmApprovalGuidance(check.message);
     expect(check.details["reason"]).toBe("mdschema binary not found at /nowhere");
   });
 
@@ -260,9 +274,7 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     expect(check.severity).toBe("error");
     expect(check.message).toContain("no @jackchuka/mdschema installation was found");
     expect(check.message).toContain("npm approve-scripts");
-    expect(check.message).toContain("pnpm approve-builds");
-    expect(check.message).toContain("`allowBuilds` for pnpm 10.31 or later");
-    expect(check.message).toContain("`onlyBuiltDependencies` for earlier pnpm 10");
+    expectPnpmApprovalGuidance(check.message);
   });
 
   // QFAI:EX-0003-0011-23

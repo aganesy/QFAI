@@ -14,7 +14,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
 import { runInit } from "../helpers/legacyInit.js";
@@ -55,7 +55,7 @@ async function seedLocalPlaywright(root: string): Promise<void> {
   }
 }
 
-async function readDoctorJson(root: string): Promise<DoctorJson> {
+async function readDoctorJson(root: string, targetUrl?: string): Promise<DoctorJson> {
   const outPath = path.join(root, ".qfai", "report", "doctor.json");
   await runDoctor({
     root,
@@ -63,6 +63,7 @@ async function readDoctorJson(root: string): Promise<DoctorJson> {
     format: "json",
     outPath,
     profile: "prototyping",
+    ...(targetUrl === undefined ? {} : { targetUrl }),
   });
   return JSON.parse(await readFile(outPath, "utf-8")) as DoctorJson;
 }
@@ -81,6 +82,50 @@ type DoctorJson = {
 function findCheck(data: DoctorJson, id: string): DoctorJson["checks"][number] | undefined {
   return data.checks.find((check) => check.id === id);
 }
+
+// QFAI:AC-0003-0006-06
+// QFAI:EX-0003-0006-07
+it("checks the configured and explicit prototyping targets without contacting them", async () => {
+  const root = await newTempDir("offline-target");
+  const configuredUrl = "https://example.invalid/configured";
+  const explicitUrl = "http://127.0.0.1:3100/preview";
+  const configPath = path.join(root, "qfai.config.yaml");
+  await writeFile(
+    configPath,
+    `prototyping:\n  execution:\n    targetUrl: ${configuredUrl}\n`,
+    "utf8",
+  );
+  await seedLocalPlaywright(root);
+
+  const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null));
+  try {
+    const configured = findCheck(await readDoctorJson(root), "prototyping.targetUrl");
+    expect(configured?.severity).toBe("ok");
+    expect(configured?.details).toEqual({ source: "config", targetUrl: configuredUrl });
+
+    const explicit = findCheck(await readDoctorJson(root, explicitUrl), "prototyping.targetUrl");
+    expect(explicit?.severity).toBe("ok");
+    expect(explicit?.details).toEqual({ source: "cli", targetUrl: explicitUrl });
+
+    for (const url of [
+      "relative.html",
+      "ftp://example.invalid/prototype",
+      "https://test-user@example.invalid/prototype",
+    ]) {
+      const refused = findCheck(await readDoctorJson(root, url), "prototyping.targetUrl");
+      expect(refused?.severity, url).toBe("error");
+      expect(refused?.details?.statusCode, url).toBeUndefined();
+    }
+
+    await writeFile(configPath, "prototyping: {}\n", "utf8");
+    const missing = findCheck(await readDoctorJson(root), "prototyping.targetUrl");
+    expect(missing?.severity).toBe("warning");
+    expect(missing?.details?.statusCode).toBeUndefined();
+    expect(fetch).not.toHaveBeenCalled();
+  } finally {
+    fetch.mockRestore();
+  }
+});
 
 // QFAI:EX-0003-0006-01
 // QFAI:EX-0003-0006-03
