@@ -42,11 +42,12 @@ Feature: Move policy and catalog content into the merged files once
 
   # AC-0004-0006-06
   Scenario: A 1.x file that is no contract is retired for a person
-    Given a Markdown file under `api/`, `db/` or `ui/`, and files under `design/`
+    Given an unnumbered Markdown note under `api/`, `db/` or `ui/`, and files under `design/`
     When step 3 runs
     Then none of them takes a contract ID or is written to the contract tree
     And each is retired as a source with no destination
     And each is listed under For a person with why it is no contract
+    And a Markdown contract already bearing its canonical name and ID is preserved
 
   # AC-0004-0006-07
   Scenario: The primary spec becomes the primary UI contract, or goes to a person

@@ -531,6 +531,9 @@ async function lintFile(
     if (line === undefined) continue;
     // Pragma escape: this line and the line immediately after are exempt.
     if (PRAGMA_RE.test(line)) continue;
+    // These source-only line comments are stripped from bundles and declarations.
+    if (targetCategory === "src" && /^\s*\/\/\s*QFAI:BR-(?:UI|API|DB)-\d{4}-\d{4}\s*$/.test(line))
+      continue;
     if (i > 0 && PRAGMA_RE.test(lines[i - 1] ?? "")) continue;
     // TS source files: `dist/*.js` strips comments at build time, but
     // `dist/*.d.ts` RETAINS them. Run the dedicated `src-comment`
