@@ -128,7 +128,7 @@ export function parseSqlContract(text: string): SqlParseResult {
   const lineOf = (at: number): number => {
     let count = 1;
     for (let i = 0; i < at; i += 1) {
-      if (text[i] === "\n") count += 1;
+      if (isSqlLineBreak(text, i)) count += 1;
     }
     return count;
   };
@@ -145,7 +145,7 @@ export function parseSqlContract(text: string): SqlParseResult {
     const ch = text[index] ?? "";
     const next = text[index + 1] ?? "";
 
-    if (ch === "\n") {
+    if (isSqlLineBreak(text, index)) {
       line += 1;
       current += ch;
       index += 1;
@@ -154,31 +154,17 @@ export function parseSqlContract(text: string): SqlParseResult {
 
     // `--` line comment
     if (ch === "-" && next === "-") {
-      const end = text.indexOf("\n", index);
-      index = end === -1 ? text.length : end;
+      index += 2;
+      while (index < text.length && !isSqlLineBreak(text, index)) index += 1;
       continue;
     }
 
     // `/* */`, nestable
     if (ch === "/" && next === "*") {
       const openedAt = line;
-      let nesting = 1;
-      index += 2;
-      while (index < text.length && nesting > 0) {
-        if (text[index] === "\n") line += 1;
-        if (text[index] === "/" && text[index + 1] === "*") {
-          nesting += 1;
-          index += 2;
-          continue;
-        }
-        if (text[index] === "*" && text[index + 1] === "/") {
-          nesting -= 1;
-          index += 2;
-          continue;
-        }
-        index += 1;
-      }
-      if (nesting > 0) {
+      const close = sqlBlockCommentEnd(text, index);
+      const end = close ?? text.length;
+      if (close === undefined) {
         errors.push({
           kind: "unterminated-comment",
           line: openedAt,
@@ -189,8 +175,10 @@ export function parseSqlContract(text: string): SqlParseResult {
       // `CREATE/*x*/TABLE t (…)` became `CREATETABLE` and stopped matching
       // `CREATE_RE` — a valid statement that silently left the redefinition
       // scan. Newlines are preserved one-for-one so reported lines stay true.
-      const spannedLines = line - openedAt;
+      const spannedLines = countNewlines(text.slice(index, end));
+      line += spannedLines;
       current += spannedLines > 0 ? "\n".repeat(spannedLines) : " ";
+      index = end;
       continue;
     }
 
@@ -296,6 +284,24 @@ export function parseSqlContract(text: string): SqlParseResult {
   return { statements, errors };
 }
 
+/** Offset after the matching SQL block comment close, or undefined if it stays open. */
+export function sqlBlockCommentEnd(text: string, start: number): number | undefined {
+  let depth = 1;
+  for (let index = start + 2; index < text.length; index += 1) {
+    const ch = text[index];
+    const next = text[index + 1];
+    if (ch === "/" && next === "*") {
+      depth += 1;
+      index += 1;
+    } else if (ch === "*" && next === "/") {
+      depth -= 1;
+      if (depth === 0) return index + 2;
+      index += 1;
+    }
+  }
+  return undefined;
+}
+
 /** One character that may continue an identifier, under the rules {@link DOLLAR_QUOTE_MARKER} follows. */
 export const IDENTIFIER_CHAR = new RegExp(IDENTIFIER_CHAR_CLASS);
 
@@ -356,10 +362,15 @@ export function separateLiterals(statement: string): StatementParts {
   return { code, literals };
 }
 
+/** Count CRLF at its LF and a bare CR at the CR, while preserving the source. */
+function isSqlLineBreak(value: string, index: number): boolean {
+  return value[index] === "\n" || (value[index] === "\r" && value[index + 1] !== "\n");
+}
+
 function countNewlines(value: string): number {
   let count = 0;
-  for (const ch of value) {
-    if (ch === "\n") count += 1;
+  for (let index = 0; index < value.length; index += 1) {
+    if (isSqlLineBreak(value, index)) count += 1;
   }
   return count;
 }
