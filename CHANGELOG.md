@@ -2384,6 +2384,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
 
+- **DB SQL validation reads continued PostgreSQL escape strings.** Later
+  quoted segments inherit escape handling after a newline, preserving
+  statement and argument boundaries and ignoring references inside the string.
+
 - **The `validate.json` guide documents `profileValidatorsRan`.** The key is
   in every result of a `qfai validate` run that finishes, but the guide to
   the file did not name it, so a consumer could read a run that stopped
