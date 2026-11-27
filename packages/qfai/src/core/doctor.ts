@@ -31,7 +31,10 @@ import {
   resolvePlaywrightLauncher,
   type PlaywrightLauncherResolution,
 } from "./prototyping/playwrightLauncher.js";
-import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
+import {
+  readUiContractInventory,
+  resolvePrimaryPrototypingSpec,
+} from "./prototyping/specResolution.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { readStoryTreeModel } from "./storyTree/tree.js";
 import type { Issue } from "./types.js";
@@ -1257,7 +1260,8 @@ async function buildPrototypingPrimarySpecCheck(
       id: "prototyping.primaryUiContract",
       severity: "error",
       title: "Primary UI contract",
-      message: "no UI contract with UI-NNNN and screens[] resolved under contractsDir/ui",
+      message:
+        "no Markdown UI contract or structured UI contract with screens[] resolved under contractsDir/ui",
     };
   }
 
@@ -1278,6 +1282,18 @@ async function buildPrototypingUiContractsCheck(
   config: Awaited<ReturnType<typeof loadConfig>>["config"],
 ): Promise<DoctorCheck> {
   const screens = await readUiContractScreenContracts(root, config.paths.contractsDir);
+  const abstractContracts = (await readUiContractInventory(root, config)).filter(
+    (entry) => path.extname(entry.contractPath).toLowerCase() === ".md",
+  );
+  if (screens.length === 0 && abstractContracts.length > 0) {
+    return {
+      id: "prototyping.uiContracts",
+      severity: "ok",
+      title: "UI contracts",
+      message: "Markdown UI responsibilities are available for prototyping",
+      details: { contractIds: abstractContracts.map((entry) => entry.uiContractId) },
+    };
+  }
   if (screens.length === 0) {
     return {
       id: "prototyping.uiContracts",

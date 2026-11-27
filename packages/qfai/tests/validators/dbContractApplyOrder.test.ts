@@ -219,6 +219,107 @@ describe("reading a contract's own DDL", () => {
     expect(references.size).toBe(0);
   });
 
+  // QFAI:EX-0001-0039-75
+  it("reads the real REFERENCES after a continued escape string", () => {
+    const sql = [
+      "CREATE TABLE t (note TEXT DEFAULT E'prefix'",
+      String.raw`  'it\'s REFERENCES sessions', parent_id int REFERENCES orders(id));`,
+    ].join("\n");
+    const { references } = readTableEdges(sql);
+
+    expect([...references.keys()]).toEqual(["orders"]);
+    expect(blankSqlNoise(sql)).toHaveLength(sql.length);
+    expect(blankSqlNoise(sql).split("\n")).toHaveLength(2);
+  });
+
+  // QFAI:EX-0001-0052-15
+  it.each(["\n", "\r\n", "\r"])(
+    "preserves %j boundaries while masking SQL noise",
+    async (separator) => {
+      const sql = [
+        "CREATE TABLE orders (",
+        "  -- REFERENCES hidden_comment(id)",
+        "  note text DEFAULT 'REFERENCES hidden_string(id)",
+        "continued',",
+        "  /* REFERENCES hidden_block(id)",
+        "     still hidden */",
+        "  buyer_id integer REFERENCES buyers(id)",
+        ");",
+      ].join(separator);
+      const masked = blankSqlNoise(sql);
+      const lineBreaks = (text: string) =>
+        [...text.matchAll(/\r\n?|\n/g)].map((match) => [match.index, match[0]]);
+
+      expect([...readTableEdges(sql).references.keys()]).toEqual(["buyers"]);
+      expect(masked).toHaveLength(sql.length);
+      expect(lineBreaks(masked)).toEqual(lineBreaks(sql));
+
+      const root = await newRoot();
+      const parent = await contract(
+        root,
+        "DB-0001",
+        "CREATE TABLE buyers (id integer PRIMARY KEY);",
+      );
+      const child = await contract(root, "DB-0002", `-- Depends on: -\n${sql}`);
+      const issues = await validateDbContractApplyOrder(root, [parent, child]);
+      expect(issues.map(({ code, refs }) => ({ code, refs }))).toEqual([
+        { code: "QFAI-CONTRACT-036", refs: ["DB-0002", "DB-0001"] },
+      ]);
+    },
+  );
+
+  // QFAI:EX-0001-0052-16
+  it.each(["\n", "\r\n", "\r"])(
+    "ignores references inside nested block comments with %j",
+    async (separator) => {
+      const sql = [
+        "CREATE TABLE orders (",
+        "  /* Outer block",
+        "     /* Inner block */",
+        "     REFERENCES phantom(id)",
+        "  */",
+        "  buyer_id integer REFERENCES buyers(id)",
+        ");",
+      ].join(separator);
+      const masked = blankSqlNoise(sql);
+      const lineBreaks = (text: string) =>
+        [...text.matchAll(/\r\n?|\n/g)].map((match) => [match.index, match[0]]);
+
+      expect([...readTableEdges(sql).references.keys()]).toEqual(["buyers"]);
+      expect(masked).toHaveLength(sql.length);
+      expect(lineBreaks(masked)).toEqual(lineBreaks(sql));
+      expect(masked.indexOf("REFERENCES buyers")).toBe(sql.indexOf("REFERENCES buyers"));
+
+      const root = await newRoot();
+      const buyer = await contract(
+        root,
+        "DB-0001",
+        "CREATE TABLE buyers (id integer PRIMARY KEY);",
+      );
+      const order = await contract(root, "DB-0002", `-- Depends on: -\n${sql}`);
+      const phantom = await contract(
+        root,
+        "DB-0003",
+        "CREATE TABLE phantom (id integer PRIMARY KEY);",
+      );
+      const issues = await validateDbContractApplyOrder(root, [buyer, order, phantom]);
+      expect(issues.map(({ code, refs }) => ({ code, refs }))).toEqual([
+        { code: "QFAI-CONTRACT-036", refs: ["DB-0002", "DB-0001"] },
+      ]);
+    },
+  );
+
+  // QFAI:EX-0001-0052-16
+  it.each(["\n", "\r\n", "\r"])("masks the rest of an unclosed comment with %j", (separator) => {
+    const ddl = "CREATE TABLE orders (id integer);";
+    const comment = ["/* Outer", "   /* Inner */", "   REFERENCES phantom(id)"];
+    const sql = [ddl, ...comment].join(separator);
+    const expected = [ddl, ...comment.map((line) => " ".repeat(line.length))].join(separator);
+
+    expect(blankSqlNoise(sql)).toBe(expected);
+    expect(readTableEdges(sql).references.size).toBe(0);
+  });
+
   it("lets a backslash escape nothing in a standard string or after a longer name", () => {
     // Only a lone `E` or `e` opens an escape string. `'C:\'` is a whole
     // standard string, and in `name'x\'` the `e` belongs to the name.

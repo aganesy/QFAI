@@ -10,7 +10,7 @@ import { prepareGraphIntegration } from "../../../src/index.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
 
 // QFAI:EX-0001-0237-01
-// Mutation: packages/qfai/src/core/graph/prepare.ts `return { runtime: "installed", code: "code-not-ready", documents: "documents-not-ready" };` -> `return { runtime: "not-ready", code: "code-not-ready", documents: "documents-not-ready" };` fails "prepares both project-local runtimes"
+// Mutation: packages/qfai/src/core/graph/prepare.ts `await replaceGraphDirectory(staged.directory, current.directory, root);` -> `return notReady;` fails "prepares both project-local runtimes"
 it("prepares both project-local runtimes", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-prepare-"));
   try {
@@ -174,9 +174,11 @@ it("repairs only a missing runtime component and retains unrelated settings", as
     await expect(access(paths.python)).resolves.toBeUndefined();
     expect(await readFile(paths.codegraph)).toEqual(codegraphBytes);
     expect(await readFile(settings, "utf8")).toBe(original);
-    expect(fixture.calls.some((call) => call.args.includes("@colbymchenry/codegraph@1.6.2"))).toBe(
-      false,
-    );
+    expect(
+      fixture.calls.some((call) =>
+        call.args.some((argument) => /^@colbymchenry\/codegraph(?:@|$)/.test(argument)),
+      ),
+    ).toBe(false);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -307,7 +309,7 @@ it("reruns init without a conflict when the entrypoint record lists files an ear
 });
 
 // QFAI:EX-0001-0237-02
-// Mutation: packages/qfai/src/core/graph/prepare.ts `return { runtime: "installed", code: "code-not-ready", documents: "documents-not-ready" };` -> `return { runtime: "not-ready", code: "code-not-ready", documents: "documents-not-ready" };` fails "prepares pinned tools in a project path containing spaces"
+// Mutation: packages/qfai/src/core/graph/prepare.ts `await replaceGraphDirectory(staged.directory, current.directory, root);` -> `void staged.directory;` fails "prepares pinned tools in a project path containing spaces"
 it("prepares pinned tools in a project path containing spaces", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai graph prepare "));
   try {

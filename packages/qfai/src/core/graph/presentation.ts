@@ -7,6 +7,7 @@ const GRAPH_TOOLS_LOCAL_NOTE =
   ".qfai/tools/ is local to this checkout: run qfai init in each other clone or worktree.";
 
 export async function renderGraphPreview(root: string): Promise<string> {
+  // QFAI:BR-UI-0001-0003
   const paths = graphRuntimePaths(root);
   const codegraph = (await safeLstat(paths.codegraph)) !== undefined;
   const graphify = (await safeLstat(paths.python)) !== undefined;
@@ -24,6 +25,7 @@ export async function renderGraphPreview(root: string): Promise<string> {
 }
 
 export function renderGraphPreparation(preparation: GraphPreparation): string {
+  // QFAI:BR-UI-0001-0001
   const lines = [
     "Graph tools",
     "Tools",
@@ -39,6 +41,7 @@ export function renderGraphPreparation(preparation: GraphPreparation): string {
     DOCUMENT_PROCESSING_SETUP,
     GRAPH_TOOLS_LOCAL_NOTE,
   ];
+  // QFAI:BR-UI-0001-0002
   if (preparation.failedStep) {
     lines.push(
       `Failed step: ${preparation.failedStep}`,

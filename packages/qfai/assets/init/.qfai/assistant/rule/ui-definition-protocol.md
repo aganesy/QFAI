@@ -19,18 +19,12 @@ A downstream skill reads the UI definition in this order.
    - `business-flow-NNNN/user-story-NNNN-NNNN/02_Acceptance-Criteria.md`
    - `business-flow-NNNN/user-story-NNNN-NNNN/03_Example.md`
 
-2. **UI Contracts** (`<paths.contractsDir>/ui/*.yaml`, default `.qfai/spec/03_contract/ui/*.yaml`):
-   the contracts whose rules cite the flow's examples, and the app frame, the UI
-   contract that holds the app shell and the home, which every application flow
-   renders inside
-   - contract ID (`UI-NNNN`, in a file named `ui-NNNN-<slug>.yaml`)
-   - screen ID
-   - route
-   - primary tasks
-   - states
-   - actions
-   - supplements and structure, when written: a description of the copy and the
-     groups the screen is read in
+2. **UI contracts** (`<paths.contractsDir>/ui/`). Read the contracts whose
+   business rules cite the flow's examples. A Markdown contract
+   (`ui-NNNN-<slug>.md`) gives the responsibility, inputs, outcomes and business
+   rules. Choose the route, regions and controls in the prototype or implementation.
+   An existing YAML contract can also supply its declared screens, routes,
+   actions and states, including the app frame where specified.
 
 3. **Brand SSOT**
    - root `DESIGN.md` (front-matter + `# Brand Philosophy` body), the only
@@ -41,7 +35,7 @@ A downstream skill reads the UI definition in this order.
    notes, or, for a `restyle` handoff, its `liveRoutes` (compare in the running
    app) and `entryPoints`
 
-The supplements and structure describe copy; `npx qfai validate` does not check them.
+Legacy YAML supplements and structure describe copy; `npx qfai validate` does not check them.
 What it checks is the UI source: every plain text there carries a `qfai-text`
 reason comment (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md`).
 

@@ -2,11 +2,11 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 import { parseDesignToken } from "../../src/core/parse/designToken.js";
-import { computeContrastRatio } from "../../src/core/uiux/contrastRatio.js";
+import * as contrastRatio from "../../src/core/uiux/contrastRatio.js";
 import { parseHtmlMock } from "../../src/core/uiux/htmlMockDom.js";
 import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
 import { validateDesignToken } from "../../src/core/validators/designToken.js";
@@ -299,7 +299,7 @@ describe("uiux validators", () => {
   });
 
   it("returns null contrast ratio for out-of-range rgb values", () => {
-    expect(computeContrastRatio("rgb(999,0,0)", "#ffffff")).toBeNull();
+    expect(contrastRatio.computeContrastRatio("rgb(999,0,0)", "#ffffff")).toBeNull();
   });
 
   it("parses var() fallback values containing nested parentheses", async () => {
@@ -388,7 +388,8 @@ describe("uiux validators", () => {
     expect(issues).toHaveLength(0);
   });
 
-  it("reports the file line of the Mermaid declaration and transition it flags", async () => {
+  // QFAI:EX-0001-0039-80
+  it("reports Mermaid warnings only inside Mermaid fences", async () => {
     const root = await newTempDir();
     const specsDir = path.join(root, ".qfai", "specs");
     await mkdir(specsDir, { recursive: true });
@@ -412,11 +413,17 @@ describe("uiux validators", () => {
         "  A --> B", // line 15
         "```", // line 16
         "",
+        "stateDiagram",
+        "",
+        "```text",
+        "stateDiagram",
+        "```",
       ].join("\n"),
       "utf-8",
     );
 
     const issues = await validateMermaidScreenFlow(root, defaultConfig);
+    expect(issues.map(({ severity }) => severity)).toEqual(["warning", "warning", "warning"]);
     const lines = Object.fromEntries(
       issues.map((finding) => [
         finding.code,
@@ -672,7 +679,8 @@ describe("uiux validators", () => {
     expect(absolute).toEqual(relative);
   });
 
-  it("aligns screens the same way whether the contract and specs directories are relative or absolute", async () => {
+  // QFAI:EX-0001-0039-81
+  it("reports missing screen mocks at info for either relative or absolute directories", async () => {
     const root = await newTempDir();
     const specsDir = path.join(root, ".qfai", "specs");
     const contractsDir = path.join(root, ".qfai", "contracts");
@@ -684,11 +692,12 @@ describe("uiux validators", () => {
       ["screens:", "  - id: List", "  - id: Detail", ""].join("\n"),
       "utf-8",
     );
-    await writeFile(
-      path.join(specsDir, "mock.md"),
-      ["<!-- Screen Mock: List -->", "<div></div>", ""].join("\n"),
-      "utf-8",
-    );
+    const mockPath = path.join(specsDir, "mock.md");
+    const mock = ["```html", "<div></div>", "```", ""].join("\n");
+    await writeFile(mockPath, mock, "utf-8");
+    expect(await validateUiDefinitionConsistency(root, defaultConfig)).toEqual([]);
+
+    await writeFile(mockPath, `<!-- Screen Mock: List -->\n${mock}`, "utf-8");
 
     const relative = await validateUiDefinitionConsistency(root, defaultConfig);
     const absolute = await validateUiDefinitionConsistency(root, {
@@ -696,8 +705,8 @@ describe("uiux validators", () => {
       paths: { ...defaultConfig.paths, specsDir, contractsDir },
     });
 
-    expect(relative.map((item) => [item.code, item.refs])).toEqual([
-      ["QFAI-CONSISTENCY-002", ["Detail"]],
+    expect(relative.map((item) => [item.code, item.severity, item.refs])).toEqual([
+      ["QFAI-CONSISTENCY-002", "info", ["Detail"]],
     ]);
     expect(absolute).toEqual(relative);
   });
@@ -762,7 +771,7 @@ describe("uiux validators", () => {
     ["high", "space-separated rgb()", "rgb(0 0 0)", "rgb(255 255 255)", []],
   ])(
     "checks %s HTML mock contrast written in %s",
-    async (_contrast, _format, foreground, background, expectedSeverities) => {
+    async (contrastKind, _format, foreground, background, expectedSeverities) => {
       const root = await newTempDir();
       const specsDir = path.join(root, ".qfai", "specs");
       await mkdir(specsDir, { recursive: true });
@@ -778,9 +787,16 @@ describe("uiux validators", () => {
         "utf-8",
       );
 
-      const issues = await validateHtmlMock(root, "web", defaultConfig);
-      const contrast = issues.filter((item) => item.code === "QFAI-MOCK-008");
-      expect(contrast.map((item) => item.severity)).toEqual(expectedSeverities);
+      const compute = vi.spyOn(contrastRatio, "computeContrastRatio");
+      try {
+        const issues = await validateHtmlMock(root, "web", defaultConfig);
+        const expectedRatio = contrastKind === "high" ? expect.closeTo(21) : expect.any(Number);
+        expect(compute).toHaveReturnedWith(expectedRatio);
+        const contrast = issues.filter((item) => item.code === "QFAI-MOCK-008");
+        expect(contrast.map((item) => item.severity)).toEqual(expectedSeverities);
+      } finally {
+        compute.mockRestore();
+      }
     },
   );
 
