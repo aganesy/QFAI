@@ -192,6 +192,7 @@ describe("`qfai doctor` CLI contract surface", () => {
 
     for (const written of [
       "`<root>/.gitignore`",
+      "managed integration wrappers and their repair backups",
       "`<outDir>/run-<ts>/` removed",
       "`npm install <name>`",
       // The `npm install` has no `--no-save`, so it lands on tracked files too.
