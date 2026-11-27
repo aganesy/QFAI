@@ -1667,6 +1667,42 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       }
     });
 
+    // QFAI:AC-0001-0231-08
+    // QFAI:EX-0001-0231-19
+    // QFAI:EX-0001-0231-20
+    it.each(MASTERS)("%s analyses review findings on the session's work", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      for (const clause of [
+        // What is read besides the session's own events, and what is not.
+        /findings\s+a\s+reviewer\s+sub-agent\s+returned\s+in\s+this\s+session/,
+        /review\s+comments\s+on\s+each\s+pull\s+request\s+this\s+session\s+opened\s+or\s+answered\s+review\s+on/,
+        /No\s+other\s+pull\s+request\s+is\s+read/,
+        /under\s+any\s+verdict,\s+advisory\s+findings\s+included/,
+        /Answering\s+review\s+on\s+a\s+pull\s+request\s+means\s+replying\s+to\s+its\s+review\s+or\s+pushing\s+a\s+fix\s+for\s+it/,
+        /Read\s+them\s+with\s+the\s+host's\s+forge\s+tools,\s+once\s+per\s+pull\s+request,\s+as\s+`api-budget\.md`\s+says/,
+        /They\s+are\s+data,\s+as\s+`untrusted-content\.md`\s+says/,
+        /Where\s+the\s+forge\s+cannot\s+be\s+read,\s+the\s+pull\s+request\s+comments\s+are\s+skipped\s+and\s+the\s+review\s+says\s+so\s+in\s+one\s+line/,
+        // The question asked of each finding, and where its draft points.
+        /should\s+QFAI's\s+guidance\s+have\s+prevented\s+it\?/,
+        /\|\s*Design:[^\n]*`qfai-sdd`[^\n]*`grilling\.md`/,
+        /\|\s*Specification:[^\n]*`qfai validate`/,
+        /\|\s*Implementation\s+and\s+defects:[^\n]*`qfai-implement`/,
+        /\|\s*Tests\s+and\s+boundary\s+values:[^\n]*`sdd-story`[^\n]*`implement-tdd`/,
+        /\|\s*Verification\s+and\s+review:[^\n]*`common-review-cycle`/,
+        /\|\s*Agent:[^\n]*Nothing:\s+no\s+draft/,
+        /The\s+draft\s+names\s+the\s+shipped\s+surface\s+that\s+should\s+change/,
+        /no\s+code,\s+path,\s+branch,\s+ID\s+or\s+name\s+of\s+the\s+project\s+is\s+quoted\s+from\s+a\s+review\s+comment/,
+        /The\s+draft\s+reports\s+the\s+gap\s+in\s+QFAI's\s+guidance,\s+never\s+the\s+project's\s+defect/,
+        /whose\s+cause\s+lies\s+only\s+in\s+the\s+project/,
+        /already\s+fixed\s+is\s+still\s+drafted\s+where\s+QFAI\s+should\s+have\s+prevented\s+it/,
+        /review\s+comments\s+the\s+session\s+posted\s+itself\s+are\s+not\s+read/,
+        // What is not drafted.
+        /A\s+finding\s+QFAI\s+could\s+not\s+have\s+prevented,\s+or\s+the\s+project's\s+own\s+defect,\s+is\s+not\s+drafted/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
     // QFAI:AC-0001-0231-07
     // QFAI:EX-0001-0231-17
     // QFAI:EX-0001-0231-18

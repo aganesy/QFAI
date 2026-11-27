@@ -49,4 +49,13 @@ Feature: Send session feedback to QFAI when the work is complete
     And it proposes nothing where an equivalent rule, skill or hook already exists, for a correction given once, or for a procedure pasted fewer than three times
     And it writes nothing until the user says yes, and files none of it with QFAI
     And under a no-question mode it writes nothing and puts the proposals in the final report
+
+  # AC-0001-0231-08
+  Scenario: Review findings on the session's work are analysed for what QFAI could have prevented
+    Given the agent follows `.agents/rules/session-feedback.md` at the end of the session
+    When a reviewer sub-agent returned findings during the session under any verdict, or a pull request the session opened, or replied to or pushed a fix for a review of, carries review comments by the time of the review
+    Then the agent reads each finding and asks whether QFAI's design, specification, implementation, test or verification guidance should have prevented it, such as a design flaw a design step let through, a defect, or a boundary value no example fixed
+    And each such finding becomes a draft that reports the gap in QFAI's guidance, never the project's defect, names the shipped skill, step, rule, template or command that should change, and is generalised as AC-0001-0231-03 requires, quoting no code, path or name of the project
+    And a finding whose cause lies only in the project, with no QFAI guidance that applied, is not drafted
+    And the review reads no pull request the session did not open or answer review on, and where the forge cannot be read it skips the pull request comments and says so in one line
 ```
