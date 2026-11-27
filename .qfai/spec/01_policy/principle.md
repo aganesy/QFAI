@@ -12,7 +12,7 @@
 - A validation result proves only the scope and revision it actually checked. A partial profile does not establish repository-wide completion.
 - Test annotations require executed behavior and an observable assertion. A placeholder or annotation alone is not coverage, except an acceptance test `qfai atdd scaffold` wrote: it passes with an empty body and raises no finding until the `write-acceptance-tests` route writes its assertions.
 - Independent reviewers report PASS or REVISE against current evidence. Authors do not certify their own work.
-- The package ships its own source and assets; this repository does not install itself as a dependency.
+- The published `qfai` package ships the built CLI and its assets and is the supported dependency. The private monorepo root is a pnpm workspace. Its root preinstall guard, `check-not-a-dependency`, refuses npm and Yarn if they reach the hook. The root's `workspace:*` dependency can stop npm earlier.
 - Sources: `.qfai/assistant/rule/test-layers.md`, `.qfai/assistant/rule/review-convergence.md`, and `.agents/rules/minimal-implementation.md`.
 
 ## Decision priorities
