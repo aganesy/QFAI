@@ -55,7 +55,7 @@ function helperRows(name: string, rows: [string, string][], map: boolean): strin
   );
 }
 
-function originalHelper(): string {
+function originalHelper(arrayInsteadOfMap?: string): string {
   const names = WORKFLOWS.map((file): [string, string] => [file, digest(workflow(INITIAL_BODY))]);
   const workflows = WORKFLOWS.map((file): [string, string] => [
     file,
@@ -70,9 +70,9 @@ function originalHelper(): string {
     shape("Check docs", INITIAL_BODY),
   ]);
   return [
-    helperRows("ALLOWED_WORKFLOW_FILES", names, true),
-    helperRows("ALLOWED_WORKFLOW_SHAPE", workflows, true),
-    helperRows("ALLOWED_JOB_SHAPE", jobs, true),
+    helperRows("ALLOWED_WORKFLOW_FILES", names, arrayInsteadOfMap !== "ALLOWED_WORKFLOW_FILES"),
+    helperRows("ALLOWED_WORKFLOW_SHAPE", workflows, arrayInsteadOfMap !== "ALLOWED_WORKFLOW_SHAPE"),
+    helperRows("ALLOWED_JOB_SHAPE", jobs, arrayInsteadOfMap !== "ALLOWED_JOB_SHAPE"),
     helperRows("ALLOWED_STEP_SHAPE", steps, false),
     "export const untouched = " + JSON.stringify(digest(INITIAL_BODY)) + ";\n",
   ].join("\n");
@@ -138,7 +138,47 @@ it("leaves all pins unchanged when a step's non-body shape changes", async () =>
   const result = run(root);
   expect(result.status).toBe(1);
   expect(result.output).toContain("qfai-tests.yml#inspect");
+  expect(result.output).toContain(
+    "Review the structural change and update the shape pin explicitly.",
+  );
   expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
+});
+
+it.each(["ALLOWED_WORKFLOW_FILES", "ALLOWED_WORKFLOW_SHAPE", "ALLOWED_JOB_SHAPE"])(
+  "refuses array rows in place of the %s Map without changing the helper",
+  async (name) => {
+    const root = await fixture();
+    const helper = path.join(root, ...HELPER);
+    const malformed = originalHelper(name);
+    await writeFile(helper, malformed);
+    await writeFile(path.join(root, ...TEMPLATES, "qfai-docs.yml"), workflow(UPDATED_BODY));
+
+    const result = run(root);
+    expect(result.status).toBe(1);
+    expect(result.output).toContain("expected new Map([...]) for " + name);
+    expect(await readFile(helper, "utf8")).toBe(malformed);
+  },
+);
+
+it.each([
+  ["name: Docs", "name: Changed docs", "qfai-tests.yml"],
+  ["runs-on: ubuntu-latest", "runs-on: windows-latest", "qfai-tests.yml#inspect"],
+])("names the next action when %s changes", async (before, after, pin) => {
+  const root = await fixture();
+  const helper = path.join(root, ...HELPER);
+  await writeFile(path.join(root, ...TEMPLATES, "qfai-docs.yml"), workflow(UPDATED_BODY));
+  await writeFile(
+    path.join(root, ...TEMPLATES, "qfai-tests.yml"),
+    workflow(INITIAL_BODY).replace(before, after),
+  );
+
+  const result = run(root);
+  expect(result.status).toBe(1);
+  expect(result.output).toContain(pin + ": pinned shape changed");
+  expect(result.output).toContain(
+    "Review the structural change and update the shape pin explicitly.",
+  );
+  expect(await readFile(helper, "utf8")).toBe(originalHelper());
 });
 
 it("leaves all pins unchanged when the template directory contains an unpinned workflow", async () => {
