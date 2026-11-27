@@ -14,9 +14,10 @@
 #
 # `sha256sum -c` format, so the pre-flight needs no parser: two spaces between the digest and
 # the path, paths relative to the repository root.
-8484c380946a0c033486e34857cf85ba76b9b3c20c10755c0b72730e400073f8  .github/actions/setup/action.yml
+9704b47b8d4c0bcf8adec355d347c34d27d59026b54c8805bbc65e610ac7479c  .github/actions/setup/action.yml
 f97098ef9f69132551dfd3e7f2e83944b5e6a16a976749d59789b39196ebd741  .github/actions/setup/bootstrap-corepack.sh
 3230335c2f0bc71bfcec72150d56fd51dc30524ca0fb35405197054709bd13b5  .github/actions/setup/dependency-builds.txt
+d6abbfb55a77390fb93b30e228f09f89b152280af1899aef386847f3b4e1babb  .github/actions/setup/node-engine-floor.mjs
 81c83080bfbae274d46c90cdae9f9ae3dd3af6240fe56fc88aec461799802ae3  .github/actions/setup/verify-rebuild-sources.mjs
 c19e4f8a243f2570ccd8debc63acf324734b6296f4b5949a2110fc7a1abbabc0  scripts/bootstrap.mjs
 8a19d8c71850da4547341b5f53476126816a1bc1ba144172de5d606c5fb5c594  scripts/branch-catchup.mjs

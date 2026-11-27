@@ -85,6 +85,7 @@ import {
   entryTitles,
   recordedCutoff,
 } from "../../../../scripts/check-release-notes.mjs";
+import { nodeEngineFloor } from "../../../../.github/actions/setup/node-engine-floor.mjs";
 import {
   expectWindowsPreflightRefusal,
   expectWindowsRunnerHeadChangeRefusal,
@@ -1774,6 +1775,47 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
 });
 
 describe("one lane runs on the floor `engines.node` declares", () => {
+  it("keeps single-version floors and refuses ranges with an excluded or ambiguous floor", () => {
+    expect(nodeEngineFloor(">=20.19.0")).toBe("20.19.0");
+    expect(nodeEngineFloor("20.19.0")).toBe("20.19.0");
+    expect(nodeEngineFloor("^20.19.10 || ^20.19.2 || >=22.0.0")).toBe("20.19.2");
+    for (const range of [">20.19.0", "20.x", ">=20.019.0", "^20.19.0 ||", ">=20.19.0 <23"]) {
+      expect(() => nodeEngineFloor(range)).toThrow("engines.node must use");
+    }
+  });
+
+  it("pins the lowest version from a disjunctive engines range in a separate checkout", () => {
+    const step = setupActionSteps().find((candidate) => candidate["id"] === "shim");
+    const body = step?.["run"];
+    if (typeof body !== "string") throw new Error("the setup shim has no run body");
+    const start = body.indexOf('if [ "${PIN_ENGINES_FLOOR}" = "true" ]; then');
+    if (start < 0) throw new Error("the setup shim has no floor selector");
+
+    const root = mkdtempSync(path.join(tmpdir(), "qfai-node-floor-"));
+    try {
+      writeFileSync(
+        path.join(root, "package.json"),
+        JSON.stringify({ engines: { node: "^22.13.0 || >=24.0.0 || ^20.19.0" } }),
+      );
+      const result = spawnSync("bash", ["-e", "-c", body.slice(start)], {
+        cwd: root,
+        encoding: "utf-8",
+        env: {
+          ...process.env,
+          ENGINES_MANIFEST: "./package.json",
+          GITHUB_OUTPUT: "github-output",
+          PIN_ENGINES_FLOOR: "true",
+          QFAI_SETUP_ACTION_DIR: path.dirname(SETUP_ACTION),
+        },
+      });
+
+      expect(result.status, result.stderr + result.stdout).toBe(0);
+      expect(readFileSync(path.join(root, "github-output"), "utf-8")).toBe("version=20.19.0\n");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("asks the shared definition for the floor, and checks it got it", () => {
     // Every other toolchain job resolves the range, so `setup-node` gives
     // them all the newest satisfying release and nothing ever runs on the floor the package
@@ -1807,7 +1849,7 @@ describe("one lane runs on the floor `engines.node` declares", () => {
     // reporting under the floor lane's name — a green check for a claim nothing tested,
     // reachable one leg at a time.
     const confirms = steps.find(
-      (step) => typeof step["run"] === "string" && step["run"].includes("engines.node"),
+      (step) => step["name"] === "Confirm the pinned floor is what is running",
     );
     expect(confirms, "and assert at runtime that it got it").toBeDefined();
     for (const [label, step] of [
@@ -1909,11 +1951,6 @@ describe("one lane runs on the floor `engines.node` declares", () => {
       .map((step) => (typeof step["run"] === "string" ? step["run"] : ""))
       .join("\n");
 
-    expect(
-      bodies,
-      "the lane must read the floor from `engines.node`, the same place the action derives it from",
-    ).toContain("engines.node");
-
     // And no bare version anywhere the SHELL would use one.
     //
     // Comment lines are stripped first. The rule is about values, and a comment explaining which
@@ -1924,6 +1961,9 @@ describe("one lane runs on the floor `engines.node` declares", () => {
       .split(/\r?\n/)
       .filter((line) => !/^\s*#/.test(line))
       .join("\n");
+    expect(executable).toContain(
+      "$(node .github/actions/setup/node-engine-floor.mjs packages/qfai/package.json)",
+    );
     expect(
       // `\.` and not `\\.`. The first version wrote the escaped form, which in a regex literal
       // matches a literal BACKSLASH followed by any character — so it returned false for
@@ -4711,6 +4751,29 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         .not.toBe(0);
       expect.soft(result.shape, `${why}: nothing may be published as the decision`).toBe("");
       expect.soft(result.checks, `${why}: neither output may be published on refusal`).toBe("");
+    }
+  });
+
+  it("verifies either release floor using the trusted setup code and the tag's manifest", () => {
+    const jobs = releaseJobs();
+    for (const id of ["gate-floor", "gate-floor-whole"]) {
+      const steps = jobs[id]?.["steps"];
+      const assertion = Array.isArray(steps)
+        ? steps
+            .filter(isRecord)
+            .find((step) => step["name"] === "Confirm the pinned floor is what is running")
+        : undefined;
+      const body = assertion?.["run"];
+      const executable =
+        typeof body === "string"
+          ? body
+              .split(/\r?\n/)
+              .filter((line) => !/^\s*#/.test(line))
+              .join("\n")
+          : "";
+      expect(executable, id).toContain(
+        "$(node .ci-actions/.github/actions/setup/node-engine-floor.mjs packages/qfai/package.json)",
+      );
     }
   });
 

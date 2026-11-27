@@ -9,7 +9,7 @@
   },
   "packageManager": "pnpm@12.23.0",
   "engines": {
-    "node": ">=20.19.0"
+    "node": "^20.19.0 || ^22.13.0 || >=24.0.0"
   },
   "scripts": {
     "preinstall": "node ./scripts/check-not-a-dependency.mjs",

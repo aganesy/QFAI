@@ -1417,6 +1417,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   Property names are case-insensitive. A later ordinary `background` can still
   override `background-color: ... !important` in jsdom. Closes #5135.
 
+- **The declared Node.js range matches the jsdom dependency.** QFAI supports Node.js `^20.19.0 || ^22.13.0 || >=24.0.0`. The CI and release floor checks derive the lowest version from the package manifest.
+
 - `check-mdschema --scope changed` includes new Markdown documents before
   staging and respects Git's ignore rules. A failed Git file listing widens
   the check and prints a warning.
