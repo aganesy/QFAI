@@ -685,7 +685,7 @@ describe("uiux validators", () => {
   });
 
   // QFAI:EX-0001-0039-81
-  it("reports missing screen mocks at info for either relative or absolute directories", async () => {
+  it("needs a mock label for unmatched-screen info with relative or absolute paths", async () => {
     const root = await newTempDir();
     const specsDir = path.join(root, ".qfai", "specs");
     const contractsDir = path.join(root, ".qfai", "contracts");
