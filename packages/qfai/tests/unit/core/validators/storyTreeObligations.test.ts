@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import * as storyTreeIds from "../../../../src/core/storyTree/ids.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
+import { declarationMask } from "../../../../src/core/testDeclarations.js";
 import type { Issue } from "../../../../src/core/types.js";
+import { maskJsNonCode } from "../../../../src/core/validators/jsSourceMask.js";
 import {
   validateStoryTreeObligationsModel,
   type StoryObligationProfile,
@@ -449,6 +451,31 @@ describe("story-tree test obligations", () => {
     expect(
       storyTreeIds.parseCountedExampleAnnotations(template.replaceAll("{tag}", tag), file),
     ).toEqual(counted ? [id] : []);
+  });
+
+  // QFAI:EX-0001-0056-14
+  it.each([
+    [
+      "Fixture.vue",
+      ["<template>", "  <SlotSource #default=\"{ label = '{literal}' }\" />", "</template>"],
+    ],
+    ["Fixture.svelte", ["{#if '{literal}'}", "  <p>Visible</p>", "{/if}"]],
+  ] as const)("counts only the script annotation in %s", (file, template) => {
+    const scriptId = "EX-0001-0001-01";
+    const scriptTag = ["QFAI", scriptId].join(":");
+    const templateTag = ["QFAI", "EX-0001-0001-02"].join(":");
+    const content = [
+      ...template.map((line) => line.replace("{literal}", templateTag)),
+      "<script>",
+      `// ${scriptTag}`,
+      "it('pays', () => {});",
+      "</script>",
+    ].join("\n");
+
+    const commentsKept = maskJsNonCode(content, { ...declarationMask(file), comments: false });
+    expect(commentsKept).toContain(scriptTag);
+    expect(commentsKept).not.toContain(templateTag);
+    expect(storyTreeIds.parseCountedExampleAnnotations(content, file)).toEqual([scriptId]);
   });
 
   it("rejects an EX annotation in E2E and keeps its test obligation open", () => {

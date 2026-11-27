@@ -41,7 +41,7 @@ Feature: Run any migration step without risk to the project
     And no step opens a network connection
 
   # AC-0004-0003-06
-  Scenario: A step reports on standard output and exits 3 only when a person must act
+  Scenario: A step reports completion or refusal with any items for a person
     Given a project on the spec-pack layout
     When a step reports its outcome
     Then a completed step prints its report sections as Markdown on standard output, with none under an empty section
