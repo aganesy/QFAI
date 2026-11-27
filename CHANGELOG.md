@@ -701,6 +701,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   validation and preserves the existing file when rendered output exceeds it.
   Small catalogue reads use a buffer that grows with the bytes read.
 
+- Component catalogue check mode reports when the selected metadata would
+  exceed the publication limit.
+
 - Restoring or publishing a completed document graph reuses the safety check
   on each copy during native freshness validation.
 
