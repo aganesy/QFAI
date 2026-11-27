@@ -799,6 +799,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   none of them after a private security intake, as the skill's Reviewer Gate
   does. Closes #5540.
 
+- The triage skill summary distinguishes ordinary records from the tracked
+  changes the Reviewer Gate permits for authorized operations.
+
 - **The seeded Git attributes explain how to handle a restored question row.**
   After a union merge restores a deleted open question, the guidance calls for
   a separate cleanup commit before pushing. It preserves other rows and IDs.
