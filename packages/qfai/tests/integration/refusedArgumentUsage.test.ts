@@ -75,7 +75,7 @@ describe("a refused argument prints the command's usage, not the whole help", ()
       const { out } = await runCliCaptured(argv);
       expect(out).toContain("qfai <command> [options]");
       expect(out).toContain("Commands:");
-      expect(out).toMatch(/^  validate[ \t]+\S/m);
+      expect(out).toMatch(/^ {2}validate[ \t]+\S/m);
       expect(out).toContain("Options:");
     }
   });
