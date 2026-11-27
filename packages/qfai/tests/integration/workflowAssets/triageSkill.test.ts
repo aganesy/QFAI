@@ -327,7 +327,8 @@ describe("a question answered without a change", () => {
   // QFAI:AC-0001-0220-06
   // QFAI:EX-0001-0220-52
   it("waits for the checks a merge needs and checks the merged result", async () => {
-    const procedure = flat(sectionOf(await step("triage-operate"), "## Procedure"));
+    const operate = await step("triage-operate");
+    const procedure = flat(sectionOf(operate, "## Procedure"));
     expect(procedure).toMatch(/Wait for checks still running before a merge/);
     expect(procedure).toMatch(
       /Checks still running means every check run of the pull request's head commit that is queued or in progress, including checks branch protection does not require/,
@@ -365,6 +366,15 @@ describe("a question answered without a change", () => {
     expect(procedure).toMatch(
       /Edit no register row except to delete again a question row the union merge kept although one side deleted it, committing that deletion before the push. Renumber no ID/,
     );
+    expect(operate).toMatch(
+      /^purpose:.*restored question-row deletion permitted only in run-operation/m,
+    );
+    expect(flat(sectionOf(operate, "## What it writes"))).toMatch(
+      /No file git tracks changes except.+the restored question-row deletion described in step 4\. In `run-operation` only, delete an open-question row the union merge restored after one side deleted it\. Commit only that deletion in a separate commit before pushing/,
+    );
+    expect(flat(sectionOf(operate, "## Gate"))).toMatch(
+      /separate `run-operation` commit that deletes only an open-question row the union merge restored after one side deleted it\. Other register rows and IDs remain as merged/,
+    );
     expect(procedure).toContain("The union merge adds no review requirement of its own.");
     const waitForChecks = procedure.indexOf("wait for the checks that push starts");
     const review = procedure.indexOf(
@@ -388,6 +398,22 @@ describe("a question answered without a change", () => {
     expect(freshness).toContain("Fetch the base again after each repeat.");
     expect(freshness).toContain(
       "When the fetched base matches the recorded commit and checks and review requirements hold for the updated head",
+    );
+    expect(procedure.slice(review, finalFetch)).toContain(
+      "Record the head commit whose checks and review passed.",
+    );
+    const mergeRequest = procedure.slice(
+      finalMerge,
+      procedure.indexOf("Carry out any other named operation.", finalMerge),
+    );
+    expect(mergeRequest).toContain(
+      "Make the forge merge conditional on that reviewed head commit.",
+    );
+    expect(mergeRequest).toContain(
+      "If the head changes, repeat the base refresh, checks, review and final base fetch for the new head before attempting the conditional merge again.",
+    );
+    expect(mergeRequest).toContain(
+      "If the forge cannot enforce the precondition, report `needs-change`.",
     );
     expect(procedure).not.toContain("only then merge");
     expect(procedure).not.toContain("ask for no new review of that merge");
@@ -523,22 +549,24 @@ describe("a request routed again from the close", () => {
     );
     const table = sectionOf(close, "## Outcomes");
     expect(table).not.toMatch(/`info-received`|`adopted`/);
-    expect(flat(table)).toContain(
-      "`accepted` | Acceptance closes the request without implementation work in this project",
+    expect(rowOf(table, "`accepted`")).toMatch(
+      /^\|\s*`accepted`\s*\|.*closes the request without implementation work in this project/,
     );
+    expect(rowOf(table, "`deferred`")).toMatch(/^\|\s*`deferred`\s*\|.*with the reason/);
     const rerouting = flat(sectionOf(close, "## Re-routing"));
     expect(rerouting).toMatch(/report the outcome\s+`info-received`/);
     expect(rerouting).toContain(
-      "In `decide-design`, use `adopted` only when `discussion-interview` records explicit user approval to implement the proposal in this project or an implementation decision under recorded delegation that covers it.",
+      "- In `decide-design`, use `adopted` only when `discussion-interview` records explicit user approval to implement " +
+        "the proposal in this project or an implementation decision under recorded delegation that covers it",
     );
     expect(rerouting).toContain(
-      "If an implementation proposal is only an assumption or remains open, record `deferred` with the reason and keep the proposal pending.",
+      "If an implementation proposal is only an assumption or remains open, " +
+        "record `deferred` with the reason and keep the proposal pending",
     );
     const plan = (await loadBuiltInPlans()).find((each) => each.route === "decide-design");
     const closeBranch = plan?.branchPoints?.find((point) => point.step === "triage-close");
-    const adopted = closeBranch?.outcomes.find((outcome) => outcome.outcome === "adopted");
-    expect(adopted?.routes).toContain("add-feature");
-    expect(closeBranch?.outcomes.map((outcome) => outcome.outcome)).not.toContain("accepted");
+    expect(closeBranch?.outcomes.map((outcome) => outcome.outcome)).toEqual(["adopted"]);
+    expect(closeBranch?.outcomes[0]?.routes).toContain("add-feature");
   });
 });
 

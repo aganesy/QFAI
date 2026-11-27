@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- UI, API and database contracts can now describe responsibilities, inputs,
+  outcomes and business rules in Markdown. Validation checks their document
+  structure, example references, and the business-rule annotations in source
+  and tests. Existing structured contracts can migrate individually.
+- Browser guidance records the reason and fallback when an implementation uses
+  a feature beyond its supported browser target.
+
 - **`qfai catalog design` derives the design tokens and the Tailwind theme
   from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
   Design Tokens Community Group 2025.10 format, with the colours, their
@@ -236,6 +243,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The end-of-session feedback review reads review findings too.** Besides the
+  session itself, it reads the findings reviewer sub-agents returned and the
+  inline review comments, review bodies and conversation comments on the pull
+  requests the session opened or answered review on. Each finding QFAI's design,
+  specification, implementation, test or verification guidance should have
+  prevented becomes an issue draft that names the shipped skill, step, rule,
+  template, command, hook or agent definition to change. A lapse against
+  guidance that was never loaded when it applied is drafted against what should
+  have loaded it. A finding whose cause lies only in the project is not drafted.
+  The `qfai session-review` counts only hint at what was loaded. A security
+  finding is drafted only once its fix has reached the users it affects in
+  production or their distribution channel, and a finding stays held back where
+  it is unknown whether the project releases or deploys. An unfixed one is named
+  to the user by a number alone; its class of defect and location are given only
+  where the message reaches the user alone, and otherwise the user is advised to
+  ask about it there. The `qfai session-review` command still reads local
+  transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A
@@ -629,16 +653,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai doctor` explains a workflow path that cannot be listed.** For
+  `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
+  ancestors are directories. Other read failures retain the existing guidance.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 
+- Migration step 3 names contract IDs in the instructions for rewriting a
+  rejected constraint in plain words.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
+- **Specification table checks respect list fences and row boundaries.**
+  Tables within fenced list examples are ignored, and comment-like text
+  in one table row can no longer hide subsequent visible rows.
+
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
+
+- `gh-budget` also discards a partial job log when a signal stops GitHub CLI.
+  It keeps the rate-limit reading if the headers arrived in full.
 
 - Plain `qfai init` preserves an assistant `VERSION` marker another writer creates
   during initialization.
@@ -648,13 +686,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Validation launcher mismatch errors identify the checkout problem and explain
   how to install its dependencies and rerun validation through its own launcher.
+  The recovery names `pnpm bootstrap` for QFAI source worktrees and explains
+  how to replace an original `--root` while retaining the other options.
 
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
 
+- **The triage write limits include the restored question-row exception.**
+  The shipped merge procedure and its write limits agree that a union-restored
+  question row is removed in a separate commit before pushing.
+
 - The shipped merge procedure places the final merge after updated-head review.
   If the final fetch sees a different base commit, it repeats the update,
   checks and review before fetching again.
+
+- **The final pull request merge is conditional on the reviewed head.**
+  If the head changes, the merge procedure refreshes the base, checks and
+  review for the new commit before trying again.
 
 - The verification guide distinguishes the built-in verdict scopes from
   acceptance-only validation with `qfai validate --profile atdd`.
@@ -681,6 +729,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   none of them after a private security intake, as the skill's Reviewer Gate
   does. Closes #5540.
 
+- **The seeded Git attributes explain how to handle a restored question row.**
+  After a union merge restores a deleted open question, the guidance calls for
+  a separate cleanup commit before pushing. It preserves other rows and IDs.
+
 - **`QFAI-DB-001` warns when a DB contract calls a destructive function it
   defines.** A function or procedure body was skipped because creating it runs
   nothing, so a file that created one holding `TRUNCATE` and then ran
@@ -693,6 +745,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runtime installation.** If a project-edited entrypoint needs manual
   recovery, the summary marks it as not ready and preserves the edited file.
   Closes #4530.
+
+- **Graph setup distinguishes tracked output from an ineffective ignore rule.**
+  Its warning tells operators to run both recovery commands from the
+  initialized project directory to stop tracking selected generated files
+  while keeping them in the working tree.
 
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read
@@ -742,6 +799,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Verification uses the repository root for index checks and staging.**
   A run started in a subdirectory compares authorized deliverables and staged
   entries using the same paths relative to the Git root.
+
+- **Verification stages authorized filenames literally.** The shipped commit
+  procedure treats each filename as one argument and disables Git pathspec
+  interpretation, so a filename cannot select an unrelated path.
 
 - **`qfai sdd preflight` no longer says "Nothing was written" after creating
   directories.** When its output-directory check failed after it had created
@@ -899,6 +960,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - The `validate.json` guide explains the original severity recorded in
   `issues[].relaxedFrom` by older exploration-mode runs.
+  The field is optional.
 
 - **A directory whose name begins with two dots counts as inside its base
   everywhere.** Several more checks tested whether a path relative to its base
@@ -1092,6 +1154,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   constraint table, and step 4 keeps every non-goal of a large old story.
   Both preserve the original order.
 
+- Migration step 3 also keeps large structure catalogue results, contract
+  index notes and changed constraint identifiers in order without exceeding
+  the JavaScript argument limit.
+
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
   `analysis` folder. When a file inside it could not be read, the copy threw:
@@ -1147,6 +1213,13 @@ decisions` headings appeared anywhere in the file, so a record with several
   The directory is listed as refused and its contents are preserved. The copy
   continues with the other template files. A dry run reports the same refusal.
 
+- Template copies keep nested file and selected-path order even when a
+  subtree has more files than JavaScript accepts as function arguments.
+
+- The template refusal warning names the two places to inspect. A directory
+  or special entry can occupy the destination, and a link or non-directory
+  can block a parent path.
+
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
   no `id` was reported under an ID made up from its file name, which
@@ -1182,6 +1255,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   holding one, such as `CREATE FUNCTION "f(x"(a int)`, gave the routine no
   arguments, and its overloads were reported as one routine defined twice. The
   list is now read from the parenthesis that follows the name. Closes #5149.
+
+- **DB SQL validation keeps commas inside routine array defaults.** A default
+  such as `ARRAY[1, 2]` or a nested array now leaves the declared argument
+  types intact when checking for `QFAI-DB-002`.
 
 - **The graph ignore check covers every name graph setup writes under.** The
   paths `qfai init` checks against an existing managed graph block missed the
@@ -1273,6 +1350,14 @@ decisions` headings appeared anywhere in the file, so a record with several
 - The routine parser skips commas and parentheses inside quoted argument
   names and preserves quoted type names when checking for duplicate routines.
 
+- **DB SQL validation accepts punctuation after routine `DEFAULT`.** It
+  detects redefinitions with defaults such as `DEFAULT(NULL)` and preserves
+  qualified input types such as `app.default`.
+
+- Dollar-quoted and directly `E`- or `e`-prefixed defaults in SQL routines
+  preserve the argument types that follow them. The duplicate check ignores
+  punctuation inside these defaults when comparing the argument types.
+
 - **`QFAI-DB-002` compares routine arguments as PostgreSQL resolves them.**
   The duplicate check compared each argument type as written, so
   `f(int)` and `f(integer)`, or `f(varchar(10))` and `f(varchar(20))`, went
@@ -1282,6 +1367,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `character varying`, `timestamptz` and the other built-in aliases);
   `float(p)` becomes `real` or `double precision` by its precision. Closes
   #5047.
+
+- Qualified SQL routine argument types compare the schema and type identifiers
+  separately. Equivalent ordinary double-quoted and bare spellings match. Case and
+  punctuation that distinguish quoted identifiers are preserved.
 
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
@@ -1302,6 +1391,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - `check-mdschema --scope changed` includes new Markdown documents before
   staging and respects Git's ignore rules. A failed Git file listing widens
   the check and prints a warning.
+
+- The changed-scope schema check requests only untracked Markdown paths from
+  Git, regardless of extension case. Unrelated untracked files no longer fill
+  the captured Git output and trigger a full-tree check.
 
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
@@ -1805,6 +1898,9 @@ decisions` headings appeared anywhere in the file, so a record with several
 
 - Proposal triage records terminal acceptance as `accepted` and uses
   `adopted` when a `decide-design` decision accepts implementation in this project.
+  This requires explicit approval to implement or a recorded delegation that
+  covers the implementation decision. An implementation proposal that is still
+  open or only assumed stays pending as `deferred`.
 
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two
@@ -2131,6 +2227,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   prints one line naming the operation that failed, such as resolving a
   given thread, and exits 2 (#4737).
 
+- **`scripts/pr-threads.mjs` reports invalid GitHub JSON as an error.** A
+  malformed response now produces an operation-specific diagnostic and exit
+  status 2. A deferral stops before proceeding to its next write (#5882).
+
 - **`qfai init --force` keeps a project's own wrapper when the link replacing
   it cannot be written.** A file or directory of the project's at a skill or
   agent wrapper path was deleted before the link was created, so a refused
@@ -2179,6 +2279,15 @@ decisions` headings appeared anywhere in the file, so a record with several
   read it before removing that line, which is not JSON, so it found no rules
   and reported `Invalid structured contract`. The declaration line is now
   removed first, and the rest is read as JSON. Closes #4707.
+
+- **Markdown contract reviews cover both contract formats and give rule-specific repair steps.**
+  Validation reads business-rule annotations in recognised implementation
+  languages, including Groovy, Objective-C, Perl and Haskell, and tells
+  authors where to add or correct a business-rule annotation. Prototyping
+  guidance checks Markdown responsibilities and structured screen lists in prose
+  or Markdown list items.
+  Accessibility walkthroughs use the web routes each role can reach in the
+  running application or prototype for Markdown UI responsibilities.
 
 - **A null `requires:` is no longer read as an empty step list.** In a
   step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
@@ -2282,6 +2391,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   reported an unterminated string or split a statement at a `;` inside the
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
+
+- **DB SQL validation reads continued PostgreSQL escape strings.** Later
+  quoted segments inherit escape handling after a newline, preserving
+  statement and argument boundaries and ignoring references inside the string.
 
 - **The `validate.json` guide documents `profileValidatorsRan`.** The key is
   in every result of a `qfai validate` run that finishes, but the guide to
@@ -2511,6 +2624,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   approval under `allowBuilds` for pnpm 10.31 or later and
   `onlyBuiltDependencies` for earlier pnpm 10.
 
+- **`qfai doctor` explains where pnpm records mdschema approval.** pnpm 10
+  updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
+  From 10.31.0 it can also create the map when neither legacy list is set.
+  Other pnpm 10 configurations use `onlyBuiltDependencies`, and pnpm 11
+  uses `allowBuilds` by default.
+
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
   key, even for a local server that needs no authentication, so document
@@ -2547,6 +2666,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - The turn-end hook clears the saved failure for the current session and agent
   when the gate is disabled or `tech.md` is missing. If the check becomes
   available again, a failing command blocks the turn as a fresh failure.
+
+- The turn-end hook also clears that session and agent's saved failure when
+  it finds no `qfai.config.yaml`. The stop stays silent, and the same failing
+  command can block again after the configuration returns.
 
 - **The turn-end check tells a failure in another worktree from a repeat.**
   When a continued turn failed with the same output it had blocked on, the

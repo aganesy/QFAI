@@ -973,6 +973,9 @@ describe("assets guardrails", () => {
         /\bunion\b/i,
         /\bbase branch\b/i,
         /\blocally\b/i,
+        /\brestore(?:s|d)?\b[^.]*\bopen-question row\b/i,
+        /\bdelete\b[^.]*\bseparate commit\b[^.]*\bbefore pushing\b/i,
+        /\bother register rows and IDs\b/i,
       ];
       for (const term of terms) {
         expect(comment, `${file}: the comment must say why (${String(term)})`).toMatch(term);
@@ -1533,7 +1536,10 @@ describe("assets guardrails", () => {
       "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/01_User-story.md",
       "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/02_Acceptance-Criteria.md",
       "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/03_Example.md",
+      "03_contract/api/api-NNNN-title.md",
       "03_contract/cli/cli-NNNN-title.md",
+      "03_contract/db/db-NNNN-title.md",
+      "03_contract/ui/ui-NNNN-title.md",
       "03_contract/contracts.md",
       "03_contract/tech.md",
       "decisions.md",
