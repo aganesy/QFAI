@@ -105,7 +105,6 @@ const NON_CREATING_TAG_FLAGS = new Set([
   "-n",
   "--contains",
   "--no-contains",
-  "--points-at",
   "--merged",
   "--no-merged",
 ]);
@@ -117,6 +116,7 @@ const VALUE_TAKING_TAG_FLAGS = new Set([
   "--local-user",
   "--trailer",
   "--cleanup",
+  "--points-at",
 ]);
 
 /** Sorting and formatting do not switch a command with a tag operand into list mode. */
@@ -144,11 +144,11 @@ const TAG_SWITCHES = new Set([
   "--no-ignore-case",
   "--no-omit-empty",
   "--no-file",
-  "--no-trailer",
   "--no-cleanup",
   "--no-local-user",
   "--no-sort",
   "--no-format",
+  "--no-points-at",
 ]);
 
 function readTagCommand(command: string): {
@@ -167,6 +167,7 @@ function readTagCommand(command: string): {
   );
   let operands: string[] = [];
   let hasListModifier = false;
+  let hasPointsAtFilter = false;
   let optionsKnown = true;
 
   for (let index = 0; index < args.length; index++) {
@@ -186,8 +187,12 @@ function readTagCommand(command: string): {
       return { creates: !optionsKnown, operands: [], optionsKnown };
     }
 
+    const clearsPointsAt = flag === "--no-points-at" && value === undefined;
+    // Git lets a later unset clear the points-at filter before choosing tag mode.
+    if (flag === "--points-at" || clearsPointsAt) hasPointsAtFilter = !clearsPointsAt;
+
     const listModifier = TAG_LIST_MODIFIERS.has(flag);
-    hasListModifier ||= listModifier;
+    hasListModifier ||= listModifier || clearsPointsAt;
     const longWithValue = listModifier || VALUE_TAKING_TAG_FLAGS.has(flag);
     const knownSwitch =
       TAG_SWITCHES.has(flag) && (value === undefined || !flag.startsWith("--no-"));
@@ -204,8 +209,8 @@ function readTagCommand(command: string): {
   // A continued command may name the tag on its next physical line.
   const creates =
     !optionsKnown ||
-    operands.length > 0 ||
-    (args.length > 0 && (!hasListModifier || command.endsWith("\\")));
+    (!hasPointsAtFilter &&
+      (operands.length > 0 || (args.length > 0 && (!hasListModifier || command.endsWith("\\")))));
   return { creates, operands, optionsKnown };
 }
 
