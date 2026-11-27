@@ -340,25 +340,43 @@ describe("contract IDs and contract-scoped business rules", () => {
       },
     };
     const findings = async () =>
-      (await validateStoryTreeObligations(root, config, "tdd"))
-        .filter(
-          (entry) =>
-            entry.rule === "storyTree.ruleCoverage" ||
-            entry.rule === "storyTree.undeclaredAnnotation",
-        )
-        .map((entry) => entry.message);
+      (await validateStoryTreeObligations(root, config, "tdd")).filter(
+        (entry) =>
+          entry.rule === "storyTree.ruleCoverage" ||
+          entry.rule === "storyTree.undeclaredAnnotation",
+      );
     await put(root, "src/refund.test.ts", `// QFAI:${id}`);
-    expect(await findings()).toEqual([`${id} has no implementation annotation`]);
-    await put(root, "src/refund.ts", `// QFAI:${id}\n// QFAI:BR-API-0003-9999`);
     expect(await findings()).toEqual([
-      expect.stringContaining("Undeclared annotation BR-API-0003-9999"),
+      expect.objectContaining({
+        message: `${id} has no implementation annotation`,
+        suggested_action: expect.stringContaining("implementation file"),
+      }),
     ]);
-    await put(root, "src/refund.ts", `// QFAI:${id}`);
+    await put(root, "src/refund.groovy", `// QFAI:${id}\n// QFAI:BR-API-0003-9999`);
+    await put(root, "src/refund.test.ts", `// QFAI:${id}\n// QFAI:BR-API-0003-9998`);
+    expect(await findings()).toEqual([
+      expect.objectContaining({
+        message: expect.stringContaining("Undeclared annotation BR-API-0003-9998"),
+        suggested_action: expect.stringMatching(/business rule.*test file/),
+      }),
+      expect.objectContaining({
+        message: expect.stringContaining("Undeclared annotation BR-API-0003-9999"),
+        suggested_action: expect.stringMatching(/business rule.*implementation file/),
+      }),
+    ]);
+    await put(root, "src/refund.groovy", "");
+    await put(root, "src/refund.m", `// QFAI:${id}`);
+    await put(root, "src/refund.test.ts", `// QFAI:${id}`);
     expect(await findings()).toEqual([]);
     await put(root, "src/refund.test.ts", "");
     await put(root, "tests/integration/README.md", `<!-- QFAI:${id} -->`);
     const noTests = await validateStoryTreeObligations(root, config, "tdd");
-    expect(noTests.map((entry) => entry.message)).toContain(`${id} has no test annotation`);
+    expect(noTests).toContainEqual(
+      expect.objectContaining({
+        message: `${id} has no test annotation`,
+        suggested_action: expect.stringContaining("test file"),
+      }),
+    );
   });
 
   // QFAI:AC-0001-0064-01

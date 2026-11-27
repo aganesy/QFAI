@@ -87,6 +87,10 @@ describe("implement-scaffold writes the accessibility check from the shipped tem
       "utf-8",
     );
     expect(template).toContain('import AxeBuilder from "@axe-core/playwright";');
+    const walkthrough = section(flat(template), "## What the adopter fills in");
+    expect(walkthrough).toMatch(/Markdown UI contracts.*running application or prototype/);
+    expect(walkthrough).toMatch(/legacy.*routes declared by the contract/);
+    expect(template).toMatch(/Every route each role can reach in the application/);
     expect(template).toContain('["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]');
     expect(template).toContain("for (const [role, routes] of Object.entries(ROUTES_BY_ROLE))");
     expect(template).toContain("test.use({ role });");

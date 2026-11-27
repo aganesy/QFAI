@@ -36,6 +36,9 @@ async function readLoopStep(): Promise<string> {
   );
 }
 
+const MARKDOWN_SCOPE = "A Markdown UI contract supplies its declared responsibility.";
+const LEGACY_SCOPE = "A legacy YAML contract supplies a non-empty screens[] list.";
+
 const VALID_SKILL_CONTENT = [
   "# Prototyping Skill",
   "",
@@ -43,7 +46,9 @@ const VALID_SKILL_CONTENT = [
   "",
   "Supported UI prototyping surfaces are: web, mobile, desktop, mixed.",
   "cli is not a prototyping execution target and is rejected.",
-  "Only UI contracts with a full UI-NNNN ID and non-empty screens[] enter prototyping execution.",
+  "Only UI contracts with a full UI-NNNN ID enter prototyping execution.",
+  MARKDOWN_SCOPE,
+  LEGACY_SCOPE,
   "",
   "## Required References",
   "Read the reference documents before execution.",
@@ -86,9 +91,17 @@ describe("prototyping skill validator", () => {
     expect(hasCliSurfaceDocumentation(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("limits prototyping to UI contracts with declared screens", () => {
+  it("requires both eligibility forms alongside the full UI contract ID", () => {
     expect(hasUiContractScope(VALID_SKILL_CONTENT)).toBe(true);
     expect(hasUiContractScope("ui_bearing: false specs are excluded.")).toBe(false);
+  });
+
+  it.each([MARKDOWN_SCOPE, LEGACY_SCOPE])("flags the skill when it omits %s", (scope) => {
+    const content = VALID_SKILL_CONTENT.replace(scope, "");
+    expect(hasUiContractScope(content)).toBe(false);
+    expect(validatePrototypingSkillContent(content).issues.map((item) => item.code)).toContain(
+      "QFAI-PROTOSKILL-011",
+    );
   });
 
   // QFAI:EX-0001-0042-15
@@ -173,8 +186,9 @@ describe("prototyping skill validator", () => {
 });
 
 describe("prototyping skill asset — UI contract scope", () => {
-  it("requires canonical UI contracts with screens and no spec-pack primary pin", async () => {
+  it("describes both UI contract formats and has no spec-pack primary pin", async () => {
     const skillContent = await readPrototypingAsset("SKILL.md");
+    expect(hasUiContractScope(skillContent)).toBe(true);
     expect(skillContent).toContain("UI-NNNN");
     expect(skillContent).toContain("screens[]");
     expect(skillContent).toContain("primaryUiContract");
