@@ -1328,6 +1328,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   such as `ARRAY[[1,2],[3,4]]` still parse, and a `[` left open is reported.
   Closes #5136.
 
+- DB SQL validation reports physical line numbers in contracts that use
+  bare carriage returns, including after comments and multiline literals.
+
 - **A failed code graph refresh keeps the previous graph with the files it
   was built from.** Checking whether the code graph was current copied the
   changed project files into the active analysis first, so when the
