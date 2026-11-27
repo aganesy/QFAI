@@ -318,7 +318,7 @@ function joinShellContinuations(shell: string): string {
       tokens.lastIndex = newline + 1;
       continue;
     }
-    mayStartComment = /^[\s;&|]$/.test(value);
+    mayStartComment = /^[\s;&|()<>]$/.test(value);
   }
   return joined + shell.slice(copied);
 }
