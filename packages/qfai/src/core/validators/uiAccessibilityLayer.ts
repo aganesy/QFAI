@@ -27,15 +27,12 @@
  * axe, so it raises nothing here; `QFAI-SCAN-002` reports the scan itself.
  */
 
-import path from "node:path";
-import { extractH2Sections } from "../parse/markdown.js";
-import { parseRenderedMarkdownTables } from "../specPackParsers.js";
-import { readUiContractInventory } from "../prototyping/specResolution.js";
+import { readProjectSurface, readUiContractInventory } from "../prototyping/specResolution.js";
 import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { readStoryTests } from "./storyTreeObligations.js";
-import { issue, readSafe } from "./utils.js";
+import { issue } from "./utils.js";
 
 export const UI_ACCESSIBILITY_LAYER_RULE_ID = "QFAI-AXE-001";
 
@@ -59,13 +56,7 @@ async function abstractWebContract(root: string, config: QfaiConfig): Promise<st
     entry.contractPath.endsWith(".md"),
   );
   if (!contract) return undefined;
-  const text = await readSafe(path.resolve(root, config.paths.contractsDir, "tech.md"));
-  const stack = extractH2Sections(text).get("Stack");
-  const table = stack && parseRenderedMarkdownTables(stack.body)[0];
-  const surface = table?.rows.find((row) => row[table.headers.indexOf("Component")] === "Surface");
-  const choice =
-    surface && table && surface[table.headers.indexOf("Choice")]?.replaceAll("`", "").trim();
-  return choice === "web" ? contract.contractPath : undefined;
+  return (await readProjectSurface(root, config)) === "web" ? contract.contractPath : undefined;
 }
 
 export async function validateUiAccessibilityLayer(

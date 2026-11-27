@@ -8,7 +8,30 @@ import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { declaredContractId, extractDeclaredContractIds } from "../contractsDecl.js";
+import { isCanonicalSurface, type CanonicalSurface } from "../domain/surface.js";
+import { extractH2Sections } from "../parse/markdown.js";
+import { parseRenderedMarkdownTables } from "../specPackParsers.js";
 import { isEnoent } from "../fs/errno.js";
+
+/** Project surface declared by the Stack table of the configured technology contract. */
+export async function readProjectSurface(
+  root: string,
+  config: QfaiConfig,
+): Promise<CanonicalSurface | undefined> {
+  let text: string;
+  try {
+    text = await readFile(path.resolve(root, config.paths.contractsDir, "tech.md"), "utf-8");
+  } catch (error) {
+    if (isEnoent(error)) return undefined;
+    throw error;
+  }
+  const section = extractH2Sections(text).get("Stack");
+  const table = section && parseRenderedMarkdownTables(section.body)[0];
+  if (!table) return undefined;
+  const row = table.rows.find((cells) => cells[table.headers.indexOf("Component")] === "Surface");
+  const choice = row?.[table.headers.indexOf("Choice")]?.replaceAll("`", "").trim();
+  return choice && isCanonicalSurface(choice) ? choice : undefined;
+}
 
 export type ResolvedUiContract = {
   uiContractId: string;
@@ -50,7 +73,7 @@ export async function readUiContractInventory(
     if (path.extname(file).toLowerCase() === ".md") {
       const id = declaredContractId(file, text);
       if (id?.startsWith("UI-")) {
-        entries.push({ uiContractId: id, contractPath, hasScreens: true, screenIds: [] });
+        entries.push({ uiContractId: id, contractPath, hasScreens: false, screenIds: [] });
       }
       continue;
     }
@@ -93,7 +116,7 @@ export async function resolvePrimaryPrototypingSpec(
   config: QfaiConfig,
 ): Promise<ResolvedUiContract | undefined> {
   const candidates = (await readUiContractInventory(root, config))
-    .filter((entry) => entry.hasScreens)
+    .filter((entry) => entry.hasScreens || entry.contractPath.endsWith(".md"))
     .sort((a, b) => a.uiContractId.localeCompare(b.uiContractId));
   const pin = config.prototyping?.primaryUiContract;
   const selected = pin ? candidates.find((entry) => entry.uiContractId === pin) : candidates[0];
@@ -105,13 +128,13 @@ export async function resolvePrimaryPrototypingSpec(
   };
 }
 
-/** Return every declared UI contract that has at least one screen. */
+/** Return every Markdown UI responsibility and every structured UI contract with screens. */
 export async function resolveAllUiBearingSpecs(
   root: string,
   config: QfaiConfig,
 ): Promise<string[]> {
   const ids = (await readUiContractInventory(root, config))
-    .filter((entry) => entry.hasScreens)
+    .filter((entry) => entry.hasScreens || entry.contractPath.endsWith(".md"))
     .map((entry) => entry.uiContractId);
   return [...new Set(ids)].sort((a, b) => a.localeCompare(b));
 }
