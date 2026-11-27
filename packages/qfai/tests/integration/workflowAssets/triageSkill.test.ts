@@ -192,8 +192,12 @@ describe("qfai-triage invoked by name", () => {
     const completion = flat(sectionOf(skill, "## Completion"));
     expect(completion).toMatch(/never says a (?:tracked )?change is done/i);
     expect(completion).toMatch(/the stage commits only the records the Reviewer Gate allows/);
-    expect(String(frontMatterOf(skill).description)).toMatch(
-      /ending with no tracked change but its deliberation record, open questions and approval row:/,
+    const description = String(frontMatterOf(skill).description);
+    expect(description).toContain(
+      "Ordinary triage limits tracked writes to its deliberation record, open questions and approval row.",
+    );
+    expect(description).toContain(
+      "User-authorized operations may also make the tracked changes allowed by the Reviewer Gate.",
     );
     expect(flat(sectionOf(skill, "## Inputs"))).toMatch(
       /still writes the run's deliberation record when it asks the user a question or takes an agent decision, except in a private security intake: a run where `triage-security-intake` takes a vulnerability report in privately writes no deliberation record that could disclose it\. Its questions, decisions and severity stay in the ignored intake record that step names/,
