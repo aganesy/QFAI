@@ -252,8 +252,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   rule, template, command, hook or agent definition to change. A lapse against
   guidance that was never loaded when it applied is drafted against what should
   have loaded it. A finding whose cause lies only in the project is not
-  drafted. A security finding is drafted only once its fix is released, and an
-  unfixed one is named to the user instead. `qfai session-review` still reads
+  drafted. The session counts only hint at what was loaded. A security finding is
+  drafted only once its fix is merged and, where the project ships, released or
+  deployed; an unfixed one is named to the user instead. `qfai session-review` still reads
   local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
