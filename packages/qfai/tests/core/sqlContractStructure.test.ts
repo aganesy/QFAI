@@ -26,6 +26,7 @@ import {
   findRedefinitions,
   IDENTIFIER_CHAR,
   parseSqlContract,
+  separateLiterals,
 } from "../../src/core/sqlContract.js";
 import type { Issue } from "../../src/core/types.js";
 import { validateContracts } from "../../src/core/validators/contracts.js";
@@ -100,6 +101,29 @@ describe("the statement splitter knows SQL's quoting rules", () => {
       `SELECT e'a\\\\'`,
       "SELECT 3",
     ]);
+  });
+
+  // QFAI:EX-0001-0039-75
+  it.each([
+    ["\n", ""],
+    ["\r\n", ""],
+    ["\n", " -- comment with ) and ;"],
+  ])("keeps an E string's continuation across %j after %j", (lineEnding, comment) => {
+    const sql = [
+      "CREATE FUNCTION f(a text DEFAULT E'prefix'" + comment,
+      String.raw`  'it\'s, );', b integer DEFAULT 0) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;`,
+      "SELECT 2;",
+    ].join(lineEnding);
+    const { statements, errors } = parseSqlContract(sql);
+
+    expect(errors).toEqual([]);
+    expect(statements.map(({ line }) => line)).toEqual([1, 3]);
+    expect(collectCreatedObjects(statements).map(({ signature }) => signature)).toEqual([
+      "text,integer",
+    ]);
+    const parts = separateLiterals(statements[0]?.text ?? "");
+    expect(parts.literals).toEqual(["prefixit's, );", " SELECT 1 "]);
+    expect(parts.code).not.toContain("s, );");
   });
 
   it("keeps a backslash literal in a standard string and in an identifier ending in E", () => {
