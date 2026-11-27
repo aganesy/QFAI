@@ -483,6 +483,9 @@ describe("a stale catalogue is a warning, and no catalogue asks nothing", () => 
       ["QFAI-COMP-004", "warning", CATALOG],
     ]);
     expect(findings[0]?.message).toBe(`Could not read the component catalogue: ${reason}`);
+    expect(findings[0]?.suggested_action).toContain("Shorten catalogue tags");
+    expect(findings[0]?.suggested_action).toContain("uiux.surfacePaths");
+    expect(findings[0]?.suggested_action).toContain("qfai catalog components");
 
     const check = await cli(["catalog", "components", "--check", "--root", root]);
     expect(check.code).toBe(1);
