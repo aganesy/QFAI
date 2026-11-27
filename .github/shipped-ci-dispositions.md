@@ -67,3 +67,5 @@ the next one against.
   Because: these aggregates now run every check after one fails, and the shipped templates run no lint aggregate.
 - SHIPPED-CI: not-applicable for package.json
   Because: the aggregate entries now call a Bash helper that holds the same check lists, and the shipped templates run no lint aggregate.
+- SHIPPED-CI: not-applicable for package.json
+  Because: this repository now checks how it generates the shipped setup steps. The workflows installed in adopter projects carry the complete setup and need no generator.
