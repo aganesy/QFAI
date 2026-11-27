@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- UI, API and database contracts can now describe responsibilities, inputs,
+  outcomes and business rules in Markdown. Validation checks their document
+  structure, example references, and the business-rule annotations in source
+  and tests. Existing structured contracts can migrate individually.
+- Browser guidance records the reason and fallback when an implementation uses
+  a feature beyond its supported browser target.
+
 - **`qfai catalog design` derives the design tokens and the Tailwind theme
   from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
   Design Tokens Community Group 2025.10 format, with the colours, their
@@ -629,8 +636,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- SQL routine identity ignores a Unicode-quoted parameter name together with
-  its `UESCAPE` clause and retains the full input type.
+- **`qfai doctor` explains a workflow path that cannot be listed.** For
+  `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
+  ancestors are directories. Other read failures retain the existing guidance.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
@@ -1310,6 +1318,9 @@ decisions` headings appeared anywhere in the file, so a record with several
 - Qualified SQL routine argument types compare the schema and type identifiers
   separately. Equivalent ordinary double-quoted and bare spellings match. Case and
   punctuation that distinguish quoted identifiers are preserved.
+
+- SQL routine identity ignores a Unicode-quoted parameter name together with
+  its `UESCAPE` clause and retains the full input type.
 
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
@@ -2549,6 +2560,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   removed. Both now recommend `pnpm approve-builds` and say it records the
   approval under `allowBuilds` for pnpm 10.31 or later and
   `onlyBuiltDependencies` for earlier pnpm 10.
+
+- **`qfai doctor` explains where pnpm records mdschema approval.** pnpm 10
+  updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
+  From 10.31.0 it can also create the map when neither legacy list is set.
+  Other pnpm 10 configurations use `onlyBuiltDependencies`, and pnpm 11
+  uses `allowBuilds` by default.
 
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
