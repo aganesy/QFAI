@@ -578,6 +578,29 @@ describe("migration CLI contract shape", () => {
     expect((await run(step03, root)).output).toMatch(/## Operations\r?\nnone/);
   });
 
+  // QFAI:EX-0004-0006-38
+  it("keeps every manual note from a large legacy CLI contract in source order", async () => {
+    const root = await project();
+    const sectionCount = 200_000;
+    const sections = Array.from(
+      { length: sectionCount },
+      (_, index) => `## Legacy ${index + 1}\n\nRetain.\n\n`,
+    );
+    await put(
+      root,
+      OLD,
+      `# Contract: Orders command\n\n## Ownership boundary\n\n${OWNERSHIP}\n\n${sections.join("")}`,
+    );
+
+    const plan = await planContracts(await context(root));
+    const notes = plan.forAPerson.filter((note) => note.startsWith(`${NEW}: rewrite "## Legacy `));
+    expect(notes).toHaveLength(sectionCount);
+    const mismatch = notes.findIndex(
+      (note, index) => note !== `${NEW}: rewrite "## Legacy ${index + 1}" of ${OLD} by hand`,
+    );
+    expect(mismatch).toBe(-1);
+  });
+
   // QFAI:EX-0004-0006-21
   it("writes the template's placeholder where the old contract has no ownership boundary", async () => {
     const root = await project();

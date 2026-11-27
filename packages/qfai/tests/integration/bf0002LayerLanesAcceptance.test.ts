@@ -211,7 +211,7 @@ describe("BF-0002 layer-separated lanes", () => {
       operationScripts.map((name) => `pnpm ${name}`).join(" && "),
     );
     expect(operationScripts.map((name) => scripts[name]).join(" && ")).toBe(
-      "pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml packages/qfai/assets/init/.qfai/ && bash ./scripts/run-lint-checks.sh gate && pnpm check-types && node ./scripts/check-build-warnings.mjs && pnpm verify:pack",
+      "node ./scripts/sync-shipped-workflow-toolchain.mjs --check && pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml packages/qfai/assets/init/.qfai/ && bash ./scripts/run-lint-checks.sh gate && pnpm check-types && node ./scripts/check-build-warnings.mjs && pnpm verify:pack",
     );
 
     const gates = ["gate-tests", "gate-floor", "gate-floor-whole", ...operationJobs];

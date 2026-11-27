@@ -673,7 +673,7 @@ jobs:
         with:
           # The version resolved by the step above: the adopter's own
           # version file when they have one, else the documented fallback
-          # (Node 20, matching the package `engines: ">=20.19.0"` floor).
+          # (Node 20, the major line containing the package's lowest supported version).
           node-version: ${{ steps.node-version.outputs.version }}
           # setup-node's `cache:` accepts a single package-manager value, and the step above
           # decides it — an expression cannot ask whether the package manager is on PATH, and
