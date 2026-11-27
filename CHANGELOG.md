@@ -682,8 +682,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 
-- Migration step 3 names contract IDs in the instructions for rewriting a
-  rejected constraint in plain words.
+- Migration step 3 asks authors to rewrite rejected constraints in plain
+  words and omit contract IDs.
 
 - Commands using the general CLI help format print full help when explicitly
   given `--help` or `-h` alongside a refused argument. The refusal still
