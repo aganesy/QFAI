@@ -78,6 +78,12 @@ export async function runCatalogComponents(options: CatalogComponentsOptions): P
     );
     return EXIT_CODES.findings;
   }
+  if (Buffer.byteLength(text, "utf8") > COMPONENT_CATALOG_MAX_BYTES) {
+    error(
+      `qfai catalog components: generated output exceeds ${COMPONENT_CATALOG_MAX_BYTES} bytes, so nothing was compared with ${target}. ${COMPONENT_CATALOG_SIZE_RECOVERY}`,
+    );
+    return EXIT_CODES.findings;
+  }
   if (committed.state === "read" && sameCatalogText(committed.text, text)) {
     info(`${target} is up to date: ${scan.components.length} component(s).`);
     return EXIT_CODES.ok;

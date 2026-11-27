@@ -23,6 +23,12 @@ A shared predicate may fail several tests whose assertions independently prove t
 
 The falsifiability run recorded for an example that production already satisfies already supplies this proof when it tests the same predicate and selector. Reuse that run instead of mutating twice.
 
+## Prose and tables
+
+When a test guards prose or a table, assert the operative words of each clause.
+Before handoff, delete each new clause once in isolation and confirm its assertion fails.
+Restore the text and confirm the test passes before probing the next clause.
+
 ## Weak oracles
 
 Check for truthiness when an exact value is available, an empty loop of assertions, expected values computed by the same helper as actual values, assertions on a mock's own input, and fields discarded before observation. Strengthen the assertion within the approved acceptance criterion.

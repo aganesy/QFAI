@@ -290,6 +290,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stated once, and the Standard commands home is named as
   `<paths.contractsDir>/tech.md#standard-commands-copy-paste`, so a project
   with its own contracts directory is pointed at the right file.
+- Oracle-strength guidance now asks tests of prose and tables to check the
+  operative words and demonstrate an assertion failure for each new clause
+  when that clause is removed on its own.
 
 - **Breaking: each contract kind has its own number sequence, and a business
   rule ID names its contract's kind.** A project with five DB contracts and
@@ -701,6 +704,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   validation and preserves the existing file when rendered output exceeds it.
   Small catalogue reads use a buffer that grows with the bytes read.
 
+- Component catalogue check mode reports when the selected metadata would
+  exceed the publication limit.
+
 - Restoring or publishing a completed document graph reuses the safety check
   on each copy during native freshness validation.
 
@@ -751,6 +757,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Validation accepts the QFAI copy selected by Yarn Plug’n’Play for the project,
   including a copy loaded from a shared cache outside the project directory.
+  The resolver must report an absolute location for the declaring package.
 
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
