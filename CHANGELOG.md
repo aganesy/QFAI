@@ -696,6 +696,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   If the final fetch sees a different base commit, it repeats the update,
   checks and review before fetching again.
 
+- **The final pull request merge is conditional on the reviewed head.**
+  If the head changes, the merge procedure refreshes the base, checks and
+  review for the new commit before trying again.
+
 - The verification guide distinguishes the built-in verdict scopes from
   acceptance-only validation with `qfai validate --profile atdd`.
 
@@ -1247,6 +1251,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   holding one, such as `CREATE FUNCTION "f(x"(a int)`, gave the routine no
   arguments, and its overloads were reported as one routine defined twice. The
   list is now read from the parenthesis that follows the name. Closes #5149.
+
+- **DB SQL validation keeps commas inside routine array defaults.** A default
+  such as `ARRAY[1, 2]` or a nested array now leaves the declared argument
+  types intact when checking for `QFAI-DB-002`.
 
 - **The graph ignore check covers every name graph setup writes under.** The
   paths `qfai init` checks against an existing managed graph block missed the
@@ -2379,6 +2387,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   reported an unterminated string or split a statement at a `;` inside the
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
+
+- **DB SQL validation reads continued PostgreSQL escape strings.** Later
+  quoted segments inherit escape handling after a newline, preserving
+  statement and argument boundaries and ignoring references inside the string.
 
 - **The `validate.json` guide documents `profileValidatorsRan`.** The key is
   in every result of a `qfai validate` run that finishes, but the guide to
