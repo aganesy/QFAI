@@ -16,8 +16,7 @@ Run the entry check of
 first.
 
 The loop is static-first and file-based by default. Supported surfaces: web,
-mobile, desktop, mixed. cli surface is rejected. Only UI contracts declaring a
-full `UI-NNNN` ID and a non-empty `screens[]` enter the prototyping scope;
+mobile, desktop, mixed. cli surface is rejected. A Markdown UI contract supplies its responsibility, inputs, outcomes and BRs; derive screens, routes, states and concrete interactions in the prototype. A legacy YAML contract supplies a non-empty `screens[]` list. Both enter scope by their full `UI-NNNN` ID;
 `prototyping-grill` § Scope says which of them one invocation covers. The
 primary contract comes from the request, or from
 `qfai.config.yaml#prototyping.primaryUiContract`; the request wins. Both take

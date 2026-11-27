@@ -7,7 +7,7 @@ import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
-import { extractDeclaredContractIds } from "../contractsDecl.js";
+import { declaredContractId, extractDeclaredContractIds } from "../contractsDecl.js";
 import { isEnoent } from "../fs/errno.js";
 
 export type ResolvedUiContract = {
@@ -25,7 +25,7 @@ export type UiContractInventoryEntry = {
 };
 
 /**
- * Read the same YAML extensions that the UI screen reader accepts. A file
+ * Markdown supplies a UI responsibility; YAML supplies its concrete screen entries. Each file
  * contributes one unit only when it declares exactly one canonical UI ID.
  * Contract validation reports malformed and duplicate declarations separately.
  */
@@ -35,7 +35,7 @@ export async function readUiContractInventory(
 ): Promise<UiContractInventoryEntry[]> {
   const uiRoot = path.resolve(root, config.paths.contractsDir, "ui");
   const files = (
-    await fg("**/*.{yaml,yml}", { cwd: uiRoot, absolute: true, onlyFiles: true })
+    await fg("**/*.{yaml,yml,md}", { cwd: uiRoot, absolute: true, onlyFiles: true })
   ).sort();
   const entries: UiContractInventoryEntry[] = [];
   for (const file of files) {
@@ -45,6 +45,14 @@ export async function readUiContractInventory(
     } catch (error) {
       if (isEnoent(error)) continue;
       throw error;
+    }
+    const contractPath = path.relative(root, file).split(path.sep).join("/");
+    if (path.extname(file).toLowerCase() === ".md") {
+      const id = declaredContractId(file, text);
+      if (id?.startsWith("UI-")) {
+        entries.push({ uiContractId: id, contractPath, hasScreens: true, screenIds: [] });
+      }
+      continue;
     }
     const declared = extractDeclaredContractIds(text).filter((id) => /^UI-\d{4}$/.test(id));
     if (declared.length !== 1) continue;
@@ -71,7 +79,7 @@ export async function readUiContractInventory(
     );
     entries.push({
       uiContractId: declared[0] ?? "",
-      contractPath: path.relative(root, file).replace(/\\/g, "/"),
+      contractPath,
       hasScreens: screens.length > 0,
       screenIds,
     });

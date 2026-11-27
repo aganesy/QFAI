@@ -27,11 +27,15 @@
  * axe, so it raises nothing here; `QFAI-SCAN-002` reports the scan itself.
  */
 
+import path from "node:path";
+import { extractH2Sections } from "../parse/markdown.js";
+import { parseRenderedMarkdownTables } from "../specPackParsers.js";
+import { readUiContractInventory } from "../prototyping/specResolution.js";
 import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { readStoryTests } from "./storyTreeObligations.js";
-import { issue } from "./utils.js";
+import { issue, readSafe } from "./utils.js";
 
 export const UI_ACCESSIBILITY_LAYER_RULE_ID = "QFAI-AXE-001";
 
@@ -50,6 +54,20 @@ export function namesAxe(source: string): boolean {
   return AXE_NAME.test(source);
 }
 
+async function abstractWebContract(root: string, config: QfaiConfig): Promise<string | undefined> {
+  const contract = (await readUiContractInventory(root, config)).find((entry) =>
+    entry.contractPath.endsWith(".md"),
+  );
+  if (!contract) return undefined;
+  const text = await readSafe(path.resolve(root, config.paths.contractsDir, "tech.md"));
+  const stack = extractH2Sections(text).get("Stack");
+  const table = stack && parseRenderedMarkdownTables(stack.body)[0];
+  const surface = table?.rows.find((row) => row[table.headers.indexOf("Component")] === "Surface");
+  const choice =
+    surface && table && surface[table.headers.indexOf("Choice")]?.replaceAll("`", "").trim();
+  return choice === "web" ? contract.contractPath : undefined;
+}
+
 export async function validateUiAccessibilityLayer(
   root: string,
   config: QfaiConfig,
@@ -58,7 +76,8 @@ export async function validateUiAccessibilityLayer(
     (screen) => isWebRoute(screen.route),
   );
   const first = screens[0];
-  if (first === undefined) return [];
+  const file = first?.sourceRef.split("#")[0] ?? (await abstractWebContract(root, config));
+  if (!file) return [];
 
   // A second read of the selected test files in a full scan, after the one the
   // obligation checks share. Accepted: it runs only once a web screen exists,
@@ -72,17 +91,19 @@ export async function validateUiAccessibilityLayer(
   if (scan.truncated) return [];
   if (scan.files.some((file) => namesAxe(file.content))) return [];
 
-  const file = first.sourceRef.split("#")[0];
+  const webEvidence = first
+    ? `The UI contracts declare ${String(screens.length)} screen(s) with a web route, such as '${first.route}'`
+    : "The project declares a web surface and a Markdown UI responsibility";
   return [
     issue(
       UI_ACCESSIBILITY_LAYER_RULE_ID,
-      `The UI contracts declare ${String(screens.length)} screen(s) with a web route, such as '${first.route}', and no selected test file contains \`AxeBuilder\` or an \`@axe-core/\` package name, so no test checks a route for accessibility.`,
+      `${webEvidence}, and no selected test file contains \`AxeBuilder\` or an \`@axe-core/\` package name, so no test checks a route for accessibility.`,
       "warning",
       file,
       "uiux.accessibilityLayer",
       screens.map((screen) => screen.screenId),
       "canonical",
-      "Add the accessibility spec `implement-scaffold` writes from `.qfai/assistant/skill/qfai-implement/references/accessibility-check.md`: axe through `@axe-core/playwright` with the WCAG 2.2 A and AA tags, over every route the UI contracts declare, for each role that can reach it. A spec outside `<testsDir>` counts only when `validation.traceability.testFileGlobs` selects it.",
+      "Add the accessibility spec `implement-scaffold` writes from `.qfai/assistant/skill/qfai-implement/references/accessibility-check.md`: axe through `@axe-core/playwright` with the WCAG 2.2 A and AA tags, over every implemented web route, for each role that can reach it. A spec outside `<testsDir>` counts only when `validation.traceability.testFileGlobs` selects it.",
     ),
   ];
 }
