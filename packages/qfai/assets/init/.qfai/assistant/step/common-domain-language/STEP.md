@@ -72,7 +72,7 @@ glossary, then deletes that row. Nothing else is written.
    `.agents/rules/grilling.md` § A round says. Changing what a glossary row
    already defines is a critical decision and is put to the user in every
    session. Under a no-question mode, write each node left open as an
-   `open-questions.md` row and change no glossary row.
+   `open-questions.md` row and rewrite no existing glossary row.
 6. **Write what was settled.** Write each settled term as the Writes table
    says, at once: a definition that says what the term is, the rejected
    synonyms comma-separated, and the context only where the term splits. A
