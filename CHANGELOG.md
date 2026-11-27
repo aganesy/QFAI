@@ -810,6 +810,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `npx --no-install playwright --version` if the shim is unavailable or fails.
   The reported order matches the two probes. Closes #4773.
 
+- **The prototyping doctor validates target URLs offline.** It reports the
+  URL configuration without sending a request. The prototyping preflight
+  checks reachability separately before the first iteration. Closes #4473.
+
 - **A plain `qfai report` of an unfinished run also says it is not a clean
   result.** The notice that the report is not a clean result was documented
   only for `qfai report --run-validate`. It is printed whenever the report
