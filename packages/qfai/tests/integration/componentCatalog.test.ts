@@ -693,3 +693,78 @@ describe("each component lists the business rules its declaration cites", () => 
     expect(section).toContain("`QFAI:BR-UI-");
   });
 });
+
+// QFAI:AC-0001-0307-13
+describe("each component lists the theme variables its declaration references", () => {
+  // QFAI:EX-0001-0307-38
+  it("writes tokens through the CLI, passes --check and leaves the catalogue readable to validate", async () => {
+    const root = await projectWith({
+      "src/ui/badge.tsx": [
+        "/**",
+        " * @source authored",
+        " * @reason no catalogue item shows a badge",
+        " */",
+        "// QFAI:BR-UI-0003-0001",
+        "export function Badge() {",
+        '  return <span className="bg-[var(--color-brand)] text-[var(--color-text)]" />;',
+        "}",
+        "",
+      ].join("\n"),
+    });
+    expect((await cli(["catalog", "components", "--root", root])).code).toBe(0);
+    expect(await readCatalogText(root)).toContain(
+      [
+        "    reason: no catalogue item shows a badge",
+        "    tokens:",
+        "      - --color-brand",
+        "      - --color-text",
+        "    realizes:",
+        "      - BR-UI-0003-0001",
+        "",
+      ].join("\n"),
+    );
+    expect((await cli(["catalog", "components", "--check", "--root", root])).code).toBe(0);
+    expect(await comp(root)).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0307-39
+  it("reports a catalogue whose tokens value is not a list of names as not a components list", async () => {
+    const root = await projectWith({
+      "src/ui/badge.tsx": component("Badge", ["@source authored", "@reason none fits"]),
+      [CATALOG]: [
+        "components:",
+        "  - name: Badge",
+        "    file: src/ui/badge.tsx",
+        "    tokens: --color-brand",
+        "",
+      ].join("\n"),
+    });
+    expect((await comp(root)).map((found) => found.message)).toContain(
+      "The component catalogue is not a `components:` list of entries with a `name` and a `file`.",
+    );
+  });
+
+  // QFAI:EX-0001-0307-40
+  it("ships the var(--name) reference in the UI guidance", async () => {
+    const guidance = await readFile(
+      path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "..",
+        "assets",
+        "init",
+        ".qfai",
+        "assistant",
+        "skill",
+        "qfai-implement",
+        "references",
+        "ui-affecting.md",
+      ),
+      "utf-8",
+    );
+    const start = guidance.indexOf("## Component catalogue");
+    const section = guidance.slice(start, guidance.indexOf("\n## ", start + 1));
+    expect(section).toContain("`tokens`");
+    expect(section).toContain("`var(--");
+  });
+});

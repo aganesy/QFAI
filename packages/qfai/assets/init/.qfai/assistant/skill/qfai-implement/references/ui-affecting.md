@@ -52,6 +52,10 @@ A component that realises a UI business rule carries the rule's `QFAI:BR-UI-NNNN
 inside its declaration or on its leading comment lines, so the catalogue's `realizes` lists the
 rule. Before writing a region for a rule, look for a listed component whose `realizes` holds it.
 
+Reference a theme value by its variable, as `var(--color-brand)` or `bg-[var(--color-brand)]`,
+never by a literal colour or size, so the catalogue's `tokens` lists the variables a component
+uses. A utility class such as `bg-brand` is not listed there.
+
 The widget `@pattern` names it reads, compared without case, spaces, hyphens or underscores, are
 `dialog`, `alert dialog`, `drawer`, `sheet`, `menu`, `menu button`, `tabs`, `combobox`,
 `autocomplete`, `listbox`, `select`, `tooltip`, `popover`, `toast`, `date picker`, `disclosure` and

@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../../src/core/config.js";
 import {
+  readCatalog,
   renderCatalog,
   scanComponents,
   type CatalogComponent,
@@ -334,5 +335,74 @@ describe("each component lists the business rules its declaration cites", () => 
       { name: "Right", file: "src/ui/pair.tsx" },
       { name: "Second", file: "src/ui/pair.tsx" },
     ]);
+  });
+});
+
+describe("each component lists the theme variables its declaration references", () => {
+  // QFAI:EX-0001-0307-38
+  it("records each var(--name) once, sorted, before realizes, and resolves no utility class", async () => {
+    const found = await components({
+      "src/ui/badge.tsx": [
+        "// QFAI:BR-UI-0003-0001",
+        "export function Badge() {",
+        "  const gap = `calc(var(--space-2, 4px) * 2)`;",
+        "  return (",
+        '    <span className="bg-[var(--color-brand)]" style={{ color: "var(--color-text)", gap }}>',
+        '      <i className="border-[var(--color-brand)]" />',
+        "    </span>",
+        "  );",
+        "}",
+        "",
+        "export function Plain() {",
+        '  return <p className="bg-brand" />;',
+        "}",
+        "",
+        'export const Left = () => <p style={{ color: "var(--color-left)" }} />,',
+        "  Right = () => <p />;",
+        "",
+      ].join("\n"),
+    });
+    expect(found).toEqual([
+      {
+        name: "Badge",
+        file: "src/ui/badge.tsx",
+        tokens: ["--color-brand", "--color-text", "--space-2"],
+        realizes: ["BR-UI-0003-0001"],
+      },
+      { name: "Left", file: "src/ui/badge.tsx", tokens: ["--color-left"] },
+      { name: "Plain", file: "src/ui/badge.tsx" },
+      { name: "Right", file: "src/ui/badge.tsx" },
+    ]);
+    expect(renderCatalog(found)).toContain(
+      [
+        "    tokens:",
+        "      - --color-brand",
+        "      - --color-text",
+        "      - --space-2",
+        "    realizes:",
+        "      - BR-UI-0003-0001",
+        "  - name: Left",
+      ].join("\n"),
+    );
+  });
+
+  // QFAI:EX-0001-0307-39
+  it("reads a tokens list back and treats any other tokens value as invalid", async () => {
+    const entry = ["components:", "  - name: Badge", "    file: src/ui/badge.tsx"];
+    const root = await projectWith({
+      ".qfai/catalog/components.yaml": [...entry, "    tokens:", "      - --color-brand", ""].join(
+        "\n",
+      ),
+    });
+    expect(await readCatalog(root)).toMatchObject({
+      state: "read",
+      components: [{ name: "Badge", file: "src/ui/badge.tsx", tokens: ["--color-brand"] }],
+    });
+    for (const malformed of ["    tokens: --color-brand", "    tokens:\n      - 3"]) {
+      const bad = await projectWith({
+        ".qfai/catalog/components.yaml": [...entry, malformed, ""].join("\n"),
+      });
+      expect(await readCatalog(bad)).toEqual({ state: "invalid" });
+    }
   });
 });

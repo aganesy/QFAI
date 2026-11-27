@@ -83,4 +83,12 @@ Feature: Catalogue the components a project already has
     Then each entry records `realizes` with the IDs its own declaration cites, once each and sorted, as its last key, and the component that cites none has no `realizes` key
     And an ID inside a single-line string, after code on the same line, or in another declarator of the same `const` list is not recorded
     And the shipped implementation UI guidance says to carry the rule's comment inside the declaration of the component that realises it or on its leading comment lines and to look up `realizes` before writing a region for a rule
+
+  # AC-0001-0307-13
+  Scenario: Each component lists the theme variables its declaration references
+    Given exported components whose declarations reference CSS custom properties through `var(--name)` in strings, template literals, style objects and Tailwind arbitrary values, and one that uses only a theme utility class
+    When `qfai catalog components` runs
+    Then each entry records `tokens` with the names its own declaration references, once each and sorted, right before `realizes`, and the component that references none has no `tokens` key
+    And a name referenced in another declarator of the same `const` list is not recorded, and a catalogue whose `tokens` is not a list of names is reported as not a components list
+    And the shipped implementation UI guidance says to reference a theme value by its variable through `var(--…)` so that `tokens` lists it
 ```

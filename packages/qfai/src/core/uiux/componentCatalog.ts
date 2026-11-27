@@ -90,6 +90,8 @@ export type CatalogComponent = {
   states?: string[];
   pattern?: string;
   a11y?: string;
+  /** The CSS custom properties its declaration references through `var(--name)`, sorted. */
+  tokens?: string[];
   /** The business-rule IDs its declaration cites on standalone comment lines, sorted. */
   realizes?: string[];
 };
@@ -184,6 +186,7 @@ export function renderCatalog(components: readonly CatalogComponent[]): string {
       const value = component[tag];
       if (value !== undefined) entry[tag] = value;
     }
+    if (component.tokens) entry.tokens = component.tokens;
     if (component.realizes) entry.realizes = component.realizes;
     return entry;
   });
@@ -292,6 +295,11 @@ function catalogComponentOf(item: unknown): CatalogComponent | null {
     if (!isStringList(states)) return null;
     component.states = states;
   }
+  const tokens = record.get("tokens");
+  if (tokens !== undefined) {
+    if (!isStringList(tokens)) return null;
+    component.tokens = tokens;
+  }
   const realizes = record.get("realizes");
   if (realizes !== undefined) {
     if (!isStringList(realizes)) return null;
@@ -304,6 +312,20 @@ function catalogComponentOf(item: unknown): CatalogComponent | null {
     component[tag] = value;
   }
   return component;
+}
+
+/**
+ * The CSS custom property names, leading `--` kept, that a text references through `var(--name`,
+ * in the order they appear: in a string, a template literal, a style object or a Tailwind
+ * arbitrary value such as `bg-[var(--color-brand)]`.
+ * Ceiling: a Tailwind theme utility such as `bg-brand`, or the `bg-(--color-brand)` shorthand, is
+ * not resolved to the variable behind it; reading the project's `@theme` and the class names a
+ * component uses lifts it.
+ */
+function themeVariableReferences(text: string): string[] {
+  return [...text.matchAll(/var\(\s*(--[\w-]+)/g)].flatMap((match) =>
+    match[1] === undefined ? [] : [match[1]],
+  );
 }
 
 function isStringList(value: unknown): value is string[] {
@@ -482,6 +504,12 @@ function componentsOfFile(
     declarator === undefined
       ? fromLineStart(statement.pos, statement.end)
       : `${fromLineStart(statement.pos, statement.getStart())}\n${fromLineStart(declarator.pos, declarator.end)}`;
+  // The text a component's theme variables are read from: the same parts, cut at their own first
+  // character, so a declarator of a `const` list never takes a variable from the one before it.
+  const ownText = ({ statement, declarator }: Candidate): string =>
+    declarator === undefined
+      ? source.slice(statement.pos, statement.end)
+      : `${source.slice(statement.pos, statement.getStart())}\n${declarator.getText()}`;
   // Ceiling: a class component is not listed; reading `render` methods lifts it.
   const components: CatalogComponent[] = [];
   for (const name of exported) {
@@ -489,12 +517,14 @@ function componentsOfFile(
     if (!candidate || !/^[A-Z]/.test(name) || !containsJsx(candidate.fn)) continue;
     const props = propsOf(candidate.fn, candidate.declared, candidate.initializer);
     const { statement } = candidate;
+    const tokens = [...new Set(themeVariableReferences(ownText(candidate)))].sort(compare);
     const realizes = [...new Set(businessRuleCitations(declarationText(candidate)))].sort(compare);
     components.push({
       name,
       file,
       ...(props ? { props } : {}),
       ...docFields(source.slice(statement.pos, statement.getStart())),
+      ...(tokens.length > 0 ? { tokens } : {}),
       ...(realizes.length > 0 ? { realizes } : {}),
     });
   }
