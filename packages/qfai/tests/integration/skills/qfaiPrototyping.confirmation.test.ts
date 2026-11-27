@@ -109,7 +109,7 @@ describe.each(TREES)("%s", (tree) => {
     );
     const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
     expect(preflight).toContain(
-      "For a `restyle` request, the live app must already be running. Also run `npx qfai doctor --profile prototyping --target-url <url>` against the live app's URL",
+      "For a `restyle` request, the live app must already be running. Also validate and check the live app's URL before the first iteration.",
     );
     const generator = section(
       await read(tree, "skill/qfai-prototyping/references/generator-prompt.md"),
@@ -449,19 +449,28 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
-  it("says that doctor probes the one URL it is given and what status passes", async () => {
+  it("checks the target URL locally in doctor and checks reachability in preflight", async () => {
     const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
+    expect(preflight).toContain("Doctor checks the target URL's format without contacting it.");
     expect(preflight).toContain(
-      "Doctor sends one `GET` to exactly the URL it is given, without following a redirect, and waits 3 seconds. A status from 200 to 399 passes;",
+      "the preflight sends one `GET` to exactly that URL without following redirects, and waits up to 3 seconds. A status from 200 to 399 passes. Any other status or no answer stops the preflight.",
     );
+    expect(preflight).toContain("and all required target requests pass.");
     expect(preflight).toContain("can answer 404 on `/`, so pass a URL that answers 200");
   });
 
   it("probes the project's Playwright launcher and reports a missing one instead of installing it", async () => {
     const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
-    expect(preflight).toContain(
+    const launcherProbe = preflight.match(
+      /- Probe the project's own Playwright launcher.*?(?= - When that check fails)/,
+    )?.[0];
+    expect(launcherProbe).toContain(
       "Probe the project's own Playwright launcher through the `prototyping.playwrightCli` check of `npx qfai doctor --profile prototyping`.",
     );
+    expect(launcherProbe).toContain(
+      "It probes `node_modules/.bin/playwright`, including its Windows variants, then `npx --no-install playwright --version`.",
+    );
+    expect(launcherProbe).not.toMatch(/scripts\/|\bPATH\b/);
     expect(preflight).toContain(
       "When that check fails, install nothing. The step stops and reports the missing Playwright launcher as a prerequisite",
     );
@@ -546,10 +555,10 @@ describe.each(TREES)("%s", (tree) => {
   });
 
   // QFAI:AC-0001-0114-01
-  it("admits only a UI contract that declares a full ID and screens", async () => {
+  it("admits a Markdown UI responsibility or the declared screens of a structured contract", async () => {
     const grill = flat(await read(tree, "step/prototyping-grill/STEP.md"));
     expect(grill).toContain(
-      "a YAML file under `<contractsDir>/ui/` declaring a full `UI-NNNN` ID and a non-empty `screens[]`. Only those contracts enter the prototyping scope.",
+      "A Markdown UI contract contributes its declared responsibility to the loop. Derive screen routes and interactions in the prototype. Existing YAML contracts contribute their declared screens.",
     );
   });
 

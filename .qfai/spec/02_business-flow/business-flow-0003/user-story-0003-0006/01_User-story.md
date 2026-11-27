@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an operator of a prototyping-profile project, I want `qfai doctor --profile prototyping` to probe `node_modules/.bin/playwright` as the primary launcher with `npx --no-install playwright --version` as the fallback, so that a fresh `qfai init` followed by `npm i -D playwright` prints no `[error]` line.
+As an operator of a prototyping-profile project, I want `qfai doctor --profile prototyping` to probe `node_modules/.bin/playwright` first, fall back to `npx --no-install playwright --version`, and validate the target URL locally, so that I can verify my setup before the prototyping preflight checks reachability.
 
 ## Non-goals
 

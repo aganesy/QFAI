@@ -1,17 +1,11 @@
 /**
- * No document may cite a `lap-*` identifier the registry does not declare.
+ * Check layout review identifiers against the shipped registry.
  *
- * `layoutAntiPatternsDetected[]` is a closed vocabulary: `loadKnownLapIds`
- * reads it from one JSON file, and a token no entry declares is
- * `QFAI-PROT-002`. The specs and the CLI contracts named that vocabulary in
- * three places and no two agreed — one identifier out of eight was the same in
- * all three, and a spec whitelist rejected two identifiers the same spec
- * required the capture pass to emit.
- *
- * Writing the list out is what let that happen, so the rule now is that a
- * document names the registry rather than copying it. A citation of one
- * identifier is still allowed — an example needs a concrete token — and this
- * sweep is what keeps such a citation honest.
+ * The reviewer records declared identifiers in `layoutAntiPatternsDetected[]`.
+ * The story tree and CLI contracts point to the registry for that vocabulary.
+ * This suite reads the registry and checks backticked identifiers in those
+ * documents. A negative or historical example identifies the context on the
+ * same line.
  */
 
 import { readFile } from "node:fs/promises";
@@ -29,10 +23,7 @@ const REGISTRY_REL = "packages/qfai/assets/validators/layoutAntiPatterns.json";
 /** Where a stale identifier does damage: what a reviewer measures against. */
 const SCANNED = [".qfai/spec/02_business-flow/**/*.md", ".qfai/spec/03_contract/cli/*.md"];
 
-/**
- * Two documents exist to record what an identifier used to be, so naming a
- * retired one there is the point rather than a defect.
- */
+/** The scan excludes the decision record, which can cite historical identifiers. */
 const EXEMPT_FILE = /(^\.qfai\/spec\/decisions\.md$)/;
 
 /**
@@ -62,7 +53,6 @@ async function declaredIds(): Promise<Set<string>> {
 
 describe("the layout anti-pattern vocabulary is one list", () => {
   it("the registry declares at least one identifier", async () => {
-    // A zero here would make every other row below pass by finding nothing.
     expect((await declaredIds()).size).toBeGreaterThan(0);
   });
 
@@ -92,9 +82,7 @@ describe("the layout anti-pattern vocabulary is one list", () => {
     expect(offenders, "an identifier no registry entry declares").toEqual([]);
   });
 
-  it("the spec names the finding code the validator actually reports", async () => {
-    // `QFAI-PROT-025` was specified for an unregistered token and is emitted by
-    // nothing. A consumer building against it waits for a code that never comes.
+  it("keeps the retired QFAI-PROT-025 code out of story-tree specs", async () => {
     const files = await fg([".qfai/spec/02_business-flow/**/*.md"], {
       cwd: repoRoot,
       absolute: false,
@@ -107,6 +95,6 @@ describe("the layout anti-pattern vocabulary is one list", () => {
       if (text.includes("QFAI-PROT-025")) offenders.push(posix);
     }
 
-    expect(offenders, "a finding code no source emits").toEqual([]);
+    expect(offenders, "story-tree files naming the retired code").toEqual([]);
   });
 });

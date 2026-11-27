@@ -191,9 +191,7 @@ describe("qfai-triage invoked by name", () => {
     );
     const completion = flat(sectionOf(skill, "## Completion"));
     expect(completion).toMatch(/never says a (?:tracked )?change is done/i);
-    expect(completion).toMatch(
-      /the commits the stage made touch only the run's deliberation record, the `open-questions\.md` rows the run wrote and the `decisions\.md` approval row the Reviewer Gate allows/,
-    );
+    expect(completion).toMatch(/the stage commits only the records the Reviewer Gate allows/);
     expect(String(frontMatterOf(skill).description)).toMatch(
       /ending with no tracked change but its deliberation record, open questions and approval row:/,
     );
@@ -217,7 +215,7 @@ describe("qfai-triage invoked by name", () => {
       /No file git tracks\. Keep the intake record in an ignored file/,
     );
     expect(flat(sectionOf(skill, "## Default Autopilot Policy"))).toMatch(
-      /Triage changes no tracked file except the run's deliberation record and `open-questions\.md` rows, which `triage-close` commits locally, and the approval row `qfai-run` records in `decisions\.md` before `triage-handoff`/,
+      /Triage follows the Reviewer Gate's tracked-write limits/,
     );
 
     const policy = parseAutopilotPolicy(skill, "qfai-triage");
@@ -324,10 +322,34 @@ describe("a question answered without a change", () => {
     );
   });
 
+  it("limits the skill's register cleanup exception to the named operation", async () => {
+    const skill = await readShipped(SKILL);
+    const gate = sectionOf(skill, "### Reviewer Gate");
+    const exceptions = flat(
+      gate
+        .split(/\r?\n[ \t]*\r?\n/)
+        .find((paragraph) => paragraph.startsWith("- the run's deliberation record")) ?? "",
+    );
+    expect(exceptions).toContain(
+      "- changes `triage-operate` brings in through an authorized base merge;",
+    );
+    expect(exceptions).toMatch(
+      /- in `run-operation`, the separate commit `triage-operate` makes when a union merge restores an open-question row that one side deleted\. Delete that row again and commit only that deletion before pushing/,
+    );
+    expect(exceptions).toContain("Keep all other register rows and IDs as merged.");
+    expect(flat(sectionOf(skill, "## Completion"))).toMatch(
+      /Apart from an authorized base merge.*in `run-operation`, the separate deletion of a restored question row/,
+    );
+    expect(flat(sectionOf(skill, "## Default Autopilot Policy"))).toMatch(
+      /`triage-operate`.*authorized base merge\. Only in `run-operation` may it commit the separate deletion of a restored question row/,
+    );
+  });
+
   // QFAI:AC-0001-0220-06
   // QFAI:EX-0001-0220-52
   it("waits for the checks a merge needs and checks the merged result", async () => {
-    const procedure = flat(sectionOf(await step("triage-operate"), "## Procedure"));
+    const operate = await step("triage-operate");
+    const procedure = flat(sectionOf(operate, "## Procedure"));
     expect(procedure).toMatch(/Wait for checks still running before a merge/);
     expect(procedure).toMatch(
       /Checks still running means every check run of the pull request's head commit that is queued or in progress, including checks branch protection does not require/,
@@ -365,6 +387,15 @@ describe("a question answered without a change", () => {
     expect(procedure).toMatch(
       /Edit no register row except to delete again a question row the union merge kept although one side deleted it, committing that deletion before the push. Renumber no ID/,
     );
+    expect(operate).toMatch(
+      /^purpose:.*restored question-row deletion permitted only in run-operation/m,
+    );
+    expect(flat(sectionOf(operate, "## What it writes"))).toMatch(
+      /No file git tracks changes except.+the restored question-row deletion described in step 4\. In `run-operation` only, delete an open-question row the union merge restored after one side deleted it\. Commit only that deletion in a separate commit before pushing/,
+    );
+    expect(flat(sectionOf(operate, "## Gate"))).toMatch(
+      /separate `run-operation` commit that deletes only an open-question row the union merge restored after one side deleted it\. Other register rows and IDs remain as merged/,
+    );
     expect(procedure).toContain("The union merge adds no review requirement of its own.");
     const waitForChecks = procedure.indexOf("wait for the checks that push starts");
     const review = procedure.indexOf(
@@ -388,6 +419,22 @@ describe("a question answered without a change", () => {
     expect(freshness).toContain("Fetch the base again after each repeat.");
     expect(freshness).toContain(
       "When the fetched base matches the recorded commit and checks and review requirements hold for the updated head",
+    );
+    expect(procedure.slice(review, finalFetch)).toContain(
+      "Record the head commit whose checks and review passed.",
+    );
+    const mergeRequest = procedure.slice(
+      finalMerge,
+      procedure.indexOf("Carry out any other named operation.", finalMerge),
+    );
+    expect(mergeRequest).toContain(
+      "Make the forge merge conditional on that reviewed head commit.",
+    );
+    expect(mergeRequest).toContain(
+      "If the head changes, repeat the base refresh, checks, review and final base fetch for the new head before attempting the conditional merge again.",
+    );
+    expect(mergeRequest).toContain(
+      "If the forge cannot enforce the precondition, report `needs-change` and stop without merging.",
     );
     expect(procedure).not.toContain("only then merge");
     expect(procedure).not.toContain("ask for no new review of that merge");

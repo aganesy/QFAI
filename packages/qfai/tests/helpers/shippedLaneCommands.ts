@@ -1249,9 +1249,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "6673822acf4a8df019fc81c00a3930477aded85ebf08f097d338874e1993a94a"],
-  ["qfai-tests.yml", "ac9de437cefe45e68b5b29cea455f81a3d767cb5ab8aab0a005551fb6a81053b"],
-  ["qfai-validate.yml", "b7edb0a89723c10822fba833a659a502eb8a3297559f97610d355f51e823b468"],
+  ["qfai-docs.yml", "920e9691664b8cd0fec7726cbb1bb9f45f54a06a15447683c7fb45315c31eb01"],
+  ["qfai-tests.yml", "1bba5ba5b736f732cfdd2797fefec01bcf1ca5b28ae10e6616310cfb3d35c9d1"],
+  ["qfai-validate.yml", "f308c482908bc84cd768ff0e785adafb5a852d32152c6230f7b15bf0c14ceea3"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1410,7 +1410,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // This digest covers the seed's raw UTF-8/LF bytes, including all union rules.
   // `qfai init` copies those bytes only when the destination does not exist.
-  [".gitattributes", "5aabde04a96157b555d70aecd8d5e2a758c9a2ab26fe9eeea63e363c46fc92a1"],
+  [".gitattributes", "299d637d719d12bc35661b530b96d10cdb8d6ddd209662885b433fcdfef8f96f"],
   // The shipped `.gitignore` IS the generated managed block, so every line of it
   // moves this digest by construction. The block ignores `.qfai/evidence/` whole
   // and re-includes nothing under it; its only negations are `!.qfai/` and the
