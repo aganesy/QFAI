@@ -502,6 +502,18 @@ describe("the project layer describes the repository it is in", () => {
     expect(tagCreations("git tag --no-points-at --points-at")).toEqual([]);
   });
 
+  it.each(["--no-sort", "--no-format"])("lists tags with %s and no tag operand", (option) => {
+    expect(tagCreations(`git tag ${option}`)).toEqual([]);
+
+    const implicit = `git tag ${option} vX.Y.Z`;
+    expect(tagCreations(implicit)).toEqual([implicit]);
+    expect(namesItsCommit(implicit)).toBe(false);
+
+    const explicit = `${implicit} <SHA>`;
+    expect(tagCreations(explicit)).toEqual([explicit]);
+    expect(namesItsCommit(explicit)).toBe(true);
+  });
+
   it.each(["git tag vX.Y.Z --me --contains", "git tag --me --sort vX.Y.Z"])(
     "checks the commit even when an unknown option may consume a flag in %s",
     (command) => {
