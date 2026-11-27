@@ -231,7 +231,9 @@ function readTagCommand(command: string): {
     if (flag === "--points-at" || clearsPointsAt) hasPointsAtFilter = !clearsPointsAt;
 
     const listModifier = TAG_LIST_MODIFIERS.has(flag);
-    hasListModifier ||= listModifier || clearsPointsAt;
+    const resetsListFormatting =
+      value === undefined && (flag === "--no-sort" || flag === "--no-format");
+    hasListModifier ||= listModifier || clearsPointsAt || resetsListFormatting;
     const longWithValue = listModifier || VALUE_TAKING_TAG_FLAGS.has(flag);
     const knownSwitch =
       TAG_SWITCHES.has(flag) && (value === undefined || !flag.startsWith("--no-"));
