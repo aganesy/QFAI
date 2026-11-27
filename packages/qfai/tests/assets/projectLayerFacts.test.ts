@@ -449,6 +449,11 @@ describe("the project layer describes the repository it is in", () => {
     ).toEqual([extended, bounded]);
   });
 
+  it.each(["*", "x"])("retains the standalone %s alternative in a plain Node claim", (wildcard) => {
+    const range = `^20.19.0 || ^22.13.0 || >=24.0.0 || ${wildcard}`;
+    expect(statedNodeRanges(`Node.js requires ${range}.`)).toEqual([range]);
+  });
+
   // The floor is the one fact in this layer with a machine-readable source, and
   // it moved twice without either file noticing. A stated floor must match; a
   // file that points at `package.json#engines` instead states nothing to match.
