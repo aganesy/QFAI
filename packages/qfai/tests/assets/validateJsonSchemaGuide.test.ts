@@ -61,6 +61,10 @@ it.each([
     "It is false that a waiver lowered the finding from error to warning. Exploration mode downgraded the finding from error to warning.",
     true,
   ],
+  [
+    "It is false that a waiver lowered the finding from error to warning; exploration mode downgraded the finding from error to warning.",
+    true,
+  ],
   ["An older finding was not lowered from error to warning by exploration mode.", false],
   [
     "An older finding was lowered from error to warning by a waiver. Exploration mode had no effect.",
