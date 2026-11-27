@@ -31,7 +31,7 @@ function explainsExplorationDowngrade(text: string): boolean {
   // A denial can contain the same transition as an affirmative explanation.
   const wording = text
     .replace(/\s+/g, " ")
-    .replace(/\bit (?:is|was) (?:false|not true) that\b[^.!?]*/gi, "");
+    .replace(/\bit (?:is|was) (?:false|not true) that\b[^.!?;]*/gi, "");
   return [
     /\b(?:was|is|had been) (?:lowered|downgraded|reduced|changed) from (?:an? )?error (?:to|into) (?:an? )?warning (?:by|due to|because of|under) exploration[- ]mode\b/i,
     /\b(?:began|started) as (?:an? )?error and (?:ended|finished) as (?:an? )?warning (?:by|due to|because of|under) exploration[- ]mode\b/i,
