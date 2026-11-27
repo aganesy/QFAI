@@ -96,6 +96,19 @@ describe("prototyping skill validator", () => {
     expect(hasUiContractScope("ui_bearing: false specs are excluded.")).toBe(false);
   });
 
+  it.each(["-", "*", "+", "1.", "2)"])("reads wrapped eligibility in %s list items", (marker) => {
+    const scope = [
+      "UI-NNNN eligibility",
+      `  ${marker} A Markdown`,
+      "    UI contract supplies its declared responsibility",
+      `  ${marker} A legacy YAML`,
+      "    contract supplies a non-empty screens[] list",
+    ].join("\n");
+
+    expect(hasUiContractScope(scope)).toBe(true);
+    expect(hasUiContractScope(scope.replace("A Markdown", "No\n    Markdown"))).toBe(false);
+  });
+
   it.each([MARKDOWN_SCOPE, LEGACY_SCOPE])("flags the skill when it omits %s", (scope) => {
     const content = VALID_SKILL_CONTENT.replace(scope, "");
     expect(hasUiContractScope(content)).toBe(false);

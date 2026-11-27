@@ -2231,9 +2231,11 @@ decisions` headings appeared anywhere in the file, so a record with several
   removed first, and the rest is read as JSON. Closes #4707.
 
 - **Markdown contract reviews cover both contract formats and give rule-specific repair steps.**
-  Validation reads Groovy and Objective-C implementation annotations and tells
+  Validation reads business-rule annotations in recognised implementation
+  languages, including Groovy, Objective-C, Perl and Haskell, and tells
   authors where to add or correct a business-rule annotation. Prototyping
-  guidance checks both Markdown responsibilities and structured screen lists.
+  guidance checks Markdown responsibilities and structured screen lists in prose
+  or Markdown list items.
   Accessibility walkthroughs use the web routes each role can reach in the
   running application or prototype for Markdown UI responsibilities.
 
