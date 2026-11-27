@@ -32,7 +32,7 @@ import { parse as parseYaml } from "yaml";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const LAYER = ".instruction/02_project";
 const NODE_RANGE_CLAIM =
-  /(?:\^|>=)\s*\d+(?:\.\d+){0,2}(?:\s*\|\|\s*(?:\^|>=)\s*\d+(?:\.\d+){0,2})*/g;
+  /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?(?:`([~^<>=]*\s*v?\d[^`]*)`|((?:[~^<>=]+\s*)?v?\d+(?:\.[\dx*]+){0,2}(?:[ \t]*(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?v?\d+(?:\.[\dx*]+){0,2})*))/giu;
 
 /**
  * A backticked repository-relative path: one that starts at a root-level entry
@@ -90,7 +90,10 @@ function declaredNodeRange(manifest: unknown): string | undefined {
 }
 
 function statedNodeRanges(markdown: string): string[] {
-  return Array.from(withoutFencedBlocks(markdown).matchAll(NODE_RANGE_CLAIM), ([range]) => range);
+  return Array.from(
+    withoutFencedBlocks(markdown).matchAll(NODE_RANGE_CLAIM),
+    ([, codeRange, plainRange]) => codeRange ?? plainRange,
+  ).filter((range) => range !== undefined);
 }
 
 function citedPaths(markdown: string): string[] {
@@ -355,6 +358,18 @@ describe("the project layer describes the repository it is in", () => {
         ].join("\n"),
       ),
     ).toEqual(["^20.19.0 || ^22.13.0 || >=24.0.0", ">=22.13.0"]);
+  });
+
+  it("retains extra alternatives and comparator bounds in a Node claim", () => {
+    const supported = "^20.19.0 || ^22.13.0 || >=24.0.0";
+    const extended = `${supported} || 23.x`;
+    const bounded = `${supported} <26.0.0`;
+
+    expect(
+      statedNodeRanges(
+        `The release supports Node.js\n\`${extended}\`. Node.js requires ${bounded}.`,
+      ),
+    ).toEqual([extended, bounded]);
   });
 
   // The floor is the one fact in this layer with a machine-readable source, and
