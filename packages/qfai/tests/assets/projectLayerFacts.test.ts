@@ -353,6 +353,33 @@ describe("the project layer describes the repository it is in", () => {
     expect(namesItsCommit(`git tag vX.Y.Z ${"a".repeat(40)}`)).toBe(true);
   });
 
+  it("checks release tag commits only in shell fences and inline commands", () => {
+    const fenced = "git tag vX.Y.Z <SHA>";
+    const inline = "git tag vA.B.C <SHA>";
+    const guide = [
+      "````markdown",
+      "```sh",
+      "git tag illustrative HEAD",
+      "```",
+      "Literal: `git tag another-example HEAD`",
+      "````",
+      "",
+      "```text",
+      "git tag sample-output HEAD",
+      "```",
+      "",
+      "~~~shell",
+      fenced,
+      "~~~",
+      "",
+      `Use \`git fetch origin main && ${inline}\`.`,
+    ].join("\n");
+
+    const commands = tagCreations(guide);
+    expect(commands).toEqual([fenced, inline]);
+    expect(commands.every(namesItsCommit)).toBe(true);
+  });
+
   it("ignores listing options when identifying tag creation commands", () => {
     const listings = [
       "git tag -n",
