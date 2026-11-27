@@ -11,8 +11,9 @@ import {
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { restoreCompletedCodeAnalysis } from "../../../src/core/graph/reuse.js";
+import { restoreCompletedDocumentAnalysis } from "../../../src/core/graph/documentReuse.js";
 import {
   completedCodeSnapshotFixture,
   completedDocumentSnapshotFixture,
@@ -166,6 +167,29 @@ it("restores a compatible document snapshot when no processing configuration is 
   } finally {
     await fixture.dispose();
     await rm(common, { recursive: true, force: true });
+  }
+});
+
+it("skips inventory when the staged document copy fails the processing check", async () => {
+  const fixture = await completedDocumentSnapshotFixture();
+  const checkProcessing = vi.fn(async () => false).mockResolvedValueOnce(true);
+  const inspect = vi.fn(async () => true);
+  try {
+    expect(
+      await restoreCompletedDocumentAnalysis(
+        fixture.root,
+        fixture.run,
+        checkProcessing,
+        inspect,
+        fixture.environment,
+      ),
+    ).toBe("cold");
+    expect(checkProcessing).toHaveBeenCalledTimes(2);
+    expect(fixture.observed.filter((args) => args.at(-1) === "inventory")).toHaveLength(1);
+    expect(inspect).not.toHaveBeenCalled();
+    await expect(lstat(fixture.documentAnalysis)).rejects.toMatchObject({ code: "ENOENT" });
+  } finally {
+    await fixture.dispose();
   }
 });
 
