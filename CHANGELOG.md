@@ -727,6 +727,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   recovery, the summary marks it as not ready and preserves the edited file.
   Closes #4530.
 
+- **Graph setup distinguishes tracked output from an ineffective ignore rule.**
+  Its warning tells operators to run both recovery commands from the
+  initialized project directory to stop tracking selected generated files
+  while keeping them in the working tree.
+
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read
   the filesystem while finishing its result, for the coverage notice, the error
