@@ -684,7 +684,8 @@ describe("uiux validators", () => {
     expect(absolute).toEqual(relative);
   });
 
-  it("aligns screens the same way whether the contract and specs directories are relative or absolute", async () => {
+  // QFAI:EX-0001-0039-81
+  it("reports missing screen mocks at info for either relative or absolute directories", async () => {
     const root = await newTempDir();
     const specsDir = path.join(root, ".qfai", "specs");
     const contractsDir = path.join(root, ".qfai", "contracts");
@@ -696,11 +697,12 @@ describe("uiux validators", () => {
       ["screens:", "  - id: List", "  - id: Detail", ""].join("\n"),
       "utf-8",
     );
-    await writeFile(
-      path.join(specsDir, "mock.md"),
-      ["<!-- Screen Mock: List -->", "<div></div>", ""].join("\n"),
-      "utf-8",
-    );
+    const mockPath = path.join(specsDir, "mock.md");
+    const mock = ["```html", "<div></div>", "```", ""].join("\n");
+    await writeFile(mockPath, mock, "utf-8");
+    expect(await validateUiDefinitionConsistency(root, defaultConfig)).toEqual([]);
+
+    await writeFile(mockPath, `<!-- Screen Mock: List -->\n${mock}`, "utf-8");
 
     const relative = await validateUiDefinitionConsistency(root, defaultConfig);
     const absolute = await validateUiDefinitionConsistency(root, {
@@ -708,8 +710,8 @@ describe("uiux validators", () => {
       paths: { ...defaultConfig.paths, specsDir, contractsDir },
     });
 
-    expect(relative.map((item) => [item.code, item.refs])).toEqual([
-      ["QFAI-CONSISTENCY-002", ["Detail"]],
+    expect(relative.map((item) => [item.code, item.severity, item.refs])).toEqual([
+      ["QFAI-CONSISTENCY-002", "info", ["Detail"]],
     ]);
     expect(absolute).toEqual(relative);
   });

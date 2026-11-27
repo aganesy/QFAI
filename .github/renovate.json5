@@ -115,8 +115,8 @@
   // lint set. So such a release goes green and merges, and the narrowing surfaces later as a
   // local failure for whoever is on the oldest Node this repository supports.
   //
-  // Measured on `markdownlint-cli2`: `0.23.2` declares `>=22` against a floor of `>=20.19.0`, and
-  // its update reached `ci-pass=success`.
+  // Measured on `markdownlint-cli2`: `0.23.2` declares `>=22`, and its update reached
+  // `ci-pass=success` while the package still promised `>=20.19.0`.
   //
   // `strict` is what makes Renovate drop those releases instead of offering them. It also keeps
   // the line followable rather than frozen — `0.22.1` declares `>=20` and is still offered — so
@@ -130,7 +130,7 @@
   // The floor itself is STATED rather than left for Renovate to infer from `engines`. Inference
   // is per manifest, this workspace has several, and the value that must bound a devDependency is
   // the one the published package promises — which is the package manifest's, not the root's.
-  constraints: { node: ">=20.19.0" },
+  constraints: { node: "^20.19.0 || ^22.13.0 || >=24.0.0" },
   constraintsFiltering: "strict",
 
   packageRules: [
@@ -169,15 +169,9 @@
       groupName: null,
     },
     {
-      // The test runner is not offered, and moves by hand. Every runner release since its third
-      // major declares an engine range that excludes at least one odd Node line, so
-      // `constraintsFiltering` drops all of them against the range above. Left enabled, the
-      // runner would freeze with nothing saying so; disabled, the manual step is written down in
-      // `.github/renovate.md`.
-      //
-      // It is also the program CI runs to judge its own update. A release that reported success
-      // would be merged by the automerge above without anyone reading it, and then run on every
-      // developer machine. A hand edit puts a reviewer in front of that.
+      // The test runner moves by hand because CI uses it to judge its own update. A release
+      // that reported success could be automerged and then run on every developer machine.
+      // The manual process in `.github/renovate.md` puts a reviewer in front of that update.
       //
       // A security fix still reaches it: `vulnerabilityAlerts` below is applied as a forced
       // override, so the `enabled: true` there outranks this refusal for that one path.
