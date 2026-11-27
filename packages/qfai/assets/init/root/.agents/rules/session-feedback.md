@@ -158,13 +158,15 @@ No record of a held-back finding is kept, so that no file records an unfixed
 defect. A later session asked about a held-back finding it has no record of says
 so. Only where the host shows that the session reaches the user alone does it
 ask which pull request the finding came from; otherwise it asks for nothing and
-repeats the advice above. Where the user's number could also be one that session
-handed out, it first confirms which finding is meant. It then reads that pull
-request's review comments, as the pull-request exception in this section's
-reading list allows, and finds the finding there again, then treats it as above.
-Where the finding is not there, or the forge cannot be read, it says so. A
-finding from a reviewer sub-agent has no pull request and cannot be found again,
-so the message about it says it can be asked about only in this session.
+repeats the advice the no-question final report gives. Where the user's number
+could also be one this session handed out, it first confirms which finding is
+meant. It then reads that pull request's review comments, as the pull-request
+exception in this section's reading list allows, and finds the finding there
+again, then treats it as above. Where the finding is not there, or the forge
+cannot be read, it says so. A finding from a reviewer sub-agent has no pull
+request and cannot be found again, so the message about it says it can be asked
+about only in this session, and under a no-question mode the final report says
+instead that it cannot be found again.
 
 ## 3. What a draft holds
 
