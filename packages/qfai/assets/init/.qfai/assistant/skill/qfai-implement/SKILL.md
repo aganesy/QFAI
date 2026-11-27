@@ -38,6 +38,8 @@ Run the entry check of
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check`
 first.
 
+For a Markdown UI, API or DB contract, implement the responsibility and exercise its outcomes. Place a standalone `QFAI:BR-<kind>-NNNN-NNNN` comment in the source enforcing each rule and in its test. Retain EX annotations and exercise prohibited behaviour as well as permitted outcomes.
+
 ## Inputs
 
 - `<BF-ID>`: the business flow, `BF-NNNN`.
