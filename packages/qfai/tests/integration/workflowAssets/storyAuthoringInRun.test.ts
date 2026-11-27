@@ -137,7 +137,14 @@ async function textFilesUnder(dir: string): Promise<string[]> {
 function citationsOf(text: string, file: string): string[] {
   const pathPart = "[^\\s`\"'()<>#\\[\\]]*";
   const barePath = new RegExp(`${pathPart}${file.replaceAll(".", "\\.")}${pathPart}`, "g");
-  const tokens = markdown.parseInline(text, {})[0]?.children ?? [];
+  const tokens = markdown.parse(text, {}).flatMap((block) => {
+    if (block.children) return block.children;
+    // Keep inspecting literal passages alongside the Markdown's resolved links.
+    if (block.type === "fence" || block.type === "code_block") {
+      return markdown.parseInline(block.content, {})[0]?.children ?? [];
+    }
+    return [];
+  });
   return tokens.flatMap((token) => {
     const reference = token.type === "link_open" ? token.attrGet("href") : null;
     if (reference !== null || token.type === "code_inline") {
@@ -166,6 +173,11 @@ it("keeps complete SDD citation paths while separating fragments and prose punct
     `Invalid \`\`${canonical} (copy)#where-each-answer-goes\`\`.`,
     `[Read](${canonical}#where-each-answer-goes).`,
     `[Invalid](${canonical}(copy)#where-each-answer-goes).`,
+    "[Read by reference][read-guide].",
+    "[Invalid by reference][invalid-guide].",
+    "",
+    `[read-guide]: ${canonical}#where-each-answer-goes`,
+    `[invalid-guide]: ${canonical}(adopt)#where-each-answer-goes`,
   ].join("\n");
 
   expect(citationsOf(text, file)).toEqual([
@@ -176,6 +188,8 @@ it("keeps complete SDD citation paths while separating fragments and prose punct
     `${canonical} (copy)`,
     canonical,
     `${canonical}(copy)`,
+    canonical,
+    `${canonical}(adopt)`,
   ]);
 });
 
