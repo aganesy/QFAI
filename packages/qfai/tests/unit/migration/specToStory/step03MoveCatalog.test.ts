@@ -339,7 +339,7 @@ describe("migration catalog move", () => {
       [];
     expect(notes).toHaveLength(rowCount);
     const expected = (index: number): string =>
-      `.qfai/spec/01_policy/constraint.md ## Technical Constraints: rewrite TC-${index + 1} of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`;
+      `.qfai/spec/01_policy/constraint.md ## Technical Constraints: rewrite TC-${index + 1} of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`;
     const mismatch = notes.findIndex((note, index) => note !== expected(index));
     expect(
       mismatch,
