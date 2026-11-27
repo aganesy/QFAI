@@ -617,7 +617,9 @@ describe("locateToolAgainstProject", () => {
         "Otherwise, run the project's dependency install command",
       );
       expect(mismatch?.suggested_action).toContain("follow its documented build and install steps");
-      expect(mismatch?.suggested_action).toContain("Original validation target: " + root);
+      expect(mismatch?.suggested_action).toContain(
+        `Original validation target: ${root}. Substitute that directory for <absolute-project-root>`,
+      );
       expect(mismatch?.suggested_action).toContain("Replace any original `--root` option");
       expect(mismatch?.suggested_action).toContain("keep the other validation options");
       for (const launcher of [
