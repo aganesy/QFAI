@@ -4,6 +4,8 @@ Use this file when `/qfai-sdd` creates or updates `<paths.contractsDir>/**`. Wri
 
 ## Contents
 
+- Markdown contracts
+- Existing structured contracts
 - Purpose
 - Rules
 - What validation checks in a `.sql` contract
@@ -11,6 +13,33 @@ Use this file when `/qfai-sdd` creates or updates `<paths.contractsDir>/**`. Wri
 - Executability
 - Obligation realizability
 - Review checklist
+
+## Markdown contracts
+
+Create a new UI, API or DB contract from the matching file under
+`templates/spec/03_contract/<kind>/`. Use one file per responsibility. The
+H1 declares the kind and number. Keep the four sections in this order:
+
+| Section        | Content                                                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Responsibility | A paragraph describing what the screen, service or persistent data is responsible for.                                                                             |
+| Inputs         | A list of information and preconditions. Use `- None.` when none applies.                                                                                          |
+| Outcomes       | A list of observable results or guarantees.                                                                                                                        |
+| Business rules | One row per rule with the columns `BR-ID`, `Statement` and `Examples`. State permitted and prohibited behaviour here and cite one or more existing EX IDs per row. |
+
+Record a rule once in the contract that owns it. For each new rule, add a standalone comment such as `// QFAI:BR-API-0001-0001` in the implementing source and its test (use the language’s comment syntax). TDD and verification check these references in source under `paths.srcDir` and tests selected by `validation.traceability.testFileGlobs`. A test file cannot supply the implementation citation.
+The document schema checks the shape, and story validation resolves the references.
+Use test results to establish behaviour. Screen composition, routes, wire formats,
+column types and storage layout belong in prototypes, implementation and tests.
+
+To migrate one contract, retain its contract ID, BR IDs and EX references, replace
+the old file with the Markdown file and update its index row in the same change.
+Keep other contracts in their existing format until their owners migrate them.
+Legacy format-specific checks continue to apply to those files.
+
+## Existing structured contracts
+
+The remaining format-specific rules apply when maintaining an existing structured contract.
 
 ## Purpose
 
