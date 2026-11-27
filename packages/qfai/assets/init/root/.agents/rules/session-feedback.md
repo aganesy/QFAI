@@ -143,12 +143,11 @@ message reaches the user alone, the message:
 - names the pull request it came from;
 - suggests asking for the finding's draft once the fix counts as fixed.
 
-Otherwise it says neither where the finding is nor its pull request, and tells
-the user to ask about the finding where only they will see the answer. That
-answer follows the same rule. Under a no-question mode the final report names it
-as held back by its class of defect, without saying where it is, since others
-may read that report, and tells the user to ask about it where only they will
-see the answer.
+Otherwise it does none of these three, and tells the user to ask about the
+finding where only they will see the answer. That answer is given under the same
+condition. Under a no-question mode the final report names it as held back by
+its class of defect, without saying where it is, since others may read that
+report, and tells the user to ask about it where only they will see the answer.
 
 ## 3. What a draft holds
 
