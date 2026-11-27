@@ -42,6 +42,7 @@ describe("test-layers.md defines the accessibility layer", () => {
     expect(layer).toMatch(
       /UI contracts declare a screen with a web route, one that starts with `\/`/,
     );
+    expect(layer).toMatch(/Markdown UI responsibility.*derive the routes from the running app/);
     expect(layer).toMatch(/every such route as each role that can reach it/);
     expect(layer).toMatch(/E2E layer's sign-in for that role/);
     expect(layer).toMatch(/Report each violation by route and rule/);
@@ -74,7 +75,10 @@ describe("implement-scaffold writes the accessibility check from the shipped tem
     expect(setup).toMatch(/E2E layer's sign-in for each role it names/);
     expect(setup).toMatch(/A visitor role that does not sign in is not an actor/);
     expect(setup).toMatch(
-      /When the spec already exists, add to its route map each route starting with `\/` that the current flow's UI contracts declare and the map lacks/,
+      /route map from the running app or prototype with the web routes each role can reach/,
+    );
+    expect(setup).toMatch(
+      /When the spec already exists, apply the same route inventory for the current flow/,
     );
     expect(setup).toMatch(/does not run Playwright for JavaScript or TypeScript/);
     expect(step).toMatch(/7\. Set up the accessibility check as § Accessibility check says/);
@@ -87,6 +91,10 @@ describe("implement-scaffold writes the accessibility check from the shipped tem
       "utf-8",
     );
     expect(template).toContain('import AxeBuilder from "@axe-core/playwright";');
+    const walkthrough = section(flat(template), "## What the adopter fills in");
+    expect(walkthrough).toMatch(/Markdown UI contracts.*running application or prototype/);
+    expect(walkthrough).toMatch(/legacy.*routes declared by the contract/);
+    expect(template).toMatch(/Every route each role can reach in the application/);
     expect(template).toContain('["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]');
     expect(template).toContain("for (const [role, routes] of Object.entries(ROUTES_BY_ROLE))");
     expect(template).toContain("test.use({ role });");
