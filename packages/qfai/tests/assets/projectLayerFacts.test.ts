@@ -200,7 +200,8 @@ function readTagCommand(command: string): {
       (longWithValue && value === undefined) || /^-[aesfi]*[mFu]$/.test(arg);
     if (takesSeparateValue) {
       index++;
-      if (index === args.length) optionsKnown = false;
+      // A final --points-at without a value uses HEAD in Git.
+      if (index === args.length && flag !== "--points-at") optionsKnown = false;
     } else if (!longWithValue && !knownSwitch && !/^-[aesfi]*(?:[mFu].+|[aesfi])$/.test(arg)) {
       optionsKnown = false;
     }
@@ -450,6 +451,8 @@ describe("the project layer describes the repository it is in", () => {
 
     expect(tagCreations("git tag --no-points-at --points-at HEAD vX.Y.Z")).toEqual([]);
     expect(tagCreations("git tag --no-points-at")).toEqual([]);
+    expect(tagCreations("git tag --points-at")).toEqual([]);
+    expect(tagCreations("git tag --no-points-at --points-at")).toEqual([]);
   });
 
   it.each(["git tag vX.Y.Z --mess --contains", "git tag --mess --sort vX.Y.Z"])(
