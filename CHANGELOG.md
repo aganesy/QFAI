@@ -794,7 +794,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Graph setup distinguishes tracked output from an ineffective ignore rule.**
   Its warning tells operators to run both recovery commands from the
   initialized project directory to stop tracking selected generated files
-  while keeping them in the working tree.
+  while keeping them in the working tree. It also tells operators to preserve
+  staged content if Git refuses the removal.
 
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read
