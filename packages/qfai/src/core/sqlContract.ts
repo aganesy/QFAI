@@ -838,7 +838,9 @@ function readArgumentDeclaration(argument: string): string {
     const escape = match.groups?.["escape"]?.slice(1, -1) ?? "\\";
     const quoted = decodeUnicodeIdentifier(unicode, escape);
     if (quoted !== undefined) {
-      decoded += argument.slice(copied, start) + quoted;
+      // Decoding two adjacent source tokens must not turn their quotes into an escape.
+      const separator = argument[start - 1] === '"' ? " " : "";
+      decoded += argument.slice(copied, start) + separator + quoted;
       copied = end;
     }
   }

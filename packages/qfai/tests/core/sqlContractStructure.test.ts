@@ -651,6 +651,7 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     ['U&"n\\0061me"int', "int", "integer"],
     ['U&"n\\0061me" int', "int", "integer"],
     ['IN U&"n\\0061me"app.custom_type', "app.custom_type", "app.custom_type"],
+    ['U&"n\\0061me"U&"\\0061pp".custom_type', "app.custom_type", "app.custom_type"],
     ['U&"n\\0061me" "Custom Type"', '"Custom Type"', '"Custom Type"'],
   ])(
     "matches the input type after a Unicode parameter %s",
