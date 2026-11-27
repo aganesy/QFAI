@@ -696,6 +696,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   If the final fetch sees a different base commit, it repeats the update,
   checks and review before fetching again.
 
+- **The final pull request merge is conditional on the reviewed head.**
+  If the head changes, the merge procedure refreshes the base, checks and
+  review for the new commit before trying again.
+
 - The verification guide distinguishes the built-in verdict scopes from
   acceptance-only validation with `qfai validate --profile atdd`.
 
