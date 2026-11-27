@@ -455,7 +455,10 @@ const IDENTIFIER_START = new RegExp(IDENTIFIER_START_CLASS);
  * decoded, so an object named that way is not recorded at all.
  * Lift when: a contract needs a `U&` name checked for redefinition.
  */
-function readQualifiedName(text: string, from: number): { name: string; end: number } | undefined {
+function readQualifiedName(
+  text: string,
+  from: number,
+): { name: string; end: number; qualified: boolean } | undefined {
   const parts: string[] = [];
   let index = from;
   for (;;) {
@@ -463,7 +466,9 @@ function readQualifiedName(text: string, from: number): { name: string; end: num
     if (!part) return undefined;
     parts.push(part.name);
     index = skipSpaces(text, part.end);
-    if (text[index] !== ".") return { name: parts.join("."), end: part.end };
+    if (text[index] !== ".") {
+      return { name: parts.join("."), end: part.end, qualified: parts.length > 1 };
+    }
     index = skipSpaces(text, index + 1);
   }
 }
@@ -483,15 +488,25 @@ function readNamePart(text: string, from: number): { name: string; end: number }
   while (end < text.length && IDENTIFIER_CHAR.test(text[end] ?? "")) end += 1;
   const bare = text.slice(from, end);
   if (/^u$/i.test(bare) && text[end] === "&" && text[end + 1] === '"') return undefined;
-  return { name: bare.replace(/[A-Z]/g, (letter) => letter.toLowerCase()), end };
+  return { name: foldUnquotedIdentifier(bare), end };
+}
+
+function foldUnquotedIdentifier(text: string): string {
+  return text.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
 }
 
 function closingQuote(text: string, from: number, quote: string): number {
-  let close = text.indexOf(quote, from + 1);
-  while (close !== -1 && text[close + 1] === quote) {
-    close = text.indexOf(quote, close + 2);
+  const escapes = quote === "'" && opensEscapeString(text, from);
+  for (let index = from + 1; index < text.length; index += 1) {
+    if (escapes && text[index] === "\\") {
+      index += 1;
+      continue;
+    }
+    if (text[index] !== quote) continue;
+    if (text[index + 1] !== quote) return index;
+    index += 1;
   }
-  return close;
+  return -1;
 }
 
 function skipSpaces(text: string, from: number): number {
@@ -559,12 +574,13 @@ function argumentList(statement: string, nameEnd: number): string {
   if (statement[open] !== "(") return "";
   let depth = 0;
   for (let index = open; index < statement.length; index += 1) {
-    const ch = statement[index];
-    if (ch === "'" || ch === '"') {
-      index = closingQuote(statement, index, ch);
-      if (index === -1) return "";
+    const quoteEnd = closingArgumentQuote(statement, index);
+    if (quoteEnd !== undefined) {
+      if (quoteEnd === -1) return "";
+      index = quoteEnd;
       continue;
     }
+    const ch = statement[index];
     if (ch === "(") depth += 1;
     if (ch === ")") {
       depth -= 1;
@@ -572,6 +588,18 @@ function argumentList(statement: string, nameEnd: number): string {
     }
   }
   return "";
+}
+
+/** Last index of a quoted argument token, -1 if unclosed, or undefined for other text. */
+function closingArgumentQuote(text: string, from: number): number | undefined {
+  const quote = text[from];
+  if (quote === "'" || quote === '"') return closingQuote(text, from, quote);
+  if (quote !== "$") return undefined;
+  DOLLAR_QUOTE_AT.lastIndex = from;
+  const marker = DOLLAR_QUOTE_AT.exec(text)?.[0];
+  if (marker === undefined) return undefined;
+  const close = text.indexOf(marker, from + marker.length);
+  return close === -1 ? -1 : close + marker.length - 1;
 }
 
 const ARGUMENT_MODES = new Set(["in", "out", "inout", "variadic"]);
@@ -584,10 +612,10 @@ const ARGUMENT_MODES = new Set(["in", "out", "inout", "variadic"]);
  * contract uses such a type.
  */
 const MULTI_WORD_TYPE_START =
-  /^(?:double precision|(?:character|char|bit) varying|national (?:character|char)\b|(?:time|timestamp)(?:\(\d+\))?\s*with(?:out)? time zone|interval (?:year|month|day|hour|minute|second)\b)/;
+  /^(?:double precision|(?:character|char|bit) varying|national (?:character|char)\b|(?:time|timestamp)(?:\(\d+\))?\s*with(?:out)? time zone|interval (?:year|month|day|hour|minute|second)\b)/i;
 
-/** The SQL-standard array suffix, lower-cased and with no space before `[`. */
-const ARRAY_SUFFIX = /^array(?:\[\d*\])?$/;
+/** The SQL-standard array suffix with no space before `[`. */
+const ARRAY_SUFFIX = /^array(?:\[\d*\])?$/i;
 
 /**
  * Each built-in type alias, mapped to the one spelling PostgreSQL resolves it
@@ -620,7 +648,21 @@ const TYPE_ALIASES = new Map<string, string>([
 ]);
 
 /** An array suffix: SQL-standard `ARRAY`, `ARRAY[n]`, or one or more `[n]`. */
-const ARRAY_TYPE_SUFFIX = /(?: array(?:\[\d*\])?|(?:\[\d*\])+)$/;
+const ARRAY_TYPE_SUFFIX = /(?: array(?:\[\d*\])?|(?:\[\d*\])+)$/i;
+
+const ROUTINE_TYPE_PARTS = /"(?:[^"]|"")*"|[^"]+/g;
+const BARE_IDENTIFIER = new RegExp(`^${IDENTIFIER_START_CLASS}${IDENTIFIER_CHAR_CLASS}*$`);
+
+/** Compare only complete qualified names and keep quotes whose contents affect identity. */
+function qualifiedArgumentName(type: string): string | undefined {
+  const parsed = readQualifiedName(type, 0);
+  if (!parsed?.qualified || parsed.end !== type.length) return undefined;
+  return type.replace(ROUTINE_TYPE_PARTS, (part) => {
+    if (!part.startsWith('"')) return foldUnquotedIdentifier(part);
+    const value = part.slice(1, -1);
+    return BARE_IDENTIFIER.test(value) && foldUnquotedIdentifier(value) === value ? value : part;
+  });
+}
 
 /**
  * The one spelling of an argument type PostgreSQL resolves a routine by.
@@ -628,19 +670,24 @@ const ARRAY_TYPE_SUFFIX = /(?: array(?:\[\d*\])?|(?:\[\d*\])+)$/;
  * PostgreSQL ignores a routine argument's type modifiers (`varchar(10)`,
  * `numeric(10,2)`, an interval's fields) and its array bounds, and resolves
  * each alias (`int`, `int4`, `bool`, `timestamptz`) to one type. `float(p)` is
- * the exception: its precision picks `real` or `double precision`. A
- * schema-qualified or quoted spelling of a built-in type is kept as written.
+ * the exception: its precision picks `real` or `double precision`. A qualified
+ * name is compared part by part and keeps its schema.
  */
 function canonicalArgumentType(type: string): string {
   const arraySuffix = ARRAY_TYPE_SUFFIX.exec(type);
   let base = arraySuffix ? type.slice(0, arraySuffix.index) : type;
-  const floatPrecision = /^float\((\d+)\)$/.exec(base);
+  const floatPrecision = /^float\((\d+)\)$/i.exec(base);
   if (floatPrecision) base = Number(floatPrecision[1]) <= 24 ? "real" : "double precision";
   // A space stands in for the modifier: the caller removed the spaces around
   // parentheses, so `timestamp(3) with time zone` arrives as `timestamp(3)with`.
   base = base
     .replace(/"(?:[^"]|"")*"|(?:\([^()]*\)|\s)+/g, (part) => (part.startsWith('"') ? part : " "))
     .trim();
+  const qualified = base.includes(".") ? qualifiedArgumentName(base) : undefined;
+  if (qualified !== undefined) return arraySuffix ? `${qualified}[]` : qualified;
+  base = base.replace(ROUTINE_TYPE_PARTS, (part) =>
+    part.startsWith('"') ? part : part.toLowerCase(),
+  );
   if (/^interval (?:year|month|day|hour|minute|second)\b/.test(base)) base = "interval";
   const name = TYPE_ALIASES.get(base) ?? base;
   return arraySuffix ? `${name}[]` : name;
@@ -655,15 +702,18 @@ function canonicalArgumentType(type: string): string {
 function identityArgumentTypes(argumentText: string, kind: string): string {
   const types: string[] = [];
   for (const argument of splitTopLevel(argumentText)) {
-    const normalized = stripDefault(argument).replace(/"(?:[^"]|"")*"|[^"]+/g, (part) =>
-      part.startsWith('"') ? part : part.toLowerCase().replace(/\s*([(),[\]])\s*/g, "$1"),
+    const normalized = stripDefault(argument).replace(ROUTINE_TYPE_PARTS, (part) =>
+      part.startsWith('"') ? part : part.replace(/\s*([.(),[\]])\s*/g, "$1"),
     );
     const words = normalized.match(/(?:"(?:[^"]|"")*"|[^"\s])+/g) ?? [];
     let mode = "in";
-    if (words[0] !== undefined && ARGUMENT_MODES.has(words[0])) {
-      mode = words.shift() ?? mode;
-    } else if (words[1] !== undefined && ARGUMENT_MODES.has(words[1]) && words.length > 2) {
-      mode = words[1];
+    const leadingMode = words[0]?.toLowerCase() ?? "";
+    const namedMode = words[1]?.toLowerCase() ?? "";
+    if (ARGUMENT_MODES.has(leadingMode)) {
+      mode = leadingMode;
+      words.shift();
+    } else if (ARGUMENT_MODES.has(namedMode) && words.length > 2) {
+      mode = namedMode;
       words.splice(1, 1);
     }
     // `int ARRAY` and `int ARRAY[3]` are one type: the suffix is not a type
@@ -684,12 +734,14 @@ function splitTopLevel(text: string): string[] {
   let depth = 0;
   let start = 0;
   for (let index = 0; index < text.length; index += 1) {
+    const quoteEnd = closingArgumentQuote(text, index);
+    if (quoteEnd !== undefined) {
+      if (quoteEnd === -1) break;
+      index = quoteEnd;
+      continue;
+    }
     const ch = text[index];
-    if (ch === "'" || ch === '"') {
-      const close = closingQuote(text, index, ch);
-      if (close === -1) break;
-      index = close;
-    } else if (ch === "(") {
+    if (ch === "(") {
       depth += 1;
     } else if (ch === ")") {
       depth -= 1;
@@ -704,8 +756,11 @@ function splitTopLevel(text: string): string[] {
 
 /** An argument without its `DEFAULT <expr>` or `= <expr>` tail. */
 function stripDefault(argument: string): string {
-  for (const match of argument.matchAll(/"(?:[^"]|"")*"|\s+default(?:\s|$)|=/gi)) {
-    if (!match[0].startsWith('"')) return argument.slice(0, match.index);
+  for (const match of argument.matchAll(/"(?:[^"]|"")*"|\s+default(?=\s|$)|=/gi)) {
+    if (match[0].startsWith('"')) continue;
+    const declaration = argument.slice(0, match.index);
+    // A reserved word after a qualification dot is an identifier in PostgreSQL.
+    if (match[0] === "=" || !declaration.trimEnd().endsWith(".")) return declaration;
   }
   return argument;
 }
