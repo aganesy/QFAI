@@ -95,16 +95,11 @@ export function routeStructureCatalog(input: StructureSource): StructureRouting 
   for (const { heading, body } of input.sections) {
     if (ENTRYPOINT_SECTION.test(heading)) {
       const entrypoints = routeEntrypoints(input, heading, body);
-      routing.skeletonLines.push(...entrypoints.skeletonLines);
-      routing.forAPerson.push(...entrypoints.forAPerson);
+      for (const line of entrypoints.skeletonLines) routing.skeletonLines.push(line);
+      for (const note of entrypoints.forAPerson) routing.forAPerson.push(note);
     } else if (ARCHITECTURE_SECTION.test(heading)) {
-      routing.forAPerson.push(
-        ...moveArchitectureSection(input.tech(), {
-          source: input.source,
-          heading,
-          body,
-        }),
-      );
+      const notes = moveArchitectureSection(input.tech(), { source: input.source, heading, body });
+      for (const note of notes) routing.forAPerson.push(note);
     } else if (UI_SECTION.test(heading)) {
       const paths = surfacePathsOf(body);
       if (paths === null)

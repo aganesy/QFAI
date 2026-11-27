@@ -77,8 +77,11 @@ covering that action, target and scope. Commit authority alone covers none of th
    included. If the index cannot be read, report the failure and stop before
    staging. If unrelated staged paths exist, report them and
    stop before changing the index or creating a commit.
-   Stage exactly the authorized tracked deliverables the run wrote, with
-   `git add <those paths>`. Never `git add -A`, `git add .` or `git add -f`,
+   Stage exactly the authorized tracked deliverables the run wrote with
+   `git --literal-pathspecs add -- <those paths>`. Pass each filename as a
+   separate argument. If using a shell, quote and escape the filename for that
+   shell. Use the same literal filename handling for resolved paths.
+   Never `git add -A`, `git add .` or `git add -f`,
    and never a file git ignores, such as `.qfai/report/*`. A file that was
    already modified before the run and then written by it is committed whole;
    the final report names it. In the `resolve-conflicts` route, first confirm

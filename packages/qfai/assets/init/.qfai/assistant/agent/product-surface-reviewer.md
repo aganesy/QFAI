@@ -128,12 +128,7 @@ specialization_tags:
 - Read the browser-support target before the next two items: the `## Technical Constraints` row of
   `<paths.specsDir>/01_policy/constraint.md` that names it, or Baseline Widely available where none does
   (`.qfai/assistant/rule/ui-procurement.md#platform-features-and-the-browser-support-target`).
-- Check the procurement record against the code: each platform feature a changed region relies on is
-  recorded with the source URL and the Baseline status it was looked up with, in the handoff's
-  `procurement` row or on a `@platform` line of the component's doc comment
-  (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#platform-features`), and a feature newer
-  than the target has its recorded fallback in the code. A missing record, or such a feature with no
-  fallback, is a finding naming the feature and the region.
+- Check the procurement record against the changed UI code for features beyond the browser-support target. Verify the reason and exercise the fallback. Ordinary selections need no entry.
 - Report a legacy pattern: changed UI code that a platform feature within the target now replaces, such as
   a script-built modal where `dialog` serves, a `max-height` hack for an expanding panel, or duplicated
   `prefers-color-scheme` blocks where `light-dark()` serves. A replacement newer than Baseline Widely
