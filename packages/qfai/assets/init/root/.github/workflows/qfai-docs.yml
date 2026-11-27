@@ -750,10 +750,18 @@ jobs:
           # directly above the opening fence. `--tools` names the directory the
           # install step put Mermaid and jsdom in.
           node -e '
+            const { readFileSync, realpathSync } = require("node:fs");
             const { createRequire } = require("node:module");
-            const { resolve } = require("node:path");
-            const fromMermaid = createRequire(resolve("tmp/qfai-docs-tools/node_modules/mermaid/package.json"));
-            const { version } = fromMermaid("katex/package.json");
+            const { isAbsolute, join, relative, resolve, sep } = require("node:path");
+            const tools = realpathSync(resolve("tmp", "qfai-docs-tools", "node_modules"));
+            const fromMermaid = createRequire(join(tools, "mermaid", "package.json"));
+            const manifest = realpathSync(fromMermaid.resolve("katex/package.json"));
+            const withinTools = relative(tools, manifest);
+            if (withinTools === ".." || withinTools.startsWith(`..${sep}`) || isAbsolute(withinTools)) {
+              console.error("::error::qfai docs: Mermaid resolved KaTeX outside the temporary tools");
+              process.exit(1);
+            }
+            const { version } = JSON.parse(readFileSync(manifest, "utf8"));
             if (version !== "0.18.2") {
               console.error(`::error::qfai docs: Mermaid resolved KaTeX ${version}, expected 0.18.2`);
               process.exit(1);

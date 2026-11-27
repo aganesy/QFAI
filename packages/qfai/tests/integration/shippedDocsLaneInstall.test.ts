@@ -19,7 +19,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -280,6 +280,45 @@ describe("the delivered document lane installs its checkers outside the project'
       await removeTempTree(stage);
     }
   });
+
+  it.skipIf(!HAS_BASH || process.env.GITHUB_ACTIONS !== "true")(
+    "installs patched KaTeX and parses a real diagram with the delivered docs steps",
+    { timeout: 150_000 },
+    async () => {
+      const installBody = await runBody(INSTALL_STEP);
+      const diagramBody = await runBody("Check Mermaid diagram syntax");
+      const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-int-docs-katex-install-"));
+      try {
+        const qfai = path.join(stage, "node_modules", "qfai");
+        const scripts = path.join(qfai, "assets", "scripts");
+        await mkdir(scripts, { recursive: true });
+        await writeFile(
+          path.join(qfai, "package.json"),
+          JSON.stringify({ dependencies: { "@jackchuka/mdschema": MDSCHEMA_VERSION } }),
+          "utf-8",
+        );
+        await copyFile(
+          new URL("../../assets/scripts/check-mermaid.mjs", import.meta.url),
+          path.join(scripts, "check-mermaid.mjs"),
+        );
+        await writeFile(
+          path.join(stage, "diagram.md"),
+          "```mermaid\nflowchart TD\nA --> B\n```\n",
+          "utf-8",
+        );
+        const options = { cwd: stage, encoding: "utf-8" as const, timeout: 60_000 };
+        const install = spawnSync("bash", ["-e", "-o", "pipefail", "-c", installBody], options);
+        if (install.error !== undefined) throw install.error;
+        expect(install.status, install.stderr).toBe(0);
+        const diagram = spawnSync("bash", ["-e", "-o", "pipefail", "-c", diagramBody], options);
+        if (diagram.error !== undefined) throw diagram.error;
+        expect(diagram.status, diagram.stderr).toBe(0);
+        expect(diagram.stdout).toContain("check-mermaid: 1 diagram(s) parsed in 1 file(s).");
+      } finally {
+        await removeTempTree(stage);
+      }
+    },
+  );
 });
 
 describe("the delivered document-schema rule tells how to run the document lane's checks locally", () => {

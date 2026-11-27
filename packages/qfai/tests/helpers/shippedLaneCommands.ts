@@ -1249,7 +1249,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "d28f2564c742a4dc053a2d665afcbeaf38aa82c3a13a17a2c082ecf05411caf7"],
+  ["qfai-docs.yml", "cfd2d7852afdce2315d56228db6c1235d47b9639649f87b7ee18d59081e6a520"],
   ["qfai-tests.yml", "ac9de437cefe45e68b5b29cea455f81a3d767cb5ab8aab0a005551fb6a81053b"],
   ["qfai-validate.yml", "b7edb0a89723c10822fba833a659a502eb8a3297559f97610d355f51e823b468"],
 ]);
@@ -2125,7 +2125,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body 7645dbfafa8d3e9f8704ce7b14397515d8e2441e5fe7ae2064d7805f3f75e31c>"}',
+    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body f6032f4988744050ef216695d96f843199a7b9d462084a60a72be638202dec3c>"}',
   ],
   [
     "qfai-docs.yml#docs",
@@ -2322,7 +2322,7 @@ export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
   // `qfai-docs.yml#checks` — creates only the temporary tools manifest with the KaTeX override.
   "e4fb2b3f888d07bd9575c4dc24bec972ec6702579cfd72d1f9c4646aa10bf36b",
   // `qfai-docs.yml#checks` — reads the KaTeX version resolved by the temporary Mermaid install.
-  "701ac332ce7b2aedb328c9e8f3d89553fc5f7153ac19e03c9c267ddbed8347fd",
+  "43a605f64cb9266bdb24b2ba6fb9f0cd8a3beae9028a0aa810c795fede0e78b7",
   // `qfai-validate.yml#validate` and `qfai-docs.yml#checks`, one payload run by `yarn node` in both —
   // prints the version of the QFAI a Yarn Plug'n'Play project depends on, or nothing when its
   // `package.json` declares none, and stops with a non-zero exit when the version Yarn resolves is
