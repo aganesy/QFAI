@@ -34,6 +34,7 @@
     "tests/assets/validateJsonFailOnFormula.test.ts",
     "tests/assets/surfaceReviewChecklist.test.ts",
     "tests/integration/surfaceReviewChecklist.test.ts",
+    "tests/integration/baseComponentCatalog.test.ts",
     "tests/integration/refusedArgumentUsage.test.ts",
     "tests/integration/initStagingCleanup.test.ts",
     "tests/integration/sddPreflightAfterMkdir.test.ts",

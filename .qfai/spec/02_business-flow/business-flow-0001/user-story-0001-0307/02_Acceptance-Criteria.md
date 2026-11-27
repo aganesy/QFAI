@@ -83,4 +83,11 @@ Feature: Catalogue the components a project already has
     Then each entry records `realizes` with the IDs its own declaration cites, once each and sorted, as its last key, and the component that cites none has no `realizes` key
     And an ID inside a single-line string, after code on the same line, or in another declarator of the same `const` list is not recorded
     And the shipped implementation UI guidance says to carry the rule's comment inside the declaration of the component that realises it or on its leading comment lines and to look up `realizes` before writing a region for a rule
+
+  # AC-0001-0307-14
+  Scenario: A shipped base catalogue describes the parts most products need before a project builds them
+    Given the assistant tree `qfai init` installs
+    When an implementer is about to build an error summary, a field with an error, a step indicator, a confirm step, a skip link, a sticky action bar, a status message or an empty state
+    Then `.qfai/assistant/rule/references/base-components.yaml` holds one entry for that part, with a unique kebab-case `id` and exactly the keys of its closed shape: purpose, anatomy, role, accessible name, keyboard, focus, states with how each renders, content rules, runtime notes on server rendering, content security policy and no-script, and sources
+    And the shipped implementation UI guidance and the procurement rule's reuse rung tell the implementer to read that entry, build the part once as a shared component and name the entry's `id` in its `@pattern`
 ```

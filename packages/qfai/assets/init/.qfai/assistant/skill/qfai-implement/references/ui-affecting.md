@@ -26,6 +26,12 @@ props and what their doc comments say. `npx qfai catalog components` writes it; 
 
 - Before writing a region, read the catalogue. Reuse a listed component whose `pattern` is that region,
   extending it if it lacks what the screen needs, rather than writing the region again.
+- Before building an error summary, a field with an error, a step indicator, a confirm step, a skip
+  link, a sticky action bar, a status message or an empty state that the catalogue does not list,
+  read its entry in `.qfai/assistant/rule/references/base-components.yaml`: its anatomy, role and
+  accessible name, keyboard and focus behaviour, states, content rules, runtime notes and sources.
+  Build it once as a shared component that meets the entry, and name the entry's `id` in its
+  `@pattern`, as `@pattern error-summary`. Not needed for any other region.
 - When you author a shared component, give it a doc comment, then run the command:
 
 ```tsx
