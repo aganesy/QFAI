@@ -107,13 +107,14 @@ function failOnValues(argsSource: string): string[] {
 }
 
 describe("`qfai doctor` CLI contract surface", () => {
-  it("says what doctor deletes, and that nothing else is deleted", async () => {
-    // A reader deciding whether the command is reversible must get one
-    // answer: a TTL-expired run log is removed, and nothing else is.
+  it("limits the clean pass to selected run log directories", async () => {
     const rules = await readRules();
 
-    ruleWith(rules, "`--clean` removes each `<outDir>/run-<ts>/`");
-    ruleWith(rules, "A run log is the one thing doctor deletes", "nothing else is deleted");
+    ruleWith(
+      rules,
+      "`--clean` removes each `<outDir>/run-<ts>/`",
+      "The `--clean` pass deletes only the run directories selected by these rules.",
+    );
     for (const statement of rules.values()) {
       expect(statement).not.toMatch(/does NOT delete anything|no path is removed on any flag/);
     }
