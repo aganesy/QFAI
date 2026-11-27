@@ -465,6 +465,8 @@ describe("the default loader resolves typescript from the project root", () => {
     const workspace = await projectWith({
       "node_modules/typescript/package.json": '{"main":"index.cjs"}',
       "node_modules/typescript/index.cjs": `module.exports = require(${JSON.stringify(packageRequire.resolve("typescript"))});\n`,
+      // A blocked root export keeps this fixture from loading the ancestor compiler.
+      "project/node_modules/typescript/package.json": '{"exports":{".":null}}',
       "project/src/a.tsx": "export const A = () => <p>Hi</p>;\n",
     });
     const root = path.join(workspace, "project");
