@@ -13,8 +13,8 @@ Feature: Forced update
 
   # AC-0001-0022-02
   Scenario: A forced template copy refuses a special file
-    Given a FIFO, socket or device occupies the destination of a shipped template file
-    When `qfai init --force` runs or previews the copy with `--dry-run`
+    Given a FIFO, socket or device occupies a shipped template file destination that the forced copy would write
+    When `qfai init --force` runs or `qfai init --force --dry-run` previews the copy
     Then the destination is reported as refused
     And the existing entry is left in place
 ```
