@@ -84,6 +84,13 @@ Feature: Catalogue the components a project already has
     And an ID inside a single-line string, after code on the same line, or in another declarator of the same `const` list is not recorded
     And the shipped implementation UI guidance says to carry the rule's comment inside the declaration of the component that realises it or on its leading comment lines and to look up `realizes` before writing a region for a rule
 
+  # AC-0001-0307-12
+  Scenario: Each component lists the string literal values its props take
+    Given exported components whose props types hold members typed as a string literal union, as a same-file alias of one and as other types, and one whose props are only destructured
+    When `qfai catalog components` runs
+    Then each entry with such a member records `variants` right after `props`, mapping each such member, in the order `props` lists it, to its literal values as written, `undefined` and `null` aside
+    And a member whose type is imported, mixed or a single literal records no variant, and an entry with none, a destructured one included, has no `variants` key
+    And a committed catalogue whose `variants` is not a mapping from names to lists of strings is reported as malformed
   # AC-0001-0307-13
   Scenario: Each component lists the theme variables its declaration references
     Given exported components whose declarations reference CSS custom properties through `var(--name)` in strings, template literals, style objects and Tailwind arbitrary values, and one that uses only a theme utility class

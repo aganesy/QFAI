@@ -52,6 +52,8 @@ A component that realises a UI business rule carries the rule's `QFAI:BR-UI-NNNN
 inside its declaration or on its leading comment lines, so the catalogue's `realizes` lists the
 rule. Before writing a region for a rule, look for a listed component whose `realizes` holds it.
 
+A prop typed as a union of string literals, such as `variant: "default" | "outline"`, is listed
+under `variants` with its values. Pass one of those values rather than restyling the component.
 Reference a theme value by its variable, as `var(--color-brand)` or `bg-[var(--color-brand)]`,
 never by a literal colour or size, so the catalogue's `tokens` lists the variables a component
 uses. A utility class such as `bg-brand` is not listed there.

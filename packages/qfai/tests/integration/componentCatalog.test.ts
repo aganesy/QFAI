@@ -768,3 +768,55 @@ describe("each component lists the theme variables its declaration references", 
     expect(section).toContain("`var(--");
   });
 });
+
+// QFAI:AC-0001-0307-12
+describe("each component lists the string literal values its props take", () => {
+  // QFAI:EX-0001-0307-37
+  it("writes variants through the CLI, passes --check, and validate reads it back or finds it malformed", async () => {
+    const root = await projectWith({
+      "src/ui/button.tsx": [
+        'type Size = "sm" | "lg";',
+        'interface ButtonProps { variant?: "primary" | "ghost"; size: Size }',
+        "/**",
+        " * @source authored",
+        " * @reason no catalogue item has these variants",
+        " */",
+        "export function Button(props: ButtonProps) {",
+        "  return <button />;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+    expect((await cli(["catalog", "components", "--root", root])).code).toBe(0);
+    const text = await readCatalogText(root);
+    expect(text).toContain(
+      [
+        "    props:",
+        "      - variant",
+        "      - size",
+        "    variants:",
+        "      variant:",
+        "        - primary",
+        "        - ghost",
+        "      size:",
+        "        - sm",
+        "        - lg",
+        "    source: authored",
+        "",
+      ].join("\n"),
+    );
+    expect((await cli(["catalog", "components", "--check", "--root", root])).code).toBe(0);
+    expect(await comp(root)).toEqual([]);
+
+    for (const malformed of ["    variants: [primary]\n", "    variants:\n      size: sm\n"]) {
+      await writeFile(
+        path.join(root, ...CATALOG.split("/")),
+        text.replace(/ {4}variants:\n(?: {6}.*\n)+/, malformed),
+        "utf-8",
+      );
+      const findings = await comp(root);
+      expect(findings.map(({ code, file }) => [code, file])).toEqual([["QFAI-COMP-004", CATALOG]]);
+      expect(findings[0]?.message).toContain("is not a `components:` list");
+    }
+  });
+});

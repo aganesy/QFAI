@@ -117,6 +117,8 @@ export type TsNode = {
   type?: TsNode;
   types?: readonly TsNode[];
   typeName?: TsNode;
+  /** A literal type's literal, as the `"primary"` of `variant: "primary"`. */
+  literal?: TsNode;
   tagName?: TsNode;
   initializer?: TsNode;
   modifiers?: readonly TsNode[];
