@@ -128,7 +128,7 @@ export function parseSqlContract(text: string): SqlParseResult {
   const lineOf = (at: number): number => {
     let count = 1;
     for (let i = 0; i < at; i += 1) {
-      if (text[i] === "\n") count += 1;
+      if (isSqlLineBreak(text, i)) count += 1;
     }
     return count;
   };
@@ -145,7 +145,7 @@ export function parseSqlContract(text: string): SqlParseResult {
     const ch = text[index] ?? "";
     const next = text[index + 1] ?? "";
 
-    if (ch === "\n") {
+    if (isSqlLineBreak(text, index)) {
       line += 1;
       current += ch;
       index += 1;
@@ -154,31 +154,17 @@ export function parseSqlContract(text: string): SqlParseResult {
 
     // `--` line comment
     if (ch === "-" && next === "-") {
-      const end = text.indexOf("\n", index);
-      index = end === -1 ? text.length : end;
+      index += 2;
+      while (index < text.length && !isSqlLineBreak(text, index)) index += 1;
       continue;
     }
 
     // `/* */`, nestable
     if (ch === "/" && next === "*") {
       const openedAt = line;
-      let nesting = 1;
-      index += 2;
-      while (index < text.length && nesting > 0) {
-        if (text[index] === "\n") line += 1;
-        if (text[index] === "/" && text[index + 1] === "*") {
-          nesting += 1;
-          index += 2;
-          continue;
-        }
-        if (text[index] === "*" && text[index + 1] === "/") {
-          nesting -= 1;
-          index += 2;
-          continue;
-        }
-        index += 1;
-      }
-      if (nesting > 0) {
+      const close = sqlBlockCommentEnd(text, index);
+      const end = close ?? text.length;
+      if (close === undefined) {
         errors.push({
           kind: "unterminated-comment",
           line: openedAt,
@@ -189,8 +175,10 @@ export function parseSqlContract(text: string): SqlParseResult {
       // `CREATE/*x*/TABLE t (…)` became `CREATETABLE` and stopped matching
       // `CREATE_RE` — a valid statement that silently left the redefinition
       // scan. Newlines are preserved one-for-one so reported lines stay true.
-      const spannedLines = line - openedAt;
+      const spannedLines = countNewlines(text.slice(index, end));
+      line += spannedLines;
       current += spannedLines > 0 ? "\n".repeat(spannedLines) : " ";
+      index = end;
       continue;
     }
 
@@ -296,6 +284,24 @@ export function parseSqlContract(text: string): SqlParseResult {
   return { statements, errors };
 }
 
+/** Offset after the matching SQL block comment close, or undefined if it stays open. */
+export function sqlBlockCommentEnd(text: string, start: number): number | undefined {
+  let depth = 1;
+  for (let index = start + 2; index < text.length; index += 1) {
+    const ch = text[index];
+    const next = text[index + 1];
+    if (ch === "/" && next === "*") {
+      depth += 1;
+      index += 1;
+    } else if (ch === "*" && next === "/") {
+      depth -= 1;
+      if (depth === 0) return index + 2;
+      index += 1;
+    }
+  }
+  return undefined;
+}
+
 /** One character that may continue an identifier, under the rules {@link DOLLAR_QUOTE_MARKER} follows. */
 export const IDENTIFIER_CHAR = new RegExp(IDENTIFIER_CHAR_CLASS);
 
@@ -356,10 +362,15 @@ export function separateLiterals(statement: string): StatementParts {
   return { code, literals };
 }
 
+/** Count CRLF at its LF and a bare CR at the CR, while preserving the source. */
+function isSqlLineBreak(value: string, index: number): boolean {
+  return value[index] === "\n" || (value[index] === "\r" && value[index + 1] !== "\n");
+}
+
 function countNewlines(value: string): number {
   let count = 0;
-  for (const ch of value) {
-    if (ch === "\n") count += 1;
+  for (let index = 0; index < value.length; index += 1) {
+    if (isSqlLineBreak(value, index)) count += 1;
   }
   return count;
 }
@@ -693,7 +704,7 @@ function canonicalArgumentType(type: string): string {
 function identityArgumentTypes(argumentText: string, kind: string): string {
   const types: string[] = [];
   for (const argument of splitTopLevel(argumentText)) {
-    const normalized = stripDefault(argument).replace(ROUTINE_TYPE_PARTS, (part) =>
+    const normalized = readArgumentDeclaration(argument).replace(ROUTINE_TYPE_PARTS, (part) =>
       part.startsWith('"') ? part : part.replace(/\s*([.(),[\]])\s*/g, "$1"),
     );
     const words = normalized.match(/(?:"(?:[^"]|"")*"|[^"\s])+/g) ?? [];
@@ -750,15 +761,70 @@ function splitTopLevel(text: string): string[] {
   return parts;
 }
 
-/** An argument without its `DEFAULT <expr>` or `= <expr>` tail. */
-function stripDefault(argument: string): string {
-  for (const match of argument.matchAll(/"(?:[^"]|"")*"|\s+default(?=\s|$)|=/gi)) {
-    if (match[0].startsWith('"')) continue;
-    const declaration = argument.slice(0, match.index);
-    // A reserved word after a qualification dot is an identifier in PostgreSQL.
-    if (match[0] === "=" || !declaration.trimEnd().endsWith(".")) return declaration;
+const ARGUMENT_DECLARATION_TOKEN = new RegExp(
+  String.raw`(?<unicode>U&"(?:[^"]|"")*")(?:\s*UESCAPE(?!${IDENTIFIER_CHAR_CLASS})\s*(?<escape>'(?:[^']|'')*'))?|` +
+    String.raw`"(?:[^"]|"")*"|${IDENTIFIER_START_CLASS}${IDENTIFIER_CHAR_CLASS}*|\S`,
+  "gi",
+);
+
+/** Decode a Unicode-delimited identifier to the ordinary quoted spelling. */
+function decodeUnicodeIdentifier(token: string, escape: string): string | undefined {
+  if (escape.length !== 1 || escape.charCodeAt(0) > 127 || /[0-9a-f+"'\s]/i.test(escape)) {
+    return undefined;
   }
-  return argument;
+  const raw = token.slice(3, -1).replace(/""/g, '"');
+  let decoded = "";
+  for (let index = 0; index < raw.length; index += 1) {
+    const character = raw.charAt(index);
+    if (character !== escape) {
+      decoded += character;
+      continue;
+    }
+    if (raw[index + 1] === escape) {
+      decoded += escape;
+      index += 1;
+      continue;
+    }
+    const longEscape = raw[index + 1] === "+";
+    const start = index + (longEscape ? 2 : 1);
+    const length = longEscape ? 6 : 4;
+    const digits = raw.slice(start, start + length);
+    if (digits.length !== length || !/^[0-9a-f]+$/i.test(digits)) return undefined;
+    const point = Number.parseInt(digits, 16);
+    if (point === 0 || point > 0x10ffff) return undefined;
+    decoded += String.fromCodePoint(point);
+    index = start + length - 1;
+  }
+  // In Unicode mode this matches an isolated surrogate, but not a composed pair.
+  if (!decoded || decoded.includes("\0") || /[\uD800-\uDFFF]/u.test(decoded)) return undefined;
+  return `"${decoded.replace(/"/g, '""')}"`;
+}
+
+/** An argument declaration with qualified Unicode parts decoded and defaults removed. */
+function readArgumentDeclaration(argument: string): string {
+  let decoded = "";
+  let copied = 0;
+  let previousToken = "";
+  for (const match of argument.matchAll(ARGUMENT_DECLARATION_TOKEN)) {
+    const token = match[0];
+    const start = match.index;
+    const afterDot = previousToken === ".";
+    if (token === "=" || (previousToken !== "" && !afterDot && token.toLowerCase() === "default")) {
+      return decoded + argument.slice(copied, start);
+    }
+    previousToken = token;
+    const unicode = match.groups?.["unicode"];
+    if (unicode === undefined) continue;
+    const end = start + token.length;
+    if (!afterDot && argument[skipSpaces(argument, end)] !== ".") continue;
+    const escape = match.groups?.["escape"]?.slice(1, -1) ?? "\\";
+    const quoted = decodeUnicodeIdentifier(unicode, escape);
+    if (quoted !== undefined) {
+      decoded += argument.slice(copied, start) + quoted;
+      copied = end;
+    }
+  }
+  return decoded + argument.slice(copied);
 }
 
 /**
