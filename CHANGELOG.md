@@ -254,9 +254,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   have loaded it. A finding whose cause lies only in the project is not drafted.
   The `qfai session-review` counts only hint at what was loaded. A security
   finding is drafted only once its fix has reached the users it affects in
-  production or their distribution channel, and an unfixed one is named to the
-  user instead, with its location only where the message reaches the user alone.
-  The `qfai session-review` command still reads local transcripts only.
+  production or their distribution channel, and a finding stays held back where
+  it is unknown whether the project releases or deploys. An unfixed one is named
+  to the user by a number alone; its class of defect and location are given only
+  where the message reaches the user alone, and otherwise the user is advised to
+  ask about it there. The `qfai session-review` command still reads local
+  transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A
