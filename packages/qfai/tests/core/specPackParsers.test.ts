@@ -154,6 +154,67 @@ describe("parseRenderedMarkdownTables", () => {
   });
 
   // QFAI:EX-0001-0039-77
+  it("omits a comment block in a list before the next visible table", () => {
+    const text = [
+      "123. Example:",
+      "",
+      "     <!-- draft",
+      "     " + header,
+      "     " + separator,
+      "     | Hidden | draft |",
+      "     -->",
+      "",
+      "     " + header,
+      "     " + separator,
+      "     | After | visible |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
+  it("ends a list comment block at a dedented table even without a closer", () => {
+    const text = [
+      "123. <!-- draft",
+      "     " + header,
+      "     " + separator,
+      "     | Hidden | draft |",
+      "",
+      header,
+      separator,
+      "| After | visible |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
+  it("masks only complete inline comments within a single table cell", () => {
+    const text = [
+      header,
+      separator,
+      "| Starts with <!-- | Ends with --> |",
+      "| Keep<!-- hidden \\| pipe --> visible | Next |",
+      "| `<!-- literal -->` | Another |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      {
+        headers: ["Label", "Expected"],
+        rows: [
+          ["Starts with <!--", "Ends with -->"],
+          ["Keep visible", "Next"],
+          ["`<!-- literal -->`", "Another"],
+        ],
+      },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
   it.each([
     ["", ""],
     ["- - -\n", "  "],
