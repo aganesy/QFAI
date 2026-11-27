@@ -886,25 +886,19 @@ describe("migration steps 1 to 4", () => {
           "",
         ].join("\n"),
       );
-      await put(
-        root,
-        "tmp/qfai-migration/plan.yaml",
-        "flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\nrules: []\n",
-      );
-
       await run(step04, await context(root));
-      const story = await readFile(
-        path.join(
-          root,
-          ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md",
-        ),
-        "utf8",
-      );
+      const story = await readFile(path.join(root, STORY_DIR, "01_User-story.md"), "utf8");
       const nonGoals = story.split("## Non-goals\n\n")[1]?.trimEnd().split("\n") ?? [];
       expect(nonGoals).toHaveLength(itemCount + 1);
-      expect(nonGoals[0]).toBe("- Shipping.");
-      expect(nonGoals[1]).toBe("- Skip item 1.");
-      expect(nonGoals.at(-1)).toBe(`- Skip item ${itemCount}.`);
+      const expected = (index: number): string =>
+        index === 0 ? "- Shipping." : `- Skip item ${index}.`;
+      const mismatch = nonGoals.findIndex((item, index) => item !== expected(index));
+      expect(
+        mismatch,
+        mismatch === -1
+          ? undefined
+          : `Non-goal ${mismatch} should be ${expected(mismatch)} but was ${nonGoals[mismatch] ?? "missing"}`,
+      ).toBe(-1);
     });
   });
 
