@@ -435,6 +435,27 @@ describe("a stale catalogue is a warning, and no catalogue asks nothing", () => 
   });
 
   // QFAI:EX-0001-0307-10
+  it("reports a dangling catalogue link as unreadable during validation", async () => {
+    const root = await projectWith({ "src/a.tsx": component("Alpha", []) });
+    const file = path.join(root, ...CATALOG.split("/"));
+    await mkdir(path.dirname(file), { recursive: true });
+    expect(await comp(root)).toEqual([]);
+
+    await symlink(
+      path.join(path.dirname(file), "missing-catalogue"),
+      file,
+      process.platform === "win32" ? "junction" : "file",
+    );
+
+    const findings = await comp(root);
+    expect(findings.map(({ code, severity, file }) => [code, severity, file])).toEqual([
+      ["QFAI-COMP-004", "warning", CATALOG],
+    ]);
+    expect(findings[0]?.message).toContain(CATALOG + " is a symbolic link.");
+    expect(findings[0]?.suggested_action).toContain("qfai catalog components");
+  });
+
+  // QFAI:EX-0001-0307-10
   it("reports a directory in place of the catalogue as unreadable", async () => {
     const root = await projectWith({ "src/a.tsx": component("Alpha", []) });
     await mkdir(path.join(root, ...CATALOG.split("/")), { recursive: true });

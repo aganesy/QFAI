@@ -22,7 +22,7 @@ import { parse, stringify } from "yaml";
 import { readHandleWithin, sameObject } from "../../shared/boundedRead.js";
 import type { QfaiConfig } from "../config.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
-import { describeError, findUnsafeHostFileComponent } from "../init/fsGuards.js";
+import { describeError, findUnsafeWrapperComponent } from "../init/fsGuards.js";
 import {
   loadTs,
   selectSurfaceFiles,
@@ -193,7 +193,7 @@ export async function inspectComponentCatalogPath(
 ): Promise<{ file: string; entry?: BigIntStats }> {
   const segments = COMPONENT_CATALOG_PATH.split(path.sep);
   const shown = segments.join("/");
-  const unsafe = await findUnsafeHostFileComponent(root, segments);
+  const unsafe = await findUnsafeWrapperComponent(root, segments.slice(0, -1).join("/"));
   if (unsafe) {
     const reason = unsafe.symlink ? "a symbolic link" : "not a directory";
     throw new Error(unsafe.relativePath + " is " + reason + ".");
@@ -207,6 +207,7 @@ export async function inspectComponentCatalogPath(
     if (isEnoent(error)) return { file };
     throw new Error(shown + " could not be inspected: " + describeError(error), { cause: error });
   }
+  if (existing.isSymbolicLink()) throw new Error(shown + " is a symbolic link.");
   if (!existing.isFile()) throw new Error(shown + " is not a file.");
   return { file, entry: existing };
 }

@@ -21,8 +21,10 @@
 # appended rows. A decision row's wording may be restated; when both branches restate one row, the
 # driver keeps both versions. GitHub's merge ignores the driver, so a pull request can show a
 # conflict a local merge does not: resolve a conflict confined to the registers by merging the base
-# branch locally and pushing, changing no row in the merge. `pnpm ci:lint:scans` and
-# `pnpm branch:catchup` report two rows left with one ID.
+# branch locally. If the union merge restores an open-question row deleted on one side, delete
+# that row again in a separate commit before pushing. Leave all other register rows and IDs as
+# the merge left them. Push the updated branch. `pnpm ci:lint:scans` and `pnpm branch:catchup`
+# report two rows left with one ID.
 /.qfai/spec/decisions.md merge=union
 # Preserve reviewed page bytes; schema and duplicate checks still apply.
 /.qfai/spec/decisions/page-*.md -text merge=union

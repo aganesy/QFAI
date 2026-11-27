@@ -530,6 +530,21 @@ describe("lint-shipping fixture — detection rules", () => {
     expect(violations).toEqual([]);
   });
 
+  it("allows standalone BR source annotations and still rejects IDs in prose and JSDoc", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"));
+    await writeFile(
+      path.join(root, "src/operation.ts"),
+      [
+        "  // QFAI:BR-UI-0010-0001",
+        "  // QFAI:BR-UI-0010-0001 extra text",
+        "  /** QFAI:BR-UI-0010-0001 */",
+      ].join("\n"),
+    );
+    const { violations } = await runLintShipping(root);
+    expect(violations.map((violation) => violation.line)).toEqual([2, 3]);
+  });
+
   it("flags internal spec-NNNN ID in src/ JSDoc — leaks via dist/*.d.ts", async () => {
     // `tsup` strips comments from `dist/*.js` but
     // RETAINS them in `dist/*.d.ts`, so internal spec IDs (spec-0010+)
