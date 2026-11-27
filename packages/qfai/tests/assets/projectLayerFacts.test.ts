@@ -107,9 +107,11 @@ const NON_CREATING_TAG_FLAGS = new Set([
   "--no-contains",
   "--merged",
   "--no-merged",
+  "--with",
+  "--without",
 ]);
 
-/** The tag creation options whose next word is their value. */
+/** Tag options that take an attached or separate value. */
 const VALUE_TAKING_TAG_FLAGS = new Set([
   "--message",
   "--file",
@@ -124,18 +126,18 @@ const TAG_LIST_MODIFIERS = new Set(["--sort", "--format"]);
 
 const TAG_SWITCHES = new Set([
   "--annotate",
+  "--edit",
   "--sign",
   "--no-sign",
   "--force",
-  "--edit",
-  "--ignore-case",
+  "--create-reflog",
+  "--no-create-reflog",
+  "--column",
+  "--no-column",
   "--color",
   "--no-color",
   "--omit-empty",
-  "--column",
-  "--no-column",
-  "--create-reflog",
-  "--no-create-reflog",
+  "--ignore-case",
   // Git supports these unsets without a value. Message and mode switches
   // such as --list opt out of negation in Git's option definitions.
   "--no-annotate",
@@ -150,6 +152,40 @@ const TAG_SWITCHES = new Set([
   "--no-format",
   "--no-points-at",
 ]);
+
+// Include switches that do not consume a word when checking for ambiguous prefixes.
+const LONG_TAG_FLAGS = [
+  ...[...NON_CREATING_TAG_FLAGS].filter((flag) => flag.startsWith("--")),
+  ...VALUE_TAKING_TAG_FLAGS,
+  ...TAG_LIST_MODIFIERS,
+  ...TAG_SWITCHES,
+  "--help",
+];
+
+function canonicalLongTagFlag(flag: string): string {
+  if (!flag.startsWith("--") || LONG_TAG_FLAGS.includes(flag)) return flag;
+  const matches = LONG_TAG_FLAGS.filter((option) => option.startsWith(flag));
+  return matches.length === 1 ? (matches[0] ?? flag) : flag;
+}
+
+function shortTagOption(arg: string): "mode" | "separate-value" | "attached-value" | undefined {
+  // The first option that uses a value owns the rest of its word.
+  const option = /^-[aesfi]*([dlvnmFu])(.*)$/.exec(arg);
+  if (option === null) return undefined;
+  switch (option[1]) {
+    case "m":
+    case "F":
+    case "u":
+      return option[2] === "" ? "separate-value" : "attached-value";
+    case "n":
+      return /^\d*$/.test(option[2] ?? "") ? "mode" : undefined;
+    case "d":
+    case "l":
+    case "v":
+      return "mode";
+  }
+  return undefined;
+}
 
 function readTagCommand(command: string): {
   creates: boolean;
@@ -181,8 +217,10 @@ function readTagCommand(command: string): {
       continue;
     }
 
-    const [flag = "", value] = arg.split("=", 2);
-    if (NON_CREATING_TAG_FLAGS.has(flag) || /^-n\d+$/.test(flag)) {
+    const [name = "", value] = arg.split("=", 2);
+    const flag = canonicalLongTagFlag(name);
+    const shortOption = shortTagOption(arg);
+    if (NON_CREATING_TAG_FLAGS.has(flag) || shortOption === "mode") {
       // An earlier unknown option may consume this apparent mode switch.
       return { creates: !optionsKnown, operands: [], optionsKnown };
     }
@@ -197,12 +235,17 @@ function readTagCommand(command: string): {
     const knownSwitch =
       TAG_SWITCHES.has(flag) && (value === undefined || !flag.startsWith("--no-"));
     const takesSeparateValue =
-      (longWithValue && value === undefined) || /^-[aesfi]*[mFu]$/.test(arg);
+      (longWithValue && value === undefined) || shortOption === "separate-value";
     if (takesSeparateValue) {
       index++;
       // A final --points-at without a value uses HEAD in Git.
       if (index === args.length && flag !== "--points-at") optionsKnown = false;
-    } else if (!longWithValue && !knownSwitch && !/^-[aesfi]*(?:[mFu].+|[aesfi])$/.test(arg)) {
+    } else if (
+      !longWithValue &&
+      !knownSwitch &&
+      shortOption !== "attached-value" &&
+      !/^-[aesfi]+$/.test(arg)
+    ) {
       optionsKnown = false;
     }
   }
@@ -386,6 +429,8 @@ describe("the project layer describes the repository it is in", () => {
       "Then run `git tag vX.Y.Z` to tag it.",
       "```sh\ngit fetch origin main && git tag vX.Y.Z\n```",
       "```sh\ngit tag vX.Y.Z -m <SHA>\n```",
+      "```sh\ngit tag vX.Y.Z -am <SHA>\n```",
+      "```sh\ngit tag vX.Y.Z --mess <SHA>\n```",
     ];
     for (const sample of tagsHead) {
       const creates = tagCreations(sample);
@@ -404,6 +449,8 @@ describe("the project layer describes the repository it is in", () => {
 
   it("checks the tag's commit independently of a quoted message", () => {
     expect(namesItsCommit('git tag -m "See HEAD for details" vX.Y.Z <SHA>')).toBe(true);
+    expect(namesItsCommit('git tag -am "See HEAD for details" vX.Y.Z <SHA>')).toBe(true);
+    expect(namesItsCommit('git tag --mess "See HEAD for details" vX.Y.Z <SHA>')).toBe(true);
     expect(namesItsCommit("git tag vX.Y.Z <SHA> --message 'Compare HEAD and @'")).toBe(true);
     expect(namesItsCommit('git tag -- vX.Y.Z "<SHA>"')).toBe(true);
     expect(namesItsCommit('git tag -m "A release note" vX.Y.Z HEAD')).toBe(false);
@@ -455,7 +502,7 @@ describe("the project layer describes the repository it is in", () => {
     expect(tagCreations("git tag --no-points-at --points-at")).toEqual([]);
   });
 
-  it.each(["git tag vX.Y.Z --mess --contains", "git tag --mess --sort vX.Y.Z"])(
+  it.each(["git tag vX.Y.Z --me --contains", "git tag --me --sort vX.Y.Z"])(
     "checks the commit even when an unknown option may consume a flag in %s",
     (command) => {
       const creations = tagCreations(command);
@@ -468,6 +515,7 @@ describe("the project layer describes the repository it is in", () => {
     const listings = [
       "git tag -n",
       "git tag -n3",
+      "git tag -ln3",
       "git tag --contains <SHA>",
       "git tag --no-contains <SHA>",
       "git tag --points-at=<SHA>",
@@ -483,6 +531,8 @@ describe("the project layer describes the repository it is in", () => {
       'git tag -m "See --contains usage" vX.Y.Z <SHA>',
       "git tag -m --contains vX.Y.Z <SHA>",
       "git tag -am --contains vX.Y.Z",
+      "git tag --mess --contains vX.Y.Z",
+      "git tag -aml vX.Y.Z",
       "git tag -iam --contains vX.Y.Z",
       'git tag "--message" --contains vX.Y.Z',
       "git tag --format='%(refname)' -m 'release; candidate | notes' vX.Y.Z",
@@ -497,6 +547,12 @@ describe("the project layer describes the repository it is in", () => {
     expect(tagCreations('git tag --format="%(refname)" \\\n  vX.Y.Z')).toEqual([
       'git tag --format="%(refname)"',
     ]);
+  });
+
+  it("only expands an unambiguous long tag option", () => {
+    expect(canonicalLongTagFlag("--mess")).toBe("--message");
+    expect(canonicalLongTagFlag("--me")).toBe("--me");
+    expect(canonicalLongTagFlag("--l")).toBe("--l");
   });
 
   // Pasted as separate lines, the block tagged even when the ancestry check
