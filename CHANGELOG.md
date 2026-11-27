@@ -3667,6 +3667,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   stays local and a different origin needs its own authorization.
   Closes #4496.
 
+- Component catalogues keep a component's leading theme token comments in
+  files with LF, CRLF, or CR line endings.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
