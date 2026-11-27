@@ -18,7 +18,7 @@
  * lays one out.
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -43,6 +43,7 @@ const TOOLS_DIR = "tmp/qfai-docs-tools";
  * installed a version written into the workflow could not pass by coincidence.
  */
 const DECLARED = "9.8.7";
+const YARN_RESOLVED = "6.5.4";
 const INSTALL_STEP = "Install the document-shape and diagram checkers";
 
 let initPromise: Promise<string> | undefined;
@@ -77,18 +78,32 @@ async function runBody(name: string): Promise<string> {
   return body;
 }
 
-type Recorded = { status: number | null; stderr: string; calls: string[][] };
+type Recorded = {
+  status: number | null;
+  stderr: string;
+  calls: string[][];
+  toolsManifest: unknown;
+};
 
 /**
  * Runs the install step in a project laid out as pnpm lays one out, with `npm` recording its arguments.
- * Each call is one line of the log: its arguments, joined by a tab.
+ * Each call is one line of the log: its arguments, joined by a tab. The stub also
+ * copies the tools manifest as it exists when npm starts.
  */
-async function runInstall(withQfai: boolean, declared: unknown = DECLARED): Promise<Recorded> {
+async function runInstall(
+  withQfai: boolean,
+  declared: unknown = DECLARED,
+  yarnResolved?: string,
+): Promise<Recorded> {
   const body = await runBody(INSTALL_STEP);
   const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-int-docs-install-run-"));
   try {
     await mkdir(path.join(stage, "node_modules", ".pnpm"), { recursive: true });
     await writeFile(path.join(stage, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n", "utf-8");
+    if (yarnResolved !== undefined) {
+      await writeFile(path.join(stage, ".pnp.cjs"), "", "utf-8");
+      await writeFile(path.join(stage, "yarn.lock"), "", "utf-8");
+    }
     if (withQfai) {
       const qfai = path.join(stage, "node_modules", "qfai");
       await mkdir(qfai, { recursive: true });
@@ -98,14 +113,29 @@ async function runInstall(withQfai: boolean, declared: unknown = DECLARED): Prom
       await writeFile(path.join(qfai, "package.json"), JSON.stringify(manifest), "utf-8");
     }
     const log = path.join(stage, "npm-calls.log");
+    const seenManifest = path.join(stage, "seen-manifest.json");
     const script = path.join(stage, "step.sh");
-    const prelude = `npm() { local IFS=$'\\t'; printf '%s\\n' "$*" >> "$NPM_LOG"; }\n`;
+    const prelude = `
+yarn() { printf '%s' "$YARN_RESOLVED"; }
+npm() {
+  local IFS=$'\\t'
+  printf '%s\\n' "$*" >> "$NPM_LOG"
+  if [ -f "${TOOLS_DIR}/package.json" ]; then
+    cp "${TOOLS_DIR}/package.json" "$SEEN_MANIFEST"
+  fi
+}
+`;
     await writeFile(script, `${prelude}${body}`, "utf-8");
     await writeFile(log, "", "utf-8");
     const child = spawnSync("bash", ["-e", "-o", "pipefail", script], {
       cwd: stage,
       encoding: "utf-8",
-      env: { ...process.env, NPM_LOG: log },
+      env: {
+        ...process.env,
+        NPM_LOG: log,
+        SEEN_MANIFEST: seenManifest,
+        YARN_RESOLVED: yarnResolved ?? "",
+      },
     });
     if (child.error !== undefined) throw child.error;
     const lines = (await readFile(log, "utf-8")).split(/\r?\n/).filter((line) => line !== "");
@@ -113,6 +143,9 @@ async function runInstall(withQfai: boolean, declared: unknown = DECLARED): Prom
       status: child.status,
       stderr: child.stderr ?? "",
       calls: lines.map((line) => line.split("\t")),
+      toolsManifest: existsSync(seenManifest)
+        ? JSON.parse(await readFile(seenManifest, "utf-8"))
+        : undefined,
     };
   } finally {
     await removeTempTree(stage);
@@ -123,10 +156,11 @@ describe("the delivered document lane installs its checkers outside the project'
   // QFAI:AC-0002-0003-04
   // QFAI:EX-0002-0003-07
   it.skipIf(!HAS_BASH).each([
-    ["depends on QFAI", true],
-    ["does not depend on QFAI", false],
-  ])("installs into its own prefix when the project %s", async (_name, withQfai) => {
-    const run = await runInstall(withQfai);
+    ["has QFAI in node_modules", true, undefined],
+    ["resolves QFAI through Yarn Plug'n'Play", false, YARN_RESOLVED],
+    ["does not depend on QFAI", false, undefined],
+  ])("installs into its own prefix when the project %s", async (_name, withQfai, yarnResolved) => {
+    const run = await runInstall(withQfai, DECLARED, yarnResolved);
 
     expect(run.status, run.stderr).toBe(0);
     // One install, so the checkers and QFAI land together rather than the second install pruning
@@ -146,8 +180,12 @@ describe("the delivered document lane installs its checkers outside the project'
     expect(packages).toEqual(
       withQfai
         ? [`@jackchuka/mdschema@${DECLARED}`, "mermaid@11.17.2", "jsdom@29.1.1"]
-        : ["mermaid@11.17.2", "jsdom@29.1.1", "qfai"],
+        : ["mermaid@11.17.2", "jsdom@29.1.1", yarnResolved ? `qfai@${yarnResolved}` : "qfai"],
     );
+    expect(run.toolsManifest).toEqual({
+      private: true,
+      overrides: { "mermaid@11.17.2": { katex: "0.18.2" } },
+    });
   });
 
   // QFAI:EX-0002-0003-07
