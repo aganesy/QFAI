@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- UI, API and database contracts can now describe responsibilities, inputs,
+  outcomes and business rules in Markdown. Validation checks their document
+  structure, example references, and the business-rule annotations in source
+  and tests. Existing structured contracts can migrate individually.
+- Browser guidance records the reason and fallback when an implementation uses
+  a feature beyond its supported browser target.
+
 - **`qfai catalog design` derives the design tokens and the Tailwind theme
   from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
   Design Tokens Community Group 2025.10 format, with the colours, their
@@ -236,6 +243,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The end-of-session feedback review reads review findings too.** Besides
+  the session itself, it reads the findings reviewer sub-agents returned and
+  the review comments on the pull requests the session opened or answered
+  review on. Each finding QFAI's design, specification, implementation, test
+  or verification guidance should have prevented becomes an issue draft that
+  names the shipped skill, step, rule, template or command to change. A
+  finding whose cause lies only in the project is not drafted, and
+  `qfai session-review` still reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A
@@ -628,6 +643,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   refresh the workflow, or leave it: the removed branch never ran. Closes #4670.
 
 ### Fixed
+
+- **`qfai doctor` explains a workflow path that cannot be listed.** For
+  `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
+  ancestors are directories. Other read failures retain the existing guidance.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
@@ -2219,6 +2238,15 @@ decisions` headings appeared anywhere in the file, so a record with several
   and reported `Invalid structured contract`. The declaration line is now
   removed first, and the rest is read as JSON. Closes #4707.
 
+- **Markdown contract reviews cover both contract formats and give rule-specific repair steps.**
+  Validation reads business-rule annotations in recognised implementation
+  languages, including Groovy, Objective-C, Perl and Haskell, and tells
+  authors where to add or correct a business-rule annotation. Prototyping
+  guidance checks Markdown responsibilities and structured screen lists in prose
+  or Markdown list items.
+  Accessibility walkthroughs use the web routes each role can reach in the
+  running application or prototype for Markdown UI responsibilities.
+
 - **A null `requires:` is no longer read as an empty step list.** In a
   step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
   `requires: null`, or a `requires:` with no value, as `requires: []`. It now
@@ -2549,6 +2577,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   removed. Both now recommend `pnpm approve-builds` and say it records the
   approval under `allowBuilds` for pnpm 10.31 or later and
   `onlyBuiltDependencies` for earlier pnpm 10.
+
+- **`qfai doctor` explains where pnpm records mdschema approval.** pnpm 10
+  updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
+  From 10.31.0 it can also create the map when neither legacy list is set.
+  Other pnpm 10 configurations use `onlyBuiltDependencies`, and pnpm 11
+  uses `allowBuilds` by default.
 
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty

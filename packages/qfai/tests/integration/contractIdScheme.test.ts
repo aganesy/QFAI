@@ -19,6 +19,7 @@ import {
 import { validateStoryTreeContractReferences } from "../../src/core/validators/contractReferences.js";
 import { validateContracts } from "../../src/core/validators/contracts.js";
 import { validateDbContractApplyOrder } from "../../src/core/validators/dbContractApplyOrder.js";
+import { validateStoryTreeObligations } from "../../src/core/validators/storyTreeObligations.js";
 import { validateStoryTreeStructureModel } from "../../src/core/validators/storyTreeStructure.js";
 
 // Counts the flow-scope resolutions a report run makes, passing each one through.
@@ -278,27 +279,142 @@ describe("contract IDs and contract-scoped business rules", () => {
 
   // QFAI:AC-0001-0052-04
   // QFAI:EX-0001-0052-07
-  it("reports a Markdown file under api/ once and counts it as no contract", async () => {
-    const refunds = "api/api-0003-refunds.md";
-    const root = await contractTree([indexRow("API-0003", refunds)], {
-      [refunds]: contract("API-0003: Refunds", ["| BR-API-0003-0001 | Refund | EX-0001-0001-01 |"]),
+  it.each(["UI", "API", "DB"])(
+    "indexes a %s Markdown contract and its example links beside a legacy contract",
+    async (kind) => {
+      const id = `${kind}-0003`;
+      const file = `${kind.toLowerCase()}/${id.toLowerCase()}-refunds.md`;
+      const legacy = "api/api-0002-orders.yaml";
+      const rule = `BR-${id}-0001`;
+      const root = await contractTree([indexRow(id, file), indexRow("API-0002", legacy)], {
+        [file]: contract(`${id}: Refunds`, [`| ${rule} | Refund | EX-0001-0001-01 |`]),
+        [legacy]: "# QFAI-CONTRACT-ID: API-0002\nopenapi: 3.1.0\nx-qfai-depends-on: []\n",
+      });
+      expect(await indexFindings(root)).toEqual([]);
+      const issues = await validateContracts(root, defaultConfig);
+      expect(
+        issues.filter(
+          (entry) =>
+            entry.rule === `contracts.${kind.toLowerCase()}.files` || entry.severity === "error",
+        ),
+      ).toEqual([]);
+      const model = await readStoryTreeModel(root, defaultConfig);
+      expect(model.rules).toContainEqual(
+        expect.objectContaining({ id: rule, examples: ["EX-0001-0001-01"] }),
+      );
+    },
+  );
+
+  it.each(["UI", "API", "DB"])(
+    "resolves %s Markdown BR references against the examples",
+    (kind) => {
+      const files = tree("");
+      files.delete(check);
+      const id = `${kind}-0003`;
+      const file = `${contracts}/${kind.toLowerCase()}/${id.toLowerCase()}-test.md`;
+      const rule = `BR-${id}-0001`;
+      for (const ref of ["EX-0001-0001-01", "EX-0001-0001-99", ""]) {
+        files.set(file, contract(`${id}: Test`, [`| ${rule} | Require authorization | ${ref} |`]));
+        const findings = ruleFindings(files);
+        if (ref === "EX-0001-0001-01") expect(findings).toEqual([]);
+        else expect(findings.join(" ")).toContain(ref ? "cites unknown" : "has no examples");
+      }
+    },
+  );
+
+  it.each([
+    ["pl", "#"],
+    ["hs", "--"],
+    ["clj", ";;"],
+    ["cljs", ";"],
+    ["erl", "%%"],
+    ["vb", "'"],
+    ["vb", "Rem"],
+  ])("counts BR comments in %s source and selected tests with %s", async (ext, mark) => {
+    const id = "BR-API-0003-0001";
+    const root = await contractTree([], {
+      "api/api-0003-refunds.md": contract("API-0003: Refunds", [
+        `| ${id} | Refund | EX-0001-0001-01 |`,
+      ]),
     });
-    const empty = (await validateContracts(root, defaultConfig))
-      .filter((entry) => entry.code === "QFAI-CONTRACT-000")
-      .map((entry) => entry.rule);
-    expect(empty.sort()).toEqual([
-      "contracts.api.files",
-      "contracts.db.files",
-      "contracts.ui.files",
+    const config = {
+      ...defaultConfig,
+      validation: {
+        ...defaultConfig.validation,
+        traceability: {
+          ...defaultConfig.validation.traceability,
+          testFileGlobs: [`tests/**/*.${ext}`],
+        },
+      },
+    };
+    await put(root, `tests/refund.${ext}`, `${mark} QFAI:${id}`);
+    const coverage = async () =>
+      (await validateStoryTreeObligations(root, config, "tdd"))
+        .filter((entry) => entry.rule === "storyTree.ruleCoverage")
+        .map((entry) => entry.message);
+    await put(root, "src/refund.ts", `' QFAI:${id} ';`);
+    await put(root, "src/refund.feature", `# QFAI:${id}`);
+    await put(root, `src/refund.${ext}`, `// QFAI:${id}`);
+    expect(await coverage()).toEqual([`${id} has no implementation annotation`]);
+    await put(root, `src/refund.${ext}`, `${mark} QFAI:${id}`);
+    expect(await coverage()).toEqual([]);
+  });
+
+  it("requires separate source and test citations for abstract rules", async () => {
+    const id = "BR-API-0003-0001";
+    const root = await contractTree([], {
+      "api/api-0003-refunds.md": contract("API-0003: Refunds", [
+        `| ${id} | Refund | EX-0001-0001-01 |`,
+      ]),
+    });
+    const config = {
+      ...defaultConfig,
+      validation: {
+        ...defaultConfig.validation,
+        traceability: {
+          ...defaultConfig.validation.traceability,
+          testFileGlobs: ["src/**/*.test.ts"],
+        },
+      },
+    };
+    const findings = async () =>
+      (await validateStoryTreeObligations(root, config, "tdd")).filter(
+        (entry) =>
+          entry.rule === "storyTree.ruleCoverage" ||
+          entry.rule === "storyTree.undeclaredAnnotation",
+      );
+    await put(root, "src/refund.test.ts", `// QFAI:${id}`);
+    expect(await findings()).toEqual([
+      expect.objectContaining({
+        message: `${id} has no implementation annotation`,
+        suggested_action: expect.stringContaining("implementation file"),
+      }),
     ]);
-    expect(await indexFindings(root)).toEqual([
-      expect.stringMatching(
-        /^QFAI-CONTRACT-034 .*api-0003-refunds\.md is Markdown, which is not a contract: api\/ holds OpenAPI YAML or JSON contracts$/,
-      ),
+    await put(root, "src/refund.groovy", `// QFAI:${id}\n// QFAI:BR-API-0003-9999`);
+    await put(root, "src/refund.test.ts", `// QFAI:${id}\n// QFAI:BR-API-0003-9998`);
+    expect(await findings()).toEqual([
+      expect.objectContaining({
+        message: expect.stringContaining("Undeclared annotation BR-API-0003-9998"),
+        suggested_action: expect.stringMatching(/business rule.*test file/),
+      }),
+      expect.objectContaining({
+        message: expect.stringContaining("Undeclared annotation BR-API-0003-9999"),
+        suggested_action: expect.stringMatching(/business rule.*implementation file/),
+      }),
     ]);
-    const model = await readStoryTreeModel(root, defaultConfig);
-    expect(model.contracts).toEqual([]);
-    expect(model.rules).toEqual([]);
+    await put(root, "src/refund.groovy", "");
+    await put(root, "src/refund.m", `// QFAI:${id}`);
+    await put(root, "src/refund.test.ts", `// QFAI:${id}`);
+    expect(await findings()).toEqual([]);
+    await put(root, "src/refund.test.ts", "");
+    await put(root, "tests/integration/README.md", `<!-- QFAI:${id} -->`);
+    const noTests = await validateStoryTreeObligations(root, config, "tdd");
+    expect(noTests).toContainEqual(
+      expect.objectContaining({
+        message: `${id} has no test annotation`,
+        suggested_action: expect.stringContaining("test file"),
+      }),
+    );
   });
 
   // QFAI:AC-0001-0064-01
