@@ -37,18 +37,17 @@ Nothing. The CLI checks are read-only.
 
 ### Step 2-B — Verify environment preconditions
 
-- Confirm a dev server or a static file server can serve
-  `.qfai/prototype/` at the URL passed to
-  `npx qfai doctor --profile prototyping --target-url <url>`.
+- Validate the dev server or static file server URL for `.qfai/prototype/`
+  with `npx qfai doctor --profile prototyping --target-url <url>`. Doctor
+  checks the target URL's format without contacting it.
 - Take the iteration kind from the request: `restyle` when it changes only
   the styles and motion of screens the project already runs.
-- For a `restyle` request, the live app must already be running. Also run
-  `npx qfai doctor --profile prototyping --target-url <url>` against the live
-  app's URL, so the running app answers before the first iteration.
-- Doctor sends one `GET` to exactly the URL it is given, without following a
-  redirect, and waits 3 seconds. A status from 200 to 399 passes; a 404 or any
-  other status fails the check, and so does no answer. It probes that one URL,
-  not a file under it. A server that serves `.qfai/prototype/` with no
+- For a `restyle` request, the live app must already be running. Also validate
+  and check the live app's URL before the first iteration.
+- After validating the URL, the preflight sends one `GET` to exactly that URL
+  without following redirects, and waits up to 3 seconds. A status from 200
+  to 399 passes. Any other status or no answer stops the preflight. It checks
+  that one URL. A server that serves `.qfai/prototype/` with no
   `index.html` at its root can answer 404 on `/`, so pass a URL that answers
   200, for example `http://localhost:3100/iter-01/<screen>.html`. A server on
   one address family while `localhost` resolves to the other also fails the
@@ -58,10 +57,9 @@ Nothing. The CLI checks are read-only.
   test stops the run, naming the contract and the ID.
 - Probe the project's own Playwright launcher through the
   `prototyping.playwrightCli` check of `npx qfai doctor --profile prototyping`.
-  It tries a project wrapper under `scripts/`, then
-  `node_modules/.bin/playwright`, then PATH, then
-  `npx --no-install playwright`. The loop runs the launcher the check resolved,
-  never a bare `npx playwright`, which can install a package mid-run.
+  It probes `node_modules/.bin/playwright`, including its Windows variants,
+  then `npx --no-install playwright --version`. Use the resolved launcher
+  throughout the loop. A bare `npx playwright` can install a package mid-run.
 - When that check fails, install nothing. The step stops and reports the
   missing Playwright launcher as a prerequisite, quoting the check's message.
   Installing it is separate setup the user authorizes, run with the project's
@@ -75,7 +73,7 @@ for a failing doctor check.
 
 The step passes when `npx qfai doctor --profile prototyping --target-url <url>`
 reports no error, with at least one UI-bearing contract resolved and a launcher
-that does not install anything.
+that does not install anything, and all required target requests pass.
 
 When the request names the primary contract, that ID replaces the configured
 one. The step checks it against the resolved UI-bearing contracts and stops,

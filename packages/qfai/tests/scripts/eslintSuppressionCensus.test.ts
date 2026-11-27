@@ -87,7 +87,6 @@ const PINNED: readonly string[] = [
   "packages/qfai/src/core/design/designMd.ts :: @typescript-eslint/no-unnecessary-condition */",
   "packages/qfai/src/core/design/designMd.ts :: @typescript-eslint/no-unnecessary-condition */",
   "packages/qfai/src/core/design/designMd.ts :: @typescript-eslint/no-unnecessary-condition */",
-  "packages/qfai/src/core/validators/layoutAntiPatterns.ts :: @typescript-eslint/no-non-null-assertion",
 ];
 
 describe("the source tree adds no ESLint suppression nobody approved", () => {

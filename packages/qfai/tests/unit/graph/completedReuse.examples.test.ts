@@ -11,8 +11,9 @@ import {
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { restoreCompletedCodeAnalysis } from "../../../src/core/graph/reuse.js";
+import { restoreCompletedDocumentAnalysis } from "../../../src/core/graph/documentReuse.js";
 import {
   completedCodeSnapshotFixture,
   completedDocumentSnapshotFixture,
@@ -45,7 +46,7 @@ it("retains completed local document analysis when snapshot restoration is unsup
 });
 
 // QFAI:EX-0001-0236-01
-// Mutation: packages/qfai/src/core/graph/documentReuse.ts `if (await inspect(staged, true)) {` -> `if (!(await inspect(staged, true))) {` fails "publishes and independently restores a completed document graph after native freshness checks"
+// Mutation: packages/qfai/src/core/graph/documentReuse.ts `if (checked && (await inspect(staged, true, checked))) {` -> `if (checked && !(await inspect(staged, true, checked))) {` fails "publishes and independently restores a completed document graph after native freshness checks"
 it("publishes and independently restores a completed document graph after native freshness checks", async () => {
   const fixture = await documentAnalysisFixture();
   const common = await mkdtemp(path.join(os.tmpdir(), "qfai-document-cache-"));
@@ -98,11 +99,14 @@ it("restores a compatible document snapshot when no processing configuration is 
   const common = await mkdtemp(path.join(os.tmpdir(), "qfai-document-cache-"));
   const native = graphifyExtractionFixture(fixture);
   const environment = { ...graphReuseEnvironment(), platform: "win32", architecture: "x64" };
+  const inventoryDirectories: string[] = [];
   const run: typeof fixture.run = async (command, args, options) => {
     if (command === "git") return { exitCode: 0, stdout: common };
     if (args.includes("-c")) return { exitCode: 0, stdout: "3.12.13" };
-    if (args.at(-1) === "inventory")
+    if (args.at(-1) === "inventory") {
+      inventoryDirectories.push(options.cwd);
       return { exitCode: 0, stdout: '{"files":["checkout.ts","rationale.md"]}' };
+    }
     return native(command, args, options);
   };
   const configuration = path.join(fixture.root, ".qfai", "graph-processing.json");
@@ -134,8 +138,10 @@ it("restores a compatible document snapshot when no processing configuration is 
 
     const held = path.join(cache, ".held-whole-corpus");
     await rename(wholeCorpus, held);
+    inventoryDirectories.length = 0;
     expect(await prepare()).toMatchObject({ status: "not-ready" });
     await expect(lstat(fixture.documentAnalysis)).rejects.toMatchObject({ code: "ENOENT" });
+    expect(inventoryDirectories).toEqual([]);
 
     await rename(held, wholeCorpus);
     fixture.calls.length = 0;
@@ -153,11 +159,37 @@ it("restores a compatible document snapshot when no processing configuration is 
       JSON.stringify({ ...fixture.processing, scope: ["checkout.ts"] }),
     );
     fixture.calls.length = 0;
+    inventoryDirectories.length = 0;
     expect(await prepare()).toMatchObject({ status: "prepared", source: "generated" });
     expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(true);
+    expect(inventoryDirectories).not.toContain(path.join(wholeCorpus, "analysis"));
+    expect(inventoryDirectories).not.toContain(path.join(narrow, "analysis"));
   } finally {
     await fixture.dispose();
     await rm(common, { recursive: true, force: true });
+  }
+});
+
+it("skips inventory when the staged document copy fails the processing check", async () => {
+  const fixture = await completedDocumentSnapshotFixture();
+  const checkProcessing = vi.fn(() => Promise.resolve(false)).mockResolvedValueOnce(true);
+  const inspect = vi.fn(() => Promise.resolve(true));
+  try {
+    expect(
+      await restoreCompletedDocumentAnalysis(
+        fixture.root,
+        fixture.run,
+        checkProcessing,
+        inspect,
+        fixture.environment,
+      ),
+    ).toBe("cold");
+    expect(checkProcessing).toHaveBeenCalledTimes(2);
+    expect(fixture.observed.filter((args) => args.at(-1) === "inventory")).toHaveLength(1);
+    expect(inspect).not.toHaveBeenCalled();
+    await expect(lstat(fixture.documentAnalysis)).rejects.toMatchObject({ code: "ENOENT" });
+  } finally {
+    await fixture.dispose();
   }
 });
 
@@ -220,7 +252,7 @@ it("restores a compatible completed local copy and confirms native freshness wit
 });
 
 // QFAI:EX-0001-0236-03
-// Mutation: packages/qfai/src/core/graph/reuse.ts `nativeRuntime.stdout.trim() !== "v24.16.0"` -> `false` fails "uses local generation for native copy combinations without independent restoration proof"
+// Mutation: packages/qfai/src/core/graph/reuse.ts `if (nativeRuntime.exitCode !== 0 || !verifiedNativeRelease(nativeRuntime.stdout)) return "cold";` -> `if (nativeRuntime.exitCode !== 0 || !verifiedNativeRelease(nativeRuntime.stdout)) return "restored";` fails "uses local generation for native copy combinations without independent restoration proof"
 it("uses local generation for native copy combinations without independent restoration proof", async () => {
   for (const platform of ["linux", "darwin"]) {
     const fixture = await completedCodeSnapshotFixture();
