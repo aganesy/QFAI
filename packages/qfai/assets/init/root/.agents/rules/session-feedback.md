@@ -135,23 +135,30 @@ channel's release does not count, and where the evidence cannot show it, or
 cannot show whether the project releases or deploys at all, the finding stays
 held back. An unfixed one is held back and named to the user in the review's own
 message, beside the § 5 question or in its one line when nothing else is worth
-reporting. The message numbers each held-back finding, such as held-back
-security finding 1, and names it by that number alone. `reply-forms.md` treats a
-place whose audience cannot be confirmed as not private. Where the host shows
-that the message reaches the user alone, the message also:
+reporting. The message numbers each held-back finding across the session, such
+as held-back security finding 1, never reusing a number, and names it by that
+number alone. `reply-forms.md` treats a place whose audience cannot be confirmed
+as not private. Where the host shows that the message reaches the user alone,
+the message also:
 
 - names the finding's class of defect;
 - says where the finding is;
 - names the pull request it came from;
 - suggests asking for the finding's draft once the fix counts as fixed.
 
-Otherwise it does none of these four. It tells the user to continue this session
-where only they will see the answer and ask about the finding there by its
-number, since another session holds no record of it. An answer gives the four
-only where the host shows it reaches the user alone, and otherwise repeats this
-advice. Under a no-question mode the final report names it by its number alone,
-since others may read that report, and tells the user to ask about it where only
-they will see the answer.
+Otherwise it does none of these four, and tells the user to continue this
+session where only they will see the answer and ask about the finding there by
+its number. An answer gives the four only where the host shows it reaches the
+user alone, and otherwise repeats this advice. Under a no-question mode the
+final report names it by its number alone, since others may read that report. It
+tells the user to ask about it in a session where only they will see the answer
+and to name there the pull request it may have come from.
+
+No record of a held-back finding is kept, so that no file holds an unfixed
+defect. A later session asked about one it has no record of says so and asks the
+user which pull request it came from. It then reads that pull request's review
+comments, as the exception above allows, and finds the finding there again. A
+finding from a reviewer sub-agent has no pull request and cannot be found again.
 
 ## 3. What a draft holds
 

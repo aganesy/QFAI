@@ -278,7 +278,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it is unknown whether the project releases or deploys. An unfixed one is named
   to the user by a number alone; its class of defect and location are given only
   where the message reaches the user alone, and otherwise the user is advised to
-  ask about it there. The `qfai session-review` command still reads local
+  ask about it in this session where only they see the answer. No record of a
+  held-back finding is kept: a later session asks the user for its pull request
+  and finds it again there. The `qfai session-review` command still reads local
   transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
