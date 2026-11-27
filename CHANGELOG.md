@@ -1158,6 +1158,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   index notes and changed constraint identifiers in order without exceeding
   the JavaScript argument limit.
 
+- Migration step 3 retains all notes from large CLI contracts and combines
+  large batches of Skeleton commands without repeatedly scanning the list.
+
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
   `analysis` folder. When a file inside it could not be read, the copy threw:
