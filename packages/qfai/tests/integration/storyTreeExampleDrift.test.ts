@@ -110,14 +110,24 @@ describe("an example rewritten on the branch", () => {
     );
   });
 
+  // QFAI:AC-0001-0054-08
   // QFAI:EX-0001-0054-31
   it.each([
-    ["fence", "```md", "```"],
-    ["comment", "<!--", "-->"],
-  ])("ignores a rewritten example row in a %s", async (_kind, open, close) => {
-    const document = (expected: string, sample: string): string =>
-      `${header}| ${example} | AC-0001-0001-01 | an order | ${expected} |\n\n` +
-      `${open}\n${header}| ${example} | AC-0001-0001-01 | sample | ${sample} |\n${close}\n`;
+    ["fence", "```md", "```", ""],
+    ["comment", "<!--", "-->", ""],
+    ["list-item fence", "123. Sample:\n     ```md", "     ```", "     "],
+  ])("ignores a rewritten example row in a %s", async (_kind, open, close, indent) => {
+    const document = (expected: string, sample: string): string => {
+      const sampleTable = `${header}| ${example} | AC-0001-0001-01 | sample | ${sample} |`;
+      return [
+        `${header}| ${example} | AC-0001-0001-01 | an order | ${expected} |`,
+        "",
+        open,
+        ...sampleTable.split("\n").map((line) => indent + line),
+        close,
+        "",
+      ].join("\n");
+    };
     await put(examples, document("it is paid", "first sample"));
     commit("add a non-rendered example table");
     git("branch", "-f", "main", "HEAD");
@@ -129,6 +139,25 @@ describe("an example rewritten on the branch", () => {
 
     await put(examples, document("it is refunded", "second sample"));
     commit("edit the rendered example");
+    expect(await warned()).toBe(true);
+  });
+
+  // QFAI:EX-0001-0054-31
+  it("checks a rendered row between comment delimiters in separate rows", async () => {
+    const document = (expected: string): string =>
+      [
+        header.trimEnd(),
+        "| EX-0001-0001-02 | AC-0001-0001-01 | starts with <!-- | unchanged |",
+        `| ${example} | AC-0001-0001-01 | an order | ${expected} |`,
+        "| EX-0001-0001-03 | AC-0001-0001-01 | ends with --> | unchanged |",
+        "",
+      ].join("\n");
+    await put(examples, document("it is paid"));
+    commit("add rendered table rows with comment-like text");
+    git("branch", "-f", "main", "HEAD");
+
+    await put(examples, document("it is refunded"));
+    commit("edit the rendered row between the delimiters");
     expect(await warned()).toBe(true);
   });
 

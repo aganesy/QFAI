@@ -2,11 +2,11 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 import { parseDesignToken } from "../../src/core/parse/designToken.js";
-import { computeContrastRatio } from "../../src/core/uiux/contrastRatio.js";
+import * as contrastRatio from "../../src/core/uiux/contrastRatio.js";
 import { parseHtmlMock } from "../../src/core/uiux/htmlMockDom.js";
 import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
 import { validateDesignToken } from "../../src/core/validators/designToken.js";
@@ -299,7 +299,7 @@ describe("uiux validators", () => {
   });
 
   it("returns null contrast ratio for out-of-range rgb values", () => {
-    expect(computeContrastRatio("rgb(999,0,0)", "#ffffff")).toBeNull();
+    expect(contrastRatio.computeContrastRatio("rgb(999,0,0)", "#ffffff")).toBeNull();
   });
 
   it("parses var() fallback values containing nested parentheses", async () => {
@@ -769,7 +769,7 @@ describe("uiux validators", () => {
     ["high", "space-separated rgb()", "rgb(0 0 0)", "rgb(255 255 255)", []],
   ])(
     "checks %s HTML mock contrast written in %s",
-    async (_contrast, _format, foreground, background, expectedSeverities) => {
+    async (contrastKind, _format, foreground, background, expectedSeverities) => {
       const root = await newTempDir();
       const specsDir = path.join(root, ".qfai", "specs");
       await mkdir(specsDir, { recursive: true });
@@ -785,9 +785,16 @@ describe("uiux validators", () => {
         "utf-8",
       );
 
-      const issues = await validateHtmlMock(root, "web", defaultConfig);
-      const contrast = issues.filter((item) => item.code === "QFAI-MOCK-008");
-      expect(contrast.map((item) => item.severity)).toEqual(expectedSeverities);
+      const compute = vi.spyOn(contrastRatio, "computeContrastRatio");
+      try {
+        const issues = await validateHtmlMock(root, "web", defaultConfig);
+        const expectedRatio = contrastKind === "high" ? expect.closeTo(21) : expect.any(Number);
+        expect(compute).toHaveReturnedWith(expectedRatio);
+        const contrast = issues.filter((item) => item.code === "QFAI-MOCK-008");
+        expect(contrast.map((item) => item.severity)).toEqual(expectedSeverities);
+      } finally {
+        compute.mockRestore();
+      }
     },
   );
 

@@ -659,14 +659,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
+- Restoring or publishing a completed document graph reuses the safety check
+  on each copy during native freshness validation.
+
+- Turn-end checks keep independent failure counts for distinct sessions and
+  agents. An active turn with only an old state file starts a fresh count
+  after upgrade.
+
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 
 - Migration step 3 names contract IDs in the instructions for rewriting a
   rejected constraint in plain words.
 
+- Commands using the general CLI help format print full help when explicitly
+  given `--help` or `-h` alongside a refused argument. The refusal still
+  writes its reason to stderr and exits 2. A version request takes precedence.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
+
+- **Specification table checks respect list fences and row boundaries.**
+  Tables within fenced list examples are ignored, and comment-like text
+  in one table row can no longer hide subsequent visible rows.
 
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
@@ -684,6 +699,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   how to install its dependencies and rerun validation through its own launcher.
   The recovery names `pnpm bootstrap` for QFAI source worktrees and explains
   how to replace an original `--root` while retaining the other options.
+
+- Validation accepts the QFAI copy selected by Yarn Plug’n’Play for the project,
+  including a copy loaded from a shared cache outside the project directory.
 
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
@@ -1154,6 +1172,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   index notes and changed constraint identifiers in order without exceeding
   the JavaScript argument limit.
 
+- Migration step 3 retains all notes from large CLI contracts and combines
+  large batches of Skeleton commands without repeatedly scanning the list.
+
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
   `analysis` folder. When a file inside it could not be read, the copy threw:
@@ -1321,6 +1342,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   such as `ARRAY[[1,2],[3,4]]` still parse, and a `[` left open is reported.
   Closes #5136.
 
+- DB SQL validation reports physical line numbers in contracts that use
+  bare carriage returns, including after comments and multiline literals.
+
 - **A failed code graph refresh keeps the previous graph with the files it
   was built from.** Checking whether the code graph was current copied the
   changed project files into the active analysis first, so when the
@@ -1345,6 +1369,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 
 - The routine parser skips commas and parentheses inside quoted argument
   names and preserves quoted type names when checking for duplicate routines.
+
+- **DB SQL validation accepts punctuation after routine `DEFAULT`.** It
+  detects redefinitions with defaults such as `DEFAULT(NULL)` and preserves
+  qualified input types such as `app.default`.
 
 - Dollar-quoted and directly `E`- or `e`-prefixed defaults in SQL routines
   preserve the argument types that follow them. The duplicate check ignores
@@ -1411,6 +1439,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `QFAI-COMP-004` with the reason when the catalogue path is unreadable or
   contains a symbolic link or junction.
 
+- `qfai validate` and `qfai catalog components --check` bound catalogue
+  reads to 8 MiB plus one byte from the verified file. Both report the limit
+  when the catalogue exceeds 8 MiB.
+
 - **`qfai catalog design` puts both files back on a volume with no inode
   numbers, and names a moved-aside file it cannot remove.** On such a volume a
   failed write left the new token file and a hidden moved-aside file behind;
@@ -1446,6 +1478,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `e` before the quote opens an escape string, in which a backslash escapes
   the next character. Closes #5137.
 
+- The DB apply-order check keeps foreign keys that follow comments in
+  contracts with bare carriage returns. Masked regions retain their original
+  line separators and offsets.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
@@ -1457,6 +1493,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   such as `CREATE PUBLICATION feed FOR TABLE orders` made its contract the owner
   of `orders`. Only the PostgreSQL modifiers `TEMP`, `TEMPORARY`, `GLOBAL`,
   `LOCAL` and `UNLOGGED` may now sit there.
+
+- DB apply-order validation ignores references inside nested PostgreSQL
+  block comments and retains references that follow the outer comment.
 
 - **A package.json QFAI cannot read is reported as unreadable.** While
   locating its init templates (for `qfai init`, `qfai doctor` and the graph
@@ -2383,6 +2422,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   reported an unterminated string or split a statement at a `;` inside the
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
+
+- **DB SQL validation reads continued PostgreSQL escape strings.** Later
+  quoted segments inherit escape handling after a newline, preserving
+  statement and argument boundaries and ignoring references inside the string.
 
 - **The `validate.json` guide documents `profileValidatorsRan`.** The key is
   in every result of a `qfai validate` run that finishes, but the guide to
@@ -4415,6 +4458,14 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   reads a base that still holds the column without it, so that change needs no
   change request. A settled question row may then
   be deleted once a decision row names its ID; until one does, the row stays.
+
+  Before removing Status, check the decision register and its pages for
+  `Test exception:` entries marked `SUPERSEDED (by DEC-…)`. Reword their
+  Content to start with `Former test exception:` and keep their IDs and
+  history. In 2.4.0, the `Test exception:` prefix activates the exemption
+  again after the Status cell is removed. If you already upgraded, find
+  those entries in the pre-upgrade register and reword them in the current one.
+
 - **A decision row may be restated under its ID.** The `drift` profile of
   `qfai validate` now reports only a decision row the base holds that the
   branch removes or renumbers (`QFAI-STORY-010`); a row whose Content or
