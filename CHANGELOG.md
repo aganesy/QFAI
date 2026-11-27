@@ -714,6 +714,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   none of them after a private security intake, as the skill's Reviewer Gate
   does. Closes #5540.
 
+- **The seeded Git attributes explain how to handle a restored question row.**
+  After a union merge restores a deleted open question, the guidance calls for
+  a separate cleanup commit before pushing. It preserves other rows and IDs.
+
 - **`QFAI-DB-001` warns when a DB contract calls a destructive function it
   defines.** A function or procedure body was skipped because creating it runs
   nothing, so a file that created one holding `TRUNCATE` and then ran
