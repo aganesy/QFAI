@@ -171,14 +171,10 @@ function splitShellCommands(line: string): string[] {
   return parts;
 }
 
-/**
- * Every `git tag` command in `markdown` that creates a tag: whole lines and
- * inline code spans alike, split at `&&`, `||`, `;` and `|` so a chained or
- * piped command is read on its own. A bare `git tag` lists and is left out.
- */
-function tagCreations(markdown: string): string[] {
-  const spans = Array.from(markdown.matchAll(/`([^`\n]+)`/g), (m) => m[1] ?? "");
-  return [...markdown.split(/\r?\n/), ...spans]
+/** Potential tag creation commands in shell input, checked one command at a time. */
+function tagCreations(shell: string): string[] {
+  return shell
+    .split(/\r?\n/)
     .flatMap(splitShellCommands)
     .map((part) => part.trim())
     .filter((part) => /^git\s+tag(?:\s|$)/.test(part))
@@ -205,17 +201,25 @@ function namesItsCommit(command: string): boolean {
 
 const releaseMarkdown = new MarkdownIt("commonmark");
 
-function releaseShellBlocks(guide: string): string[] {
-  return releaseMarkdown
-    .parse(guide, {})
+function releaseShellBlocks(tokens: ReturnType<typeof releaseMarkdown.parse>): string[] {
+  return tokens
     .filter(
       ({ type, info }) => type === "fence" && /^(?:sh|bash|shell)(?:[ \t]|$)/.test(info.trim()),
     )
     .map(({ content }) => content);
 }
 
+function releaseTagCreations(guide: string): string[] {
+  const tokens = releaseMarkdown.parse(guide, {});
+  const inlineCommands = tokens
+    .flatMap(({ children }) => children ?? [])
+    .filter(({ type }) => type === "code_inline")
+    .map(({ content }) => content);
+  return [...releaseShellBlocks(tokens), ...inlineCommands].flatMap(tagCreations);
+}
+
 function releaseTaggingStatements(guide: string): string[] {
-  const statements = releaseShellBlocks(guide)
+  const statements = releaseShellBlocks(releaseMarkdown.parse(guide, {}))
     .map((body) => body.replace(/&&[ \t]*\r?\n\s*/g, "&& "))
     .flatMap((body) => body.split(/\r?\n/))
     .map((line) => line.trim());
@@ -319,7 +323,7 @@ describe("the project layer describes the repository it is in", () => {
   // wrong checkout would publish a commit nobody approved.
   it("tags a release by the commit it names, never the local HEAD", async () => {
     const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
-    const creates = tagCreations(guide);
+    const creates = releaseTagCreations(guide);
 
     expect(creates.length, "the release guide shows no tag command to check").toBeGreaterThan(0);
     expect(
@@ -339,15 +343,15 @@ describe("the project layer describes the repository it is in", () => {
       "```sh\ngit tag vX.Y.Z -m <SHA>\n```",
     ];
     for (const sample of tagsHead) {
-      const creates = tagCreations(sample);
+      const creates = releaseTagCreations(sample);
       expect(creates.length, sample).toBe(1);
       expect(creates.filter((command) => !namesItsCommit(command)).length, sample).toBe(1);
     }
 
-    expect(tagCreations("Delete it with `git tag -d vX.Y.Z`, or list with `git tag -l`.")).toEqual(
-      [],
-    );
-    const chained = tagCreations("```sh\n  git tag vX.Y.Z <SHA> &&\n```\n");
+    expect(
+      releaseTagCreations("Delete it with `git tag -d vX.Y.Z`, or list with `git tag -l`."),
+    ).toEqual([]);
+    const chained = releaseTagCreations("```sh\n  git tag vX.Y.Z <SHA> &&\n```\n");
     expect(chained).toEqual(["git tag vX.Y.Z <SHA>"]);
     expect(chained.every((command) => namesItsCommit(command))).toBe(true);
     expect(namesItsCommit(`git tag vX.Y.Z ${"a".repeat(40)}`)).toBe(true);
@@ -375,7 +379,7 @@ describe("the project layer describes the repository it is in", () => {
       `Use \`git fetch origin main && ${inline}\`.`,
     ].join("\n");
 
-    const commands = tagCreations(guide);
+    const commands = releaseTagCreations(guide);
     expect(commands).toEqual([fenced, inline]);
     expect(commands.every(namesItsCommit)).toBe(true);
   });
@@ -406,7 +410,7 @@ describe("the project layer describes the repository it is in", () => {
       "git tag --format='%(refname)' -m prepare\\;ship vX.Y.Z",
     ];
     const guide = ["```sh", ...listings, ...creations, "```"].join("\n");
-    expect(tagCreations(guide)).toEqual(creations);
+    expect(releaseTagCreations(guide)).toEqual(creations);
     expect(tagCreations("git tag vX.Y.Z # --contains; git tag --format=unused")).toEqual([
       "git tag vX.Y.Z",
     ]);
