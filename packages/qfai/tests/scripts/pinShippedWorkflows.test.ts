@@ -141,6 +141,56 @@ it("leaves all pins unchanged when a step's non-body shape changes", async () =>
   expect(result.output).toContain(
     "Review the structural change and update the shape pin explicitly.",
   );
+  expect(result.output).not.toContain("Fix the workflow YAML");
+  expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
+});
+
+it.each([
+  ["syntax", "jobs: [\n", "", "valid YAML"],
+  ["workflow", "- workflow\n", "", "a workflow mapping"],
+  ["jobs", "name: Docs\njobs: []\n", "#jobs", "a jobs mapping"],
+  ["job", "name: Docs\njobs:\n  inspect: false\n", "#jobs.inspect", "a job mapping"],
+  [
+    "steps",
+    "name: Docs\njobs:\n  inspect:\n    runs-on: ubuntu-latest\n    steps: invalid\n",
+    "#jobs.inspect.steps",
+    "a step list",
+  ],
+  [
+    "step",
+    "name: Docs\njobs:\n  inspect:\n    runs-on: ubuntu-latest\n    steps:\n      - invalid\n",
+    "#jobs.inspect.steps[0]",
+    "a step mapping",
+  ],
+])(
+  "diagnoses malformed workflow %s without changing the pins",
+  async (_part, yaml, location, expected) => {
+    const root = await fixture();
+    const malformedPath = path.posix.join(...TEMPLATES, "qfai-tests.yml");
+    await writeFile(path.join(root, ...TEMPLATES, "qfai-docs.yml"), workflow(UPDATED_BODY));
+    await writeFile(path.join(root, ...TEMPLATES, "qfai-tests.yml"), yaml);
+
+    const result = run(root);
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(malformedPath + location + ": expected " + expected);
+    expect(result.output).toContain("Fix the workflow YAML before refreshing pins.");
+    expect(result.output).not.toContain("update the shape pin explicitly");
+    expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
+  },
+);
+
+it("reports a malformed declaration before suggesting a pin change for an earlier workflow", async () => {
+  const root = await fixture();
+  await writeFile(
+    path.join(root, ...TEMPLATES, "qfai-docs.yml"),
+    workflow(INITIAL_BODY, "Renamed step"),
+  );
+  await writeFile(path.join(root, ...TEMPLATES, "qfai-tests.yml"), "jobs: []\n");
+
+  const result = run(root);
+  expect(result.status).toBe(1);
+  expect(result.output).toContain("qfai-tests.yml#jobs: expected a jobs mapping");
+  expect(result.output).not.toContain("update the shape pin explicitly");
   expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
 });
 
