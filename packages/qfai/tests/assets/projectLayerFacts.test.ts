@@ -305,8 +305,12 @@ function releaseTaggingStatements(guide: string): string[] {
   return statements.filter((statement) => tagCreations(statement).length > 0);
 }
 
-function releaseBuildBlock(guide: string): string | undefined {
-  return releaseShellBlocks(guide).find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
+function releaseBuildChecks(guide: string): { blocks: string[]; duplicates: string[] } {
+  const blocks = releaseShellBlocks(guide).filter((body) =>
+    /^\s*corepack pnpm ci:gate:build$/m.test(body),
+  );
+  const duplicates = blocks.filter((body) => /^\s*pnpm verify:pack$/m.test(body));
+  return { blocks, duplicates };
 }
 
 describe("the project layer describes the repository it is in", () => {
@@ -614,9 +618,9 @@ describe("the project layer describes the repository it is in", () => {
     expect(guide, "the guide runs the build check with bare node").not.toMatch(
       /^\s*node (?:\.\/)?scripts\/check-build-warnings\.mjs/m,
     );
-    const block = releaseBuildBlock(guide);
-    expect(block, "no shell block runs corepack pnpm ci:gate:build").toBeDefined();
-    expect(block, "the block runs verify:pack a second time").not.toMatch(/^\s*pnpm verify:pack$/m);
+    const { blocks, duplicates } = releaseBuildChecks(guide);
+    expect(blocks.length, "no shell block runs corepack pnpm ci:gate:build").toBeGreaterThan(0);
+    expect(duplicates, "a build block runs verify:pack a second time").toEqual([]);
   });
 
   it.each([
@@ -632,10 +636,9 @@ describe("the project layer describes the repository it is in", () => {
       const build = "corepack pnpm ci:gate:build";
       const duplicate = "pnpm verify:pack";
       const guide = ["```" + shell, build, duplicate, "```"].join(newline);
-      const block = releaseBuildBlock(guide);
-      expect(block).toBeDefined();
-      expect(block).toContain(build);
-      expect(block).toMatch(/^\s*pnpm verify:pack$/m);
+      const { blocks, duplicates } = releaseBuildChecks(guide);
+      expect(blocks).toHaveLength(1);
+      expect(duplicates).toEqual(blocks);
     },
   );
 
@@ -644,7 +647,9 @@ describe("the project layer describes the repository it is in", () => {
     const duplicate = "pnpm verify:pack";
     const guide = ["```bash", build, "```", "", "```sh", build, duplicate, "```"].join("\n");
 
-    expect(releaseBuildBlock(guide)).toEqual([`${build}\n`, `${build}\n${duplicate}\n`]);
+    const { blocks, duplicates } = releaseBuildChecks(guide);
+    expect(blocks).toHaveLength(2);
+    expect(duplicates).toEqual([blocks[1]]);
   });
 
   // The host command lists under `.instruction/03_ai-agents/` were copied from
