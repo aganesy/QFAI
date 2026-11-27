@@ -118,7 +118,7 @@ export function tableName(raw: string): TableName {
  * {@link readSqlQuotedToken}, because where it ends depends on what precedes it.
  * A block comment opens at `/*` and ends at the matching close after any nested blocks.
  */
-const SQL_NOISE = String.raw`--[^\n]*|\/\*|'|${QUOTED_IDENTIFIER}|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`;
+const SQL_NOISE = String.raw`--[^\r\n]*|\/\*|'|${QUOTED_IDENTIFIER}|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`;
 
 /**
  * SQL with its comments and string literals blanked, keeping every offset.

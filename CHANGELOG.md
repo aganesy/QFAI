@@ -1158,6 +1158,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   index notes and changed constraint identifiers in order without exceeding
   the JavaScript argument limit.
 
+- Migration step 3 retains all notes from large CLI contracts and combines
+  large batches of Skeleton commands without repeatedly scanning the list.
+
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
   `analysis` folder. When a file inside it could not be read, the copy threw:
@@ -1325,6 +1328,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   such as `ARRAY[[1,2],[3,4]]` still parse, and a `[` left open is reported.
   Closes #5136.
 
+- DB SQL validation reports physical line numbers in contracts that use
+  bare carriage returns, including after comments and multiline literals.
+
 - **A failed code graph refresh keeps the previous graph with the files it
   was built from.** Checking whether the code graph was current copied the
   changed project files into the active analysis first, so when the
@@ -1453,6 +1459,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   string literals by the rule the statement splitter follows: a lone `E` or
   `e` before the quote opens an escape string, in which a backslash escapes
   the next character. Closes #5137.
+
+- The DB apply-order check keeps foreign keys that follow comments in
+  contracts with bare carriage returns. Masked regions retain their original
+  line separators and offsets.
 
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
