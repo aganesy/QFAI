@@ -1434,9 +1434,11 @@ decisions` headings appeared anywhere in the file, so a record with several
   separately. Equivalent ordinary double-quoted and bare spellings match. Case and
   punctuation that distinguish quoted identifiers are preserved.
 
-- SQL routine identity ignores Unicode-quoted parameter names and their
-  optional `UESCAPE` clauses. It retains the type when it follows the
-  name without a space.
+- SQL routine identity ignores a Unicode-quoted parameter name together with
+  its `UESCAPE` clause and retains the full input type.
+
+- SQL routine identity also retains the input type when it immediately follows
+  a Unicode-quoted parameter name without a `UESCAPE` clause.
 
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
