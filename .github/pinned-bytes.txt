@@ -14,9 +14,10 @@
 #
 # `sha256sum -c` format, so the pre-flight needs no parser: two spaces between the digest and
 # the path, paths relative to the repository root.
-8484c380946a0c033486e34857cf85ba76b9b3c20c10755c0b72730e400073f8  .github/actions/setup/action.yml
+9704b47b8d4c0bcf8adec355d347c34d27d59026b54c8805bbc65e610ac7479c  .github/actions/setup/action.yml
 f97098ef9f69132551dfd3e7f2e83944b5e6a16a976749d59789b39196ebd741  .github/actions/setup/bootstrap-corepack.sh
 3230335c2f0bc71bfcec72150d56fd51dc30524ca0fb35405197054709bd13b5  .github/actions/setup/dependency-builds.txt
+d6abbfb55a77390fb93b30e228f09f89b152280af1899aef386847f3b4e1babb  .github/actions/setup/node-engine-floor.mjs
 81c83080bfbae274d46c90cdae9f9ae3dd3af6240fe56fc88aec461799802ae3  .github/actions/setup/verify-rebuild-sources.mjs
 c19e4f8a243f2570ccd8debc63acf324734b6296f4b5949a2110fc7a1abbabc0  scripts/bootstrap.mjs
 8a19d8c71850da4547341b5f53476126816a1bc1ba144172de5d606c5fb5c594  scripts/branch-catchup.mjs
@@ -53,7 +54,7 @@ ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356  scripts/entry-
 99c2f17ebcb315ed3c4324f36afda738a36cbcae7939dd582ab01e7896197dae  scripts/fresh-init-findings.json
 032493d612d6999edef2233ef94718a84d7c21843722c4c5050f2b879d165331  scripts/fresh-init-findings.mjs
 6ccb467893b21e280f5edbe18352737940b55faf86506693afb036ec7341bb15  scripts/gen-codex-agents.mjs
-44f23da60e15be3c705439a34bd94e73353c1ba4252ca9a1fab9756d4baf7d4d  scripts/gh-budget.mjs
+f129308912b411b42602e727731aae06c69d120e3ad6a96c042c38c45a84311a  scripts/gh-budget.mjs
 fe10fc25e9136494bf0c85779249f538c404f2e9fc30eb621773ff7057dc4b45  scripts/lib/always-loaded-footprint.mjs
 1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444  scripts/lib/bounded-read.mjs
 c8a928b67c4cea521080c7b1de2427ad0d82eecff1ed50c5bb59aa4ceaa5ee48  scripts/lib/git-quoted-path.mjs
@@ -88,4 +89,5 @@ c6381c7b4088a40c0db291a57c3be0c8419b9c030548ab3a5f72548aaf066491  scripts/smoke-
 7d19de4735e7ca7d250fba9cf241ddf06c3f33095e81f172e6852b3d6b354d99  scripts/story-ids.mjs
 51b70ddf5dba655ff6fc0509e67daa93ca2f8ef4cc4da48477cdae75a7f0c9a1  scripts/sync-init-to-root.mjs
 cab5dc15baaa9ce5581a29c49bdaa5bbfec763b2498ccf27723c37997dced8bd  scripts/sync-mdschema-version.mjs
+e23f05033f3405d04016d21e270c5345cde10ab8dbb2a5c76c4c64e3444918e2  scripts/sync-shipped-workflow-toolchain.mjs
 be78543442876519c3642af3de59073f1279bf5e3c35deb90249ec33c71bbe10  scripts/verify-pack.mjs
