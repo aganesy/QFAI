@@ -1,0 +1,79 @@
+# Document schema: <contractsDir>/db/db-NNNN-<slug>.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
+structure:
+  - heading:
+      pattern: "^# DB-[0-9]{4}: .+$"
+      regex: true
+    description: Contract ID and title.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
+    children:
+      - heading:
+          pattern: "^## Responsibility$"
+          regex: true
+        description: The responsibility this contract owns.
+        allow_additional: false
+        paragraphs:
+          min: 1
+          max: 1
+        forbidden_text:
+          - pattern: '(?m)^\s*([-*+]|[0-9]+[.)])\s'
+            regex: true
+          - pattern: '(?m)^\s*\|'
+            regex: true
+          - pattern: '(?m)^\s*(```|~~~)'
+            regex: true
+          - pattern: "BR-(?:(?:CLI|API|DB|UI)-)?[0-9]{4}-[0-9]{4}"
+            regex: true
+      - heading:
+          pattern: "^## Inputs$"
+          regex: true
+        description: Each item names required information or a precondition.
+        allow_additional: false
+        lists:
+          - min: 1
+        forbidden_text:
+          - pattern: '(?m)^[ \t]?[^-\s#]'
+            regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*(?:[^-\s#]|-\S)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
+            regex: true
+      - heading:
+          pattern: "^## Outcomes$"
+          regex: true
+        description: Each item names an observable result or guarantee.
+        allow_additional: false
+        lists:
+          - min: 1
+        forbidden_text:
+          - pattern: '(?m)^[ \t]?[^-\s#]'
+            regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*(?:[^-\s#]|-\S)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
+            regex: true
+      - heading:
+          pattern: "^## Business rules$"
+          regex: true
+        description: The rules this contract enforces, each citing the examples that show it.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [BR-ID, Statement, Examples]
+        forbidden_text:
+          - pattern: '(?m)^[^|#\s]'
+            regex: true
+          - pattern: '(?m)^\|[^|\n]*\|[^\n]*BR-(?:(?:CLI|API|DB|UI)-)?[0-9]{4}-[0-9]{4}'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){3}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|[^|\n]*\|[ \t]*\|'
+            regex: true
