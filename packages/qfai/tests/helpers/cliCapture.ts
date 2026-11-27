@@ -9,6 +9,7 @@ import { captureStdout } from "./stdout.js";
  */
 export async function runCliCaptured(
   args: string[],
+  cwd = process.cwd(),
 ): Promise<{ code: number; out: string; err: string }> {
   const previous = process.exitCode;
   process.exitCode = undefined;
@@ -17,7 +18,7 @@ export async function runCliCaptured(
   try {
     const out = await captureStdout(async () => {
       err = await captureStderr(async () => {
-        await run(args, process.cwd());
+        await run(args, cwd);
         code = Number(process.exitCode ?? 0);
       });
     });

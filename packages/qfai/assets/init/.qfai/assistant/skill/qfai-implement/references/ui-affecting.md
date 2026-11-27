@@ -23,9 +23,20 @@ Read the flow, story, acceptance criterion, and example that the implementation 
 
 `.qfai/catalog/components.yaml` lists the components the `uiux.surfacePaths` files export, with their
 props and what their doc comments say. `npx qfai catalog components` writes it; commit the result.
+A brief that hands a screen unit to another agent includes the output of
+`npx qfai catalog components --brief`, one line per listed component and the design token count,
+rather than restating the components by hand.
 
 - Before writing a region, read the catalogue. Reuse a listed component whose `pattern` is that region,
   extending it if it lacks what the screen needs, rather than writing the region again.
+- Before building an error summary, a field with an error, a step indicator, a confirm step, a skip
+  link, a sticky action bar, a status message or an empty state that the catalogue does not list,
+  read its entry in `.qfai/assistant/rule/references/base-components.yaml`: its anatomy, role and
+  accessible name, keyboard and focus behaviour, states, content rules, runtime notes and sources.
+  Build it once as a shared component that meets the entry, and name the entry's `id` in its
+  `@pattern`, as `@pattern error-summary`. Give it `@source authored` with an `@reason` naming the
+  entry's `id`, as `@reason built to base entry error-summary`: the entry is a description, not an
+  installed catalogue. Not needed for any other region.
 - When you author a shared component, give it a doc comment, then run the command:
 
 ```tsx
@@ -47,6 +58,17 @@ hand-written `role="dialog"`, `role="menu"`, `role="tablist"` or `aria-modal` wh
 installed, and a component whose `@pattern` is an interactive widget `ui-procurement.md` lists with no
 `@a11y` (`QFAI-COMP-001` to `QFAI-COMP-006`). `npx qfai catalog components --check` fails CI on an
 out-of-date catalogue.
+
+A component that realises a UI business rule carries the rule's `QFAI:BR-UI-NNNN-NNNN` comment line
+inside its declaration or on its leading comment lines, so the catalogue's `realizes` lists the
+rule. Before writing a region for a rule, look for a listed component whose `realizes` holds it.
+
+A prop typed as a union of string literals, such as `variant: "default" | "outline"`, is listed
+under `variants` with its values. Pass one of a prop's listed `variants` values rather than
+restyling the component.
+Reference a theme value by its variable, as `var(--color-brand)` or `bg-[var(--color-brand)]`,
+never by a literal colour or size, so the catalogue's `tokens` lists the variables a component
+uses. A utility class such as `bg-brand` is not listed there.
 
 The widget `@pattern` names it reads, compared without case, spaces, hyphens or underscores, are
 `dialog`, `alert dialog`, `drawer`, `sheet`, `menu`, `menu button`, `tabs`, `combobox`,

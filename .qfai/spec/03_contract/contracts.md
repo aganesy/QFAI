@@ -26,5 +26,5 @@
 | UI-0001 | Graph exploration terminal surfaces | `.qfai/spec/03_contract/ui/ui-0001-graph-exploration.md` | - | CLI-0009, CLI-0021 | CLI preparation, preview and query-result presentation. |
 | CLI-0023 | `qfai sdd merge-docs` | `.qfai/spec/03_contract/cli/cli-0023-qfai-sdd-merge-docs.md` | - | - | Sentence-level merge of conflicted story-tree documents. |
 | CLI-0024 | `qfai session-review` | `.qfai/spec/03_contract/cli/cli-0024-qfai-session-review.md` | - | - | Local transcript counts for the session review. |
-| CLI-0025 | `qfai catalog components` | `.qfai/spec/03_contract/cli/cli-0025-qfai-catalog-components.md` | - | - | The component catalogue written from the UI source, and how the implementer keeps it. |
+| CLI-0025 | `qfai catalog components` | `.qfai/spec/03_contract/cli/cli-0025-qfai-catalog-components.md` | - | - | The component catalogue written from the UI source, how the implementer keeps it, the shipped base component catalogue, and the brief of the committed catalogue for an agent's prompt. |
 | CLI-0026 | `qfai catalog design` | `.qfai/spec/03_contract/cli/cli-0026-qfai-catalog-design.md` | - | - | The design token file and the Tailwind theme written from root DESIGN.md, and the optional data display section. |

@@ -335,6 +335,16 @@ function businessRuleAnnotation(comment: RegExp): RegExp {
 }
 
 const BUSINESS_RULE_ANNOTATION = businessRuleAnnotation(/\/\/|\/\*+|\*|#|--|<!--/);
+/**
+ * The business-rule IDs a C-family, hash or HTML source text cites on standalone comment lines, in
+ * the order they appear: the implementation citations rule coverage counts.
+ */
+export function businessRuleCitations(text: string): string[] {
+  return [...text.matchAll(BUSINESS_RULE_ANNOTATION)].flatMap((match) =>
+    match[1] === undefined ? [] : [match[1]],
+  );
+}
+
 const LISP_RULE_ANNOTATION = businessRuleAnnotation(/;+/);
 const RULE_ANNOTATION_BY_EXTENSION: ReadonlyMap<string, RegExp> = new Map([
   [".clj", LISP_RULE_ANNOTATION],
