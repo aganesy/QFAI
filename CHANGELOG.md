@@ -690,6 +690,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Migration step 3 names contract IDs in the instructions for rewriting a
   rejected constraint in plain words.
 
+- Commands using the general CLI help format print full help when explicitly
+  given `--help` or `-h` alongside a refused argument. The refusal still
+  writes its reason to stderr and exits 2. A version request takes precedence.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
@@ -713,6 +717,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   how to install its dependencies and rerun validation through its own launcher.
   The recovery names `pnpm bootstrap` for QFAI source worktrees and explains
   how to replace an original `--root` while retaining the other options.
+
+- Validation accepts the QFAI copy selected by Yarn Plug’n’Play for the project,
+  including a copy loaded from a shared cache outside the project directory.
 
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.

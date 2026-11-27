@@ -98,7 +98,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     return;
   }
 
-  if (!command || options.help) {
+  if (!command || invalid || options.help) {
     // The rejection reason goes to stderr and the usage to stdout. Even if a
     // caller discards stdout, it still learns which token was rejected. A
     // refused `--format json` call gets the same two streams: usage text on
@@ -115,10 +115,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         error(await unavailableCommandDiagnosis(options.root));
       }
     }
-    // A refused argument of a known command gets that command's usage lines,
-    // not the help of every command: one missing flag must not cost the
-    // caller the whole help text on every call.
-    info(invalid && command ? refusedUsage(command, subcommandOf(options)) : usage());
+    info(command && !options.help ? refusedUsage(command, subcommandOf(options)) : usage());
     if (invalid) {
       process.exitCode = options.invalidExitCode;
     }
@@ -315,6 +312,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "sdd":
       {
+        // The parser rejects a missing subcommand before dispatch.
         if (!options.sddAction) {
           error("qfai sdd: unknown or missing subcommand. Expected: preflight|next-id|merge-docs");
           info(refusedUsage("sdd"));
@@ -497,7 +495,7 @@ function refusedUsage(command: string, subcommand?: string): string {
   return [
     "Usage:",
     ...lines.map((line) => `  qfai ${line}`),
-    "Run `qfai --help` for every option.",
+    "Run qfai --help for every option.",
     "",
   ].join("\n");
 }

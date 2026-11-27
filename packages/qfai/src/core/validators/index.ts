@@ -49,8 +49,6 @@ export { validateUiScreenPattern } from "./uiScreenPattern.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateStepTree } from "./stepTree.js";
 export { validateDesignAudit } from "./designAudit.js";
-export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";
-export type { LayoutAntiPattern, LayoutAntiPatternScope } from "./layoutAntiPatterns.js";
 export {
   validateDesignContractReadiness,
   validateRootDesignMdParse,
