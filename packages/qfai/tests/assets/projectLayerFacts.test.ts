@@ -31,6 +31,8 @@ import { parse as parseYaml } from "yaml";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const LAYER = ".instruction/02_project";
+const NODE_RANGE_CLAIM =
+  /(?:\^|>=)\s*\d+(?:\.\d+){0,2}(?:\s*\|\|\s*(?:\^|>=)\s*\d+(?:\.\d+){0,2})*/g;
 
 /**
  * A backticked repository-relative path: one that starts at a root-level entry
@@ -326,6 +328,10 @@ function releaseTaggingStatements(guide: string): string[] {
   return statements.filter((statement) => tagCreations(statement).length > 0);
 }
 
+function releaseBuildBlock(guide: string): string | undefined {
+  return releaseShellBlocks(guide).find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
+}
+
 describe("the project layer describes the repository it is in", () => {
   it("names no repository path that does not exist", async () => {
     const missing: string[] = [];
@@ -366,8 +372,10 @@ describe("the project layer describes the repository it is in", () => {
     const disagreeing: string[] = [];
     for (const name of await layerFiles()) {
       const text = await readFile(path.join(repoRoot, LAYER, name), "utf-8");
-      for (const [stated] of text.matchAll(/>=\s*\d+(?:\.\d+)*(?:\.\d+)?/g)) {
-        if (stated.replace(/\s+/g, "") !== engines) disagreeing.push(`${name}: ${stated}`);
+      for (const [stated] of text.matchAll(NODE_RANGE_CLAIM)) {
+        if (stated.replace(/\s+/g, "") !== engines?.replace(/\s+/g, "")) {
+          disagreeing.push(`${name}: ${stated}`);
+        }
       }
     }
 
@@ -385,13 +393,13 @@ describe("the project layer describes the repository it is in", () => {
     expect(engines, "package.json declares no Node range").not.toBeUndefined();
 
     const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
-    const stated = [...withoutFencedBlocks(guide).matchAll(/>=\s*\d+(?:\.\d+)*/g)].map(([match]) =>
-      match.replace(/\s+/g, ""),
+    const stated = [...withoutFencedBlocks(guide).matchAll(NODE_RANGE_CLAIM)].map(
+      ([match]) => match,
     );
 
     expect(stated.length, "the release guide states no Node floor to check").toBeGreaterThan(0);
     expect(
-      stated.filter((floor) => floor !== engines),
+      stated.filter((range) => range.replace(/\s+/g, "") !== engines?.replace(/\s+/g, "")),
       `the declared Node range is ${String(engines)}`,
     ).toEqual([]);
   });
@@ -674,12 +682,30 @@ describe("the project layer describes the repository it is in", () => {
     expect(guide, "the guide runs the build check with bare node").not.toMatch(
       /^\s*node (?:\.\/)?scripts\/check-build-warnings\.mjs/m,
     );
-    const block = [...guide.matchAll(/^\s*```sh\n([\s\S]*?)^\s*```/gm)]
-      .map(([, body]) => body ?? "")
-      .find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
+    const block = releaseBuildBlock(guide);
     expect(block, "no shell block runs corepack pnpm ci:gate:build").toBeDefined();
     expect(block, "the block runs verify:pack a second time").not.toMatch(/^\s*pnpm verify:pack$/m);
   });
+
+  it.each([
+    ["sh", "\n"],
+    ["bash", "\n"],
+    ["shell", "\n"],
+    ["sh", "\r\n"],
+    ["bash", "\r\n"],
+    ["shell", "\r\n"],
+  ])(
+    "finds the build command and its neighboring lines in a %s fence with %j",
+    (shell, newline) => {
+      const build = "corepack pnpm ci:gate:build";
+      const duplicate = "pnpm verify:pack";
+      const guide = ["```" + shell, build, duplicate, "```"].join(newline);
+      const block = releaseBuildBlock(guide);
+      expect(block).toBeDefined();
+      expect(block).toContain(build);
+      expect(block).toMatch(/^\s*pnpm verify:pack$/m);
+    },
+  );
 
   // The host command lists under `.instruction/03_ai-agents/` were copied from
   // another project: `generate:graphql`, `apply:backend`, `test:e2e` and `seed`

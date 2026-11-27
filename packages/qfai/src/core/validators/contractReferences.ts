@@ -11,8 +11,6 @@ import type { StoryTreeModel } from "../storyTree/tree.js";
 import {
   CONTRACT_KIND_DIRS,
   directoryOutsideContractKinds,
-  markdownOutsideContractForm,
-  NON_MARKDOWN_CONTRACT_FORMS,
   resolveStoryTreeRoots,
 } from "../storyTree/layout.js";
 
@@ -62,9 +60,7 @@ function contractKind(relative: string): string | null {
  * Checks the index in its current columns. Each contract file under a kind
  * directory declares an ID of that kind, is named `<kind>-NNNN-<slug>.<ext>`
  * after it, and has a row whose ID, File and Depends On agree with it. A number belongs to
- * one contract, and every row names a contract file. A Markdown file under
- * `api/`, `db/` or `ui/`, and a file in any other directory, is not a
- * contract, and is reported as that alone.
+ * one contract, and every row names a contract file. Files outside the contract kind directories are reported separately.
  */
 async function validateContractIndex(
   location: IndexLocation,
@@ -104,17 +100,6 @@ async function validateContractIndex(
       continue;
     }
     if (!kind) continue;
-    const directory = markdownOutsideContractForm(relative);
-    if (directory) {
-      issues.push(
-        indexIssue(
-          `${file} is Markdown, which is not a contract: ${directory}/ holds ${NON_MARKDOWN_CONTRACT_FORMS[directory]} contracts`,
-          file,
-          [file],
-        ),
-      );
-      continue;
-    }
     const id = declared.get(file) ?? null;
     const problems = contractFileProblems(relative, kind, id, row, location.indexFile);
     // A Markdown contract has no dependency declaration form, so its row has nothing to agree with,
