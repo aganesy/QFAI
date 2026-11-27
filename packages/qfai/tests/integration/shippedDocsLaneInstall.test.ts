@@ -236,7 +236,7 @@ describe("the delivered document lane installs its checkers outside the project'
       .map((step) => String(step["run"] ?? ""))
       .flatMap((body) => body.split(/\r?\n/))
       .map((line) => line.trim())
-      .filter((line) => line.startsWith("node "));
+      .filter((line) => line.startsWith("node ") && line.includes(" --tools "));
 
     expect(commands).toEqual([
       `node node_modules/qfai/assets/scripts/check-mdschema.mjs --tools ${TOOLS_DIR} --scope all --summary`,
@@ -244,6 +244,41 @@ describe("the delivered document lane installs its checkers outside the project'
       `node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools ${TOOLS_DIR}`,
       `node ${TOOLS_DIR}/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools ${TOOLS_DIR}`,
     ]);
+  });
+
+  it.skipIf(!HAS_BASH).each([
+    ["0.18.2", 0],
+    ["0.18.1", 1],
+  ])("checks Mermaid's resolved KaTeX %s before parsing diagrams", async (version, status) => {
+    const body = await runBody("Check Mermaid diagram syntax");
+    const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-int-docs-katex-"));
+    try {
+      const tools = path.join(stage, TOOLS_DIR, "node_modules");
+      const katex = path.join(tools, "mermaid", "node_modules", "katex");
+      const scripts = path.join(tools, "qfai", "assets", "scripts");
+      await mkdir(katex, { recursive: true });
+      await mkdir(scripts, { recursive: true });
+      await writeFile(path.join(katex, "package.json"), JSON.stringify({ version }), "utf-8");
+      await writeFile(
+        path.join(scripts, "check-mermaid.mjs"),
+        'console.log("Mermaid checker ran");',
+        "utf-8",
+      );
+      const child = spawnSync("bash", ["-e", "-o", "pipefail", "-c", body], {
+        cwd: stage,
+        encoding: "utf-8",
+      });
+      if (child.error !== undefined) throw child.error;
+      expect(child.status, child.stderr).toBe(status);
+      if (status === 0) {
+        expect(child.stdout).toContain("Mermaid checker ran");
+      } else {
+        expect(child.stdout).not.toContain("Mermaid checker ran");
+        expect(child.stderr).toContain(`Mermaid resolved KaTeX ${version}, expected 0.18.2`);
+      }
+    } finally {
+      await removeTempTree(stage);
+    }
   });
 });
 

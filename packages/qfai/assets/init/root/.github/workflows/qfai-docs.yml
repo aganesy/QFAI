@@ -676,6 +676,24 @@ jobs:
               }
             ')"
           fi
+          # npm reads overrides from the root manifest of its install prefix.
+          # Keep the patched KaTeX resolution in the temporary tool tree.
+          node -e '
+            const { lstatSync, mkdirSync, writeFileSync } = require("node:fs");
+            const { join } = require("node:path");
+            const prefix = join("tmp", "qfai-docs-tools");
+            for (const dir of ["tmp", prefix]) {
+              if (lstatSync(dir, { throwIfNoEntry: false })?.isSymbolicLink()) {
+                console.error(`::error::qfai docs: ${dir} must be a local directory`);
+                process.exit(1);
+              }
+              mkdirSync(dir, { recursive: true });
+            }
+            writeFileSync(join(prefix, "package.json"), JSON.stringify({
+              private: true,
+              overrides: { "mermaid@11.17.2": { katex: "0.18.2" } }
+            }), { flag: "wx" });
+          '
           if [ -d node_modules/qfai ]; then
             checker="$(node -e '
               const { readFileSync } = require("node:fs");
@@ -731,6 +749,16 @@ jobs:
           # `{/* mermaid-lint:ignore */}` in MDX. Put the marker on the line
           # directly above the opening fence. `--tools` names the directory the
           # install step put Mermaid and jsdom in.
+          node -e '
+            const { createRequire } = require("node:module");
+            const { resolve } = require("node:path");
+            const fromMermaid = createRequire(resolve("tmp/qfai-docs-tools/node_modules/mermaid/package.json"));
+            const { version } = fromMermaid("katex/package.json");
+            if (version !== "0.18.2") {
+              console.error(`::error::qfai docs: Mermaid resolved KaTeX ${version}, expected 0.18.2`);
+              process.exit(1);
+            }
+          '
           if [ -d node_modules/qfai ]; then
             node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools
           else
