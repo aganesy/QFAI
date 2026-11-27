@@ -670,6 +670,27 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(redefinitions.map((issue) => issue.severity)).toEqual(["error"]);
   });
 
+  // QFAI:EX-0001-0039-74
+  it.each(["ARRAY[1, 2]", "ARRAY[[1, 2], [3, 4]]"])(
+    "keeps actual parameter boundaries with the default %s",
+    async (arrayDefault) => {
+      const sql =
+        `CREATE FUNCTION f(a integer[] DEFAULT ${arrayDefault}, b text DEFAULT '') RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE OR REPLACE FUNCTION f(a integer[] DEFAULT ARRAY[9], b text DEFAULT '') RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`;
+      const { statements, errors } = parseSqlContract(sql);
+      expect(errors).toEqual([]);
+      const created = collectCreatedObjects(statements);
+      expect(created.map((object) => object.signature)).toEqual([
+        "integer[],text",
+        "integer[],text",
+      ]);
+      const redefinitions = (await runOn(HEADER + sql)).filter(
+        (issue) => issue.code === "QFAI-DB-002",
+      );
+      expect(redefinitions.map((issue) => issue.severity)).toEqual(["error"]);
+    },
+  );
+
   it("stays silent on a file that defines each object once", async () => {
     const issues = await runOn(
       `${HEADER}CREATE TABLE a (x int);\nCREATE TABLE b (y int);\nCREATE INDEX i ON a (x);\n`,

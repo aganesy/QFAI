@@ -719,10 +719,11 @@ function identityArgumentTypes(argumentText: string, kind: string): string {
   return types.join(",");
 }
 
-/** Split on commas outside parentheses, strings and quoted names. */
+/** Split on commas outside parentheses, brackets, strings and quoted names. */
 function splitTopLevel(text: string): string[] {
   const parts: string[] = [];
   let depth = 0;
+  let bracketDepth = 0;
   let start = 0;
   for (let index = 0; index < text.length; index += 1) {
     const quoteEnd = closingArgumentQuote(text, index);
@@ -736,7 +737,11 @@ function splitTopLevel(text: string): string[] {
       depth += 1;
     } else if (ch === ")") {
       depth -= 1;
-    } else if (depth === 0 && ch === ",") {
+    } else if (ch === "[") {
+      bracketDepth += 1;
+    } else if (ch === "]") {
+      bracketDepth -= 1;
+    } else if (depth === 0 && bracketDepth === 0 && ch === ",") {
       parts.push(text.slice(start, index));
       start = index + 1;
     }
