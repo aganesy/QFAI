@@ -1460,6 +1460,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `e` before the quote opens an escape string, in which a backslash escapes
   the next character. Closes #5137.
 
+- The DB apply-order check keeps foreign keys that follow comments in
+  contracts with bare carriage returns. Masked regions retain their original
+  line separators and offsets.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
