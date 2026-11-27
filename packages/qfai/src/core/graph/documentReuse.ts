@@ -28,13 +28,9 @@ import {
   type CheckedCorpus,
   type GraphReuseEnvironment,
 } from "./reuse.js";
-import {
-  assertGraphStoragePath,
-  assertIndependentAnalysis,
-  replaceGraphDirectory,
-} from "./storage.js";
+import { assertGraphStoragePath, replaceGraphDirectory } from "./storage.js";
 
-type Inspect = (analysis: string, refresh: boolean) => Promise<boolean>;
+type Inspect = (analysis: string, refresh: boolean, checked: CheckedCorpus) => Promise<boolean>;
 
 export async function restoreCompletedDocumentAnalysis(
   root: string,
@@ -73,8 +69,8 @@ export async function restoreCompletedDocumentAnalysis(
         staged = undefined;
         continue;
       }
-      await assertIndependentAnalysis(staged);
-      if (await inspect(staged, true)) {
+      const checked = await safeDocumentCopy(root, staged, run);
+      if (checked && (await inspect(staged, true, checked))) {
         await replaceGraphDirectory(staged, current, root);
         return "restored";
       }
@@ -108,9 +104,8 @@ export async function publishCompletedDocumentAnalysis(
     await mkdir(staged);
     const copy = path.join(staged, "analysis");
     await cp(analysis, copy, { recursive: true, dereference: false });
-    await assertIndependentAnalysis(copy);
-    if (!(await safeDocumentCopy(root, copy, run)) || !(await inspect(copy, false)))
-      return "unavailable";
+    const checked = await safeDocumentCopy(root, copy, run);
+    if (!checked || !(await inspect(copy, false, checked))) return "unavailable";
     await writeFile(
       path.join(staged, "completed.json"),
       JSON.stringify({

@@ -30,4 +30,12 @@ Feature: playwright primary probe
     When `qfai doctor --profile prototyping` runs
     Then the `prototyping.designMdReadiness` check, titled `Root DESIGN.md readiness`, names root `DESIGN.md` in `details.designMd`
     And it is `ok` when the readiness checks find nothing, and otherwise lists their findings in `details.issues`
+
+  # AC-0003-0006-06
+  Scenario: Doctor checks the target URL configuration without contacting it
+    Given a prototyping-profile project with an optional configured target URL
+    When `qfai doctor --profile prototyping` runs with or without `--target-url`
+    Then the explicit URL wins over the configured URL
+    And the target URL check reports ok for a valid HTTP or HTTPS URL without credentials, error for an invalid URL, or warning when no URL is configured
+    And doctor sends no request to the target and reports no HTTP response status
 ```

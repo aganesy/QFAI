@@ -32,7 +32,7 @@ export type DoctorCommandOptions = {
   clean?: boolean;
   /** `--autoremediate`: orchestrate install + clean. */
   autoremediate?: boolean;
-  /** `--dry-run`: preview only; no side effects. */
+  /** `--dry-run`: preview clean or autoremediate repairs without applying them. */
   dryRun?: boolean;
   /** `--yes`: skip interactive confirmation (autoremediate). */
   yes?: boolean;

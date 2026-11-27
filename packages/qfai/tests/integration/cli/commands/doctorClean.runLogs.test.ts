@@ -8,16 +8,17 @@
 // fixtures (no shelling out so Windows parallel-FS flake stays bounded).
 
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, symlink, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
 import { createDoctorData } from "../../../../src/core/doctor.js";
 import { findOutDirCoOwners } from "../../../../src/core/doctor/outDirCollisions.js";
 import { pathExists } from "../../../helpers/pathExists.js";
+import { captureStdout } from "../../../helpers/stdout.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const tempDirs: string[] = [];
@@ -103,22 +104,54 @@ describe("doctor --clean prunes stale validate run logs", () => {
     expect(await pathExists(stale)).toBe(true);
   });
 
-  it("--dry-run leaves every run in place", async () => {
-    const root = await newTempDir("dry-run");
-    await writeFile(path.join(root, "qfai.config.yaml"), "report:\n  keepLatestRuns: 0\n", "utf-8");
-    const stale = await seedRunLog(root, "run-20260401120000001", 30);
+  // QFAI:AC-0003-0005-02
+  // QFAI:EX-0003-0005-05
+  it.each([
+    { flag: "--clean", options: { clean: true }, message: "would remove -> run-20260401120000001" },
+    {
+      flag: "--autoremediate",
+      options: { autoremediate: true },
+      message: "would prune run logs=1",
+    },
+  ])(
+    "$flag --dry-run keeps the stale run and writes the diagnosis",
+    async ({ options, message }) => {
+      const root = await newTempDir("dry-run");
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "report:\n  keepLatestRuns: 1\n",
+        "utf-8",
+      );
+      const stale = await seedRunLog(root, "run-20260401120000001", 30);
+      await seedRunLog(root, "run-20260811120000002", 0);
 
-    const exit = await runDoctor({
-      root,
-      rootExplicit: true,
-      format: "text",
-      clean: true,
-      dryRun: true,
-    });
+      const reportPath = path.join(root, "doctor.json");
+      vi.stubEnv("CI", "");
+      vi.stubEnv("GITHUB_ACTIONS", "");
+      const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      try {
+        const stdout = await captureStdout(async () => {
+          const exit = await runDoctor({
+            root,
+            rootExplicit: true,
+            format: "json",
+            outPath: reportPath,
+            dryRun: true,
+            ...options,
+          });
+          expect(exit).toBe(0);
+        });
 
-    expect(exit).toBe(0);
-    expect(await pathExists(stale)).toBe(true);
-  });
+        expect(stdout.trim()).toBe(`doctor: wrote ${reportPath}`);
+        expect(JSON.parse(await readFile(reportPath, "utf-8"))).toHaveProperty("summary");
+        expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(message);
+        expect(await readFile(path.join(stale, "run.json"), "utf-8")).toBe("{}\n");
+      } finally {
+        stderr.mockRestore();
+        vi.unstubAllEnvs();
+      }
+    },
+  );
 
   it("refuses to prune while the config carries issues", async () => {
     const root = await newTempDir("bad-config");
