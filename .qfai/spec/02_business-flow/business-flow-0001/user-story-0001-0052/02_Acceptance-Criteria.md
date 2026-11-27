@@ -27,11 +27,11 @@ Feature: Contract index and contract-layer validation
     And it is also raised for a row that names no contract file, and for a contract ID that more than one contract declares, while contracts of different kinds may share a number
 
   # AC-0001-0052-04
-  Scenario: A Markdown file under api/, db/ or ui/ is not a contract
-    Given the story tree, and a Markdown file under `api/`, `db/` or `ui/` of `paths.contractsDir` whose H1 declares an ID of that kind
-    When `qfai validate --profile sdd` runs
-    Then `QFAI-CONTRACT-034` is raised once at error naming the file and the form a contract of that directory takes
-    And no check counts the file as a contract: `QFAI-CONTRACT-000` is still raised for a directory with no other contract
+  Scenario: An abstract contract participates in mixed-format validation
+    Given an indexed Markdown UI, API or DB contract and an existing structured contract
+    When the project is validated
+    Then the Markdown contract counts for presence and its BRs resolve their example references
+    And the structured contract retains its format-specific checks
 
   # AC-0001-0052-05
   Scenario: Only a db contract that declares one DB ID takes part in the apply-order check
