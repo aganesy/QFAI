@@ -7,6 +7,7 @@ import {
   type CanonicalScreenContract,
   type PrimaryTaskShapeFinding,
 } from "../contracts/screenContracts.js";
+import { readUiContractInventory } from "../prototyping/specResolution.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -323,7 +324,13 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
   if (!auditConfig.enabled) return [];
 
   const uiContractScreens = await readUiContractScreenContracts(root, config.paths.contractsDir);
-  if (uiContractScreens.length === 0) return [];
+  if (
+    !uiContractScreens.length &&
+    !(await readUiContractInventory(root, config)).some((entry) =>
+      entry.contractPath.endsWith(".md"),
+    )
+  )
+    return [];
 
   const findings: DesignFinding[] = [...checkContractHierarchyFromScreens(uiContractScreens)];
 

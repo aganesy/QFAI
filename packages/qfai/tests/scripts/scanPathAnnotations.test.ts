@@ -108,14 +108,14 @@ describe("check-tracked-readmes escapes the paths it found in the index", () => 
 
   it("escapes the separators a property value is parsed with, and `%` first", async () => {
     const root = await indexWith(
-      [...PUBLISHED, "a:b,c%41/README.md"].map((file) => ({ mode: "100644", path: file })),
+      [...PUBLISHED, "docs/a:b,c%41/README.md"].map((file) => ({ mode: "100644", path: file })),
     );
 
     const [annotation] = commands(run("check-tracked-readmes.mjs", root).lines);
 
-    expect(annotation?.metadata).toBe("::error file=a%3Ab%2Cc%2541/README.md");
+    expect(annotation?.metadata).toBe("::error file=docs/a%3Ab%2Cc%2541/README.md");
     // The message keeps `:` and `,`, which only the metadata block is split at.
-    expect(annotation?.line).toContain("::a:b,c%2541/README.md is a README");
+    expect(annotation?.line).toContain("::docs/a:b,c%2541/README.md is a README");
   });
 });
 

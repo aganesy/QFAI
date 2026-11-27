@@ -392,7 +392,7 @@ export const step03: MigrationStep = {
       routedTo.set(source, targets);
       if (source.endsWith("/structure.md")) {
         const routed = await routeStructure(context, { source, preamble, sections }, draftFor);
-        forAPerson.push(...routed.forAPerson);
+        for (const note of routed.forAPerson) forAPerson.push(note);
         surfacePaths = routed.surfacePaths;
         if (routed.skeletonLines.length > 0) addTechCommands(draftFor(tech), routed.skeletonLines);
         if (drafts.has(tech)) targets.add(tech);
@@ -400,15 +400,14 @@ export const step03: MigrationStep = {
       }
       const fallback = route(source, "", context);
       if (path.posix.basename(fallback) === "contracts.md") {
-        forAPerson.push(
-          ...(await writeContractIndex(
-            context,
-            { source, content, target: fallback },
-            contracts,
-            documents,
-            refused,
-          )),
+        const notes = await writeContractIndex(
+          context,
+          { source, content, target: fallback },
+          contracts,
+          documents,
+          refused,
         );
+        for (const note of notes) forAPerson.push(note);
         targets.add(fallback);
         continue;
       }
@@ -463,7 +462,7 @@ export const step03: MigrationStep = {
       const absolute = path.join(context.root, target);
       if (!(await exists(absolute))) {
         documents.set(target, content);
-        identifiers.push(...renumbered);
+        for (const identifier of renumbered) identifiers.push(identifier);
       } else if ((await readInput(absolute)) !== content) {
         refused.add(target);
         forAPerson.push(notWritten(target));
