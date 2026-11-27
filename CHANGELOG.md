@@ -3266,6 +3266,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   the create, and deletes the Release again and fails when the tag moved or
   was deleted in between. Closes #4504.
 
+- Automatic release tagging verifies that the pushed commit came from merging the
+  version's release branch within this repository.
+
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the
   `workflows.mdschemaBinary` check loaded `@jackchuka/mdschema`'s
