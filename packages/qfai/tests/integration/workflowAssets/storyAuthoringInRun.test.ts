@@ -160,6 +160,8 @@ it("keeps complete SDD citation paths while separating fragments and prose punct
     `Invalid \`${canonical}.bak#where-each-answer-goes\`.`,
     `Invalid \`${canonical}.\`.`,
     `Invalid \`\`${canonical} (copy)#where-each-answer-goes\`\`.`,
+    `[Read](${canonical}#where-each-answer-goes).`,
+    `[Invalid](${canonical}(copy)#where-each-answer-goes).`,
   ].join("\n");
 
   expect(citationsOf(text, file)).toEqual([
@@ -168,6 +170,8 @@ it("keeps complete SDD citation paths while separating fragments and prose punct
     `${canonical}.bak`,
     `${canonical}.`,
     `${canonical} (copy)`,
+    canonical,
+    `${canonical}(copy)`,
   ]);
 });
 
