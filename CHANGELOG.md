@@ -1157,6 +1157,13 @@ decisions` headings appeared anywhere in the file, so a record with several
   The directory is listed as refused and its contents are preserved. The copy
   continues with the other template files. A dry run reports the same refusal.
 
+- Template copies keep nested file and selected-path order even when a
+  subtree has more files than JavaScript accepts as function arguments.
+
+- The template refusal warning names the two places to inspect. A directory
+  or special entry can occupy the destination, and a link or non-directory
+  can block a parent path.
+
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
   no `id` was reported under an ID made up from its file name, which
@@ -2155,6 +2162,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   trace and exited 1, the status it documents for a budget refusal. It now
   prints one line naming the operation that failed, such as resolving a
   given thread, and exits 2 (#4737).
+
+- **`scripts/pr-threads.mjs` reports invalid GitHub JSON as an error.** A
+  malformed response now produces an operation-specific diagnostic and exit
+  status 2. A deferral stops before proceeding to its next write (#5882).
 
 - **`qfai init --force` keeps a project's own wrapper when the link replacing
   it cannot be written.** A file or directory of the project's at a skill or
