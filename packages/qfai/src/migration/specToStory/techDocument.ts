@@ -119,7 +119,7 @@ function moveCommands(draft: PolicyDraft, section: PolicySection): string[] {
       `${draft.target} ## ${COMMANDS}: rewrite the part of "## ${section.heading}" of ${section.source} that is not a list of labelled commands by hand`,
     );
   }
-  addUnique(draft.lists, COMMANDS, commands, sameText);
+  addTechCommands(draft, commands);
   return person;
 }
 
@@ -183,7 +183,14 @@ export function moveArchitectureSection(draft: PolicyDraft, section: PolicySecti
 
 /** Adds standard-command items already in the template's form, such as Skeleton items. */
 export function addTechCommands(draft: PolicyDraft, items: string[]): void {
-  addUnique(draft.lists, COMMANDS, items, sameText);
+  const commands = draft.lists.get(COMMANDS) ?? [];
+  const seen = new Set(commands);
+  for (const item of items) {
+    if (seen.has(item)) continue;
+    seen.add(item);
+    commands.push(item);
+  }
+  draft.lists.set(COMMANDS, commands);
 }
 
 /**
