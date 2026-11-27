@@ -95,6 +95,8 @@ describe("parseRenderedMarkdownTables", () => {
   it.each([
     ["123. Sample:\n     ```md", "     ```", "     "],
     ["123. ```md", "", "     "],
+    ["1. First item\n2. ```md", "   ```", "   "],
+    ["A paragraph\n1. ```md", "   ```", "   "],
     ["- - ~~~md", "    ~~~", "    "],
     ["123.\n     ~~~md", "     ~~~", "     "],
     ["- Heading\n  -\n    ~~~md", "    ~~~", "  "],
@@ -121,6 +123,25 @@ describe("parseRenderedMarkdownTables", () => {
     expect(parseRenderedMarkdownTables(text)).toEqual([
       { headers: ["Label", "Expected"], rows: [["Before", "visible"]] },
       { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
+  it.each([
+    ["A paragraph\n2. ```md", "   "],
+    ["A paragraph\n2. Wrapped text\n3. ```md", "   "],
+    ["- A paragraph\n  2. ```md", "     "],
+  ])("keeps a visible table after a non-interrupting ordered marker in %j", (prefix, indent) => {
+    const text = [
+      prefix,
+      "",
+      indent + header,
+      indent + separator,
+      indent + "| Row | visible |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      { headers: ["Label", "Expected"], rows: [["Row", "visible"]] },
     ]);
   });
 
