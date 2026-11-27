@@ -829,7 +829,7 @@ async function mastersHoldingShippedText(rootAssets: string, destRoot: string): 
 function reportRefusedWrites(refused: readonly string[], destRoot: string): void {
   for (const dest of refused) {
     warn(
-      `WARN: ${formatReportPath(path.relative(destRoot, dest))} was not written. An incompatible destination or parent path blocked the write. Check the path before retrying.`,
+      `WARN: ${formatReportPath(path.relative(destRoot, dest))} was not written. Check whether a directory or special entry occupies the destination, or a symbolic link or non-directory blocks a parent path.`,
     );
   }
 }

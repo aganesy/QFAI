@@ -407,10 +407,12 @@ describe("a sidecar left by a repair", () => {
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
       expect(await readFile(path.join(hold, basename), "utf-8")).toBe(content);
       expect(output).toContain(`the repair succeeded but the hold could not be deleted (${hold})`);
-      expect(output).toContain(
-        `${hold} holds project content moved aside from ${linkPath} during link repair`,
+      const notice = output
+        .split(/\r?\n/)
+        .find((line) => line.includes(`${hold} holds project content`));
+      expect(notice).toBe(
+        `  note: ${hold} holds project content moved aside from ${linkPath} during link repair. It was left in place for you to move back or delete.`,
       );
-      expect(output).not.toContain(`${hold} holds project content an interrupted forced relink`);
     });
   });
 
