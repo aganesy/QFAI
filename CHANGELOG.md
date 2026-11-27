@@ -662,6 +662,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Restoring or publishing a completed document graph reuses the safety check
   on each copy during native freshness validation.
 
+- Turn-end checks keep independent failure counts for distinct sessions and
+  agents. An active turn with only an old state file starts a fresh count
+  after upgrade.
+
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 
