@@ -322,6 +322,44 @@ describe("contract IDs and contract-scoped business rules", () => {
     },
   );
 
+  it.each([
+    ["pl", "#"],
+    ["hs", "--"],
+    ["clj", ";;"],
+    ["cljs", ";"],
+    ["erl", "%%"],
+    ["vb", "'"],
+    ["vb", "Rem"],
+  ])("counts BR comments in %s source and selected tests with %s", async (ext, mark) => {
+    const id = "BR-API-0003-0001";
+    const root = await contractTree([], {
+      "api/api-0003-refunds.md": contract("API-0003: Refunds", [
+        `| ${id} | Refund | EX-0001-0001-01 |`,
+      ]),
+    });
+    const config = {
+      ...defaultConfig,
+      validation: {
+        ...defaultConfig.validation,
+        traceability: {
+          ...defaultConfig.validation.traceability,
+          testFileGlobs: [`tests/**/*.${ext}`],
+        },
+      },
+    };
+    await put(root, `tests/refund.${ext}`, `${mark} QFAI:${id}`);
+    const coverage = async () =>
+      (await validateStoryTreeObligations(root, config, "tdd"))
+        .filter((entry) => entry.rule === "storyTree.ruleCoverage")
+        .map((entry) => entry.message);
+    await put(root, "src/refund.ts", `' QFAI:${id} ';`);
+    await put(root, "src/refund.feature", `# QFAI:${id}`);
+    await put(root, `src/refund.${ext}`, `// QFAI:${id}`);
+    expect(await coverage()).toEqual([`${id} has no implementation annotation`]);
+    await put(root, `src/refund.${ext}`, `${mark} QFAI:${id}`);
+    expect(await coverage()).toEqual([]);
+  });
+
   it("requires separate source and test citations for abstract rules", async () => {
     const id = "BR-API-0003-0001";
     const root = await contractTree([], {
