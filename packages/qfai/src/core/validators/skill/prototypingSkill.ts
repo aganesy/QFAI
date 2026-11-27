@@ -109,18 +109,15 @@ const UI_CONTRACT_ID_PLACEHOLDER = /(?<![\w-])ui-nnnn(?![\w-])/;
 
 export function hasUiContractScope(content: string): boolean {
   const lower = content.toLowerCase();
-  const statements = lower.split(/[.!?]/);
-  const mentionsMarkdown = statements.some(
-    (statement) =>
-      /\bmarkdown ui contracts?\b/.test(statement) && /\bresponsibilit(?:y|ies)\b/.test(statement),
+  const markdownEligibility =
+    /\bmarkdown ui contracts?\s+(?:suppl(?:y|ies)|provides?|must declare)\s+(?:a|its|their)\s+(?:declared\s+)?responsibilit(?:y|ies)\b/;
+  const legacyEligibility =
+    /\b(?:legacy yaml|structured)(?: ui)? contracts?\s+(?:suppl(?:y|ies)|provides?|requires?|must declare)\s+a\s+non-empty\s+`?screens\[\]`?(?=\s|[.!?]|$)/;
+  return (
+    UI_CONTRACT_ID_PLACEHOLDER.test(lower) &&
+    markdownEligibility.test(lower) &&
+    legacyEligibility.test(lower)
   );
-  const mentionsLegacy = statements.some(
-    (statement) =>
-      /\b(?:legacy yaml|structured) contracts?\b/.test(statement) &&
-      statement.includes("non-empty") &&
-      statement.includes("screens[]"),
-  );
-  return UI_CONTRACT_ID_PLACEHOLDER.test(lower) && mentionsMarkdown && mentionsLegacy;
 }
 
 export function hasDelegationScopeTable(content: string): boolean {

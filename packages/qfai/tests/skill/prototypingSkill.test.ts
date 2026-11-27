@@ -104,6 +104,16 @@ describe("prototyping skill validator", () => {
     );
   });
 
+  it.each([
+    [MARKDOWN_SCOPE, "Markdown UI contracts do not need a declared responsibility."],
+    [LEGACY_SCOPE, "Legacy YAML contracts do not require a non-empty screens[] list."],
+  ])("flags the skill when it contradicts %s", (scope, contradiction) => {
+    const content = VALID_SKILL_CONTENT.replace(scope, contradiction);
+    expect(validatePrototypingSkillContent(content).issues.map((item) => item.code)).toContain(
+      "QFAI-PROTOSKILL-011",
+    );
+  });
+
   // QFAI:EX-0001-0042-15
   it("does not read the retired CON-UI-NNNN form as the UI contract scope", () => {
     const retired = VALID_SKILL_CONTENT.replace("full UI-NNNN ID", "full CON-UI-NNNN ID");
