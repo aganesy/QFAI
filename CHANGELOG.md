@@ -672,6 +672,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Migration step 3 names contract IDs in the instructions for rewriting a
   rejected constraint in plain words.
 
+- Commands using the general CLI help format print full help when explicitly
+  given `--help` or `-h` alongside a refused argument. The refusal still
+  writes its reason to stderr and exits 2. A version request takes precedence.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
