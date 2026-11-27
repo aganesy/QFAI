@@ -1,7 +1,7 @@
 # Accessibility check: the spec template
 
 `implement-scaffold` writes this spec under `<testsDir>/e2e/` in a project whose UI contracts declare
-a screen with a web route. It is the layer `.qfai/assistant/rule/test-layers.md#l6-accessibility`
+a screen with a web route, or a web project declares a Markdown UI responsibility. For Markdown, obtain the concrete routes from the implementation or prototype. It is the layer `.qfai/assistant/rule/test-layers.md#l6-accessibility`
 defines: axe through Playwright, limited to the WCAG 2.2 A and AA rules, on every route the UI
 contracts declare, as each role that can reach it.
 

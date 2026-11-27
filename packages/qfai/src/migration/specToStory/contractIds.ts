@@ -62,10 +62,11 @@ const FILE_LIMIT = 200_000;
 export function notAContract(relative: string): string | null {
   if (relative.split("/")[0] === DESIGN)
     return `${DESIGN}/ no longer exists: the brand belongs in the root DESIGN.md and a screen in a ui/ contract`;
+  if (/^(api|db|ui)\/\1-\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(relative)) return null;
   const directory = markdownOutsideContractForm(relative);
   return directory === null
     ? null
-    : `Markdown is not a contract: ${directory}/ holds ${NON_MARKDOWN_CONTRACT_FORMS[directory]} contracts`;
+    : `expected ${directory}/${directory}-NNNN-<slug>.md for a Markdown contract or ${NON_MARKDOWN_CONTRACT_FORMS[directory]} for a legacy contract`;
 }
 
 function kindOf(relative: string): string {
@@ -103,7 +104,7 @@ async function contractFiles(context: MigrationContext): Promise<string[]> {
 
 /**
  * Deletes every 1.x file step 3 writes no contract from, and names each for a
- * person: a Markdown file under `api/`, `db/` or `ui/`, and every file of
+ * person: a noncanonical Markdown note under `api/`, `db/` or `ui/`, and every file of
  * `design/`, which goes as one directory.
  */
 async function retireNonContracts(

@@ -339,8 +339,15 @@ describe("migration catalog move", () => {
       plan.forAPerson?.filter((note) => note.includes("## Technical Constraints: rewrite TC-")) ??
       [];
     expect(notes).toHaveLength(rowCount);
-    expect(notes[0]).toContain(`rewrite TC-1 of "## Constraints" in ${source}`);
-    expect(notes.at(-1)).toContain(`rewrite TC-${rowCount} of "## Constraints" in ${source}`);
+    const expected = (index: number): string =>
+      `.qfai/spec/01_policy/constraint.md ## Technical Constraints: rewrite TC-${index + 1} of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand`;
+    const mismatch = notes.findIndex((note, index) => note !== expected(index));
+    expect(
+      mismatch,
+      mismatch === -1
+        ? undefined
+        : `Constraint note ${mismatch} should be ${expected(mismatch)} but was ${notes[mismatch] ?? "missing"}`,
+    ).toBe(-1);
   });
 
   // QFAI:EX-0004-0006-11
