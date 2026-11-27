@@ -403,6 +403,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   merge commit, each check run of the head commit with its conclusion when it
   merged. Part of #4399.
 
+- **`qfai-triage` explains the restored-question merge exception.** The shipped
+  skill lists authorized base merges and explains that only `run-operation`
+  permits a separate commit to delete a question row that the union merge
+  restored after one side deleted it. #5991.
+
 - **`web-research` loads its skill-loading and golden-task detail only when it
   needs them.** How the skill is loaded (what the roster scan reads, when the
   body loads, and the fallback for a front matter that does not parse) moved
