@@ -4264,8 +4264,9 @@ describe("release automation performs decisions rather than making them", () => 
           { ...release, base: { ...release.base, repo: { full_name: "other/repo" } } },
         ],
         ["different base branch", { ...release, base: { ...release.base, ref: "maintenance" } }],
-        ["open PR", { ...release, state: "open", merged_at: null }],
-        ["closed without merging", { ...release, merged_at: null }],
+        ["open PR with a merge timestamp", { ...release, state: "open" }],
+        ["closed PR without a merge timestamp", { ...release, merged_at: null }],
+        ["closed PR with an empty merge timestamp", { ...release, merged_at: "" }],
         ["different merge commit", { ...release, merge_commit_sha: "aaaaaaaa" }],
       ] as const;
 
@@ -4281,6 +4282,15 @@ describe("release automation performs decisions rather than making them", () => 
           skipped: true,
         });
       }
+    });
+
+    it("names the release association that a skipped tag requires", () => {
+      const run = runGate("[]", "1.10.2");
+
+      expect(run).toMatchObject({ status: 0, tagged: false, skipped: true });
+      expect(run.output).toContain(
+        `no associated pull request from ${repository}:release/v1.10.2 merged into ${repository}:main and produced ${pushedCommit}; nothing to tag`,
+      );
     });
 
     it("tags a release merge and declines everything else, measured by running it", () => {
