@@ -98,11 +98,14 @@ it("restores a compatible document snapshot when no processing configuration is 
   const common = await mkdtemp(path.join(os.tmpdir(), "qfai-document-cache-"));
   const native = graphifyExtractionFixture(fixture);
   const environment = { ...graphReuseEnvironment(), platform: "win32", architecture: "x64" };
+  const inventoryDirectories: string[] = [];
   const run: typeof fixture.run = async (command, args, options) => {
     if (command === "git") return { exitCode: 0, stdout: common };
     if (args.includes("-c")) return { exitCode: 0, stdout: "3.12.13" };
-    if (args.at(-1) === "inventory")
+    if (args.at(-1) === "inventory") {
+      inventoryDirectories.push(options.cwd);
       return { exitCode: 0, stdout: '{"files":["checkout.ts","rationale.md"]}' };
+    }
     return native(command, args, options);
   };
   const configuration = path.join(fixture.root, ".qfai", "graph-processing.json");
@@ -134,8 +137,10 @@ it("restores a compatible document snapshot when no processing configuration is 
 
     const held = path.join(cache, ".held-whole-corpus");
     await rename(wholeCorpus, held);
+    inventoryDirectories.length = 0;
     expect(await prepare()).toMatchObject({ status: "not-ready" });
     await expect(lstat(fixture.documentAnalysis)).rejects.toMatchObject({ code: "ENOENT" });
+    expect(inventoryDirectories).toEqual([]);
 
     await rename(held, wholeCorpus);
     fixture.calls.length = 0;
@@ -153,8 +158,11 @@ it("restores a compatible document snapshot when no processing configuration is 
       JSON.stringify({ ...fixture.processing, scope: ["checkout.ts"] }),
     );
     fixture.calls.length = 0;
+    inventoryDirectories.length = 0;
     expect(await prepare()).toMatchObject({ status: "prepared", source: "generated" });
     expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(true);
+    expect(inventoryDirectories).not.toContain(path.join(wholeCorpus, "analysis"));
+    expect(inventoryDirectories).not.toContain(path.join(narrow, "analysis"));
   } finally {
     await fixture.dispose();
     await rm(common, { recursive: true, force: true });
