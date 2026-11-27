@@ -36,7 +36,10 @@ import { readSafe } from "../validators/utils.js";
 /** Where the catalogue is written and read, relative to the project root. */
 export const COMPONENT_CATALOG_PATH = path.join(".qfai", "catalog", "components.yaml");
 
-const MAX_CATALOG_BYTES = 8 * 1024 * 1024;
+export const COMPONENT_CATALOG_MAX_BYTES = 8 * 1024 * 1024;
+export const COMPONENT_CATALOG_SIZE_REASON = `The component catalogue exceeds ${COMPONENT_CATALOG_MAX_BYTES} bytes.`;
+export const COMPONENT_CATALOG_SIZE_RECOVERY =
+  "Shorten catalogue tags in selected component doc comments or narrow `uiux.surfacePaths`, then run `qfai catalog components`.";
 const CATALOG_OPTIONAL_FLAGS: Partial<Record<"O_NOFOLLOW" | "O_NONBLOCK", number>> = constants;
 const CATALOG_READ_FLAGS =
   constants.O_RDONLY |
@@ -127,7 +130,7 @@ export type ComponentScan =
 export type CatalogRead =
   | { state: "absent" }
   | { state: "invalid" }
-  | { state: "unreadable"; reason: string }
+  | { state: "unreadable"; reason: string; suggestedAction?: string }
   | { state: "read"; text: string; components: CatalogComponent[] };
 
 const HEADER = [
@@ -250,13 +253,14 @@ export async function readCatalog(root: string): Promise<CatalogRead> {
         };
       }
       const bytes =
-        held.size > BigInt(MAX_CATALOG_BYTES)
+        held.size > BigInt(COMPONENT_CATALOG_MAX_BYTES)
           ? undefined
-          : await readHandleWithin(handle, MAX_CATALOG_BYTES);
+          : await readHandleWithin(handle, COMPONENT_CATALOG_MAX_BYTES);
       if (bytes === undefined) {
         return {
           state: "unreadable",
-          reason: `The component catalogue exceeds ${MAX_CATALOG_BYTES} bytes.`,
+          reason: COMPONENT_CATALOG_SIZE_REASON,
+          suggestedAction: COMPONENT_CATALOG_SIZE_RECOVERY,
         };
       }
       text = bytes.toString("utf8");

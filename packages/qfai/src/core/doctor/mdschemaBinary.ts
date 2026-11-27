@@ -99,11 +99,11 @@ const INSTALL_FIX =
   "It arrives as an optional dependency of @jackchuka/mdschema, so install without omitting optional dependencies. " +
   "If the platform package is missing, approve the package's install script so it can download the binary. " +
   "Use `npm approve-scripts` on npm 11.16 or later. " +
-  "Use `pnpm approve-builds` to approve @jackchuka/mdschema. " +
+  "On pnpm 10.1.0 or later, use `pnpm approve-builds` to approve @jackchuka/mdschema. " +
   "pnpm 11 records approvals under `allowBuilds` by default. " +
   "In `pnpm-workspace.yaml`, pnpm 10 updates an existing `allowBuilds` map from 10.26.0. " +
   "From 10.31.0, it also creates the map when neither `onlyBuiltDependencies` nor `ignoredBuiltDependencies` is configured. " +
-  "Otherwise, pnpm 10 records approvals under `onlyBuiltDependencies`.";
+  "Otherwise, on pnpm 10.1.0 or later in the 10.x series, the command records approvals under `onlyBuiltDependencies`.";
 
 const DOWNLOAD_REASON = "the platform package is absent and the binary is the downloaded copy";
 

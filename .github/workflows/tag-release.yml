@@ -162,25 +162,30 @@ jobs:
           if ! pulls="$(printf '%s' "$pages" | node -e 'const pages = JSON.parse(require("node:fs").readFileSync(0, "utf8")); if (!Array.isArray(pages) || !pages.every(Array.isArray)) process.exit(1); process.stdout.write(JSON.stringify(pages.flat()));')"; then
             reject "the pull requests associated with ${GITHUB_SHA} did not arrive as a list of pages, so whether this is a release merge is unknown"
           fi
-          # SHIPPED-CI: not-applicable
-          # Because: release association tagging belongs to this package repository.
-          # Check every associated pull request for the exact release branch.
-          # Node reads the REST array and emits only string head.ref values.
-          # Missing or nonstring refs are ignored. Malformed JSON or a nonarray
-          # response fails without output, so it cannot authorize a tag.
-          #
-          # SHIPPED-CI: not-applicable
-          # Because: the shipped workflow set has no release tagging step to parse this response.
-          # Parsed apart from the match, because the two answers mean different things. A
-          # response that cannot be read says nothing about whether this is a release merge, and
-          # skipping on it would leave a release commit untagged under a green run. Only a valid
-          # array with no matching branch is "not a release"; the parser's own error stays in
-          # the log above the rejection.
-          if ! refs="$(printf '%s' "$pulls" | node -e 'const pulls = JSON.parse(require("node:fs").readFileSync(0, "utf8")); if (!Array.isArray(pulls)) process.exit(1); const refs = pulls.flatMap((pull) => typeof pull?.head?.ref === "string" ? [pull.head.ref] : []); if (refs.length > 0) process.stdout.write(refs.join("\n") + "\n");')"; then
+          # Require a merged pull request from this repository's release branch into the
+          # branch that triggered the workflow. The API's merge SHA identifies the resulting
+          # base commit for merge, squash and rebase. A valid list without that association
+          # skips tagging. An unreadable response stops the run.
+          if ! release_associated="$(printf '%s' "$pulls" | node -e '
+            // SHIPPED-CI: not-applicable
+            // Because: the shipped workflows do not authorize package tags.
+            const [repository, base, commit, releaseRef] = process.argv.slice(1);
+            const pulls = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+            if (!Array.isArray(pulls)) process.exit(1);
+
+            const matched = pulls.some((pull) =>
+              pull?.state === "closed" &&
+              typeof pull.merged_at === "string" && pull.merged_at.length > 0 &&
+              pull.merge_commit_sha === commit &&
+              pull.base?.ref === base && pull.base?.repo?.full_name === repository &&
+              pull.head?.ref === releaseRef && pull.head?.repo?.full_name === repository
+            );
+            process.stdout.write(String(matched));
+          ' -- "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "$GITHUB_SHA" "release/v${claimed}")"; then
             reject "the answer to which pull request carried ${GITHUB_SHA} is not a JSON array of pull requests, so whether this is a release merge is unknown"
           fi
-          if ! printf '%s\n' "$refs" | grep -qxF "release/v${claimed}"; then
-            echo "tag-release: ${GITHUB_SHA} did not arrive from release/v${claimed}; nothing to tag"
+          if [ "$release_associated" != true ]; then
+            echo "tag-release: ${GITHUB_SHA} did not arrive from an approved release/v${claimed} merge into ${GITHUB_REF_NAME}; nothing to tag"
             echo "push=false" >> "$GITHUB_OUTPUT"
             echo "version=${claimed}" >> "$GITHUB_OUTPUT"
             exit 0
