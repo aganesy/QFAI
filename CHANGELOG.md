@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- UI, API and database contracts can now describe responsibilities, inputs,
+  outcomes and business rules in Markdown. Validation checks their document
+  structure, example references, and the business-rule annotations in source
+  and tests. Existing structured contracts can migrate individually.
+- Browser guidance records the reason and fallback when an implementation uses
+  a feature beyond its supported browser target.
+
 - **`qfai catalog design` derives the design tokens and the Tailwind theme
   from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
   Design Tokens Community Group 2025.10 format, with the colours, their
@@ -629,9 +636,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **DB SQL validation keeps commas inside routine array defaults.** A default
-  such as `ARRAY[1, 2]` or a nested array now leaves the declared argument
-  types intact when checking for `QFAI-DB-002`.
+- **`qfai doctor` explains a workflow path that cannot be listed.** For
+  `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
+  ancestors are directories. Other read failures retain the existing guidance.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
@@ -643,6 +650,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
+
+- `gh-budget` also discards a partial job log when a signal stops GitHub CLI.
+  It keeps the rate-limit reading if the headers arrived in full.
 
 - Plain `qfai init` preserves an assistant `VERSION` marker another writer creates
   during initialization.
@@ -1099,6 +1109,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   constraint table, and step 4 keeps every non-goal of a large old story.
   Both preserve the original order.
 
+- Migration step 3 also keeps large structure catalogue results, contract
+  index notes and changed constraint identifiers in order without exceeding
+  the JavaScript argument limit.
+
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
   `analysis` folder. When a file inside it could not be read, the copy threw:
@@ -1154,6 +1168,13 @@ decisions` headings appeared anywhere in the file, so a record with several
   The directory is listed as refused and its contents are preserved. The copy
   continues with the other template files. A dry run reports the same refusal.
 
+- Template copies keep nested file and selected-path order even when a
+  subtree has more files than JavaScript accepts as function arguments.
+
+- The template refusal warning names the two places to inspect. A directory
+  or special entry can occupy the destination, and a link or non-directory
+  can block a parent path.
+
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
   no `id` was reported under an ID made up from its file name, which
@@ -1189,6 +1210,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   holding one, such as `CREATE FUNCTION "f(x"(a int)`, gave the routine no
   arguments, and its overloads were reported as one routine defined twice. The
   list is now read from the parenthesis that follows the name. Closes #5149.
+
+- **DB SQL validation keeps commas inside routine array defaults.** A default
+  such as `ARRAY[1, 2]` or a nested array now leaves the declared argument
+  types intact when checking for `QFAI-DB-002`.
 
 - **The graph ignore check covers every name graph setup writes under.** The
   paths `qfai init` checks against an existing managed graph block missed the
@@ -1317,6 +1342,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - `check-mdschema --scope changed` includes new Markdown documents before
   staging and respects Git's ignore rules. A failed Git file listing widens
   the check and prints a warning.
+
+- The changed-scope schema check requests only untracked Markdown paths from
+  Git, regardless of extension case. Unrelated untracked files no longer fill
+  the captured Git output and trigger a full-tree check.
 
 - **The story-tree test scan opens at most 64 test files at once.** Every
   selected test file was opened together, and a selection may hold up to
@@ -2149,6 +2178,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   prints one line naming the operation that failed, such as resolving a
   given thread, and exits 2 (#4737).
 
+- **`scripts/pr-threads.mjs` reports invalid GitHub JSON as an error.** A
+  malformed response now produces an operation-specific diagnostic and exit
+  status 2. A deferral stops before proceeding to its next write (#5882).
+
 - **`qfai init --force` keeps a project's own wrapper when the link replacing
   it cannot be written.** A file or directory of the project's at a skill or
   agent wrapper path was deleted before the link was created, so a refused
@@ -2529,6 +2562,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   approval under `allowBuilds` for pnpm 10.31 or later and
   `onlyBuiltDependencies` for earlier pnpm 10.
 
+- **`qfai doctor` explains where pnpm records mdschema approval.** pnpm 10
+  updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
+  From 10.31.0 it can also create the map when neither legacy list is set.
+  Other pnpm 10 configurations use `onlyBuiltDependencies`, and pnpm 11
+  uses `allowBuilds` by default.
+
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
   key, even for a local server that needs no authentication, so document
@@ -2565,6 +2604,10 @@ decisions` headings appeared anywhere in the file, so a record with several
 - The turn-end hook clears the saved failure for the current session and agent
   when the gate is disabled or `tech.md` is missing. If the check becomes
   available again, a failing command blocks the turn as a fresh failure.
+
+- The turn-end hook also clears that session and agent's saved failure when
+  it finds no `qfai.config.yaml`. The stop stays silent, and the same failing
+  command can block again after the configuration returns.
 
 - **The turn-end check tells a failure in another worktree from a repeat.**
   When a continued turn failed with the same output it had blocked on, the
