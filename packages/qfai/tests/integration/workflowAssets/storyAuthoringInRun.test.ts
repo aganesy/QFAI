@@ -146,9 +146,10 @@ function citationsOf(text: string, file: string): string[] {
     return [];
   });
   return tokens.flatMap((token) => {
-    const reference = token.type === "link_open" ? token.attrGet("href") : null;
-    if (reference !== null || token.type === "code_inline") {
-      const cited = (reference ?? token.content).split("#", 1)[0]?.trim() ?? "";
+    if (token.type === "link_open" || token.type === "code_inline") {
+      const reference = token.type === "link_open" ? token.attrGet("href") : token.content;
+      if (typeof reference !== "string") return [];
+      const cited = reference.split("#", 1)[0]?.trim() ?? "";
       return cited.includes(file) ? [cited] : [];
     }
     if (token.type !== "text") return [];
