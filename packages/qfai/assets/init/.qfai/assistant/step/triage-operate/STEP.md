@@ -63,7 +63,8 @@ operation. This step runs it and reports what happened.
    head commit. If the head changes, repeat the base refresh, checks, review
    and final base fetch for the new head before attempting the conditional
    merge again.
-   If the forge cannot enforce the precondition, report `needs-change`.
+   If the forge cannot enforce the precondition, report `needs-change` and stop
+   without merging.
    Carry out any other named operation. Observe the result, such as the
    merge commit, deploy status or closed item.
 6. After a merge, check the merged result: the target branch holds the merge
