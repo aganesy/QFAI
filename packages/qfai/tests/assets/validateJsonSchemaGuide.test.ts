@@ -46,6 +46,10 @@ it("requires the original severity row to say that the field is optional", () =>
 it.each([
   ["An old finding began as an error and ended as a warning due to exploration mode.", true],
   ["Exploration mode downgraded the finding from error to warning.", true],
+  [
+    'An older finding has `relaxedFrom: "error"` and `severity: "warning"`. It is false that exploration mode downgraded the finding from error to warning.',
+    false,
+  ],
   ["An older finding was not lowered from error to warning by exploration mode.", false],
   [
     "An older finding was lowered from error to warning by a waiver. Exploration mode had no effect.",
