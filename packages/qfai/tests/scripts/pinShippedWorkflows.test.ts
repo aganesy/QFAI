@@ -242,6 +242,18 @@ it("leaves all pins unchanged when the template directory contains an unpinned w
   expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
 });
 
+it("diagnoses an unpinned workflow with malformed YAML before suggesting a pin change", async () => {
+  const root = await fixture();
+  await writeFile(path.join(root, ...TEMPLATES, "extra.yaml"), "jobs: []\n");
+
+  const result = run(root);
+  expect(result.status).toBe(1);
+  expect(result.output).toContain("extra.yaml#jobs: expected a jobs mapping");
+  expect(result.output).toContain("Fix the workflow YAML before refreshing pins.");
+  expect(result.output).not.toContain("update the shape pin explicitly");
+  expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
+});
+
 it("leaves the current shipped template pins unchanged", async () => {
   const root = await fixture();
   const repo = path.resolve(path.dirname(SCRIPT), "..");
