@@ -686,6 +686,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
 
+- **The triage write limits include the restored question-row exception.**
+  The shipped merge procedure and its write limits agree that a union-restored
+  question row is removed in a separate commit before pushing.
+
 - The shipped merge procedure places the final merge after updated-head review.
   If the final fetch sees a different base commit, it repeats the update,
   checks and review before fetching again.
@@ -714,6 +718,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   records before `triage-handoff`. The row now names those exceptions, and
   none of them after a private security intake, as the skill's Reviewer Gate
   does. Closes #5540.
+
+- **The seeded Git attributes explain how to handle a restored question row.**
+  After a union merge restores a deleted open question, the guidance calls for
+  a separate cleanup commit before pushing. It preserves other rows and IDs.
 
 - **`QFAI-DB-001` warns when a DB contract calls a destructive function it
   defines.** A function or procedure body was skipped because creating it runs
