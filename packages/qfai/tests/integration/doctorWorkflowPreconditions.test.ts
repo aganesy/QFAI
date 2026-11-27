@@ -458,7 +458,7 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
   });
 
   // QFAI:EX-0003-0011-46
-  it("reports a file that exists and cannot be read instead of treating it as absent", async () => {
+  it.each(["EIO", "ENOTDIR"])("reports unreadable files (%s)", async (readCode) => {
     // QFAI:AC-0003-0011-08
     const manifestRoot = await project({
       packageJson: { name: "demo" },
@@ -489,17 +489,21 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
       },
     });
     failingReads.set(".nvmrc", "EACCES");
-    failingReads.set(".github/workflows/old.yml", "EIO");
+    failingReads.set(".github/workflows/old.yml", readCode);
 
     const workflowFindings = await preconditions(workflowRoot);
     const unread = workflowFindings.filter((check) => check.id === "workflows.preconditionsUnread");
 
-    expect(unread.map((check) => check.details?.["path"]).sort()).toEqual([
-      ".github/workflows/old.yml",
-      ".nvmrc",
-    ]);
-    expect(unread.map((check) => check.details?.["code"]).sort()).toEqual(["EACCES", "EIO"]);
-    expect(unread.every((check) => check.severity === "warning")).toBe(true);
+    expect(unread).toHaveLength(2);
+    const failedFiles = { ".nvmrc": "EACCES", ".github/workflows/old.yml": readCode };
+    for (const [file, code] of Object.entries(failedFiles)) {
+      const check = unread.find((entry) => entry.details?.["path"] === file);
+      const cause = `${code}: controlled read failure`;
+      expect(check).toMatchObject({ severity: "warning", details: { path: file, code, cause } });
+      expect(check?.message).toContain(`${file} cannot be read (${code}): ${cause}`);
+      expect(check?.message).toContain("Make it readable, then run doctor again.");
+      expect(check?.message).not.toContain("ancestors are directories");
+    }
     expect(workflowFindings.map((check) => check.id)).not.toContain("workflows.nodeVersionFile");
     const pin = workflowFindings.find((check) => check.id === "workflows.nodePin");
     expect(pin?.message).toContain(".github/workflows/ci.yml pins Node 18");
