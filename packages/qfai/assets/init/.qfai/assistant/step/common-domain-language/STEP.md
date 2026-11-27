@@ -76,6 +76,9 @@ glossary, then deletes that row. Nothing else is written.
    says, at once: a definition that says what the term is, the rejected
    synonyms comma-separated, and the context only where the term splits. A
    context the row names is declared in `## Contexts`.
+   A sentence that names a rejected word as a word, such as an old name or
+   what a user says, writes it in a code span, which the glossary check does
+   not read.
 
 ## Passes when
 

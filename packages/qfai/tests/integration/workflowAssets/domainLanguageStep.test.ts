@@ -68,6 +68,9 @@ describe("what the step file says", () => {
     ]) {
       expect(body, phrase).toContain(phrase);
     }
+    expect(body).toMatch(/names a rejected word as a word.*code span/i);
+    const check = flat(await readShipped("skill/qfai-grilling/references/glossary-check.md"));
+    expect(check).toMatch(/named as a word only in a code span/i);
     expect(flat(sectionOf(text, "## Passes when"))).toMatch(/Read first: .*the step passes/i);
     expect(flat(sectionOf(text, "## Gate"))).not.toBe("");
   });

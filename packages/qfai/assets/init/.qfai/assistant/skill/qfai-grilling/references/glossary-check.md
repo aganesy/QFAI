@@ -21,3 +21,4 @@ checks only `<specsDir>/01_policy/glossary.md`.
   `open-questions.md` row naming the term and its definition, which `/qfai-sdd`
   writes into the glossary.
 - A definition says what the term is. A rule, a value set or a procedure belongs in the spec, not in the row.
+- A word the glossary rejects is named as a word only in a code span, such as `client`: `qfai validate` reads no code span, and reports the word anywhere else in the story tree.
