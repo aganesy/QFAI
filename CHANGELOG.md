@@ -676,11 +676,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   agents. An active turn with only an old state file starts a fresh count
   after upgrade.
 
+- The shipped-workflow pin command identifies malformed YAML declarations
+  and reports the expected shape before it refreshes any pins.
+
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 
-- Migration step 3 names contract IDs in the instructions for rewriting a
-  rejected constraint in plain words.
+- Migration step 3 asks authors to rewrite rejected constraints in plain
+  words and omit contract IDs.
 
 - Commands using the general CLI help format print full help when explicitly
   given `--help` or `-h` alongside a refused argument. The refusal still
@@ -2676,18 +2679,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
-- **The mdschema approval advice names the key current pnpm writes.** The
-  README and the `qfai doctor` fix for a checker that does not run said pnpm
-  records the approval under `onlyBuiltDependencies`, a setting pnpm 11
-  removed. Both now recommend `pnpm approve-builds` and say it records the
-  approval under `allowBuilds` for pnpm 10.31 or later and
-  `onlyBuiltDependencies` for earlier pnpm 10.
-
-- **`qfai doctor` explains where pnpm records mdschema approval.** pnpm 10
+- **The README and `qfai doctor` explain mdschema approval on pnpm.**
+  The `pnpm approve-builds` command is available from pnpm 10.1.0. pnpm 10
   updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
   From 10.31.0 it can also create the map when neither legacy list is set.
-  Other pnpm 10 configurations use `onlyBuiltDependencies`, and pnpm 11
-  uses `allowBuilds` by default.
+  In other configurations on pnpm 10.1.0 or later in the 10.x series, the
+  command uses `onlyBuiltDependencies`. pnpm 11 uses `allowBuilds` by default.
 
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
