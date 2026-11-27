@@ -42,7 +42,10 @@ export async function prepareCodeAnalysis(
   return prepareCodeAnalysisWithFreshnessCheck(root, run, true, environment);
 }
 
-/** Prepares a replacement after the caller checked the active analysis under the same graph lock. */
+/**
+ * Prepares a replacement after the caller finds no current active analysis.
+ * The caller must hold the same graph lock through the check and this call.
+ */
 export async function prepareNotCurrentCodeAnalysisLocked(
   root: string,
   run: GraphProcess,
