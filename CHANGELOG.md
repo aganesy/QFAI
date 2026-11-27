@@ -631,7 +631,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Component catalogue generation respects the same UTF-8 byte limit as
   validation and preserves the existing file when rendered output exceeds it.
-  Small catalogue reads use a buffer that grows with the bytes read.
+  Small catalogue reads use a buffer that grows with the bytes read. Check mode
+  reports when the selected metadata would exceed the publication limit.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
