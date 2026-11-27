@@ -1252,6 +1252,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   arguments, and its overloads were reported as one routine defined twice. The
   list is now read from the parenthesis that follows the name. Closes #5149.
 
+- **DB SQL validation keeps commas inside routine array defaults.** A default
+  such as `ARRAY[1, 2]` or a nested array now leaves the declared argument
+  types intact when checking for `QFAI-DB-002`.
+
 - **The graph ignore check covers every name graph setup writes under.** The
   paths `qfai init` checks against an existing managed graph block missed the
   CodeGraph install directory in its private home and most hidden directories
