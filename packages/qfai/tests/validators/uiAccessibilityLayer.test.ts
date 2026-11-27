@@ -50,6 +50,19 @@ const AXE_SPEC = [
   "",
 ].join("\n");
 
+it.each(["web", "cli"])(
+  "uses the declared %s surface for a Markdown UI contract",
+  async (surface) => {
+    const root = await project({
+      [CONTRACT.replace(".yaml", ".md")]: "# UI-0001: Orders",
+      ".qfai/spec/03_contract/tech.md": `# Technology\n\n## Stack\n\n| Component | Choice |\n| --- | --- |\n| Surface | ${surface} |\n`,
+    });
+    expect(await validateUiAccessibilityLayer(root, defaultConfig)).toHaveLength(
+      surface === "web" ? 1 : 0,
+    );
+  },
+);
+
 afterEach(async () => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
