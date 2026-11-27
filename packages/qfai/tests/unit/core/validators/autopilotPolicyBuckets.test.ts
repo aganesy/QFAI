@@ -145,6 +145,15 @@ describe("TC-0015-0021: parseAutopilotPolicy bucket detection", () => {
     expect(result.buckets).toEqual({ autoDecide: true, askUser: true, hardRequired: true });
   });
 
+  it("preserves literal comment text in a collected hard-required entry", () => {
+    const policy = [
+      "- hard-required:",
+      "  - brand intent `<!-- literal -->` <!-- rationale -->",
+    ].join("\n");
+
+    expect(collectHardRequiredEntries(policy)).toEqual(["brand intent `<!-- literal -->`"]);
+  });
+
   it("returns hasSection=false when the ## Default Autopilot Policy section is absent", () => {
     const result = parseAutopilotPolicy(SKILL_NO_SECTION);
     expect(result.hasSection).toBe(false);
