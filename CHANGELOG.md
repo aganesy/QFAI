@@ -270,6 +270,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stated once, and the Standard commands home is named as
   `<paths.contractsDir>/tech.md#standard-commands-copy-paste`, so a project
   with its own contracts directory is pointed at the right file.
+- Oracle-strength guidance now asks tests of prose and tables to check the
+  operative words and demonstrate an assertion failure for each new clause
+  when that clause is removed on its own.
 
 - **Breaking: each contract kind has its own number sequence, and a business
   rule ID names its contract's kind.** A project with five DB contracts and

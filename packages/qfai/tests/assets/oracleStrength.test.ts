@@ -37,6 +37,10 @@ describe.each(trees)("%s oracle strength", (tree) => {
       "probes each new clause independently",
       "Before handoff, delete each new clause once in isolation and confirm its assertion fails.",
     ],
+    [
+      "restores and verifies the text between probes",
+      "Restore the text and confirm the test passes before probing the next clause.",
+    ],
   ])("%s for tests of prose or tables", async (_case, clause) => {
     const proof = await read(tree, "assistant/skill/qfai-implement/references/oracle-strength.md");
     expect(proof.replace(/\s+/g, " ")).toContain(clause);
