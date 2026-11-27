@@ -66,9 +66,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A fix could run every step, reviews and full suite included, while an open
   issue or pull request already covered the same problem, and the work was
   thrown away when the other change merged first. After its announcement and
-  before any edit, `qfai-run` now makes one REST search of the forge for open
-  issues and pull requests naming the request's files or symptom, leaving out
-  the one the request itself names. A match is a result that describes the
+  before any edit, `qfai-run` now makes one REST search for the request's
+  files or symptom, leaving out the item the request itself names. The
+  GitHub query uses `is:issue` so it works with GitHub App user tokens.
+  Forges with combined search include open issues and pull requests.
+  A match is a result that describes the
   same problem, not one that only shares words. On a match it writes nothing
   and asks the user, with at most three matches, whether to continue or to
   leave the problem to that work. Without a
@@ -810,7 +812,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Graph setup distinguishes tracked output from an ineffective ignore rule.**
   Its warning tells operators to run both recovery commands from the
   initialized project directory to stop tracking selected generated files
-  while keeping them in the working tree.
+  while keeping them in the working tree. It also tells operators to preserve
+  staged content if Git refuses the removal.
 
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read
