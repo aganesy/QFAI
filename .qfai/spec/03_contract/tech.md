@@ -13,8 +13,8 @@
 | Build tool | tsup 8 (`^8.3.5`) |
 | Test runner | Vitest 4 (`^4.1.11`), seven projects in `packages/qfai/vitest.workspace.ts`: `core`, `unit`, `validators`, `cli` and `scripts` each run the `tests/` directory of the same name; `integration` also runs `tests/skill/` and `tests/codex/`; `e2e` also runs `tests/assets/` |
 | Lint / format | ESLint 10 and Prettier 3 |
-| CSS framework | None: the package is a command-line tool with no user interface |
-| Component catalogue | None: the package is a command-line tool with no user interface |
+| CSS framework | None (the product interface is a terminal) |
+| Component catalogue | None (the product interface is a terminal) |
 
 ## Architecture
 
