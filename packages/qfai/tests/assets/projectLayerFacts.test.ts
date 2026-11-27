@@ -420,14 +420,32 @@ describe("the project layer describes the repository it is in", () => {
     },
   );
 
-  it.each(["--no-message", "--no-list", "--no-unknown", "--no-file=unused", "--no-edit="])(
-    "holds the commit check for an invalid tag unset %s",
-    (option) => {
-      const command = `git tag ${option} vX.Y.Z <SHA>`;
-      expect(tagCreations(command)).toEqual([command]);
-      expect(namesItsCommit(command)).toBe(false);
-    },
-  );
+  it.each([
+    "--no-message",
+    "--no-trailer",
+    "--no-list",
+    "--no-unknown",
+    "--no-file=unused",
+    "--no-edit=",
+    "--no-points-at=<SHA>",
+  ])("holds the commit check for an invalid tag unset %s", (option) => {
+    const command = `git tag ${option} vX.Y.Z <SHA>`;
+    expect(tagCreations(command)).toEqual([command]);
+    expect(namesItsCommit(command)).toBe(false);
+  });
+
+  it("uses the last points-at filter when checking tag creation", () => {
+    const implicit = "git tag --points-at=HEAD --no-points-at vX.Y.Z";
+    expect(tagCreations(implicit)).toEqual([implicit]);
+    expect(namesItsCommit(implicit)).toBe(false);
+
+    const explicit = "git tag --points-at HEAD --no-points-at vX.Y.Z <SHA>";
+    expect(tagCreations(explicit)).toEqual([explicit]);
+    expect(namesItsCommit(explicit)).toBe(true);
+
+    expect(tagCreations("git tag --no-points-at --points-at HEAD vX.Y.Z")).toEqual([]);
+    expect(tagCreations("git tag --no-points-at")).toEqual([]);
+  });
 
   it.each(["git tag vX.Y.Z --mess --contains", "git tag --mess --sort vX.Y.Z"])(
     "checks the commit even when an unknown option may consume a flag in %s",
