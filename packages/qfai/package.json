@@ -71,7 +71,7 @@
     "playwright": "^1.52.0"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite": "^0.6.0",
     "@types/jsdom": "^30.0.0",
     "@types/markdown-it": "^14.2.0",
     "@types/node": "^26.0.0",
