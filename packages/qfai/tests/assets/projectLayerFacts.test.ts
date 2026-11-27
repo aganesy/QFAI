@@ -333,7 +333,9 @@ function releaseTaggingStatements(guide: string): string[] {
 }
 
 function releaseBuildBlock(guide: string): string | undefined {
-  return releaseShellBlocks(guide).find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
+  return releaseShellBlocks(releaseMarkdown.parse(guide, {})).find((body) =>
+    /^\s*corepack pnpm ci:gate:build$/m.test(body),
+  );
 }
 
 describe("the project layer describes the repository it is in", () => {
