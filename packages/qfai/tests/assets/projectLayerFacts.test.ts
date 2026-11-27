@@ -378,6 +378,7 @@ function releaseTagCreations(guide: string): string[] {
 
 function releaseTaggingStatements(guide: string): string[] {
   const statements = releaseShellBlocks(releaseMarkdown.parse(guide, {}))
+    .map(joinShellContinuations)
     .map((body) => body.replace(/&&[ \t]*\r?\n\s*/g, "&& "))
     .flatMap((body) => body.split(/\r?\n/))
     .map((line) => line.trim());
@@ -674,6 +675,18 @@ describe("the project layer describes the repository it is in", () => {
     const comment = ["git tag --points-at=HEAD # listing \\", "git tag second <SHA>"].join("\n");
     expect(joinShellContinuations(quoted)).toBe(quoted);
     expect(tagCreations(comment)).toEqual(["git tag second <SHA>"]);
+  });
+
+  it("checks the commit and ordering of a continued tag command", () => {
+    const check = "git merge-base --is-ancestor <SHA> origin/main";
+    const firstLine = "git tag --points-at=HEAD";
+    const lastLine = "--no-points-at vX.Y.Z <SHA>";
+    const guide = ["~~~sh", check + " &&", firstLine + " \\", lastLine, "~~~"].join("\n");
+    const command = firstLine + " " + lastLine;
+
+    expect(releaseTagCreations(guide)).toEqual([command]);
+    expect(namesItsCommit(command)).toBe(true);
+    expect(releaseTaggingStatements(guide)).toEqual([check + " && " + command]);
   });
 
   it("only expands an unambiguous long tag option", () => {
