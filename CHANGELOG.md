@@ -6,6 +6,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A domain-language step settles the request's terms before the interview
+  and the specification.** `common-domain-language` runs in the discussion
+  stage between `discussion-research` and `discussion-interview`, and first in
+  every specification stage, before `sdd-triage`, marked pass-through. It reads
+  each domain word against `01_policy/glossary.md`, corrects a rejected
+  synonym, proposes a synonym for a row's Avoid cell, and splits a word read
+  two ways into one row per bounded context. It drafts a definition only from
+  a use it cites, asks for a new business term's definition with no
+  recommended answer, and tries each definition on an edge case. In discussion
+  it leaves each settled term as an `open-questions.md` row; in the
+  specification stage it writes the glossary. `qfai-discussion` and `qfai-sdd`
+  list the step, and `npx qfai workflow plan` returns it.
+
 - **`qfai catalog design` derives the design tokens and the Tailwind theme
   from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
   Design Tokens Community Group 2025.10 format, with the colours, their

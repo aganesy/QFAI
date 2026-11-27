@@ -4,7 +4,17 @@ title: QFAI SDD (Story Tree)
 description: "Use when invoked by name or handed a QFAI work order. Its subject is the story tree: policy, business flows, stories, examples and the contracts that enforce them."
 argument-hint: "[<BF-ID-or-name>] [--contract <contract-ID-or-path>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
-steps: [sdd-triage, sdd-flow, sdd-story, sdd-contract, common-design-md, sdd-cycle, sdd-gate]
+steps:
+  [
+    common-domain-language,
+    sdd-triage,
+    sdd-flow,
+    sdd-story,
+    sdd-contract,
+    common-design-md,
+    sdd-cycle,
+    sdd-gate,
+  ]
 requires: [common-review-cycle]
 mode: approval-gated
 ---
@@ -43,15 +53,16 @@ Run the steps in this order, as
 states: read `.qfai/assistant/step/<id>/STEP.md` for the current step only, run
 it, then move to the next.
 
-| Step               | What it does                                                    | Skipped when                                               |
-| ------------------ | --------------------------------------------------------------- | ---------------------------------------------------------- |
-| `sdd-triage`       | Source, preflight, triage, critical decisions and ID allocation | Never                                                      |
-| `sdd-flow`         | Policy, `tech.md` and business flows                            | Triage changed no policy fact and no flow                  |
-| `sdd-story`        | Stories, Gherkin AC and EX                                      | Never                                                      |
-| `sdd-contract`     | Contracts and the BRs they enforce, or the `--contract` repair  | Triage changed no BR and no contract                       |
-| `common-design-md` | Root `DESIGN.md`                                                | The flow is not UI-bearing, or its surface is CLI-only     |
-| `sdd-cycle`        | The concrete-abstract cycle between BRs and EXs                 | `sdd-contract` wrote or changed no BR Statement or Example |
-| `sdd-gate`         | Per-flow `validate --profile sdd` and the flow report           | Never                                                      |
+| Step                     | What it does                                                     | Skipped when                                                          |
+| ------------------------ | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `common-domain-language` | The request's domain terms against the glossary, written into it | The run already settled its terms, or every term matches the glossary |
+| `sdd-triage`             | Source, preflight, triage, critical decisions and ID allocation  | Never                                                                 |
+| `sdd-flow`               | Policy, `tech.md` and business flows                             | Triage changed no policy fact and no flow                             |
+| `sdd-story`              | Stories, Gherkin AC and EX                                       | Never                                                                 |
+| `sdd-contract`           | Contracts and the BRs they enforce, or the `--contract` repair   | Triage changed no BR and no contract                                  |
+| `common-design-md`       | Root `DESIGN.md`                                                 | The flow is not UI-bearing, or its surface is CLI-only                |
+| `sdd-cycle`              | The concrete-abstract cycle between BRs and EXs                  | `sdd-contract` wrote or changed no BR Statement or Example            |
+| `sdd-gate`               | Per-flow `validate --profile sdd` and the flow report            | Never                                                                 |
 
 `sdd-triage` records whether each affected flow is UI-bearing. A step that
 changes an input an earlier step consumed reruns that step's authors and

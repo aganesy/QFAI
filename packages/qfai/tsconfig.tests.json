@@ -409,6 +409,7 @@
     "tests/integration/spec0017SliceAlignment.test.ts",
     "tests/integration/spec0017TuningChangeScope.test.ts",
     "tests/integration/glossaryTerms.test.ts",
+    "tests/integration/workflowAssets/domainLanguageStep.test.ts",
     "tests/integration/staleTerms.test.ts",
     "tests/integration/decisionRowLength.test.ts",
     "tests/integration/validators/stepTree.test.ts",
