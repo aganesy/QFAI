@@ -191,6 +191,24 @@ describe("readHandleWithin", () => {
     expect(await readWithin("abcdef", 5)).toBeUndefined();
   });
 
+  it("reads a small file without allocating its full read ceiling", async () => {
+    const ceiling = 8 * 1024 * 1024;
+    const handle = await open(await fileHolding("small"), "r");
+    const capacities: number[] = [];
+    try {
+      const reader = {
+        read: (buffer: Buffer, offset: number, length: number, position: number) => {
+          capacities.push(buffer.length);
+          return handle.read(buffer, offset, length, position);
+        },
+      };
+      expect((await readHandleWithin(reader, ceiling))?.toString("utf-8")).toBe("small");
+      expect(Math.max(...capacities)).toBeLessThan(ceiling);
+    } finally {
+      await handle.close();
+    }
+  });
+
   it("keeps reading through short reads until the end", async () => {
     // A read that returns fewer bytes than asked for left the tail as NUL.
     const handle = await open(await fileHolding("abcdef"), "r");
