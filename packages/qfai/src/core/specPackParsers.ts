@@ -143,7 +143,7 @@ function listContentLine(
   indentation: { offset: number; columns: number },
   listIndents: number[],
   paragraphOpen: boolean,
-): { container: number; contentOffset: number | undefined } {
+): { container: number; contentOffset: number | undefined; continuesParagraph?: true } {
   const previousContainer = listIndents.at(-1) ?? 0;
   if (indentation.offset < line.length) {
     while ((listIndents.at(-1) ?? 0) > indentation.columns) listIndents.pop();
@@ -162,15 +162,17 @@ function listContentLine(
     const markerEnd = columns + marker.length;
     const padding = markdownIndent(line, offset + marker.length, markerEnd);
     const empty = padding.offset === line.length;
-    if (
-      empty &&
-      paragraphOpen &&
-      container === previousContainer &&
-      offset === indentation.offset
-    ) {
+    const interruptsParagraph =
+      paragraphOpen && container === previousContainer && offset === indentation.offset;
+    if (interruptsParagraph && empty) {
       // A single dash here can underline a heading in the current paragraph.
       // An empty item can start after leaving that paragraph's container.
       return { container, contentOffset: undefined };
+    }
+    if (interruptsParagraph && marker.length > 1 && Number(marker.slice(0, -1)) !== 1) {
+      // An existing list can have later numbered items. A new list can
+      // interrupt this paragraph only if its first item starts at 1.
+      return { container, contentOffset: offset, continuesParagraph: true };
     }
     if (empty || padding.columns - markerEnd > 4) {
       container = markerEnd + 1;
@@ -375,13 +377,15 @@ function tableRowLines(lines: readonly string[]): Set<number> {
   let headerContainer: number | undefined;
   let tableContainer: number | undefined;
   for (const [index, line] of lines.entries()) {
-    const { container, contentOffset } = listContentLine(
+    const { container, contentOffset, continuesParagraph } = listContentLine(
       line,
       markdownIndent(line),
       listIndents,
       paragraphOpen,
     );
-    paragraphOpen = contentOffset !== undefined && !endsParagraph(line.slice(contentOffset));
+    paragraphOpen =
+      continuesParagraph ||
+      (contentOffset !== undefined && !endsParagraph(line.slice(contentOffset)));
     if (contentOffset === undefined || !looksLikeTableRow(line)) {
       headerAt = -1;
       tableContainer = undefined;
@@ -509,7 +513,7 @@ export function maskNonSpecRegions(text: string): string {
       return "";
     }
 
-    const { container, contentOffset } = listContentLine(
+    const { container, contentOffset, continuesParagraph } = listContentLine(
       line,
       indentation,
       listIndents,
@@ -596,7 +600,8 @@ export function maskNonSpecRegions(text: string): string {
       inBlankTerminatedHtml = true;
       return "";
     }
-    paragraphOpen = !endsParagraph(masked.text.slice(contentOffset ?? indentation.offset));
+    paragraphOpen =
+      continuesParagraph || !endsParagraph(masked.text.slice(contentOffset ?? indentation.offset));
     return masked.text;
   };
 
