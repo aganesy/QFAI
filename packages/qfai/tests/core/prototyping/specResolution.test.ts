@@ -85,6 +85,19 @@ describe("UI contract prototyping scope", () => {
     });
   });
 
+  it("resolves a pinned Markdown UI responsibility alongside YAML screens", async () => {
+    const root = await fixtureRoot();
+    const cfg = config("UI-0011");
+    await uiContract(root, "home.yaml", "UI-0001", "[{id: home}]");
+    const file = path.join(cfg.paths.contractsDir, "ui", "ui-0011-orders.md");
+    await writeFile(path.join(root, file), "# UI-0011: Orders\n");
+    expect(await resolveAllUiBearingSpecs(root, cfg)).toEqual(["UI-0001", "UI-0011"]);
+    expect(await resolvePrimaryPrototypingSpec(root, cfg)).toMatchObject({
+      uiContractId: "UI-0011",
+      source: "config",
+    });
+  });
+
   it("honours a full primary pin only when that contract has screens", async () => {
     const root = await fixtureRoot();
     await uiContract(root, "home.yaml", "UI-0001", "[{id: home}]");
