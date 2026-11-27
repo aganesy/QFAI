@@ -172,8 +172,8 @@ it("restores a compatible document snapshot when no processing configuration is 
 
 it("skips inventory when the staged document copy fails the processing check", async () => {
   const fixture = await completedDocumentSnapshotFixture();
-  const checkProcessing = vi.fn(async () => false).mockResolvedValueOnce(true);
-  const inspect = vi.fn(async () => true);
+  const checkProcessing = vi.fn(() => Promise.resolve(false)).mockResolvedValueOnce(true);
+  const inspect = vi.fn(() => Promise.resolve(true));
   try {
     expect(
       await restoreCompletedDocumentAnalysis(
