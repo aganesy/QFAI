@@ -89,6 +89,10 @@ function declaredNodeRange(manifest: unknown): string | undefined {
   return typeof node === "string" ? node : undefined;
 }
 
+function statedNodeRanges(markdown: string): string[] {
+  return Array.from(withoutFencedBlocks(markdown).matchAll(NODE_RANGE_CLAIM), ([range]) => range);
+}
+
 function citedPaths(markdown: string): string[] {
   const cited = Array.from(
     withoutFencedBlocks(markdown).matchAll(PATH_CITATION),
@@ -338,6 +342,21 @@ describe("the project layer describes the repository it is in", () => {
     expect(undeferring, `each guide cites ${rule}`).toEqual([]);
   });
 
+  it("reads complete Node ranges and ignores unrelated version claims", () => {
+    expect(
+      statedNodeRanges(
+        [
+          "Use pnpm `^10.7.0` and a Node.js version matching `^20.19.0 || ^22.13.0 || >=24.0.0`.",
+          "Set `engines.node` to `>=22.13.0`. Use pnpm `^10.7.0`.",
+          "With Node.js already installed, use pnpm `^10.7.0`.",
+          "```md",
+          "An example supports Node.js `^18.0.0`.",
+          "```",
+        ].join("\n"),
+      ),
+    ).toEqual(["^20.19.0 || ^22.13.0 || >=24.0.0", ">=22.13.0"]);
+  });
+
   // The floor is the one fact in this layer with a machine-readable source, and
   // it moved twice without either file noticing. A stated floor must match; a
   // file that points at `package.json#engines` instead states nothing to match.
@@ -351,7 +370,7 @@ describe("the project layer describes the repository it is in", () => {
     const disagreeing: string[] = [];
     for (const name of await layerFiles()) {
       const text = await readFile(path.join(repoRoot, LAYER, name), "utf-8");
-      for (const [stated] of text.matchAll(NODE_RANGE_CLAIM)) {
+      for (const stated of statedNodeRanges(text)) {
         if (stated.replace(/\s+/g, "") !== engines?.replace(/\s+/g, "")) {
           disagreeing.push(`${name}: ${stated}`);
         }
@@ -372,9 +391,7 @@ describe("the project layer describes the repository it is in", () => {
     expect(engines, "package.json declares no Node range").not.toBeUndefined();
 
     const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
-    const stated = [...withoutFencedBlocks(guide).matchAll(NODE_RANGE_CLAIM)].map(
-      ([match]) => match,
-    );
+    const stated = statedNodeRanges(guide);
 
     expect(stated.length, "the release guide states no Node floor to check").toBeGreaterThan(0);
     expect(
