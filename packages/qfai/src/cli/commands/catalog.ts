@@ -13,7 +13,10 @@ import { type OwnerLockOptions, withOwnerLock } from "../../core/fs/ownerLock.js
 import { findUnsafeWrapperComponent } from "../../core/init/fsGuards.js";
 import { error, info } from "../../core/logger.js";
 import {
+  COMPONENT_CATALOG_MAX_BYTES,
   COMPONENT_CATALOG_PATH,
+  COMPONENT_CATALOG_SIZE_REASON,
+  COMPONENT_CATALOG_SIZE_RECOVERY,
   type ComponentScan,
   inspectComponentCatalogPath,
   readCatalog,
@@ -153,7 +156,11 @@ async function scanAndWrite(
   if (!scan.readable) {
     return { code: EXIT_CODES.findings, line: unreadableSurface(scan.unread), wrote: false };
   }
-  const failure = await writeCatalog(root, renderCatalog(scan.components));
+  const text = renderCatalog(scan.components);
+  const failure =
+    Buffer.byteLength(text, "utf8") > COMPONENT_CATALOG_MAX_BYTES
+      ? `${COMPONENT_CATALOG_SIZE_REASON} ${COMPONENT_CATALOG_SIZE_RECOVERY}`
+      : await writeCatalog(root, text);
   if (failure !== null) {
     return { code: EXIT_CODES.findings, line: notWritten(target, failure), wrote: false };
   }

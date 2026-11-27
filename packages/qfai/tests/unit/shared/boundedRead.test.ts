@@ -203,7 +203,7 @@ describe("readHandleWithin", () => {
         },
       };
       expect((await readHandleWithin(reader, ceiling))?.toString("utf-8")).toBe("small");
-      expect(Math.max(...capacities)).toBeLessThan(ceiling);
+      expect(Math.max(...capacities)).toBeLessThan(ceiling / 8);
     } finally {
       await handle.close();
     }

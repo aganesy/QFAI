@@ -629,6 +629,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Component catalogue generation respects the same UTF-8 byte limit as
+  validation and preserves the existing file when rendered output exceeds it.
+  Small catalogue reads use a buffer that grows with the bytes read.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
