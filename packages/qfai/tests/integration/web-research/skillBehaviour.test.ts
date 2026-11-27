@@ -512,6 +512,9 @@ describe("web-research skill behaviour", () => {
     expect(nextActions[0]).toContain("Share the cited research artifact (recommended)");
     const handoff = nextActions.find((item) => item.startsWith("Apply the findings"));
     expect(handoff).toContain("only when the user explicitly requests application");
+    expect(handoff).toContain(
+      "Start a separate code change and follow the applicable gates in Section 6.",
+    );
     expect(nextActions.join(" ")).not.toContain("in the next implementation or review step");
   });
 
