@@ -6,6 +6,7 @@ import path from "node:path";
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
+import { nodeEngineFloor } from "../../../../.github/actions/setup/node-engine-floor.mjs";
 import { runInit } from "../helpers/legacyInit.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
@@ -572,8 +573,8 @@ describe("assets guardrails", () => {
       "utf-8",
     );
     const nodeEngine = /"engines"\s*:\s*\{[^}]*"node"\s*:\s*"([^"]+)"/.exec(packageJsonText)?.[1];
-    expect(nodeEngine).toBeTruthy();
-    expect(content).toContain(`\`engines: "${nodeEngine}"\``);
+    if (nodeEngine === undefined) throw new Error("The package declares no Node range");
+    expect(content).toContain(`minimum Node ${nodeEngineFloor(nodeEngine)}.`);
     expect(content).not.toContain('">=18.0.0"');
   });
 
@@ -964,15 +965,16 @@ describe("assets guardrails", () => {
         .join(" ");
       // The comment's content, not its sentences: new rows are appended and a row keeps its ID,
       // so union merging keeps both branches' rows; a decision row's wording may be restated; and
-      // a conflict a host shows is resolved by merging the base branch locally. A pinned sentence
-      // would turn a restatement of the comment into a red build.
+      // only conflicts confined to the registers use a local base merge. The comment also
+      // describes which rows to remove after the merge and which to keep.
       const terms = [
         /\bappended\b/i,
         /\bID\b/,
         /\brestated\b/i,
         /\bunion\b/i,
-        /\bbase branch\b/i,
-        /\blocally\b/i,
+        /\bconflict confined to the registers\b[^.]*\bbase branch locally\b/i,
+        /\bif\b[^.]*\brestores\b[^.]*\bopen-question row deleted on one side,\s*delete (?:that row|it)\b[^.]*\bseparate commit\b[^.]*\bbefore pushing\b/i,
+        /\bleave\b[^.]*\bother register rows and IDs\b[^.]*\bas the merge left them\b/i,
       ];
       for (const term of terms) {
         expect(comment, `${file}: the comment must say why (${String(term)})`).toMatch(term);
@@ -1533,7 +1535,10 @@ describe("assets guardrails", () => {
       "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/01_User-story.md",
       "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/02_Acceptance-Criteria.md",
       "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/03_Example.md",
+      "03_contract/api/api-NNNN-title.md",
       "03_contract/cli/cli-NNNN-title.md",
+      "03_contract/db/db-NNNN-title.md",
+      "03_contract/ui/ui-NNNN-title.md",
       "03_contract/contracts.md",
       "03_contract/tech.md",
       "decisions.md",

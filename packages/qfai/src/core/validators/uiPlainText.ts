@@ -108,6 +108,7 @@ type Candidate = { line: number; text: string; reason: Reason | null };
 export type TsNode = {
   kind: number;
   pos: number;
+  end: number;
   parent?: TsNode;
   getStart(): number;
   getText(): string;
@@ -116,10 +117,13 @@ export type TsNode = {
   type?: TsNode;
   types?: readonly TsNode[];
   typeName?: TsNode;
+  /** A literal type's literal, as the `"primary"` of `variant: "primary"`. */
+  literal?: TsNode;
   tagName?: TsNode;
   initializer?: TsNode;
   modifiers?: readonly TsNode[];
   parameters?: readonly TsNode[];
+  typeParameters?: readonly TsNode[];
   members?: readonly TsNode[];
   elements?: readonly TsNode[];
   typeArguments?: readonly TsNode[];
@@ -147,7 +151,15 @@ export type TsApi = {
     target: number,
     setParents: boolean,
     kind: number,
-  ): TsNode & { getLineAndCharacterOfPosition(pos: number): { line: number } };
+  ): TsNode & { getLineAndCharacterOfPosition(pos: number): { line: number; character: number } };
+  getLeadingCommentRanges(
+    text: string,
+    pos: number,
+  ): readonly { pos: number; end: number }[] | undefined;
+  getTrailingCommentRanges(
+    text: string,
+    pos: number,
+  ): readonly { pos: number; end: number }[] | undefined;
   SyntaxKind: Record<string, number>;
   NodeFlags: { Let: number; Const: number; Using?: number };
   ScriptTarget: { Latest: number };

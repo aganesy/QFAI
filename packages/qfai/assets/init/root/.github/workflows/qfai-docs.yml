@@ -35,7 +35,7 @@
 # | Skipped when                  | every changed path is code a document check never reads; anything else, or any doubt, runs both checks   |
 # | Default-branch push           | runs the checks the push reaches; with `vars.QFAI_CI_PUSH_POLICY` set to `protected` or `none`, neither  |
 # | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
-# | Node support floor            | the package declares `engines: ">=20.19.0"`; the fall-open Node 20 satisfies it                          |
+# | Node support floor            | minimum Node 20.19.0. The fallback uses Node 20                                                          |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
 # | Jobs per pull request event   | idle: 1 (scope); lane runs: 4 (scope, checks x2, docs)                                                   |
 # | Required check                | docs, named "qfai docs (document shape and Mermaid syntax)"                                              |
@@ -491,7 +491,7 @@ jobs:
         with:
           # The version resolved by the step above: the adopter's own
           # version file when they have one, else the documented fallback
-          # (Node 20, matching the package `engines: ">=20.19.0"` floor).
+          # (Node 20, the major line containing the package's lowest supported version).
           node-version: ${{ steps.node-version.outputs.version }}
           # setup-node's `cache:` accepts a single package-manager value, and the step above
           # decides it — an expression cannot ask whether the package manager is on PATH, and
@@ -676,6 +676,24 @@ jobs:
               }
             ')"
           fi
+          # npm reads overrides from the root manifest of its install prefix.
+          # Keep the patched KaTeX resolution in the temporary tool tree.
+          node -e '
+            const { lstatSync, mkdirSync, writeFileSync } = require("node:fs");
+            const { join } = require("node:path");
+            const prefix = join("tmp", "qfai-docs-tools");
+            for (const dir of ["tmp", prefix, join(prefix, "node_modules")]) {
+              if (lstatSync(dir, { throwIfNoEntry: false })?.isSymbolicLink()) {
+                console.error(`::error::qfai docs: ${dir} must be a local directory`);
+                process.exit(1);
+              }
+              mkdirSync(dir, { recursive: true });
+            }
+            writeFileSync(join(prefix, "package.json"), JSON.stringify({
+              private: true,
+              overrides: { "mermaid@11.17.2": { katex: "0.18.2" } }
+            }), { flag: "wx" });
+          '
           if [ -d node_modules/qfai ]; then
             checker="$(node -e '
               const { readFileSync } = require("node:fs");
@@ -731,6 +749,33 @@ jobs:
           # `{/* mermaid-lint:ignore */}` in MDX. Put the marker on the line
           # directly above the opening fence. `--tools` names the directory the
           # install step put Mermaid and jsdom in.
+          node -e '
+            const { readFileSync, realpathSync } = require("node:fs");
+            const { createRequire } = require("node:module");
+            const { join, sep } = require("node:path");
+            const prefix = join(realpathSync("."), "tmp", "qfai-docs-tools");
+            const tools = join(prefix, "node_modules");
+            if (realpathSync(prefix) !== prefix || realpathSync(tools) !== tools) {
+              console.error("::error::qfai docs: the temporary tools must be local directories");
+              process.exit(1);
+            }
+            const fromTools = createRequire(join(prefix, "noop.cjs"));
+            const entry = realpathSync(fromTools.resolve("mermaid"));
+            if (!entry.startsWith(tools + sep)) {
+              console.error("::error::qfai docs: Mermaid resolved outside the temporary tools");
+              process.exit(1);
+            }
+            const manifest = realpathSync(createRequire(entry).resolve("katex/package.json"));
+            if (!manifest.startsWith(tools + sep)) {
+              console.error("::error::qfai docs: Mermaid resolved KaTeX outside the temporary tools");
+              process.exit(1);
+            }
+            const { version } = JSON.parse(readFileSync(manifest, "utf8"));
+            if (version !== "0.18.2") {
+              console.error(`::error::qfai docs: Mermaid resolved KaTeX ${version}, expected 0.18.2`);
+              process.exit(1);
+            }
+          '
           if [ -d node_modules/qfai ]; then
             node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools
           else

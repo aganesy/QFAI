@@ -98,7 +98,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     return;
   }
 
-  if (!command || options.help) {
+  if (!command || invalid || options.help) {
     // The rejection reason goes to stderr and the usage to stdout. Even if a
     // caller discards stdout, it still learns which token was rejected. A
     // refused `--format json` call gets the same two streams: usage text on
@@ -115,10 +115,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         error(await unavailableCommandDiagnosis(options.root));
       }
     }
-    // A refused argument of a known command gets that command's usage lines,
-    // not the help of every command: one missing flag must not cost the
-    // caller the whole help text on every call.
-    info(invalid && command ? refusedUsage(command, subcommandOf(options)) : usage());
+    info(command && !options.help ? refusedUsage(command, subcommandOf(options)) : usage());
     if (invalid) {
       process.exitCode = options.invalidExitCode;
     }
@@ -315,6 +312,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "sdd":
       {
+        // The parser rejects a missing subcommand before dispatch.
         if (!options.sddAction) {
           error("qfai sdd: unknown or missing subcommand. Expected: preflight|next-id|merge-docs");
           info(refusedUsage("sdd"));
@@ -374,8 +372,12 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       process.exitCode = await (
         options.catalogAction === "design" ? runCatalogDesign : runCatalogComponents
       )({
-        root: await resolveRoot(options),
+        root:
+          options.catalogBrief && !options.rootExplicit
+            ? (await findConfigRoot(options.root)).root
+            : await resolveRoot(options),
         ...(options.catalogCheck ? { check: true } : {}),
+        ...(options.catalogBrief ? { brief: true } : {}),
       });
       return;
 
@@ -496,7 +498,7 @@ function refusedUsage(command: string, subcommand?: string): string {
   return [
     "Usage:",
     ...lines.map((line) => `  qfai ${line}`),
-    "Run `qfai --help` for every option.",
+    "Run qfai --help for every option.",
     "",
   ].join("\n");
 }
@@ -517,7 +519,7 @@ Commands:
   sdd merge-docs               Merge each conflicted story-tree document from the index by table row and sentence, leave what it cannot settle between conflict markers, and check the result's document schema
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
-  catalog components           Write .qfai/catalog/components.yaml from the components the uiux.surfacePaths files export (--check compares and writes nothing)
+  catalog components           Write .qfai/catalog/components.yaml from the components the uiux.surfacePaths files export (--check compares and writes nothing; --brief prints a brief of the committed catalogue for an agent's prompt)
   catalog design               Write .qfai/catalog/design.tokens.json and the Tailwind 4 theme .qfai/catalog/theme.css from root DESIGN.md (--check compares and writes nothing)
   workflow plan                Print the route plan for a request extraction (--in <path|->), a route (--route <route>, with --in for a chosen candidate's extraction), or an operation on finished work (--order)
 
@@ -528,7 +530,8 @@ Options:
                   (that output includes the qfai-provided .github/copilot-instructions.md, which keeps the rule-list entries and sections the project added, and .github/instructions/**; the story tree, rule/*.local.md overlays, assistant/skill.local/**, qfai.config.yaml, DESIGN.md and AGENTS.md are never overwritten)
   --yes           init: reserved flag (no behavioural difference today because init is non-interactive; auto-Yes once prompts are introduced)
   --yes           doctor --autoremediate: skip the interactive confirmation (no effect elsewhere)
-  --dry-run       init / doctor: show what would change without writing anything
+  --dry-run       init: preview changes without writing
+                  doctor: preview repairs. If a diagnosis is produced, --out still writes it
   --verbose       init: expand the run report's skipped-path list (counts only by default)
   --format <text|github>       validate: output format
   --format <md|json>           report: output format
@@ -550,6 +553,7 @@ Options:
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
   --timings                     validate: print the time each finding family took, slowest first; runs the UI/UX checks one after another
   --check                       catalog components / design: exit 1 when a committed catalogue file is missing, does not parse, or is out of date, without writing it
+  --brief                       catalog components: print one line per component of the committed catalogue, and the design token count, without writing anything
   --out <path>                  report/doctor/db-drift/session-review: output path (a relative path is resolved against --root)
   --in <path>                   report: validate.json input path (takes precedence over the config)
   --run-validate                report: run validate first, then generate the report

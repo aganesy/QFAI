@@ -367,7 +367,7 @@ function moveConstraintSection(draft: PolicyDraft, section: PolicySection): stri
     }
     if (row.some((cell) => CONCRETE_CONSTRAINT.test(cell))) {
       person.push(
-        `${draft.target} ## ${into}: rewrite ${row[0]} of "## ${section.heading}" in ${section.source} in plain words, with no file name, command or rule ID, by hand`,
+        `${draft.target} ## ${into}: rewrite ${row[0]} of "## ${section.heading}" in ${section.source} in plain words, with no file name, command, rule ID or contract ID, by hand`,
       );
       continue;
     }

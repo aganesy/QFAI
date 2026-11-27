@@ -54,13 +54,14 @@ identity.
    the target goes in only with a fallback that keeps the screen working where
    the feature is missing, as
    `.qfai/assistant/rule/ui-procurement.md#platform-features-and-the-browser-support-target`
-   says. Before starting a new screen region, look up each platform feature it
-   relies on in MDN, web.dev or the web-features data, and list it in
-   `progress.md` under the screen and region with the source URL, the Baseline
-   status that source gives and, for a feature newer than the target, its
-   fallback. Keep the list in step when a later iteration changes the features
-   a region relies on. `prototyping-handoff` carries it into the region's
-   `procurement` row, so the implementation uses the same feature.
+   says. Consult the catalogue during feature selection. Only a feature beyond the browser-support target needs a selection record. Record why it is needed and its fallback in the region’s procurement record, then carry the exception into the handoff.
+9. When `.qfai/catalog/components.yaml` is committed, the output of
+   `npx qfai catalog components --brief`, which the session agent includes in
+   each screen unit's brief: one line per listed component and the design
+   token count. Build a region from the component listed for its pattern. A
+   part no line lists but `.qfai/assistant/rule/references/base-components.yaml`
+   describes, such as an error summary or a skip link, is built to its entry
+   there.
 
 ## HTML envelope (every iteration)
 

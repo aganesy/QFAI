@@ -55,7 +55,7 @@ function helperRows(name: string, rows: [string, string][], map: boolean): strin
   );
 }
 
-function originalHelper(): string {
+function originalHelper(arrayInsteadOfMap?: string): string {
   const names = WORKFLOWS.map((file): [string, string] => [file, digest(workflow(INITIAL_BODY))]);
   const workflows = WORKFLOWS.map((file): [string, string] => [
     file,
@@ -70,9 +70,9 @@ function originalHelper(): string {
     shape("Check docs", INITIAL_BODY),
   ]);
   return [
-    helperRows("ALLOWED_WORKFLOW_FILES", names, true),
-    helperRows("ALLOWED_WORKFLOW_SHAPE", workflows, true),
-    helperRows("ALLOWED_JOB_SHAPE", jobs, true),
+    helperRows("ALLOWED_WORKFLOW_FILES", names, arrayInsteadOfMap !== "ALLOWED_WORKFLOW_FILES"),
+    helperRows("ALLOWED_WORKFLOW_SHAPE", workflows, arrayInsteadOfMap !== "ALLOWED_WORKFLOW_SHAPE"),
+    helperRows("ALLOWED_JOB_SHAPE", jobs, arrayInsteadOfMap !== "ALLOWED_JOB_SHAPE"),
     helperRows("ALLOWED_STEP_SHAPE", steps, false),
     "export const untouched = " + JSON.stringify(digest(INITIAL_BODY)) + ";\n",
   ].join("\n");
@@ -138,7 +138,97 @@ it("leaves all pins unchanged when a step's non-body shape changes", async () =>
   const result = run(root);
   expect(result.status).toBe(1);
   expect(result.output).toContain("qfai-tests.yml#inspect");
+  expect(result.output).toContain(
+    "Review the structural change and update the shape pin explicitly.",
+  );
+  expect(result.output).not.toContain("Fix the workflow YAML");
   expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
+});
+
+it.each([
+  ["syntax", "jobs: [\n", "", "valid YAML"],
+  ["workflow", "- workflow\n", "", "a workflow mapping"],
+  ["jobs", "name: Docs\njobs: []\n", "#jobs", "a jobs mapping"],
+  ["job", "name: Docs\njobs:\n  inspect: false\n", "#jobs.inspect", "a job mapping"],
+  [
+    "steps",
+    "name: Docs\njobs:\n  inspect:\n    runs-on: ubuntu-latest\n    steps: invalid\n",
+    "#jobs.inspect.steps",
+    "a step list",
+  ],
+  [
+    "step",
+    "name: Docs\njobs:\n  inspect:\n    runs-on: ubuntu-latest\n    steps:\n      - invalid\n",
+    "#jobs.inspect.steps[0]",
+    "a step mapping",
+  ],
+])(
+  "diagnoses malformed workflow %s without changing the pins",
+  async (_part, yaml, location, expected) => {
+    const root = await fixture();
+    const malformedPath = path.posix.join(...TEMPLATES, "qfai-tests.yml");
+    await writeFile(path.join(root, ...TEMPLATES, "qfai-docs.yml"), workflow(UPDATED_BODY));
+    await writeFile(path.join(root, ...TEMPLATES, "qfai-tests.yml"), yaml);
+
+    const result = run(root);
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(malformedPath + location + ": expected " + expected);
+    expect(result.output).toContain("Fix the workflow YAML before refreshing pins.");
+    expect(result.output).not.toContain("update the shape pin explicitly");
+    expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
+  },
+);
+
+it("reports a malformed declaration before suggesting a pin change for an earlier workflow", async () => {
+  const root = await fixture();
+  await writeFile(
+    path.join(root, ...TEMPLATES, "qfai-docs.yml"),
+    workflow(INITIAL_BODY, "Renamed step"),
+  );
+  await writeFile(path.join(root, ...TEMPLATES, "qfai-tests.yml"), "jobs: []\n");
+
+  const result = run(root);
+  expect(result.status).toBe(1);
+  expect(result.output).toContain("qfai-tests.yml#jobs: expected a jobs mapping");
+  expect(result.output).not.toContain("update the shape pin explicitly");
+  expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
+});
+
+it.each(["ALLOWED_WORKFLOW_FILES", "ALLOWED_WORKFLOW_SHAPE", "ALLOWED_JOB_SHAPE"])(
+  "refuses array rows in place of the %s Map without changing the helper",
+  async (name) => {
+    const root = await fixture();
+    const helper = path.join(root, ...HELPER);
+    const malformed = originalHelper(name);
+    await writeFile(helper, malformed);
+    await writeFile(path.join(root, ...TEMPLATES, "qfai-docs.yml"), workflow(UPDATED_BODY));
+
+    const result = run(root);
+    expect(result.status).toBe(1);
+    expect(result.output).toContain("expected new Map([...]) for " + name);
+    expect(await readFile(helper, "utf8")).toBe(malformed);
+  },
+);
+
+it.each([
+  ["name: Docs", "name: Changed docs", "qfai-tests.yml"],
+  ["runs-on: ubuntu-latest", "runs-on: windows-latest", "qfai-tests.yml#inspect"],
+])("names the next action when %s changes", async (before, after, pin) => {
+  const root = await fixture();
+  const helper = path.join(root, ...HELPER);
+  await writeFile(path.join(root, ...TEMPLATES, "qfai-docs.yml"), workflow(UPDATED_BODY));
+  await writeFile(
+    path.join(root, ...TEMPLATES, "qfai-tests.yml"),
+    workflow(INITIAL_BODY).replace(before, after),
+  );
+
+  const result = run(root);
+  expect(result.status).toBe(1);
+  expect(result.output).toContain(pin + ": pinned shape changed");
+  expect(result.output).toContain(
+    "Review the structural change and update the shape pin explicitly.",
+  );
+  expect(await readFile(helper, "utf8")).toBe(originalHelper());
 });
 
 it("leaves all pins unchanged when the template directory contains an unpinned workflow", async () => {
@@ -149,6 +239,18 @@ it("leaves all pins unchanged when the template directory contains an unpinned w
   const result = run(root);
   expect(result.status).toBe(1);
   expect(result.output).toContain("shipped workflow file pins differ");
+  expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
+});
+
+it("diagnoses an unpinned workflow with malformed YAML before suggesting a pin change", async () => {
+  const root = await fixture();
+  await writeFile(path.join(root, ...TEMPLATES, "extra.yaml"), "jobs: []\n");
+
+  const result = run(root);
+  expect(result.status).toBe(1);
+  expect(result.output).toContain("extra.yaml#jobs: expected a jobs mapping");
+  expect(result.output).toContain("Fix the workflow YAML before refreshing pins.");
+  expect(result.output).not.toContain("update the shape pin explicitly");
   expect(await readFile(path.join(root, ...HELPER), "utf8")).toBe(originalHelper());
 });
 

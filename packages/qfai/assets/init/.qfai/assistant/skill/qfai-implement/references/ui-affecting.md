@@ -23,9 +23,20 @@ Read the flow, story, acceptance criterion, and example that the implementation 
 
 `.qfai/catalog/components.yaml` lists the components the `uiux.surfacePaths` files export, with their
 props and what their doc comments say. `npx qfai catalog components` writes it; commit the result.
+A brief that hands a screen unit to another agent includes the output of
+`npx qfai catalog components --brief`, one line per listed component and the design token count,
+rather than restating the components by hand.
 
 - Before writing a region, read the catalogue. Reuse a listed component whose `pattern` is that region,
   extending it if it lacks what the screen needs, rather than writing the region again.
+- Before building an error summary, a field with an error, a step indicator, a confirm step, a skip
+  link, a sticky action bar, a status message or an empty state that the catalogue does not list,
+  read its entry in `.qfai/assistant/rule/references/base-components.yaml`: its anatomy, role and
+  accessible name, keyboard and focus behaviour, states, content rules, runtime notes and sources.
+  Build it once as a shared component that meets the entry, and name the entry's `id` in its
+  `@pattern`, as `@pattern error-summary`. Give it `@source authored` with an `@reason` naming the
+  entry's `id`, as `@reason built to base entry error-summary`: the entry is a description, not an
+  installed catalogue. Not needed for any other region.
 - When you author a shared component, give it a doc comment, then run the command:
 
 ```tsx
@@ -48,6 +59,17 @@ installed, and a component whose `@pattern` is an interactive widget `ui-procure
 `@a11y` (`QFAI-COMP-001` to `QFAI-COMP-006`). `npx qfai catalog components --check` fails CI on an
 out-of-date catalogue.
 
+A component that realises a UI business rule carries the rule's `QFAI:BR-UI-NNNN-NNNN` comment line
+inside its declaration or on its leading comment lines, so the catalogue's `realizes` lists the
+rule. Before writing a region for a rule, look for a listed component whose `realizes` holds it.
+
+A prop typed as a union of string literals, such as `variant: "default" | "outline"`, is listed
+under `variants` with its values. Pass one of a prop's listed `variants` values rather than
+restyling the component.
+Reference a theme value by its variable, as `var(--color-brand)` or `bg-[var(--color-brand)]`,
+never by a literal colour or size, so the catalogue's `tokens` lists the variables a component
+uses. A utility class such as `bg-brand` is not listed there.
+
 The widget `@pattern` names it reads, compared without case, spaces, hyphens or underscores, are
 `dialog`, `alert dialog`, `drawer`, `sheet`, `menu`, `menu button`, `tabs`, `combobox`,
 `autocomplete`, `listbox`, `select`, `tooltip`, `popover`, `toast`, `date picker`, `disclosure` and
@@ -63,23 +85,7 @@ only with a fallback that keeps the screen working where the feature is missing,
 block or a polyfill loaded only where the feature is absent; one with no such fallback is not used.
 `.qfai/assistant/rule/ui-procurement.md#platform-features-and-the-browser-support-target` holds the rule.
 
-Look a feature up before starting a new screen region, not from memory: in MDN, web.dev or the
-web-features data, taking its Baseline status from that source. Where the handoff's `procurement` row
-for the region lists `platformFeatures`, use those features; the prototype already looked them up.
-Record each other feature the region relies on in the doc comment of the component or page that realises it, one `@platform` line per feature after the catalogue tags: the feature, the source URL, the Baseline
-status that source gave and, for a feature newer than the target, `fallback:` and what serves where
-it is missing.
-
-```tsx
-/**
- * @source authored
- * @reason no catalogue item serves an expanding answer
- * @pattern faq answer
- * @platform details element; https://developer.mozilla.org/docs/Web/HTML/Element/details; Baseline Widely available
- */
-```
-
-`npx qfai catalog components` does not read a `@platform` line; the reviewers do.
+Consult the catalogue and current compatibility data. Only a feature beyond the browser-support target needs a selection record. Reuse the handoff exception if it still applies. Otherwise record why the feature is needed and how the user completes the task without it beside the implementation. Exercise the fallback in the affected environment.
 
 ## Design catalogue
 
