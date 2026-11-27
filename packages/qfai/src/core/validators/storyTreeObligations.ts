@@ -348,7 +348,12 @@ async function validateAbstractRuleCoverage(
   const issues: Issue[] = [];
   const sourceRefs = new Set<string>();
   const testRefs = new Set<string>();
-  const record = (content: string, file: string, refs: Set<string>) => {
+  const record = (
+    content: string,
+    file: string,
+    refs: Set<string>,
+    role: "implementation" | "test",
+  ) => {
     for (const [, id] of content.matchAll(BUSINESS_RULE_ANNOTATION)) {
       if (!id) continue;
       if (known.has(id)) refs.add(id);
@@ -361,19 +366,22 @@ async function validateAbstractRuleCoverage(
             file,
             "storyTree.undeclaredAnnotation",
             [id],
+            "canonical",
+            `Use a declared business rule ID in this ${role} file or remove the stale QFAI annotation.`,
           ),
         );
     }
   };
   const testPaths = new Set(tests.map((test) => path.resolve(root, test.file)));
   for (const test of tests) {
-    if (test.selectedForExample) record(test.content, toRelativePath(root, test.file), testRefs);
+    if (test.selectedForExample)
+      record(test.content, toRelativePath(root, test.file), testRefs, "test");
   }
   const src = resolvePath(root, config, "srcDir");
   try {
     const result = await collectFilesByGlobs(src, {
       globs: [
-        "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,vue,svelte,astro,html,css,scss,sql,py,rb,php,go,rs,swift,kt,kts,java,c,cc,cpp,h,hpp,cs,fs,fsx,dart,lua,sh,ex,exs,scala}",
+        "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,vue,svelte,astro,html,css,scss,sql,py,rb,php,go,rs,swift,kt,kts,java,groovy,c,cc,cpp,h,hpp,m,cs,fs,fsx,dart,lua,sh,ex,exs,scala}",
       ],
       ignore: [
         ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
@@ -385,7 +393,12 @@ async function validateAbstractRuleCoverage(
     if (result.truncated) throw new Error("Source file limit reached");
     for (const file of result.files) {
       if (!testPaths.has(path.resolve(file)))
-        record(await readFile(file, "utf8"), toRelativePath(root, file), sourceRefs);
+        record(
+          await readFile(file, "utf8"),
+          toRelativePath(root, file),
+          sourceRefs,
+          "implementation",
+        );
     }
   } catch (err) {
     return [
@@ -413,6 +426,10 @@ async function validateAbstractRuleCoverage(
             rule.file,
             "storyTree.ruleCoverage",
             [rule.id],
+            "canonical",
+            role === "implementation"
+              ? `Add a QFAI:${rule.id} comment to an implementation file under paths.srcDir.`
+              : `Add a QFAI:${rule.id} comment to a test file selected by validation.traceability.testFileGlobs.`,
           ),
         );
     }
