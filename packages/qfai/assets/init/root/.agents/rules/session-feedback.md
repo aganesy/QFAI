@@ -131,16 +131,18 @@ and filed under the user's own account. Fixed means the fix has reached the
 users the defect affects: it is on the project's default branch and, where the
 project releases or deploys, the evidence shows it in the production environment
 or the distribution channel those users get. A preview deployment or another
-channel's release does not count, and where the evidence cannot show it, the
-finding stays held back. An unfixed one is held back and named to the user in
-the review's own message, beside the § 5 question or in its one line when
-nothing else is worth reporting. The message says where the finding is, and
-names the pull request it came from, only where the host shows that it reaches
-the user alone, as `reply-forms.md` treats a place whose audience cannot be
-confirmed as not private. Otherwise it names the finding as held back without
-saying where it is. It suggests asking for its draft once the fix counts as
-fixed. Under a no-question mode the final report names it as held back, without
-saying where it is, since others may read that report.
+channel's release does not count, and where the evidence cannot show it, or
+cannot show whether the project releases or deploys at all, the finding stays
+held back. An unfixed one is held back and named to the user in the review's own
+message, beside the § 5 question or in its one line when nothing else is worth
+reporting. Only where the host shows that the message reaches the user alone
+does it say where the finding is, name the pull request it came from and suggest
+asking for its draft once the fix counts as fixed, as `reply-forms.md` treats a
+place whose audience cannot be confirmed as not private. Otherwise it names the
+finding as held back without saying where it is, and tells the user to ask for
+its details where only they will see the answer. Under a no-question mode the
+final report names it as held back, without saying where it is, since others may
+read that report.
 
 ## 3. What a draft holds
 
