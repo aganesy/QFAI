@@ -243,6 +243,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The end-of-session feedback review reads review findings too.** Besides
+  the session itself, it reads the findings reviewer sub-agents returned and
+  the review comments on the pull requests the session opened or answered
+  review on. Each finding QFAI's design, specification, implementation, test
+  or verification guidance should have prevented becomes an issue draft that
+  names the shipped skill, step, rule, template, command, hook or agent
+  definition to change. A
+  finding whose cause lies only in the project is not drafted, a security
+  finding is drafted only once the project has fixed it, and
+  `qfai session-review` still reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A
@@ -644,6 +654,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
+
+- Migration step 3 names contract IDs in the instructions for rewriting a
+  rejected constraint in plain words.
 
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
@@ -2230,6 +2243,15 @@ decisions` headings appeared anywhere in the file, so a record with several
   read it before removing that line, which is not JSON, so it found no rules
   and reported `Invalid structured contract`. The declaration line is now
   removed first, and the rest is read as JSON. Closes #4707.
+
+- **Markdown contract reviews cover both contract formats and give rule-specific repair steps.**
+  Validation reads business-rule annotations in recognised implementation
+  languages, including Groovy, Objective-C, Perl and Haskell, and tells
+  authors where to add or correct a business-rule annotation. Prototyping
+  guidance checks Markdown responsibilities and structured screen lists in prose
+  or Markdown list items.
+  Accessibility walkthroughs use the web routes each role can reach in the
+  running application or prototype for Markdown UI responsibilities.
 
 - **A null `requires:` is no longer read as an empty step list.** In a
   step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
