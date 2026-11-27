@@ -23,7 +23,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { copyFile, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -181,11 +181,12 @@ describe("receiving a GitHub response", () => {
   it("reports and saves the budget without saving a truncated job log", async () => {
     const root = await mkdtemp(path.join(await realpath(os.tmpdir()), "gh-budget-overflow-"));
     try {
-      const library = path.join("scripts", "lib", "bounded-read.mjs");
-      await mkdir(path.join(root, path.dirname(library)), { recursive: true });
-      for (const file of [SCRIPT_REL, library]) {
-        await copyFile(path.join(repoRoot, file), path.join(root, file));
-      }
+      const libraryDirectory = path.join("scripts", "lib");
+      await mkdir(path.join(root, "scripts"));
+      await copyFile(path.join(repoRoot, SCRIPT_REL), path.join(root, SCRIPT_REL));
+      await cp(path.join(repoRoot, libraryDirectory), path.join(root, libraryDirectory), {
+        recursive: true,
+      });
 
       // Inject the child error at the process boundary without a real call or a 64 MiB fixture.
       const preload = path.join(root, "overflow.cjs");

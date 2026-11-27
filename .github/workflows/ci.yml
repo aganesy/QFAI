@@ -351,7 +351,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           9b80c95d57c04e17369b07d2023cdb1754fc3dbc1969a54e9dafc85e6813c00c  scripts/check-toolchain-action.sh
-          5bee3495e6c13fa39501a17ebee75fa180a84f920f7766c6b426b40395f55079  .github/pinned-bytes.txt
+          9e672edbb3a91e7ac9ad1838aeeeec9137e798e781d24dcf2af53b4ba94bdd95  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -446,8 +446,8 @@ jobs:
         run: pnpm check-types:future
 
   # ── 3b. The supported floor ──────────────────────────────────────
-  # Every other toolchain job resolves `package.json#engines` — `>=20.19.0` with no
-  # ceiling — so `setup-node` gives all of them the newest satisfying release and
+  # Every other toolchain job resolves the range in `package.json#engines`.
+  # `setup-node` gives all of them the newest satisfying release and
   # nothing ever runs on the floor the package promises. Review finding [13]: an API
   # or syntax that exists in Node 24 and not in Node 20.19 passes every gate,
   # including the release gate, and breaks exactly the supported users the range was
@@ -511,8 +511,9 @@ jobs:
           # derives it from. Writing `v20.19.0` here would be the second literal the
           # repository's one-Node-literal rule exists to prevent, and it would go stale
           # in the direction that passes.
-          range="$(node -p "require('./packages/qfai/package.json').engines.node")"
-          expected="v${range#>=}"
+          # SHIPPED-CI: not-applicable
+          # Because: this verifies the Node floor of the package built by this repository.
+          expected="v$(node .github/actions/setup/node-engine-floor.mjs packages/qfai/package.json)"
           actual="$(node --version)"
           echo "node-floor: engines floor ${expected}, running ${actual}"
           if [ "$actual" != "$expected" ]; then

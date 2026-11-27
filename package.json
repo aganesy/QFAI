@@ -9,17 +9,17 @@
   },
   "packageManager": "pnpm@12.23.0",
   "engines": {
-    "node": ">=20.19.0"
+    "node": "^20.19.0 || ^22.13.0 || >=24.0.0"
   },
   "scripts": {
     "preinstall": "node ./scripts/check-not-a-dependency.mjs",
     "bootstrap": "node ./scripts/bootstrap.mjs",
     "graph:prepare": "node ./scripts/prepare-graph-tools.mjs",
     "build": "node ./scripts/run-package-build.mjs",
-    "sync:ssot": "node ./scripts/link-assistant-tree.mjs && node ./scripts/sync-init-to-root.mjs && node ./scripts/gen-codex-agents.mjs",
+    "sync:ssot": "node ./scripts/link-assistant-tree.mjs && node ./scripts/sync-init-to-root.mjs && node ./scripts/gen-codex-agents.mjs && node ./scripts/sync-shipped-workflow-toolchain.mjs",
     "ci:gate": "pnpm ci:gate:checks && pnpm -C packages/qfai test",
     "ci:gate:checks": "pnpm ci:gate:ssot && pnpm ci:gate:lint && pnpm ci:gate:types && pnpm ci:gate:build",
-    "ci:gate:ssot": "pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml packages/qfai/assets/init/.qfai/",
+    "ci:gate:ssot": "node ./scripts/sync-shipped-workflow-toolchain.mjs --check && pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml packages/qfai/assets/init/.qfai/",
     "ci:gate:lint": "bash ./scripts/run-lint-checks.sh gate",
     "ci:gate:types": "pnpm check-types",
     "ci:gate:build": "node ./scripts/check-build-warnings.mjs && pnpm verify:pack",
