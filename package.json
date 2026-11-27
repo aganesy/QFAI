@@ -9,7 +9,7 @@
   },
   "packageManager": "pnpm@12.23.0",
   "engines": {
-    "node": ">=20.19.0"
+    "node": "^20.19.0 || ^22.13.0 || >=24.0.0"
   },
   "scripts": {
     "preinstall": "node ./scripts/check-not-a-dependency.mjs",
@@ -49,7 +49,7 @@
     "prepack": "echo 'ERROR: Do not pack from repo root. Use packages/qfai/' && exit 1"
   },
   "devDependencies": {
-    "@asamuzakjp/css-color": "4.1.2",
+    "@asamuzakjp/css-color": "5.1.11",
     "@eslint/js": "^10.0.1",
     "@jackchuka/mdschema": "0.16.0",
     "@types/node": "^26.0.0",

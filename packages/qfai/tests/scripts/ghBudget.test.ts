@@ -153,7 +153,7 @@ describe("receiving a GitHub response", () => {
     });
   });
 
-  it("rejects the partial output of an interrupted GitHub CLI", () => {
+  it("rejects partial GitHub CLI output and tells the operator how to retry", () => {
     const execute = () => {
       throw Object.assign(new Error("Command was interrupted"), {
         signal: "SIGTERM",
@@ -163,7 +163,8 @@ describe("receiving a GitHub response", () => {
     };
 
     expect(ghApi("repos/owner/repo/actions/jobs/123/logs", execute)).toEqual({
-      error: "The GitHub CLI was interrupted (SIGTERM).",
+      error:
+        "The GitHub CLI was interrupted (SIGTERM). Rerun the same command once the interruption clears.",
       reading: { remaining: 2785, limit: 5000, reset: 1789723893, resource: "core" },
     });
   });

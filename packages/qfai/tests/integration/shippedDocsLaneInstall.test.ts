@@ -18,8 +18,8 @@
  * lays one out.
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
+import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -43,6 +43,7 @@ const TOOLS_DIR = "tmp/qfai-docs-tools";
  * installed a version written into the workflow could not pass by coincidence.
  */
 const DECLARED = "9.8.7";
+const YARN_RESOLVED = "6.5.4";
 const INSTALL_STEP = "Install the document-shape and diagram checkers";
 
 let initPromise: Promise<string> | undefined;
@@ -77,18 +78,32 @@ async function runBody(name: string): Promise<string> {
   return body;
 }
 
-type Recorded = { status: number | null; stderr: string; calls: string[][] };
+type Recorded = {
+  status: number | null;
+  stderr: string;
+  calls: string[][];
+  toolsManifest: unknown;
+};
 
 /**
  * Runs the install step in a project laid out as pnpm lays one out, with `npm` recording its arguments.
- * Each call is one line of the log: its arguments, joined by a tab.
+ * Each call is one line of the log: its arguments, joined by a tab. The stub also
+ * copies the tools manifest as it exists when npm starts.
  */
-async function runInstall(withQfai: boolean, declared: unknown = DECLARED): Promise<Recorded> {
+async function runInstall(
+  withQfai: boolean,
+  declared: unknown = DECLARED,
+  yarnResolved?: string,
+): Promise<Recorded> {
   const body = await runBody(INSTALL_STEP);
   const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-int-docs-install-run-"));
   try {
     await mkdir(path.join(stage, "node_modules", ".pnpm"), { recursive: true });
     await writeFile(path.join(stage, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n", "utf-8");
+    if (yarnResolved !== undefined) {
+      await writeFile(path.join(stage, ".pnp.cjs"), "", "utf-8");
+      await writeFile(path.join(stage, "yarn.lock"), "", "utf-8");
+    }
     if (withQfai) {
       const qfai = path.join(stage, "node_modules", "qfai");
       await mkdir(qfai, { recursive: true });
@@ -98,14 +113,29 @@ async function runInstall(withQfai: boolean, declared: unknown = DECLARED): Prom
       await writeFile(path.join(qfai, "package.json"), JSON.stringify(manifest), "utf-8");
     }
     const log = path.join(stage, "npm-calls.log");
+    const seenManifest = path.join(stage, "seen-manifest.json");
     const script = path.join(stage, "step.sh");
-    const prelude = `npm() { local IFS=$'\\t'; printf '%s\\n' "$*" >> "$NPM_LOG"; }\n`;
+    const prelude = `
+yarn() { printf '%s' "$YARN_RESOLVED"; }
+npm() {
+  local IFS=$'\\t'
+  printf '%s\\n' "$*" >> "$NPM_LOG"
+  if [ -f "${TOOLS_DIR}/package.json" ]; then
+    cp "${TOOLS_DIR}/package.json" "$SEEN_MANIFEST"
+  fi
+}
+`;
     await writeFile(script, `${prelude}${body}`, "utf-8");
     await writeFile(log, "", "utf-8");
     const child = spawnSync("bash", ["-e", "-o", "pipefail", script], {
       cwd: stage,
       encoding: "utf-8",
-      env: { ...process.env, NPM_LOG: log },
+      env: {
+        ...process.env,
+        NPM_LOG: log,
+        SEEN_MANIFEST: seenManifest,
+        YARN_RESOLVED: yarnResolved ?? "",
+      },
     });
     if (child.error !== undefined) throw child.error;
     const lines = (await readFile(log, "utf-8")).split(/\r?\n/).filter((line) => line !== "");
@@ -113,6 +143,9 @@ async function runInstall(withQfai: boolean, declared: unknown = DECLARED): Prom
       status: child.status,
       stderr: child.stderr ?? "",
       calls: lines.map((line) => line.split("\t")),
+      toolsManifest: existsSync(seenManifest)
+        ? JSON.parse(await readFile(seenManifest, "utf-8"))
+        : undefined,
     };
   } finally {
     await removeTempTree(stage);
@@ -123,10 +156,11 @@ describe("the delivered document lane installs its checkers outside the project'
   // QFAI:AC-0002-0003-04
   // QFAI:EX-0002-0003-07
   it.skipIf(!HAS_BASH).each([
-    ["depends on QFAI", true],
-    ["does not depend on QFAI", false],
-  ])("installs into its own prefix when the project %s", async (_name, withQfai) => {
-    const run = await runInstall(withQfai);
+    ["has QFAI in node_modules", true, undefined],
+    ["resolves QFAI through Yarn Plug'n'Play", false, YARN_RESOLVED],
+    ["does not depend on QFAI", false, undefined],
+  ])("installs into its own prefix when the project %s", async (_name, withQfai, yarnResolved) => {
+    const run = await runInstall(withQfai, DECLARED, yarnResolved);
 
     expect(run.status, run.stderr).toBe(0);
     // One install, so the checkers and QFAI land together rather than the second install pruning
@@ -146,8 +180,12 @@ describe("the delivered document lane installs its checkers outside the project'
     expect(packages).toEqual(
       withQfai
         ? [`@jackchuka/mdschema@${DECLARED}`, "mermaid@11.17.2", "jsdom@29.1.1"]
-        : ["mermaid@11.17.2", "jsdom@29.1.1", "qfai"],
+        : ["mermaid@11.17.2", "jsdom@29.1.1", yarnResolved ? `qfai@${yarnResolved}` : "qfai"],
     );
+    expect(run.toolsManifest).toEqual({
+      private: true,
+      overrides: { "mermaid@11.17.2": { katex: "0.18.2" } },
+    });
   });
 
   // QFAI:EX-0002-0003-07
@@ -198,7 +236,7 @@ describe("the delivered document lane installs its checkers outside the project'
       .map((step) => String(step["run"] ?? ""))
       .flatMap((body) => body.split(/\r?\n/))
       .map((line) => line.trim())
-      .filter((line) => line.startsWith("node "));
+      .filter((line) => line.startsWith("node ") && line.includes(" --tools "));
 
     expect(commands).toEqual([
       `node node_modules/qfai/assets/scripts/check-mdschema.mjs --tools ${TOOLS_DIR} --scope all --summary`,
@@ -207,6 +245,91 @@ describe("the delivered document lane installs its checkers outside the project'
       `node ${TOOLS_DIR}/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools ${TOOLS_DIR}`,
     ]);
   });
+
+  it.skipIf(!HAS_BASH).each([
+    ["0.18.2", true, 0],
+    ["0.18.1", true, 1],
+    ["0.18.2", false, 1],
+  ])(
+    "checks KaTeX %s and Mermaid entry (%s) before parsing diagrams",
+    async (version, entry, status) => {
+      const body = await runBody("Check Mermaid diagram syntax");
+      const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-int-docs-katex-"));
+      try {
+        const tools = path.join(stage, TOOLS_DIR, "node_modules");
+        const mermaid = path.join(tools, "mermaid");
+        const katex = path.join(mermaid, "node_modules", "katex");
+        const scripts = path.join(tools, "qfai", "assets", "scripts");
+        await mkdir(katex, { recursive: true });
+        await mkdir(scripts, { recursive: true });
+        if (entry) {
+          await writeFile(path.join(mermaid, "package.json"), '{"main":"index.cjs"}', "utf-8");
+          await writeFile(path.join(mermaid, "index.cjs"), "", "utf-8");
+        }
+        await writeFile(path.join(katex, "package.json"), JSON.stringify({ version }), "utf-8");
+        await writeFile(
+          path.join(scripts, "check-mermaid.mjs"),
+          'console.log("Mermaid checker ran");',
+          "utf-8",
+        );
+        const child = spawnSync("bash", ["-e", "-o", "pipefail", "-c", body], {
+          cwd: stage,
+          encoding: "utf-8",
+        });
+        if (child.error !== undefined) throw child.error;
+        expect(child.status, child.stderr).toBe(status);
+        if (status === 0) {
+          expect(child.stdout).toContain("Mermaid checker ran");
+        } else {
+          expect(child.stdout).not.toContain("Mermaid checker ran");
+          expect(child.stderr).toContain(
+            entry ? `Mermaid resolved KaTeX ${version}, expected 0.18.2` : "Cannot find module",
+          );
+        }
+      } finally {
+        await removeTempTree(stage);
+      }
+    },
+  );
+
+  it.skipIf(!HAS_BASH || process.env.GITHUB_ACTIONS !== "true")(
+    "installs patched KaTeX and parses a real diagram with the delivered docs steps",
+    { timeout: 150_000 },
+    async () => {
+      const installBody = await runBody(INSTALL_STEP);
+      const diagramBody = await runBody("Check Mermaid diagram syntax");
+      const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-int-docs-katex-install-"));
+      try {
+        const qfai = path.join(stage, "node_modules", "qfai");
+        const scripts = path.join(qfai, "assets", "scripts");
+        await mkdir(scripts, { recursive: true });
+        await writeFile(
+          path.join(qfai, "package.json"),
+          JSON.stringify({ dependencies: { "@jackchuka/mdschema": MDSCHEMA_VERSION } }),
+          "utf-8",
+        );
+        await copyFile(
+          new URL("../../assets/scripts/check-mermaid.mjs", import.meta.url),
+          path.join(scripts, "check-mermaid.mjs"),
+        );
+        await writeFile(
+          path.join(stage, "diagram.md"),
+          "```mermaid\nflowchart TD\nA --> B\n```\n",
+          "utf-8",
+        );
+        const options = { cwd: stage, encoding: "utf-8" as const, timeout: 60_000 };
+        const install = spawnSync("bash", ["-e", "-o", "pipefail", "-c", installBody], options);
+        if (install.error !== undefined) throw install.error;
+        expect(install.status, install.stderr).toBe(0);
+        const diagram = spawnSync("bash", ["-e", "-o", "pipefail", "-c", diagramBody], options);
+        if (diagram.error !== undefined) throw diagram.error;
+        expect(diagram.status, diagram.stderr).toBe(0);
+        expect(diagram.stdout).toContain("check-mermaid: 1 diagram(s) parsed in 1 file(s).");
+      } finally {
+        await removeTempTree(stage);
+      }
+    },
+  );
 });
 
 describe("the delivered document-schema rule tells how to run the document lane's checks locally", () => {

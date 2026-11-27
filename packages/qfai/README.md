@@ -88,7 +88,7 @@ upgrades.
 
 A fresh `qfai init` needs these on the machine before the first run:
 
-- Node.js 20.19.0 or later, to run `qfai` at all.
+- A Node.js version matching `^20.19.0 || ^22.13.0 || >=24.0.0` to run `qfai`.
 - Python 3.10 or later, and [`uv`](https://docs.astral.sh/uv/). Init installs
   Graphify, the document graph runtime, with them.
 - npm, which ships with Node.js. Init installs CodeGraph, the code graph

@@ -45,7 +45,7 @@ inputs:
       the newest release satisfying it. Any other value keeps the default.
 
       This exists for review finding [13]. Every toolchain job resolving the same broad
-      `>=20.19.0` range means `setup-node` gives all of them the newest satisfying
+      engines range means `setup-node` gives all of them the newest satisfying
       release, so nothing in CI or in the release gate ever runs on the floor the package
       promises — and an API or syntax present in Node 24 and absent in the floor passes
       every gate while breaking exactly the supported users the range was written for.
@@ -78,8 +78,8 @@ runs:
     - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
       id: shim
       # Corepack is BUNDLED with the Node line this repository floors at, and it
-      # stopped being bundled from Node 25 on. `engines.node` is `>=20.19.0` with
-      # no ceiling, and step 2 resolves "latest satisfying the range", so the day
+      # stopped being bundled from Node 25 on. `engines.node` has no ceiling,
+      # and step 2 resolves "latest satisfying the range", so the day
       # the runner image ships a Node past that boundary this command becomes
       # `corepack: command not found` — and every job that consumes this action
       # (lint, type checks, tests, the required build) stops being runnable at
@@ -96,9 +96,8 @@ runs:
       # The floor is READ from `engines.node` and never written here. A version literal in
       # this file would be the second answer to a question `engines.node` already answers,
       # and `TC-0017` pins the count of Node literals in this repository at one for that
-      # reason. `>=X.Y.Z` is the only shape this can pin: anything else is a hard failure
-      # rather than a guess, because a caller that asked for the floor and silently got the
-      # range back would report as the floor lane while testing nothing of the kind.
+      # reason. The resolver accepts exact versions and inclusive `>=` or `^` alternatives.
+      # It rejects any other shape instead of handing a floor lane an unpinned range.
       run: |
         set -euo pipefail
         # The bootstrap lives in one file beside this action, because `release.yml` runs it too.
@@ -145,35 +144,9 @@ runs:
               exit 1
               ;;
           esac
-          range="$(node -e 'const m = require(require("node:path").resolve(process.argv[1])); process.stdout.write(String(m.engines.node))' "${ENGINES_MANIFEST}")"
-          floor="${range#>=}"
-          case "$floor" in
-            [0-9]*.[0-9]*.[0-9]*) ;;
-            *)
-              echo "::error file=package.json::engines.node is '${range}'; this action can pin only a '>=X.Y.Z' floor"
-              exit 1
-              ;;
-          esac
-          case "$floor" in
-            *[!0-9.]*|*.*.*.*)
-              echo "::error file=package.json::engines.node floor '${floor}' is not a bare X.Y.Z"
-              exit 1
-              ;;
-          esac
-          # Each component on its own. The globs above are "digits and dots with three parts",
-          # which `20.19.0.5` and `20.019.0` both satisfy — neither is a version setup-node
-          # resolves, and handing it one is a failure two steps later rather than here.
-          rest="$floor"
-          for _part in 1 2 3; do
-            part="${rest%%.*}"
-            case "$part" in
-              ""|*[!0-9]*|0?*)
-                echo "::error file=package.json::engines.node floor '${floor}' has a component ('${part}') that is not a bare non-negative integer"
-                exit 1
-                ;;
-            esac
-            rest="${rest#*.}"
-          done
+          # SHIPPED-CI: not-applicable
+          # Because: adopters resolve their own Node range without this repository's floor lane.
+          floor="$(node "${QFAI_SETUP_ACTION_DIR}/node-engine-floor.mjs" "${ENGINES_MANIFEST}")"
           echo "version=${floor}" >> "$GITHUB_OUTPUT"
           echo "setup: pinning Node to the engines floor ${floor}"
         fi
@@ -181,6 +154,7 @@ runs:
         # Through the environment, so the input cannot be spliced into the script text.
         PIN_ENGINES_FLOOR: ${{ inputs.pin-engines-floor }}
         ENGINES_MANIFEST: ${{ inputs.engines-manifest }}
+        QFAI_SETUP_ACTION_DIR: ${{ github.action_path }}
       shell: bash
 
     # ── 2. Node, from a FILE ──────────────────────────────────────────────────
