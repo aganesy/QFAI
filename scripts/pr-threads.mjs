@@ -32,8 +32,8 @@
  *   node scripts/pr-threads.mjs defer <pr> <thread-id> <follow-up-issue>
  *
  * Exit codes: 0 answered, 1 the remaining budget is below the reserve, 2 the
- * arguments, `git` or `gh` could not be read, a GitHub comments page contained
- * invalid JSON or a non-list response, or `defer` was given a thread of another
+ * arguments, `git` or `gh` could not be read, GitHub returned invalid JSON or
+ * a comments response was not a list, or `defer` was given a thread of another
  * pull request or repository. A `gh` that fails or cannot be started
  * gives 2 and a line naming the operation it was doing, not a stack trace.
  */
@@ -225,7 +225,7 @@ export function foreignThread(slug, pr, response) {
   return `The thread belongs to ${nameWithOwner}#${String(pullRequest.number)}, not ${slug}#${String(requested)}.`;
 }
 
-/** A `gh` call that failed, with the operation it was doing. */
+/** A failed `gh` call or invalid response, with the operation it was doing. */
 class GhFailure extends Error {}
 
 /** Why `gh` failed: it could not be started, it exited with an error, or Node stopped it. */
@@ -247,6 +247,18 @@ function gh(args, operation) {
   } catch (error) {
     throw new GhFailure(`\`gh\` ${failureCause(error)} while ${operation}.`);
   }
+}
+
+function parseGhJson(body, operation) {
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new GhFailure(`GitHub returned invalid JSON while ${operation}.`);
+  }
+}
+
+function ghJson(args, operation) {
+  return parseGhJson(gh(args, operation), operation);
 }
 
 function origin() {
@@ -280,7 +292,7 @@ function readThreads(owner, repo, number) {
       `size=${String(PAGE_SIZE)}`,
     ];
     if (before !== undefined) args.push("-f", `before=${before}`);
-    const response = JSON.parse(gh(args, `reading the review threads of pull request ${number}`));
+    const response = ghJson(args, `reading the review threads of pull request ${number}`);
     const page = unresolvedThreads(response);
     if (page === undefined) return undefined;
     threads.unshift(...page);
@@ -354,20 +366,18 @@ function listCommand(slug, number) {
 }
 
 function replyCommand(threadId, bodyFile) {
-  const out = JSON.parse(
-    gh(
-      [
-        "api",
-        "graphql",
-        "-f",
-        `query=${REPLY_MUTATION}`,
-        "-F",
-        `id=${threadId}`,
-        "-F",
-        `body=@${bodyFile}`,
-      ],
-      `replying to review thread ${threadId}`,
-    ),
+  const out = ghJson(
+    [
+      "api",
+      "graphql",
+      "-f",
+      `query=${REPLY_MUTATION}`,
+      "-F",
+      `id=${threadId}`,
+      "-F",
+      `body=@${bodyFile}`,
+    ],
+    `replying to review thread ${threadId}`,
   );
   console.log(out?.data?.addPullRequestReviewThreadReply?.comment?.url ?? "replied");
   return 0;
@@ -375,7 +385,7 @@ function replyCommand(threadId, bodyFile) {
 
 function resolveCommand(threadIds) {
   for (const id of threadIds) {
-    gh(
+    ghJson(
       ["api", "graphql", "-f", `query=${RESOLVE_MUTATION}`, "-F", `id=${id}`],
       `resolving review thread ${id}`,
     );
@@ -389,6 +399,7 @@ function resolveCommand(threadIds) {
  * `gh`'s output so a body's own line breaks cannot split it.
  */
 function issueCommentBodies(slug, issue) {
+  const operation = `reading the comments of issue ${issue}`;
   const out = gh(
     [
       "api",
@@ -397,21 +408,19 @@ function issueCommentBodies(slug, issue) {
       "--jq",
       ".[].body | @json",
     ],
-    `reading the comments of issue ${issue}`,
+    operation,
   );
   return out
     .split("\n")
     .filter((line) => line.trim() !== "")
-    .map((line) => JSON.parse(line))
+    .map((line) => parseGhJson(line, operation))
     .filter((body) => typeof body === "string");
 }
 
 function deferCommand(slug, pr, threadId, issue) {
-  const response = JSON.parse(
-    gh(
-      ["api", "graphql", "-f", `query=${THREAD_QUERY}`, "-F", `id=${threadId}`],
-      `reading review thread ${threadId}`,
-    ),
+  const response = ghJson(
+    ["api", "graphql", "-f", `query=${THREAD_QUERY}`, "-F", `id=${threadId}`],
+    `reading review thread ${threadId}`,
   );
   const entry = deferredEntry(pr, response);
   if (entry === undefined) {
@@ -429,13 +438,13 @@ function deferCommand(slug, pr, threadId, issue) {
     return 0;
   }
   if (!done.recorded) {
-    gh(
+    ghJson(
       ["api", `repos/${slug}/issues/${issue}/comments`, "-f", `body=${entry}`],
       `recording the finding of review thread ${threadId} in issue ${issue}`,
     );
   }
   if (!done.replied) {
-    gh(
+    ghJson(
       [
         "api",
         "graphql",
@@ -450,7 +459,7 @@ function deferCommand(slug, pr, threadId, issue) {
     );
   }
   if (!done.resolved) {
-    gh(
+    ghJson(
       ["api", "graphql", "-f", `query=${RESOLVE_MUTATION}`, "-F", `id=${threadId}`],
       `resolving review thread ${threadId}`,
     );

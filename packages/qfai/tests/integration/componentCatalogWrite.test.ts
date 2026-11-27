@@ -16,7 +16,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { waitForCatalogueWriteHold } from "../helpers/catalogWriteHold.js";
+import { withCatalogueWriteHold } from "../helpers/catalogWriteHold.js";
 
 type FsPromises = typeof fsPromises;
 
@@ -172,11 +172,16 @@ describe("one run at a time scans and writes the catalogue", () => {
     const hold = holdBeforeRename();
     const err = collectStderr();
     const first = runCatalogComponents({ root, loadTypescript });
-    await waitForCatalogueWriteHold(hold.held, first, err);
-    await addComponent(root, "Beta", "b.tsx");
-    const second = await runCatalogComponents({ root, loadTypescript });
-    hold.resume();
-    expect(await first).toBe(0);
+    const { value: second, writerCode } = await withCatalogueWriteHold(
+      hold,
+      first,
+      err,
+      async () => {
+        await addComponent(root, "Beta", "b.tsx");
+        return runCatalogComponents({ root, loadTypescript });
+      },
+    );
+    expect(writerCode).toBe(0);
     vi.restoreAllMocks();
     expect(second).toBe(1);
     expect(err.join("")).toBe(
@@ -213,12 +218,11 @@ describe("one run at a time scans and writes the catalogue", () => {
     await addComponent(root, "Alpha", "a.tsx");
     const hold = holdBeforeRename();
     const err = collectStderr();
-    const running = runCatalogComponents({ root, loadTypescript });
-    await waitForCatalogueWriteHold(hold.held, running, err);
     const lock = otherRecord(process.pid);
-    await writeFile(lockFile(root), lock, "utf-8");
-    hold.resume();
-    const code = await running;
+    const running = runCatalogComponents({ root, loadTypescript });
+    const { writerCode: code } = await withCatalogueWriteHold(hold, running, err, () =>
+      writeFile(lockFile(root), lock, "utf-8"),
+    );
     vi.restoreAllMocks();
     expect(code).toBe(1);
     expect(err.join("")).toBe(

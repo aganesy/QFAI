@@ -9,7 +9,6 @@
  * permission: `chmod 000` does not stop a root user or a Windows process reading the file.
  */
 
-import { spawnSync } from "node:child_process";
 import { lstat, mkdir, mkdtemp, readFile, rm as rmFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -18,6 +17,7 @@ import type * as fsPromises from "node:fs/promises";
 import type * as boundedRead from "../../../src/shared/boundedRead.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createFifoFixture } from "../../helpers/fifoFixture.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
 
 type FsPromises = typeof fsPromises;
@@ -29,6 +29,12 @@ const { reads, boundedReads, reader } = vi.hoisted(() => ({
   boundedReads: new Array<{ path: string; maxBytes: number }>(),
   reader: { refuses: false },
 }));
+
+const largeTree = vi.hoisted(() => ({ directory: "", destination: "" }));
+const LARGE_TEMPLATE_COUNT = 200_000;
+const missingDestination = Object.assign(new Error("The fixture destination is absent."), {
+  code: "ENOENT",
+});
 
 vi.mock("../../../src/shared/boundedRead.js", async (importOriginal) => {
   const actual = await importOriginal<BoundedRead>();
@@ -46,6 +52,30 @@ vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
   return {
     ...actual,
+    lstat: (...args: Parameters<FsPromises["lstat"]>) => {
+      if (
+        largeTree.destination !== "" &&
+        typeof args[0] === "string" &&
+        args[0].startsWith(largeTree.destination + path.sep)
+      ) {
+        return Promise.reject(missingDestination);
+      }
+      return actual.lstat(...args);
+    },
+    readdir: (...args: Parameters<FsPromises["readdir"]>) => {
+      if (args[0] === largeTree.directory) {
+        const isFile = () => true;
+        const isDirectory = () => false;
+        return Promise.resolve(
+          Array.from({ length: LARGE_TEMPLATE_COUNT }, (_, index) => ({
+            name: `file-${index}.md`,
+            isFile,
+            isDirectory,
+          })),
+        );
+      }
+      return actual.readdir(...args);
+    },
     readFile: (...args: Parameters<FsPromises["readFile"]>) => {
       if (typeof args[0] === "string") {
         const key = path.resolve(args[0]);
@@ -56,7 +86,8 @@ vi.mock("node:fs/promises", async () => {
   };
 });
 
-const { copyTemplateTree } = await import("../../../src/core/fs/templateCopy.js");
+const { collectTemplateFiles, copyListedTemplateFiles, copyTemplatePaths, copyTemplateTree } =
+  await import("../../../src/core/fs/templateCopy.js");
 
 let root: string | undefined;
 
@@ -67,6 +98,8 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  largeTree.directory = "";
+  largeTree.destination = "";
   if (root !== undefined) await removeTempTree(root);
   root = undefined;
 });
@@ -89,6 +122,54 @@ async function trees(template: string, installed: string) {
 }
 
 const plain = { force: false, dryRun: false, conflictPolicy: "skip" } as const;
+
+async function createLargeTree() {
+  root = await mkdtemp(path.join(os.tmpdir(), "qfai-template-large-"));
+  const source = path.join(root, "source");
+  const destination = path.join(root, "destination");
+  const nested = path.join(source, "nested");
+  await mkdir(nested, { recursive: true });
+  await mkdir(destination);
+  largeTree.directory = nested;
+  largeTree.destination = destination;
+  return { source, destination, nested };
+}
+
+describe("enumerating a large template subtree", () => {
+  it("keeps every nested file in directory order", async () => {
+    const { source, nested } = await createLargeTree();
+    const files = await collectTemplateFiles(source);
+    expect(files).toHaveLength(LARGE_TEMPLATE_COUNT);
+    expect(files.findIndex((file, index) => file !== path.join(nested, `file-${index}.md`))).toBe(
+      -1,
+    );
+  });
+
+  it("keeps a large selected subtree between the surrounding selections", async () => {
+    const { source, destination } = await createLargeTree();
+    await writeFile(path.join(source, "before.md"), "before");
+    await writeFile(path.join(source, "after.md"), "after");
+
+    const { copied } = await copyTemplatePaths(
+      source,
+      destination,
+      ["before.md", "nested", "after.md"],
+      {
+        ...plain,
+        dryRun: true,
+      },
+    );
+    expect(copied).toHaveLength(LARGE_TEMPLATE_COUNT + 2);
+    expect(copied[0]).toBe(path.join(destination, "before.md"));
+    expect(copied.at(-1)).toBe(path.join(destination, "after.md"));
+    const nested = path.join(destination, "nested");
+    expect(
+      copied
+        .slice(1, -1)
+        .findIndex((file, index) => file !== path.join(nested, `file-${index}.md`)),
+    ).toBe(-1);
+  });
+});
 
 describe("comparing an installed template", () => {
   it("reads each file once when only the line endings differ", async () => {
@@ -145,16 +226,20 @@ describe("a directory where a template file goes", () => {
     { mode: "copy", dryRun: false },
     { mode: "dry run", dryRun: true },
   ])("refuses that destination and continues the forced $mode", async ({ dryRun }) => {
-    const { source, dest, destFile } = await trees("template\n", "installed\n");
+    const { source, dest, sourceFile, destFile } = await trees("template\n", "installed\n");
     await rmFile(destFile);
     await mkdir(destFile);
     const ownedFile = path.join(destFile, "owned.md");
     await writeFile(ownedFile, "project content\n");
-    await writeFile(path.join(source, "z-other.md"), "other template\n");
+    const otherSource = path.join(source, "other.md");
+    await writeFile(otherSource, "other template\n");
 
-    const result = await copyTemplateTree(source, dest, { force: true, dryRun });
+    const result = await copyListedTemplateFiles([sourceFile, otherSource], source, dest, {
+      force: true,
+      dryRun,
+    });
 
-    const other = path.join(dest, "z-other.md");
+    const other = path.join(dest, "other.md");
     expect(result.refused).toEqual([destFile]);
     expect(result.copied).toEqual([other]);
     expect((await lstat(destFile)).isDirectory()).toBe(true);
@@ -168,41 +253,24 @@ describe("a directory where a template file goes", () => {
 });
 
 describe("a FIFO where a template file goes", () => {
-  /** Replaces the installed `doc.md` with a FIFO, or skips the case where this process sees none. */
-  async function plantFifo(destFile: string, skip: () => void): Promise<void> {
-    if (process.platform === "win32") skip();
-    await rmFile(destFile);
-    // Git Bash ships `mkfifo`, but its FIFO lives in the MSYS layer and `lstat` here sees nothing,
-    // so the fixture is checked rather than the tool's exit status.
-    spawnSync("mkfifo", [destFile]);
-    const planted = await lstat(destFile).then(
-      (entry) => entry.isFIFO(),
-      () => false,
-    );
-    if (!planted) skip();
-  }
+  it.for([
+    { mode: "copy", dryRun: false },
+    { mode: "dry run", dryRun: true },
+  ])(
+    "refuses the destination and preserves the FIFO in a forced $mode",
+    async ({ dryRun }, ctx) => {
+      const { source, dest, destFile } = await trees("a\n", "a\n");
+      await rmFile(destFile);
+      const original = await createFifoFixture(destFile);
+      if (original === undefined) return ctx.skip("No usable FIFO fixture on this host.");
 
-  // QFAI:EX-0001-0022-04
-  it("is refused by a forced copy, which neither opens nor removes it", async (ctx) => {
-    const { source, dest, destFile } = await trees("a\n", "a\n");
-    await plantFifo(destFile, () => ctx.skip());
+      const result = await copyTemplateTree(source, dest, { force: true, dryRun });
 
-    const result = await copyTemplateTree(source, dest, { force: true, dryRun: false });
-
-    expect(result.refused).toEqual([path.join(dest, "doc.md")]);
-    expect(result.copied).toEqual([]);
-    expect((await lstat(destFile)).isFIFO()).toBe(true);
-  });
-
-  // QFAI:EX-0001-0022-04
-  it("is refused by a forced dry run too", async (ctx) => {
-    const { source, dest, destFile } = await trees("a\n", "a\n");
-    await plantFifo(destFile, () => ctx.skip());
-
-    const result = await copyTemplateTree(source, dest, { force: true, dryRun: true });
-
-    expect(result.refused).toEqual([path.join(dest, "doc.md")]);
-    expect(result.copied).toEqual([]);
-    expect((await lstat(destFile)).isFIFO()).toBe(true);
-  });
+      expect(result.refused).toEqual([destFile]);
+      expect(result.copied).toEqual([]);
+      const current = await lstat(destFile, { bigint: true });
+      expect(current.isFIFO()).toBe(true);
+      expect([current.dev, current.ino]).toEqual([original.dev, original.ino]);
+    },
+  );
 });
