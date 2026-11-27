@@ -249,7 +249,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review on. Each finding QFAI's design, specification, implementation, test
   or verification guidance should have prevented becomes an issue draft that
   names the shipped skill, step, rule, template or command to change. A
-  finding whose cause lies only in the project is not drafted, and
+  finding whose cause lies only in the project is not drafted, a security
+  finding is drafted only once the project has fixed it, and
   `qfai session-review` still reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
