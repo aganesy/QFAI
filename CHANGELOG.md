@@ -671,6 +671,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
   ancestors are directories. Other read failures retain the existing guidance.
 
+- Document graph cache restore checks the analysis directory and its processing
+  settings before native inventory. An ineligible snapshot leaves local analysis
+  available.
+
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
 - Restoring or publishing a completed document graph reuses the safety check
