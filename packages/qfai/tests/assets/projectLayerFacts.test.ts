@@ -32,7 +32,7 @@ import { parse as parseYaml } from "yaml";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const LAYER = ".instruction/02_project";
 const NODE_RANGE_CLAIM =
-  /(?:\^|>=)\s*\d+(?:\.\d+){0,2}(?:\s*\|\|\s*(?:\^|>=)\s*\d+(?:\.\d+){0,2})*/g;
+  /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?(?:`([~^<>=]*\s*v?\d[^`]*)`|((?:[~^<>=]+\s*)?v?\d+(?:\.[\dx*]+){0,2}(?:[ \t]*(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?v?\d+(?:\.[\dx*]+){0,2})*))/giu;
 
 /**
  * A backticked repository-relative path: one that starts at a root-level entry
@@ -87,6 +87,13 @@ function declaredNodeRange(manifest: unknown): string | undefined {
   if (!isRecord(engines)) return undefined;
   const node = engines["node"];
   return typeof node === "string" ? node : undefined;
+}
+
+function statedNodeRanges(markdown: string): string[] {
+  return Array.from(
+    withoutFencedBlocks(markdown).matchAll(NODE_RANGE_CLAIM),
+    ([, codeRange, plainRange]) => codeRange ?? plainRange,
+  ).filter((range) => range !== undefined);
 }
 
 function citedPaths(markdown: string): string[] {
@@ -400,6 +407,33 @@ describe("the project layer describes the repository it is in", () => {
     expect(undeferring, `each guide cites ${rule}`).toEqual([]);
   });
 
+  it("reads complete Node ranges and ignores unrelated version claims", () => {
+    expect(
+      statedNodeRanges(
+        [
+          "Use pnpm `^10.7.0` and a Node.js version matching `^20.19.0 || ^22.13.0 || >=24.0.0`.",
+          "Set `engines.node` to `>=22.13.0`. Use pnpm `^10.7.0`.",
+          "With Node.js already installed, use pnpm `^10.7.0`.",
+          "```md",
+          "An example supports Node.js `^18.0.0`.",
+          "```",
+        ].join("\n"),
+      ),
+    ).toEqual(["^20.19.0 || ^22.13.0 || >=24.0.0", ">=22.13.0"]);
+  });
+
+  it("retains extra alternatives and comparator bounds in a Node claim", () => {
+    const supported = "^20.19.0 || ^22.13.0 || >=24.0.0";
+    const extended = `${supported} || 23.x`;
+    const bounded = `${supported} <26.0.0`;
+
+    expect(
+      statedNodeRanges(
+        `The release supports Node.js\n\`${extended}\`. Node.js requires ${bounded}.`,
+      ),
+    ).toEqual([extended, bounded]);
+  });
+
   // The floor is the one fact in this layer with a machine-readable source, and
   // it moved twice without either file noticing. A stated floor must match; a
   // file that points at `package.json#engines` instead states nothing to match.
@@ -413,7 +447,7 @@ describe("the project layer describes the repository it is in", () => {
     const disagreeing: string[] = [];
     for (const name of await layerFiles()) {
       const text = await readFile(path.join(repoRoot, LAYER, name), "utf-8");
-      for (const [stated] of text.matchAll(NODE_RANGE_CLAIM)) {
+      for (const stated of statedNodeRanges(text)) {
         if (stated.replace(/\s+/g, "") !== engines?.replace(/\s+/g, "")) {
           disagreeing.push(`${name}: ${stated}`);
         }
@@ -434,9 +468,7 @@ describe("the project layer describes the repository it is in", () => {
     expect(engines, "package.json declares no Node range").not.toBeUndefined();
 
     const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
-    const stated = [...withoutFencedBlocks(guide).matchAll(NODE_RANGE_CLAIM)].map(
-      ([match]) => match,
-    );
+    const stated = statedNodeRanges(guide);
 
     expect(stated.length, "the release guide states no Node floor to check").toBeGreaterThan(0);
     expect(

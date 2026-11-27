@@ -1784,6 +1784,35 @@ describe("one lane runs on the floor `engines.node` declares", () => {
     }
   });
 
+  it("distinguishes unreadable manifests from malformed JSON without echoing their contents", () => {
+    const resolver = path.join(path.dirname(SETUP_ACTION), "node-engine-floor.mjs");
+    const root = mkdtempSync(path.join(tmpdir(), "qfai-node-floor-errors-"));
+    const missing = "missing\nmanifest.json";
+    const malformed = "invalid manifest.json";
+    const manifestContents = "PRIVATE-MANIFEST-CONTENT";
+    try {
+      writeFileSync(path.join(root, malformed), manifestContents, "utf-8");
+      for (const { file, reason } of [
+        { file: missing, reason: `Cannot read manifest ${JSON.stringify(missing)}.` },
+        {
+          file: malformed,
+          reason: `Manifest ${JSON.stringify(malformed)} contains malformed JSON.`,
+        },
+      ]) {
+        const result = spawnSync(process.execPath, [resolver, file], {
+          cwd: root,
+          encoding: "utf-8",
+        });
+        expect(result.status, result.error?.message).toBe(1);
+        expect(result.stdout).toBe("");
+        expect(result.stderr).toBe(`Cannot resolve the Node.js floor. ${reason}\n`);
+        expect(result.stderr).not.toContain(manifestContents);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("pins the lowest version from a disjunctive engines range in a separate checkout", () => {
     const step = setupActionSteps().find((candidate) => candidate["id"] === "shim");
     const body = step?.["run"];
