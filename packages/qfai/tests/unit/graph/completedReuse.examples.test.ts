@@ -220,7 +220,7 @@ it("restores a compatible completed local copy and confirms native freshness wit
 });
 
 // QFAI:EX-0001-0236-03
-// Mutation: packages/qfai/src/core/graph/reuse.ts `nativeRuntime.stdout.trim() !== "v24.16.0"` -> `false` fails "uses local generation for native copy combinations without independent restoration proof"
+// Mutation: packages/qfai/src/core/graph/reuse.ts `if (nativeRuntime.exitCode !== 0 || !verifiedNativeRelease(nativeRuntime.stdout)) return "cold";` -> `if (nativeRuntime.exitCode !== 0 || !verifiedNativeRelease(nativeRuntime.stdout)) return "restored";` fails "uses local generation for native copy combinations without independent restoration proof"
 it("uses local generation for native copy combinations without independent restoration proof", async () => {
   for (const platform of ["linux", "darwin"]) {
     const fixture = await completedCodeSnapshotFixture();
