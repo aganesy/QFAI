@@ -1700,7 +1700,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /A\s+security\s+finding\s+is\s+drafted\s+only\s+once\s+the\s+project\s+has\s+fixed\s+it,\s+and\s+its\s+evidence\s+names\s+only\s+the\s+class\s+of\s+defect,\s+never\s+where\s+it\s+was/,
         /An\s+unfixed\s+one\s+is\s+held\s+back\s+and\s+named\s+to\s+the\s+user\s+in\s+the\s+review's\s+own\s+message,\s+beside\s+the\s+§\s+5\s+question\s+or\s+in\s+its\s+one\s+line\s+when\s+nothing\s+else\s+is\s+worth\s+reporting/,
         /That\s+message\s+is\s+the\s+user's\s+alone,\s+so\s+it\s+may\s+say\s+where\s+the\s+finding\s+is/,
-        /It\s+names\s+the\s+pull\s+request\s+it\s+came\s+from\s+and\s+suggests\s+asking\s+for\s+its\s+draft\s+once\s+the\s+fix\s+counts\s+as\s+fixed/,
+        /It\s+names\s+the\s+pull\s+request\s+it\s+came\s+from,\s+where\s+there\s+is\s+one,\s+and\s+suggests\s+asking\s+for\s+its\s+draft\s+once\s+the\s+fix\s+counts\s+as\s+fixed/,
         /except\s+the\s+one\s+a\s+held-back\s+security\s+finding\s+names\s+when\s+the\s+user\s+later\s+asks\s+for\s+its\s+draft/,
         /Under\s+a\s+no-question\s+mode\s+the\s+final\s+report\s+names\s+it\s+as\s+held\s+back,\s+without\s+saying\s+where\s+it\s+is/,
         /A\s+held-back\s+security\s+finding\s+goes\s+there\s+too,\s+named\s+without\s+saying\s+where\s+it\s+is/,

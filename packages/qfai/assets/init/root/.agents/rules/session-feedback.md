@@ -133,10 +133,10 @@ default branch and, where the project releases or deploys, in a release or
 deployment. An unfixed one is held back and named to the user in the review's
 own message, beside the § 5 question or in its one line when nothing else is
 worth reporting. That message is the user's alone, so it may say where the
-finding is. It names the pull request it came from and suggests asking for its
-draft once the fix counts as fixed. Under a no-question mode the final report
-names it as held back, without saying where it is, since others may read that
-report.
+finding is. It names the pull request it came from, where there is one, and
+suggests asking for its draft once the fix counts as fixed. Under a no-question
+mode the final report names it as held back, without saying where it is, since
+others may read that report.
 
 ## 3. What a draft holds
 
