@@ -11,6 +11,7 @@ import {
 } from "../../../src/core/graph/process.js";
 import { graphCliResult } from "../../helpers/graphCli.js";
 
+// QFAI:BR-UI-0001-0005
 // QFAI:EX-0001-0234-13
 // Mutation: packages/qfai/src/core/graph/query.ts `coverage.unsupported.length > 0 || coverage.unreadable.length > 0` -> `false` fails "distinguishes unsupported and unreadable scope from no matches"
 it("distinguishes unsupported and unreadable scope from no matches", async () => {
