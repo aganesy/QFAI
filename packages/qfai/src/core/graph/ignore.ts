@@ -100,7 +100,10 @@ export async function ensureGraphGitignore(
           "From the repository root, review the indexed paths with `git ls-files -- .qfai/tools/`. " +
           "If you want a generated file to stay local, use `git --literal-pathspecs rm --cached -- <path>`. " +
           "Replace `<path>` with one exact path relative to the repository root and quote it for your shell. " +
-          "This keeps the files in your working tree. Keep an effective ignore rule for future output.",
+          "This keeps the files in your working tree. " +
+          "If Git refuses because the staged content differs, review and preserve the staged version before retrying. " +
+          "The staged content must match HEAD or the working file. " +
+          "Keep an effective ignore rule for future output.",
       ],
     };
   }
