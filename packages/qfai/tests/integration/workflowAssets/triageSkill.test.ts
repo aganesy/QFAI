@@ -59,7 +59,7 @@ describe("qfai-triage as a stage skill", () => {
     const front = frontMatterOf(await readShipped(SKILL));
     const description = String(front.description);
     expect(description).toMatch(/^Use when invoked by name or handed a QFAI work order\b/);
-    expect(description.length).toBeLessThanOrEqual(1024);
+    expect(Array.from(`${String(front.name)}${description}`).length).toBeLessThanOrEqual(400);
     expect(description).not.toMatch(/[<>]/);
     expect(Object.keys(front)).not.toContain("disable-model-invocation");
     expect(Object.keys(front)).not.toContain("routing-profile");
@@ -194,11 +194,9 @@ describe("qfai-triage invoked by name", () => {
     expect(completion).toMatch(/the stage commits only the records the Reviewer Gate allows/);
     const description = String(frontMatterOf(skill).description);
     expect(description).toContain(
-      "Ordinary triage limits tracked writes to its deliberation record, open questions and approval row.",
+      "Ordinary triage writes only its deliberation record, open questions and approval row.",
     );
-    expect(description).toContain(
-      "User-authorized operations may also make the tracked changes allowed by the Reviewer Gate.",
-    );
+    expect(description).toContain("Authorized operations follow the Reviewer Gate.");
     expect(flat(sectionOf(skill, "## Inputs"))).toMatch(
       /still writes the run's deliberation record when it asks the user a question or takes an agent decision, except in a private security intake: a run where `triage-security-intake` takes a vulnerability report in privately writes no deliberation record that could disclose it\. Its questions, decisions and severity stay in the ignored intake record that step names/,
     );
