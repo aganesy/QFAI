@@ -1432,6 +1432,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   `QFAI-COMP-004` with the reason when the catalogue path is unreadable or
   contains a symbolic link or junction.
 
+- `qfai validate` and `qfai catalog components --check` bound catalogue
+  reads to 8 MiB plus one byte from the verified file. Both report the limit
+  when the catalogue exceeds 8 MiB.
+
 - **`qfai catalog design` puts both files back on a volume with no inode
   numbers, and names a moved-aside file it cannot remove.** On such a volume a
   failed write left the new token file and a hidden moved-aside file behind;
