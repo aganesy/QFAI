@@ -668,6 +668,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
+- **Specification table checks respect list fences and row boundaries.**
+  Tables within fenced list examples are ignored, and comment-like text
+  in one table row can no longer hide subsequent visible rows.
+
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
 
