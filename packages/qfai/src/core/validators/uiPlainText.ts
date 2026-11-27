@@ -150,7 +150,7 @@ export type TsApi = {
     target: number,
     setParents: boolean,
     kind: number,
-  ): TsNode & { getLineAndCharacterOfPosition(pos: number): { line: number } };
+  ): TsNode & { getLineAndCharacterOfPosition(pos: number): { line: number; character: number } };
   SyntaxKind: Record<string, number>;
   NodeFlags: { Let: number; Const: number; Using?: number };
   ScriptTarget: { Latest: number };

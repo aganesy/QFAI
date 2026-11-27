@@ -557,16 +557,18 @@ function componentsOfFile(
       if (target && target.kind === k.Identifier) exported.add(target.getText());
     }
   }
-  // The text a component's citations are read from: its statement's leading comment lines, then
-  // its own declarator of a `const` list or the whole function. Each part starts at the beginning
-  // of the line its first character is on, so a comment after code on that line, which belongs
-  // to the code before it, stays a line that opens with code and is not counted.
-  const fromLineStart = (start: number, end: number): string =>
-    source.slice(source.lastIndexOf("\n", start - 1) + 1, end);
+  // When a declaration starts partway through a line, only indentation may precede a citation
+  // on that line. Inspect the prefix without including text from a different declaration.
+  const citationSlice = (start: number, end: number): string => {
+    const { character } = sourceFile.getLineAndCharacterOfPosition(start);
+    const prefix = source.slice(start - character, start);
+    const text = source.slice(start, end);
+    return /[^ \t]/.test(prefix) ? text.replace(/^[^\r\n\u2028\u2029]*/, "") : text;
+  };
   const declarationText = ({ statement, declarator }: Candidate): string =>
     declarator === undefined
-      ? fromLineStart(statement.pos, statement.end)
-      : `${fromLineStart(statement.pos, statement.getStart())}\n${fromLineStart(declarator.pos, declarator.end)}`;
+      ? citationSlice(statement.pos, statement.end)
+      : `${citationSlice(statement.pos, statement.getStart())}\n${citationSlice(declarator.pos, declarator.end)}`;
   // The text a component's theme variables are read from: the same parts, cut at their own first
   // character, so a declarator of a `const` list never takes a variable from the one before it.
   // The leading part starts on the line after the one holding the statement's first position
