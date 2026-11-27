@@ -774,7 +774,7 @@ function argumentWords(declaration: string): string[] {
   const first = tokens.next().value;
   const mode = first && ARGUMENT_MODES.has(first[0].toLowerCase()) ? first[0] : undefined;
   const name = mode === undefined ? first : tokens.next().value;
-  if (name?.groups?.["escape"] === undefined || name.index === undefined) {
+  if (name?.groups?.["escape"] === undefined) {
     return declaration.match(ARGUMENT_WORD) ?? [];
   }
 
