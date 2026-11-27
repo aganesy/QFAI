@@ -824,6 +824,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now uses `{/* mermaid-lint:ignore */}` on the line above the fence instead.
   Closes #5341.
 
+- **The shipped docs workflow installs patched KaTeX for Mermaid.** Its
+  temporary npm tool directory selects KaTeX 0.18.2 for
+  GHSA-238p-pmpm-9mq7. The workflow verifies the resolved version before
+  checking diagram syntax.
+
 - **The prototyping doctor probes the project Playwright shim first.** It uses
   `npx --no-install playwright --version` if the shim is unavailable or fails.
   The reported order matches the two probes. Closes #4773.
