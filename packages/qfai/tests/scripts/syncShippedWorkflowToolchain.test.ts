@@ -95,7 +95,16 @@ describe("shared setup in shipped workflows", () => {
         const step = "      - name: Install the document-shape and diagram checkers";
         return text.replace(`\r\n${step}`, `\n${step}`);
       },
-      error: /mixed line endings in qfai-docs\.yml/u,
+      error: /mixed or unsupported line endings in qfai-docs\.yml/u,
+    },
+    {
+      description: "a bare carriage return before a destination-only step",
+      newline: "\n",
+      change: (text: string) => {
+        const step = "      - name: Install the document-shape and diagram checkers";
+        return text.replace(`\n${step}`, `\r${step}`);
+      },
+      error: /mixed or unsupported line endings in qfai-docs\.yml/u,
     },
   ])("rejects $description before writing either workflow", async ({ newline, change, error }) => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "qfai-shipped-toolchain-"));

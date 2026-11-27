@@ -26,6 +26,9 @@ const SETUP_STEP_PREFIXES = [
 function readBlock(text, name) {
   const newline = text.includes("\r\n") ? "\r\n" : "\n";
   const lines = text.split(newline);
+  if (lines.some((line) => /[\r\n]/u.test(line))) {
+    throw new Error(`mixed or unsupported line endings in ${name}. Use LF or CRLF consistently.`);
+  }
   const first = lines.indexOf(SETUP_STEP_PREFIXES[0]);
   // A de-dented mapping key or comment ends the current sequence just as a
   // following list item does. In particular, the install step can end a job.
