@@ -26,7 +26,7 @@ import {
   runGraphProcess,
   type GraphProcess,
 } from "./process.js";
-import type { GraphReuseEnvironment } from "./reuse.js";
+import type { CheckedCorpus, GraphReuseEnvironment } from "./reuse.js";
 import {
   assertGraphStoragePath,
   assertIndependentAnalysis,
@@ -171,8 +171,9 @@ async function replaceDocumentAnalysis(
   approveExternal: ApproveExternalProcessing,
   environment?: GraphReuseEnvironment,
 ): Promise<DocumentPreparation> {
-  const inspect = async (analysis: string, refresh: boolean) =>
-    (await inspectDocumentScopeAt(root, analysis, run, refresh ? "in-place" : "none")).current;
+  const inspect = async (analysis: string, refresh: boolean, checked: CheckedCorpus) =>
+    (await inspectDocumentScopeAt(root, analysis, run, refresh ? "in-place" : "none", checked))
+      .current;
   const processing = await readGraphProcessing(root);
   // Restoration calls no backend, so only new generation needs one configured. A malformed
   // configuration is refused, and the inspection refuses a snapshot whose definition differs from
@@ -181,8 +182,8 @@ async function replaceDocumentAnalysis(
   // remote snapshot from another worktree is never restored as this one's analysis.
   const restoreInspect = processing
     ? inspect
-    : async (analysis: string, refresh: boolean) =>
-        (await recordsDefaultProcessing(analysis)) && inspect(analysis, refresh);
+    : async (analysis: string, refresh: boolean, checked: CheckedCorpus) =>
+        (await recordsDefaultProcessing(analysis)) && inspect(analysis, refresh, checked);
   if (
     (processing || (await processingConfigurationAbsent(root))) &&
     (await restoreCompletedDocumentAnalysis(root, run, restoreInspect, environment)) === "restored"
@@ -437,6 +438,7 @@ async function inspectDocumentScopeAt(
   analysis: string,
   run: GraphProcess,
   refresh: InputRefresh,
+  checkedCopy?: CheckedCorpus,
 ): Promise<DocumentScopeStatus> {
   const managed = await readOptionalJson(path.join(analysis, "graphify-out", "managed.json"));
   const selected = await readGraphProcessing(root);
@@ -453,8 +455,10 @@ async function inspectDocumentScopeAt(
     !sameProcessing(managed.processing, processing)
   )
     return notCurrent();
-  // This walk refuses every shared file and link the corpus walks below would, so they skip theirs.
-  const checked = await safeDocumentCopy(root, analysis, run);
+  // Reuse the check on this private copy. The same check also covers the corpus walks below.
+  const checked = checkedCopy?.covers(analysis)
+    ? checkedCopy
+    : await safeDocumentCopy(root, analysis, run);
   if (!checked) return notCurrent();
   const scope =
     object(processing) && validDocumentScope(processing.scope)
