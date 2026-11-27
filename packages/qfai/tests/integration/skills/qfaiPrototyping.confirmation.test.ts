@@ -553,10 +553,10 @@ describe.each(TREES)("%s", (tree) => {
   });
 
   // QFAI:AC-0001-0114-01
-  it("admits only a UI contract that declares a full ID and screens", async () => {
+  it("admits a Markdown UI responsibility or the declared screens of a structured contract", async () => {
     const grill = flat(await read(tree, "step/prototyping-grill/STEP.md"));
     expect(grill).toContain(
-      "a YAML file under `<contractsDir>/ui/` declaring a full `UI-NNNN` ID and a non-empty `screens[]`. Only those contracts enter the prototyping scope.",
+      "A Markdown UI contract contributes its declared responsibility to the loop. Derive screen routes and interactions in the prototype. Existing YAML contracts contribute their declared screens.",
     );
   });
 

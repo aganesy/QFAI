@@ -1,8 +1,6 @@
 # AI Agent Instructions
 
-The one entry file for every AI agent working in this repository (Claude Code, Codex, Copilot). It
-holds what every task needs and says when to read the rest. Quality-First AI (QFAI) is a verification
-framework and CLI for specification-driven development.
+Quality-First AI (QFAI) is a CLI and verification framework for specification-driven development.
 
 ## Stance
 
@@ -13,13 +11,16 @@ framework and CLI for specification-driven development.
   stores is English: `.agents/rules/repository-language.md`.
 - When you finish, report the summary, the impact, the commands you ran with their results, and the
   remaining risk. If something could not run, say why.
-- For planning, design, investigation, testing and review practice, read
-  `.instruction/00_universal/working-practice.md` when the task is more than a one-step change.
+- Read [working practice](.instruction/00_universal/working-practice.md) for tasks beyond one step.
+  Its [task-specific guidance](.instruction/00_universal/working-practice.md#task-specific-guidance) points to the detailed instructions.
+- Read `.instruction/01_specialties/work-scenarios.md` when a listed scenario matches the task
+  and you need its reading order.
+- Read `.agents/rules/graph-exploration.md` before searching, exploring or investigating code or
+  documents. Prefer the matching graph CLI. Ordinary search stays available.
 
 ## This repository
 
-This repository builds the QFAI package and is governed by what the package ships, so the same
-document often exists in two trees. **Edit the one the package carries.**
+**For shipped guidance, edit the package source.** This repository uses the guidance it ships.
 
 | Directory               | Role                                                                                                                                                                                            | Edit?                                                                                                              |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -30,25 +31,8 @@ document often exists in two trees. **Edit the one the package carries.**
 
 - An edit made directly to the generated assistant tree is reverted by the next `pnpm sync:ssot` and
   fails the tracked-tree diff in `pnpm ci:gate`.
-- The root depends on the package only through the pnpm workspace (`"qfai": "workspace:*"`). After
-  `pnpm install`, `pnpm build` and a second `pnpm install`, `node_modules/.bin/qfai` runs the local
-  build. Before that, and in CI, `npx qfai` fetches the published copy.
-- `npx qfai` runs the build of the checkout that owns the `node_modules` it resolves. A worktree that
-  needs its own build runs the three steps with its own `node_modules`, never through a junction
-  shared with another checkout. A new worktree has no `node_modules`: run
-  `pnpm install --frozen-lockfile` first, and merge `origin/main` into it before relying on its skills.
-- On Windows, Claude Code desktop sessions in worktrees under `.claude/worktrees/` have been seen
-  running the hooks of the main checkout's `.claude/settings.json`, not the worktree's. This was
-  observed, not confirmed in Claude Code's documentation. A main checkout behind `origin/main` then
-  sends its older reminders, such as an install check that warns on every prompt after the
-  worktree's own install. If that happens, fast-forward the main checkout to `origin/main`.
-- Where `pnpm` is not on `PATH`, run `corepack pnpm <script>`; `scripts/run-lint-checks.sh` falls back to it itself. npm stops at the `workspace:` protocol,
-  and `scripts/check-not-a-dependency.mjs` refuses a yarn install. On Windows a linked file reads as a
-  one-line path unless `core.symlinks` is enabled: open its target under
-  `packages/qfai/assets/init/root/.agents/rules/`.
-- Node.js and Bash must be on `PATH` for the two association-gate cases in
-  `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`. A case stops and names the missing tool
-  when either is unavailable.
+- Read [development setup](.instruction/02_project/development.md#setup) for workspace builds,
+  Windows worktrees and check prerequisites. Merge `origin/main` before relying on a new worktree's skills.
 - Editing a pinned file (the guard programs, the local actions and the other paths in
   `.github/pinned-bytes.txt`) changes digests in `.github/pinned-bytes.txt`,
   `.github/required-status-contexts.json` and `.github/workflows/ci.yml`. Run `pnpm pins:reseal`
@@ -58,13 +42,13 @@ document often exists in two trees. **Edit the one the package carries.**
 - After reviewing edits to shipped workflow run bodies or comments, run
   `pnpm pins:shipped-workflows` to refresh the workflow file and step body digests.
   Review changes to workflow, job or step structure and update their shape pins separately.
-- `.qfai/spec/03_contract/cli/` holds the contracts for QFAI's own command surface and for the files
-  QFAI writes into a consuming project; `api/`, `db/` and `ui/` beside it belong to the shipped
-  `qfai-sdd` skill (`packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`). Each contract is Markdown with no `QFAI-CONTRACT-ID`, declares `# CLI-NNNN: <title>`
-  in its H1, is named `cli-NNNN-<slug>.md`, and has one row in `.qfai/spec/03_contract/contracts.md`.
-  Each kind numbers its contracts in its own sequence, and a number is never reused within its
-  kind. A business rule names its contract's kind and number, as `BR-CLI-0014-0092`. `qfai validate`
-  reports a contract whose ID, file name and index row disagree.
+- `.qfai/spec/03_contract/cli/` specifies QFAI's commands and the files it writes into projects.
+  The neighboring API, DB and UI contracts follow the shipped
+  [contract artifact rules](packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md).
+  A CLI contract uses the H1 `# CLI-NNNN: <title>`, the filename `cli-NNNN-<slug>.md` and one row in
+  `.qfai/spec/03_contract/contracts.md`. It has no `QFAI-CONTRACT-ID`. Number each kind separately
+  without reuse and name the kind and number in its business rules, as in `BR-CLI-0014-0092`.
+  `qfai validate` reports mismatches among the ID, filename and index row.
 
 ## Code and checks
 
@@ -90,8 +74,7 @@ document often exists in two trees. **Edit the one the package carries.**
 
 ## Rules: what to read, and when
 
-The masters under `.agents/rules/` are the single source of truth. A `<name>.local.md` is an overlay
-with what is specific to this repository; read it with its master.
+Read the rule masters under `.agents/rules/` with their repository-specific `<name>.local.md` overlays.
 
 | Rule                                                                 | In short                                                                                                                          | Read when                                                                                       |
 | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -115,22 +98,3 @@ with what is specific to this repository; read it with its master.
 | `shipped-ci-parity.md`                                               | A CI change reaches the shipped templates or says why not                                                                         | You change CI                                                                                   |
 | `ai-readable-markdown.md`                                            | An agent-read Markdown file stays within 500 lines                                                                                | You write Markdown an agent reads                                                               |
 | `instruction-tree.md`                                                | What `.instruction/` may say                                                                                                      | You edit `.instruction/`                                                                        |
-
-## More guidance (`.instruction/`)
-
-| When                             | Read                                                                                                                                                            |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Thinking, quality, communication | `00_universal/thinking.md`, `quality.md`, `communication.md`, `working-practice.md`                                                                             |
-| Planning, consulting, design     | `01_specialties/planning.md`, `consultation.md`, `design.md`                                                                                                    |
-| Implementing                     | `01_specialties/implementation.md`, `development-principles-checklist.md`, `-automation.md`, `-metrics.md`                                                      |
-| Testing and quality judgment     | `01_specialties/testing.md`, `quality-evaluation.md`                                                                                                            |
-| Investigating or debugging       | `01_specialties/investigation-debug.md`                                                                                                                         |
-| Project facts                    | `02_project/`: `architecture`, `tech-stack`, `development`, `domain`, `patterns`, `spec-driven-development`, `mcp`, `agent-selection`, `orchestrator`, `naming` |
-| A tool's quirks                  | `03_ai-agents/codex/`, `03_ai-agents/claude-code/`, `03_ai-agents/copilot/`                                                                                     |
-
-Read `.instruction/01_specialties/work-scenarios.md` when the task matches one of its scenarios (a feature,
-a bug fix, a refactor, a security change, a release check and so on) and you need the order to read the
-documents in. It is not needed when the task is already clear.
-
-- Read `.agents/rules/graph-exploration.md` before searching, exploring or investigating code or documents: prefer the matching
-  graph CLI first; ordinary search stays acceptable, and no tool blocks it.

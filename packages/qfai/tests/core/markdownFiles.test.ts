@@ -98,9 +98,10 @@ describe("Markdown under the specs directory in the UI/UX group", () => {
   });
 
   it("fails the read with the read's own error when a file is there but cannot be read", async () => {
-    // The reader passes the failure on unchanged; the incomplete-run finding names the file from
-    // the error's `path`, as `validateRunUnreadableMarkdown.test.ts` shows. Matching the path here
-    // would only match the text this stub wrote.
+    // Exercise markdownFileReader directly at the UI/UX read boundary.
+    // A persistently unreadable spec file stops validation at the earlier story-tree read.
+    // validateRunUnreadableMarkdown.test.ts covers that CLI diagnostic and its file path.
+    // At this boundary the original file error must reach the caller unchanged.
     const root = await projectWithMockAndFlow();
     const specsDir = path.join(root, ".qfai", "specs");
     await writeFile(path.join(specsDir, "denied.md"), "# Denied\n", "utf-8");

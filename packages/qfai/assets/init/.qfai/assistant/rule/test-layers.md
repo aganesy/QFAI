@@ -81,10 +81,11 @@ reachability rather than one flow, so it carries no BF annotation.
 Check the built app with axe through Playwright (`@axe-core/playwright`),
 limited to the WCAG 2.2 A and AA rules: the axe tags `wcag2a`, `wcag2aa`,
 `wcag21a`, `wcag21aa` and `wcag22aa`. The layer applies to a project whose UI
-contracts declare a screen with a web route, one that starts with `/`. Check
-every such route as each role that can reach it, signed in through the E2E
-layer's sign-in for that role. Check a route a visitor reaches before signing
-in with no session.
+contracts declare a screen with a web route, one that starts with `/`, or a
+Markdown UI responsibility on a web surface. For Markdown, derive the routes
+from the running app or prototype. Check every such route as each role that
+can reach it, signed in through the E2E layer's sign-in for that role. Check a
+route a visitor reaches before signing in with no session.
 
 - Report each violation by route and rule: the route, the role, the axe rule
   ID and the number of elements it found.
