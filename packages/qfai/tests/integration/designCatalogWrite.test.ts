@@ -23,7 +23,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { waitForCatalogueWriteHold } from "../helpers/catalogWriteHold.js";
+import { withCatalogueWriteHold } from "../helpers/catalogWriteHold.js";
 
 type FsPromises = typeof fsPromises;
 type RenameFault = (from: string, to: string) => boolean;
@@ -375,13 +375,12 @@ describe("the design catalogue is written only inside the project, by the run th
       const hold = holdBeforeTheme();
       const err = captureStderr();
       const running = runCatalogDesign({ root });
-      await waitForCatalogueWriteHold(hold.held, running, err);
-      // Another file put in place by rename, so it never shares the placed file's inode.
-      const other = catalogFile(root, ".design.tokens.json.other-run");
-      await writeFile(other, '{ "other": "run" }\n', "utf-8");
-      await rename(other, catalogFile(root, "design.tokens.json"));
-      hold.resume();
-      const code = await running;
+      const { writerCode: code } = await withCatalogueWriteHold(hold, running, err, async () => {
+        // Another file put in place by rename, so it never shares the placed file's inode.
+        const other = catalogFile(root, ".design.tokens.json.other-run");
+        await writeFile(other, '{ "other": "run" }\n', "utf-8");
+        await rename(other, catalogFile(root, "design.tokens.json"));
+      });
       vi.restoreAllMocks();
       expect(code).toBe(1);
       expect(err.join("")).toMatch(
@@ -490,11 +489,16 @@ describe("the design catalogue is written only inside the project, by the run th
     const hold = holdBeforeTheme();
     const err = captureStderr();
     const first = runCatalogDesign({ root });
-    await waitForCatalogueWriteHold(hold.held, first, err);
-    await changePrimary(root);
-    const second = await runCatalogDesign({ root });
-    hold.resume();
-    expect(await first).toBe(0);
+    const { value: second, writerCode } = await withCatalogueWriteHold(
+      hold,
+      first,
+      err,
+      async () => {
+        await changePrimary(root);
+        return runCatalogDesign({ root });
+      },
+    );
+    expect(writerCode).toBe(0);
     vi.restoreAllMocks();
     expect(second).toBe(1);
     expect(err.join("")).toBe(
@@ -537,12 +541,11 @@ describe("the design catalogue is written only inside the project, by the run th
     await changePrimary(root);
     const hold = holdBeforeTheme();
     const err = captureStderr();
-    const running = runCatalogDesign({ root });
-    await waitForCatalogueWriteHold(hold.held, running, err);
     const lock = otherRecord(process.pid);
-    await writeFile(lockFile(root), lock, "utf-8");
-    hold.resume();
-    const code = await running;
+    const running = runCatalogDesign({ root });
+    const { writerCode: code } = await withCatalogueWriteHold(hold, running, err, () =>
+      writeFile(lockFile(root), lock, "utf-8"),
+    );
     vi.restoreAllMocks();
     expect(code).toBe(1);
     expect(err.join("")).toBe(
@@ -568,12 +571,11 @@ describe("the design catalogue is written only inside the project, by the run th
     const hold = holdBeforeTheme();
     fault.rename = placesTheme;
     const err = captureStderr();
-    const running = runCatalogDesign({ root });
-    await waitForCatalogueWriteHold(hold.held, running, err);
     const lock = otherRecord(process.pid);
-    await writeFile(lockFile(root), lock, "utf-8");
-    hold.resume();
-    const code = await running;
+    const running = runCatalogDesign({ root });
+    const { writerCode: code } = await withCatalogueWriteHold(hold, running, err, () =>
+      writeFile(lockFile(root), lock, "utf-8"),
+    );
     vi.restoreAllMocks();
     expect(code).toBe(1);
     expect(err.join("")).toBe(

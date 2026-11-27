@@ -115,6 +115,7 @@ vi.mock("node:fs", async (importOriginal) => {
 });
 
 const gitListingFault = vi.hoisted(() => ({ enabled: false }));
+const gitListingOutput = vi.hoisted((): { paths: string[] | null } => ({ paths: null }));
 
 vi.mock("node:child_process", async (importOriginal) => {
   const actual = await importOriginal<typeof NodeChildProcess>();
@@ -122,13 +123,15 @@ vi.mock("node:child_process", async (importOriginal) => {
     ...actual,
     spawnSync(command: string, args?: string[] | SpawnSyncOptions, options?: SpawnSyncOptions) {
       if (!Array.isArray(args)) return actual.spawnSync(command, args);
-      if (
-        gitListingFault.enabled &&
-        command === "git" &&
-        args[0] === "ls-files" &&
-        args[1] === "--others"
-      ) {
-        return actual.spawnSync(command, ["ls-files", "--qfai-invalid-option"], options);
+      if (command === "git" && args[0] === "ls-files" && args[1] === "--others") {
+        if (gitListingFault.enabled) {
+          return actual.spawnSync(command, ["ls-files", "--qfai-invalid-option"], options);
+        }
+        const result = actual.spawnSync(command, args, options);
+        if (gitListingOutput.paths !== null) {
+          gitListingOutput.paths = String(result.stdout).split("\0").filter(Boolean);
+        }
+        return result;
       }
       return actual.spawnSync(command, args, options);
     },
@@ -994,6 +997,32 @@ describe("the ratchet in --scope changed", () => {
     expect(result.stdout + result.stderr).not.toContain("business-flow-0004");
   });
 
+  it.each(["0", "1"])(
+    "captures only untracked Markdown with Git literal mode %s",
+    async (literal) => {
+      const tracked = { "business-flow-0001": CONFORMING_FLOW };
+      const root = await twoCommits(tracked, tracked);
+      const candidate = await writeFlow(root, "business-flow-0003", CONFORMING_FLOW);
+      await writeFile(path.join(root, "notes.MD"), "ignored by document scope\n", "utf8");
+      await writeFile(path.join(root, "unrelated.txt"), "not Markdown\n", "utf8");
+      await writeFile(path.join(root, "ignored.md"), "ignored by Git\n", "utf8");
+      await writeFile(path.join(root, ".git", "info", "exclude"), "/ignored.md\n", "utf8");
+
+      const argv = process.argv;
+      try {
+        vi.stubEnv("GIT_LITERAL_PATHSPECS", literal);
+        gitListingOutput.paths = [];
+        process.argv = ["node", SCRIPT, "--root", root, "--scope", "changed", "--base", "main"];
+        expect(main()).toBe(0);
+        expect(gitListingOutput.paths).toEqual([candidate, "notes.MD"]);
+      } finally {
+        vi.unstubAllEnvs();
+        gitListingOutput.paths = null;
+        process.argv = argv;
+      }
+    },
+  );
+
   // QFAI:EX-0001-0011-29
   it("still fails for what the branch owes when it also edits a legacy document", async () => {
     const root = await twoCommits(
@@ -1051,6 +1080,15 @@ describe("the ratchet in --scope changed", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("pre-existing");
     expect(result.stdout).toContain("Root heading is");
+    expect(result.stdout.split(/\r?\n/)).toContain(
+      path.posix.join(
+        ".qfai",
+        "specs",
+        "02_business-flow",
+        "business-flow-0002",
+        "business-flow.md",
+      ),
+    );
   });
 
   // QFAI:EX-0001-0011-29
