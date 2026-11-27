@@ -2094,6 +2094,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   check, so doctor reported the required lane installed although GitHub had
   no workflow there. The lane now counts only as a readable regular file.
 
+- **Doctor's help explains `--dry-run` with `--out`.** A dry run previews
+  repairs. When a diagnosis is produced, `--out` still writes it. The contract
+  now records that relative output paths resolve against the checked project root.
+
 - **Verification reads its context from the configured spec and contract
   directories.** The `verify-context` step read the policy, contracts and
   `decisions.md` from the default `.qfai/spec` paths, and looked for gate

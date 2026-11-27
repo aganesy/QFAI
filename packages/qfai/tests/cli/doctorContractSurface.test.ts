@@ -155,9 +155,8 @@ describe("`qfai doctor` CLI contract surface", () => {
   });
 
   it("declares the `--out` write, which needs neither mutating flag", async () => {
-    // `runDoctor` creates the parent directories and writes the file on any
-    // invocation carrying `--out`, so "doctor writes nothing unless --clean or
-    // --autoremediate" would be false for the one write an operator names.
+    // `runDoctor` creates the parent directories and writes `--out` when it
+    // builds a diagnosis, even when the operator does not ask for a repair.
     const rules = await readRules();
 
     const out = ruleWith(rules, "With `--out <path>`");
@@ -210,7 +209,8 @@ describe("`qfai doctor` CLI contract surface", () => {
 
     expect(statement).toContain("only the changes that pass would make");
     expect(statement).toContain("would remove -> <run id>");
-    expect(statement).toContain("writes nothing");
+    expect(statement).toContain("does not apply the planned repairs");
+    expect(statement).toContain("an explicitly requested `--out` report is still written");
   });
 
   it("keeps the `--yes` confirmation gate as a requirement", async () => {
