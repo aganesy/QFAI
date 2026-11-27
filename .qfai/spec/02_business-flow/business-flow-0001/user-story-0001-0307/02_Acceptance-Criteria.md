@@ -113,9 +113,9 @@ Feature: Catalogue the components a project already has
 
   # AC-0001-0307-15
   Scenario: An agent's brief carries the committed catalogue
-    Given a committed `.qfai/catalog/components.yaml` and design token file
+    Given a committed `.qfai/catalog/components.yaml` and optional design artifacts
     When `qfai catalog components --brief` runs
-    Then it writes nothing and prints one line per listed component with its name, file and every other key it holds, and one line with the token count and the theme
+    Then it writes nothing and prints one line per listed component with its name, file and every other key it holds, and a final line when a token file is present with the token count or a parse note, and the theme path when present
     And a missing, invalid or unreadable catalogue, or a token file or theme that exists but cannot be read, exits 1 with one line naming that file
     And `--brief` with `--check` is a usage error that exits 2
     And the shipped implementation UI guidance and the prototyping generator prompt say to include that output in a screen unit's brief

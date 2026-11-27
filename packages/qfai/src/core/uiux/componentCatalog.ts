@@ -204,7 +204,14 @@ export function renderCatalog(components: readonly CatalogComponent[]): string {
 export async function inspectComponentCatalogPath(
   root: string,
 ): Promise<{ file: string; entry?: BigIntStats }> {
-  const segments = COMPONENT_CATALOG_PATH.split(path.sep);
+  return inspectCatalogArtifactPath(root, COMPONENT_CATALOG_PATH);
+}
+
+async function inspectCatalogArtifactPath(
+  root: string,
+  relative: string,
+): Promise<{ file: string; entry?: BigIntStats }> {
+  const segments = relative.split(path.sep);
   const shown = segments.join("/");
   const unsafe = await findUnsafeWrapperComponent(root, segments.slice(0, -1).join("/"));
   if (unsafe) {
@@ -212,7 +219,7 @@ export async function inspectComponentCatalogPath(
     throw new Error(unsafe.relativePath + " is " + reason + ".");
   }
 
-  const file = path.join(root, COMPONENT_CATALOG_PATH);
+  const file = path.join(root, relative);
   let existing;
   try {
     existing = await lstat(file, { bigint: true });
@@ -225,22 +232,28 @@ export async function inspectComponentCatalogPath(
   return { file, entry: existing };
 }
 
-/** The committed catalogue, if there is one and it holds a list of components. */
-export async function readCatalog(root: string): Promise<CatalogRead> {
-  const checked = await inspectComponentCatalogPath(root).catch((error: unknown) => ({
+export type CatalogArtifactRead =
+  Extract<CatalogRead, { state: "unreadable" | "absent" }> | { state: "read"; text: string };
+
+/** Read a bounded catalogue artifact, or verify a file is readable without loading it. */
+export async function readCatalogArtifact(
+  root: string,
+  relative: string,
+  mode: "text" | "presence" = "text",
+): Promise<CatalogArtifactRead> {
+  const checked = await inspectCatalogArtifactPath(root, relative).catch((error: unknown) => ({
     reason: describeError(error),
   }));
   if ("reason" in checked) return { state: "unreadable", reason: checked.reason };
   if (!checked.entry) return { state: "absent" };
 
-  let text: string;
   try {
     const handle = await open(checked.file, CATALOG_READ_FLAGS);
     try {
       const held = await handle.stat({ bigint: true });
       // Recheck the parents and named leaf before reading from this handle.
       // Ceiling: Node cannot pin the parent directory walk and open in one operation.
-      const current = await inspectComponentCatalogPath(root);
+      const current = await inspectCatalogArtifactPath(root, relative);
       if (
         !held.isFile() ||
         !sameObject(checked.entry, held) ||
@@ -249,27 +262,44 @@ export async function readCatalog(root: string): Promise<CatalogRead> {
       ) {
         return {
           state: "unreadable",
-          reason: "The component catalogue path changed during the read.",
+          reason:
+            relative === COMPONENT_CATALOG_PATH
+              ? "The component catalogue path changed during the read."
+              : "The catalogue artifact path changed during the read.",
         };
       }
+      if (mode === "presence") return { state: "read", text: "" };
       const bytes =
         held.size > BigInt(COMPONENT_CATALOG_MAX_BYTES)
           ? undefined
           : await readHandleWithin(handle, COMPONENT_CATALOG_MAX_BYTES);
       if (bytes === undefined) {
+        if (relative !== COMPONENT_CATALOG_PATH) {
+          return {
+            state: "unreadable",
+            reason: `The file exceeds ${COMPONENT_CATALOG_MAX_BYTES} bytes.`,
+          };
+        }
         return {
           state: "unreadable",
           reason: COMPONENT_CATALOG_SIZE_REASON,
           suggestedAction: COMPONENT_CATALOG_SIZE_RECOVERY,
         };
       }
-      text = bytes.toString("utf8");
+      return { state: "read", text: bytes.toString("utf8") };
     } finally {
       await handle.close();
     }
   } catch (error: unknown) {
     return { state: "unreadable", reason: hasErrnoCode(error) ? error.code : describeError(error) };
   }
+}
+
+/** The committed catalogue, if there is one and it holds a list of components. */
+export async function readCatalog(root: string): Promise<CatalogRead> {
+  const file = await readCatalogArtifact(root, COMPONENT_CATALOG_PATH);
+  if (file.state !== "read") return file;
+  const { text } = file;
 
   let parsed: unknown;
   try {

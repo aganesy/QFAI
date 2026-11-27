@@ -3,7 +3,7 @@
  * made from the committed catalogue and run through the CLI entry.
  */
 
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, truncate, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -86,7 +86,7 @@ describe("the brief made from the committed catalogue", () => {
       [THEME]: "@theme {}\n",
     });
     const before = await snapshot(root);
-    const first = await cli(["catalog", "components", "--brief", "--root", root]);
+    const first = await cli(["catalog", "components", "--brief"], root);
     expect(first.err).toBe("");
     expect(first.code).toBe(0);
     expect(first.out).toBe(
@@ -151,6 +151,32 @@ describe("the brief made from the committed catalogue", () => {
     expect(lastLine).toContain(THEME);
   });
 
+  // QFAI:EX-0001-0307-44
+  it("counts tokens in deeply nested groups", async () => {
+    const groups = 12_000;
+    const root = await projectWith({
+      [CATALOG]: CATALOG_TEXT,
+      [TOKENS]: '{"group":'.repeat(groups) + '{"token":{"$value":"value"}}' + "}".repeat(groups),
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    expect(brief.err).toBe("");
+    expect(brief.out.trimEnd().split("\n").at(-1)).toBe(`Design tokens: 1 in ${TOKENS}`);
+  });
+
+  // QFAI:EX-0001-0307-45
+  it("rejects cyclic additional catalogue fields in one line", async () => {
+    const root = await projectWith({
+      [CATALOG]:
+        "components:\n  - name: Page\n    file: src/page.tsx\n    notes: &notes { self: *notes }\n",
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(1);
+    expect(brief.out).toBe("");
+    expect(brief.err.trimEnd().split("\n")).toHaveLength(1);
+    expect(brief.err).toContain(`${CATALOG} is not a component catalogue`);
+  });
+
   // QFAI:EX-0001-0307-45
   it("refuses a missing or invalid catalogue in one line and --brief with --check as a usage error", async () => {
     const root = await projectWith({});
@@ -199,6 +225,27 @@ describe("the brief made from the committed catalogue", () => {
       expect(run.out).toBe("");
       expect(run.err).toMatch(couldNotRead(failing));
     }
+  });
+
+  // QFAI:EX-0001-0307-47
+  it("bounds design token reads and inspects theme presence without loading its text", async () => {
+    const root = await projectWith({
+      [CATALOG]: CATALOG_TEXT,
+      [TOKENS]: TOKENS_TEXT,
+      [THEME]: "",
+    });
+    const oversized = 8 * 1024 * 1024 + 1;
+    await truncate(path.join(root, THEME), oversized);
+    const args = ["catalog", "components", "--brief", "--root", root];
+    const readable = await cli(args);
+    expect(readable.code).toBe(0);
+    expect(readable.out).toContain(`theme: ${THEME}`);
+
+    await truncate(path.join(root, TOKENS), oversized);
+    const rejected = await cli(args);
+    expect(rejected.code).toBe(1);
+    expect(rejected.out).toBe("");
+    expect(rejected.err).toContain(`could not read ${TOKENS}: The file exceeds`);
   });
 
   // QFAI:EX-0001-0307-47

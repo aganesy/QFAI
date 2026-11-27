@@ -372,7 +372,10 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       process.exitCode = await (
         options.catalogAction === "design" ? runCatalogDesign : runCatalogComponents
       )({
-        root: await resolveRoot(options),
+        root:
+          options.catalogBrief && !options.rootExplicit
+            ? (await findConfigRoot(options.root)).root
+            : await resolveRoot(options),
         ...(options.catalogCheck ? { check: true } : {}),
         ...(options.catalogBrief ? { brief: true } : {}),
       });
