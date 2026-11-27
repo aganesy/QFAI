@@ -262,7 +262,9 @@ function readTagCommand(command: string): {
     if (flag === "--points-at" || clearsPointsAt) hasPointsAtFilter = !clearsPointsAt;
 
     const listModifier = TAG_LIST_MODIFIERS.has(flag);
-    hasListModifier ||= listModifier || clearsPointsAt;
+    const resetsListFormatting =
+      value === undefined && (flag === "--no-sort" || flag === "--no-format");
+    hasListModifier ||= listModifier || clearsPointsAt || resetsListFormatting;
     const longWithValue = listModifier || VALUE_TAKING_TAG_FLAGS.has(flag);
     const knownSwitch =
       TAG_SWITCHES.has(flag) && (value === undefined || !flag.startsWith("--no-"));
@@ -563,6 +565,18 @@ describe("the project layer describes the repository it is in", () => {
     const unknown = "git tag --no-unknown --points-at HEAD --no-points-at --list vX.Y.Z";
     expect(tagCreations(unknown)).toEqual([unknown]);
     expect(namesItsCommit(unknown)).toBe(false);
+  });
+
+  it.each(["--no-sort", "--no-format"])("lists tags with %s and no tag operand", (option) => {
+    expect(tagCreations(`git tag ${option}`)).toEqual([]);
+
+    const implicit = `git tag ${option} vX.Y.Z`;
+    expect(tagCreations(implicit)).toEqual([implicit]);
+    expect(namesItsCommit(implicit)).toBe(false);
+
+    const explicit = `${implicit} <SHA>`;
+    expect(tagCreations(explicit)).toEqual([explicit]);
+    expect(namesItsCommit(explicit)).toBe(true);
   });
 
   it.each(["git tag vX.Y.Z --me --contains", "git tag --me --sort vX.Y.Z"])(
