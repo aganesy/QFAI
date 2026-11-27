@@ -327,7 +327,8 @@ describe("a question answered without a change", () => {
   // QFAI:AC-0001-0220-06
   // QFAI:EX-0001-0220-52
   it("waits for the checks a merge needs and checks the merged result", async () => {
-    const procedure = flat(sectionOf(await step("triage-operate"), "## Procedure"));
+    const operate = await step("triage-operate");
+    const procedure = flat(sectionOf(operate, "## Procedure"));
     expect(procedure).toMatch(/Wait for checks still running before a merge/);
     expect(procedure).toMatch(
       /Checks still running means every check run of the pull request's head commit that is queued or in progress, including checks branch protection does not require/,
@@ -364,6 +365,15 @@ describe("a question answered without a change", () => {
     );
     expect(procedure).toMatch(
       /Edit no register row except to delete again a question row the union merge kept although one side deleted it, committing that deletion before the push. Renumber no ID/,
+    );
+    expect(operate).toMatch(
+      /^purpose:.*restored question-row deletion permitted only in run-operation/m,
+    );
+    expect(flat(sectionOf(operate, "## What it writes"))).toMatch(
+      /No file git tracks changes except.+the restored question-row deletion described in step 4\. In `run-operation` only, delete an open-question row the union merge restored after one side deleted it\. Commit only that deletion in a separate commit before pushing/,
+    );
+    expect(flat(sectionOf(operate, "## Gate"))).toMatch(
+      /separate `run-operation` commit that deletes only an open-question row the union merge restored after one side deleted it\. Other register rows and IDs remain as merged/,
     );
     expect(procedure).toContain("The union merge adds no review requirement of its own.");
     const waitForChecks = procedure.indexOf("wait for the checks that push starts");
