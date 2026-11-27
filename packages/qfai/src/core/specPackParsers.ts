@@ -495,7 +495,7 @@ export function maskNonSpecRegions(text: string): string {
   // Whether the last visible line can continue a paragraph in its container.
   let paragraphOpen = false;
   // SIMPLIFIED: a visible table row keeps the type-7 HTML paragraph flag open.
-  // Lift when a standalone custom element immediately after a table must open a block.
+  // Lift when: a standalone custom element immediately after a table must open a block.
   let htmlParagraphOpen = false;
 
   const maskLine = (line: string, index: number): string => {
