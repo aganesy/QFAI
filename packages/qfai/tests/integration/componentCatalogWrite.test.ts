@@ -9,7 +9,7 @@
 
 import { randomUUID } from "node:crypto";
 import type * as fsPromises from "node:fs/promises";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, truncate, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
@@ -24,7 +24,11 @@ const fault = vi.hoisted(
   (): {
     lstat: ((file: string) => boolean) | null;
     pause: ((from: string, to: string) => Promise<void>) | null;
-  } => ({ lstat: null, pause: null }),
+    catalogueRead: {
+      file: string;
+      beforeRead: (position: number, length: number) => Promise<void>;
+    } | null;
+  } => ({ lstat: null, pause: null, catalogueRead: null }),
 );
 
 vi.mock("node:fs/promises", async () => {
@@ -41,6 +45,18 @@ vi.mock("node:fs/promises", async () => {
       }
       return actual.lstat(...args);
     },
+    open: async (...args: Parameters<FsPromises["open"]>): ReturnType<FsPromises["open"]> => {
+      const handle = await actual.open(...args);
+      const probe = fault.catalogueRead;
+      if (probe?.file !== String(args[0])) return handle;
+      const read = handle.read.bind(handle);
+      return Object.assign(handle, {
+        read: async (buffer: Buffer, offset: number, length: number, position: number) => {
+          await probe.beforeRead(position, length);
+          return read(buffer, offset, length, position);
+        },
+      });
+    },
     rename: async (...args: Parameters<FsPromises["rename"]>): Promise<void> => {
       // A run held just before this rename, while another run starts.
       await fault.pause?.(String(args[0]), String(args[1]));
@@ -51,6 +67,7 @@ vi.mock("node:fs/promises", async () => {
 
 const { runCliCaptured: cli } = await import("../helpers/cliCapture.js");
 const { runCatalogComponents } = await import("../../src/cli/commands/catalog.js");
+const { renderCatalog } = await import("../../src/core/uiux/componentCatalog.js");
 
 const roots: string[] = [];
 const CATALOG = ".qfai/catalog/components.yaml";
@@ -58,6 +75,7 @@ const CATALOG = ".qfai/catalog/components.yaml";
 afterEach(async () => {
   fault.lstat = null;
   fault.pause = null;
+  fault.catalogueRead = null;
   vi.restoreAllMocks();
   while (roots.length > 0) {
     const root = roots.pop();
@@ -106,6 +124,57 @@ const packageRequire = createRequire(import.meta.url);
 const loadTypescript = (): unknown => packageRequire("typescript");
 
 const catalogFile = (root: string): string => path.join(root, ...CATALOG.split("/"));
+
+// QFAI:EX-0001-0307-30
+it("writes at the UTF-8 limit and preserves the catalogue when output is larger", async () => {
+  const root = await project();
+  const limit = 8 * 1024 * 1024;
+  const entry = { name: "Alpha", file: "src/a.tsx" };
+  const bytesForReason = limit - Buffer.byteLength(renderCatalog([{ ...entry, reason: "x" }])) + 1;
+  const reason = "é".repeat(Math.floor(bytesForReason / 2)) + "x".repeat(bytesForReason % 2);
+  expect(Buffer.byteLength(renderCatalog([{ ...entry, reason }]))).toBe(limit);
+
+  await mkdir(path.join(root, "src"));
+  const source = path.join(root, "src", "a.tsx");
+  const writeSource = (value: string) =>
+    writeFile(source, `/** @reason ${value} */\nexport function Alpha() { return <div />; }\n`);
+  await writeSource(reason);
+  expect(await runCatalogComponents({ root, loadTypescript })).toBe(0);
+  const previous = await readFile(catalogFile(root));
+  expect(previous.length).toBe(limit);
+
+  await writeSource(reason + "x");
+  const stderr = collectStderr();
+  expect(await runCatalogComponents({ root, loadTypescript })).toBe(1);
+  expect(stderr.join("")).toContain(`exceeds ${limit} bytes`);
+  expect(stderr.join("")).toContain("Shorten catalogue tags");
+  expect(stderr.join("")).toContain("uiux.surfacePaths");
+  expect((await readFile(catalogFile(root))).equals(previous)).toBe(true);
+});
+
+// QFAI:EX-0001-0307-29
+it("stops reading the verified catalogue descriptor when the file grows past the limit", async () => {
+  const root = await project();
+  const file = catalogFile(root);
+  const limit = 8 * 1024 * 1024;
+  const grownSize = limit + 128;
+  let requestedEnd = 0;
+  fault.catalogueRead = {
+    file,
+    beforeRead: async (position, length) => {
+      if (requestedEnd === 0) await truncate(file, grownSize);
+      requestedEnd = Math.max(requestedEnd, position + length);
+    },
+  };
+
+  const checked = await cli(["catalog", "components", "--check", "--root", root]);
+  expect(checked.code).toBe(1);
+  expect(checked.err).toContain(`The component catalogue exceeds ${limit} bytes.`);
+  expect(requestedEnd).toBeGreaterThan(0);
+  expect(requestedEnd).toBeLessThanOrEqual(limit + 1);
+  expect((await stat(file)).size).toBe(grownSize);
+});
+
 const lockFile = (root: string): string =>
   path.join(root, ".qfai", "tools", "state", "component-catalog.lock");
 

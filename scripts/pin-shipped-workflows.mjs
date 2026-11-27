@@ -74,6 +74,38 @@ function shapeMismatch(key, message) {
   );
 }
 
+function malformedWorkflow(location, expected, detail = "") {
+  return new Error(
+    `${location}: expected ${expected}.${detail} Fix the workflow YAML before refreshing pins.`,
+  );
+}
+
+function readWorkflow(templates, name) {
+  const bytes = readFileSync(path.join(templates, name));
+  const location = path.posix.join(SHIPPED_DIR, name);
+  let workflow;
+  try {
+    workflow = parseYaml(bytes.toString("utf8"));
+  } catch (error) {
+    const detail = error instanceof Error ? " " + error.message.split("\n")[0] : "";
+    throw malformedWorkflow(location, "valid YAML", detail);
+  }
+  if (!isRecord(workflow)) throw malformedWorkflow(location, "a workflow mapping");
+  if (!isRecord(workflow.jobs)) throw malformedWorkflow(location + "#jobs", "a jobs mapping");
+
+  for (const [id, job] of Object.entries(workflow.jobs)) {
+    const jobPath = location + "#jobs." + id;
+    if (!isRecord(job)) throw malformedWorkflow(jobPath, "a job mapping");
+    const { steps = [] } = job;
+    if (!Array.isArray(steps)) throw malformedWorkflow(jobPath + ".steps", "a step list");
+    const invalidStep = steps.findIndex((step) => !isRecord(step));
+    if (invalidStep !== -1) {
+      throw malformedWorkflow(`${jobPath}.steps[${invalidStep}]`, "a step mapping");
+    }
+  }
+  return { bytes, workflow };
+}
+
 function checkShape(pins, key, actual) {
   if (pins.get(key) !== JSON.stringify(actual)) throw shapeMismatch(key, "pinned shape changed");
   pins.delete(key);
@@ -92,7 +124,7 @@ function refreshDigest(changes, source, pin, previous, next) {
 }
 
 function checkStep(changes, source, pin, key, step) {
-  if (!pin || pin.key !== key || !isRecord(step)) {
+  if (!pin || pin.key !== key) {
     throw shapeMismatch(key, "pinned step order or shape changed");
   }
   if (typeof step.run !== "string") {
@@ -113,9 +145,15 @@ function checkStep(changes, source, pin, key, step) {
 function computeChanges(root, source) {
   const files = pinRows(source, "ALLOWED_WORKFLOW_FILES", true);
   const templates = path.join(root, ...SHIPPED_DIR.split("/"));
-  const names = readdirSync(templates)
-    .filter((name) => /\.ya?ml$/.test(name))
-    .sort();
+  const entries = readdirSync(templates, { withFileTypes: true }).filter(({ name }) =>
+    /\.ya?ml$/.test(name),
+  );
+  const names = entries.map(({ name }) => name).sort();
+  const workflows = new Map(
+    entries
+      .filter((entry) => entry.isFile())
+      .map(({ name }) => [name, readWorkflow(templates, name)]),
+  );
   if (
     names.length === 0 ||
     JSON.stringify(files.map(({ key }) => key).sort()) !== JSON.stringify(names)
@@ -129,19 +167,13 @@ function computeChanges(root, source) {
   let stepIndex = 0;
 
   for (const file of files) {
-    const bytes = readFileSync(path.join(templates, file.key));
-    const workflow = parseYaml(bytes.toString("utf8"));
-    if (!isRecord(workflow) || !isRecord(workflow.jobs)) {
-      throw shapeMismatch(file.key, "expected a workflow with jobs");
-    }
+    const { bytes, workflow } = workflows.get(file.key) ?? readWorkflow(templates, file.key);
     const { jobs, ...shape } = workflow;
     checkShape(workflowPins, file.key, shape);
     for (const [id, job] of Object.entries(jobs)) {
       const key = file.key + "#" + id;
-      if (!isRecord(job)) throw shapeMismatch(key, "expected a job mapping");
       const { steps: jobSteps = [], ...jobShape } = job;
       checkShape(jobPins, key, jobShape);
-      if (!Array.isArray(jobSteps)) throw shapeMismatch(key, "expected a step list");
       for (const step of jobSteps) {
         checkStep(changes, source, steps[stepIndex], key, step);
         stepIndex++;
