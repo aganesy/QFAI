@@ -3,12 +3,12 @@
  * the project edited it, keeps no record of what it wrote, and leaves the
  * project's own files alone.
  */
-import { spawnSync } from "node:child_process";
 import { link, lstat, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { createFifoFixture } from "../helpers/fifoFixture.js";
 import { runInit } from "../helpers/legacyInit.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { useTempDirPool } from "../helpers/shippedWorkflowFixtures.js";
@@ -94,21 +94,21 @@ describe("init --force overwrites the regenerated assets", () => {
   });
 
   // QFAI:AC-0001-0022-02
+  // QFAI:EX-0001-0022-04
   it("reports and preserves a FIFO at a forced template destination in apply and preview", async (ctx) => {
-    if (process.platform === "win32") ctx.skip();
     const dir = await newTempDir();
     const relative = path.join(".agents", "rules", "minimal-implementation.md");
     const fifo = path.join(dir, relative);
     await mkdir(path.dirname(fifo), { recursive: true });
-    const creation = spawnSync("mkfifo", [fifo], { encoding: "utf-8" });
-    if (creation.error) throw creation.error;
-    expect(creation.status, creation.stderr).toBe(0);
-    expect((await lstat(fifo)).isFIFO()).toBe(true);
+    const original = await createFifoFixture(fifo);
+    if (original === undefined) return ctx.skip("No usable FIFO fixture on this host.");
 
     for (const dryRun of [true, false]) {
       const output = await captureStdout(() => runInit({ dir, force: true, dryRun, yes: true }));
       expect(output).toContain(`${relative} was not written`);
-      expect((await lstat(fifo)).isFIFO()).toBe(true);
+      const current = await lstat(fifo, { bigint: true });
+      expect(current.isFIFO()).toBe(true);
+      expect([current.dev, current.ino]).toEqual([original.dev, original.ino]);
     }
   });
 });
