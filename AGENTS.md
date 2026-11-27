@@ -74,7 +74,7 @@ Quality-First AI (QFAI) is a CLI and verification framework for specification-dr
 
 ## Rules: what to read, and when
 
-Read the rule masters under `.agents/rules/` with their repository-specific `<name>.local.md` overlays.
+The masters under `.agents/rules/` are authoritative. Read each with its repository-specific `<name>.local.md` overlay when present.
 
 | Rule                                                                 | In short                                                                                                                          | Read when                                                                                       |
 | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
