@@ -1,0 +1,236 @@
+# Base component catalogue: the parts most products need, described before a project builds them.
+#
+# Read an entry before building its part, as ui-procurement.md rung 1 says. Build the part once as a
+# shared component that meets the entry, and name the entry's id in that component's @pattern doc
+# tag, so every screen reuses the one component and .qfai/catalog/components.yaml lists it.
+#
+# Each entry has exactly these keys: id, purpose, anatomy, role, accessibleName, keyboard, focus,
+# states (each state and how it renders), content, runtime (serverRendering, csp, noScript) and
+# sources (a native element, or a page a reader can open). An entry describes the part; it mirrors
+# no external registry, and a catalogue item that meets it may still realise it.
+#
+# The shipped file is not edited in the project: npx qfai init replaces it. A project records what
+# it decided for a part in that component's doc comment.
+components:
+  - id: error-summary
+    purpose: Lists every error a submitted form holds, above the form, so the user sees how many there are and reaches each field from one place.
+    anatomy:
+      - A container placed after the page heading and before the form's first field.
+      - A heading that says there is a problem.
+      - A list with one link per error, whose text is that field's error message and whose target is the field's id.
+    role: A container labelled by its heading through aria-labelledby, with tabindex="-1" so it can take focus. It has no live-region role, because moving focus to it already announces it.
+    accessibleName: Its heading, through aria-labelledby.
+    keyboard:
+      - Each link is reached by Tab and followed by Enter.
+      - Following a link puts focus in that field, the first option of a group, not only scrolls to it.
+    focus: When the summary appears, after a submit the server answers or a check on the client, focus moves to the container, and the page title starts with "Error" so the reload is announced as failed.
+    states:
+      hidden: Not rendered when the form has no error; no empty container is left for a screen reader to find.
+      shown: The heading and one link per error, in the order the fields appear on the page.
+    content:
+      - Each link's text is the error message shown at its field, word for word.
+      - An error message says what went wrong and how to fix it, as "Enter a date of birth in the past", never "Invalid input".
+      - Only errors are listed; a hint or a warning is not.
+    runtime:
+      serverRendering: The server renders the summary in its response to a failed submit, so it is there on the first paint without a client bundle.
+      csp: Needs no inline script or style attribute; the script that moves focus ships in the app's own bundle.
+      noScript: The summary and its links still render from the server; only the focus move is lost, and the links still scroll to each field.
+    sources:
+      - native <a>
+      - https://design-system.service.gov.uk/components/error-summary/
+      - https://www.w3.org/WAI/WCAG22/Understanding/error-identification.html
+
+  - id: field-with-error
+    purpose: One form field with its label, hint and error message, so the user knows what the field wants and, after a failed check, what to change.
+    anatomy:
+      - A visible label tied to the control with for and id.
+      - An optional hint for a format or constraint the user cannot guess.
+      - An error message, rendered only while the field is invalid, between the hint and the control.
+      - The native control.
+    role: The native control's own role; the hint and the error message are text tied to it.
+    accessibleName: The visible label. The hint and the error message are its description, through aria-describedby on the control naming both ids.
+    keyboard:
+      - The control keeps its native keyboard behaviour; the field adds no key of its own.
+    focus: Focus stays on the control the user is in. A failed submit moves focus to the error summary when the form has one, and to the first invalid field when it has none.
+    states:
+      default: Label, hint and control, with no error message and no aria-invalid.
+      invalid: The error message is shown, the control has aria-invalid="true", and the error is marked by its text and a border or icon change as well as by colour.
+      disabled: The control is disabled and the reason it cannot be changed is shown in the hint; a value the user must still read uses readonly instead.
+    content:
+      - The label names the value, as "Email address", not the action.
+      - The error message says what to do, is the same text as its error summary link, and is not shown before the user submits or leaves the field.
+      - A hint is not a placeholder; a placeholder disappears as the user types and is not the label.
+    runtime:
+      serverRendering: The server renders the error message and aria-invalid in its response to a failed submit, keeping the value the user typed.
+      csp: The invalid styling is a class or the :user-invalid selector in the stylesheet, not an inline style attribute.
+      noScript: The native required, type, min, max and pattern attributes still check the field, and the server-rendered error message still shows after submit.
+    sources:
+      - native <label>
+      - native <input>
+      - https://design-system.service.gov.uk/components/error-message/
+      - https://www.w3.org/WAI/WCAG22/Techniques/aria/ARIA21
+
+  - id: step-indicator
+    purpose: Shows where the user is in a form split over several steps, how many steps there are and which are done.
+    anatomy:
+      - An ordered list with one item per step, in order.
+      - Each step's name; a completed step is a link back to it when going back is allowed.
+      - The current step marked with aria-current="step".
+    role: An ordered list, inside a nav element when completed steps are links.
+    accessibleName: The nav is named by aria-label, such as "Progress". The page heading and title also say which step this is, as "Step 2 of 4".
+    keyboard:
+      - Links to completed steps are reached by Tab; the current step and the steps after it are not links.
+    focus: On moving to the next step, focus starts at the top of the new page or step heading, not on the previous step's button.
+    states:
+      completed: Marked as done by text or an icon with an accessible name, and a link when the user may go back to it.
+      current: Emphasised by weight or an outline as well as colour, and marked aria-current="step".
+      upcoming: Plain text, not a link.
+    content:
+      - Each step's name is a short noun phrase, the same as that step's heading.
+      - The number of steps does not change while the user is in the form; where a step may be skipped, the count is still the same or is not shown.
+    runtime:
+      serverRendering: Each step is its own page or server response, and the indicator is rendered with the step it belongs to.
+      csp: Needs no script or inline style.
+      noScript: Works fully; it is a list and links.
+    sources:
+      - native <ol>
+      - native <nav>
+      - https://www.w3.org/WAI/tutorials/forms/multi-page/
+
+  - id: confirm-step
+    purpose: Shows everything the user entered before a submission that commits money, data or an obligation, so they can check it and change any answer first.
+    anatomy:
+      - A page heading such as "Check your answers".
+      - A description list of each question and its answer, grouped as the form's steps are.
+      - A change link beside each answer that goes to that field and, once saved, back to this step.
+      - The cost, consequence or commitment of submitting, stated directly above the button.
+      - One primary button that submits.
+    role: Native elements; a description list for the answers and a form with a submit button.
+    accessibleName: Each change link is named with its question, as "Change email address", with the question in visually hidden text when the visible text is only "Change".
+    keyboard:
+      - The change links and the submit button are reached by Tab in reading order.
+      - Enter on the submit button submits once; pressing it again while the submission is in progress does nothing.
+    focus: Returning from a change link puts focus at the top of this step, with the changed answer shown.
+    states:
+      review: Every answer shown with its change link, and the submit button enabled.
+      submitting: The button shows that it is working and refuses a second submit; the answers stay visible.
+      failed: An error summary above the answers says what failed and whether anything was saved, and the answers are kept.
+    content:
+      - Answers are shown as they will be used, such as a formatted date and an amount with its currency.
+      - The button says what happens, as "Place order" or "Send application", never "Submit".
+    runtime:
+      serverRendering: Rendered from the answers the server holds, so a reload shows the same answers.
+      csp: Needs no inline script; a guard against a second submit ships in the app's bundle, and the server also refuses a repeated submission by its key.
+      noScript: The form posts and the change links are plain links; the server's check for a repeated submission still applies.
+    sources:
+      - native <dl>
+      - native <form>
+      - https://design-system.service.gov.uk/patterns/check-answers/
+      - https://www.w3.org/WAI/WCAG22/Understanding/error-prevention-legal-financial-data.html
+
+  - id: skip-link
+    purpose: Lets a keyboard user pass the repeated header and navigation and go straight to the page's main content.
+    anatomy:
+      - A link that is the first focusable element of every page, pointing at the main element's id.
+      - The main element with that id and tabindex="-1", so following the link moves focus there.
+    role: A native link.
+    accessibleName: Its text, such as "Skip to main content".
+    keyboard:
+      - The first Tab on the page reaches it.
+      - Enter moves focus to the main content, and the next Tab reaches the first focusable element inside it.
+    focus: Visually hidden until it takes focus, then shown at the top of the page with the project's focus indicator. It is never hidden with display none or visibility hidden, which take it out of the tab order.
+    states:
+      hidden: Clipped off screen, still in the tab order and the accessibility tree.
+      focused: Shown at the top of the page, above the header.
+    content:
+      - It sits in the shared layout every page uses, so no page header is left without it.
+      - Its text says where it goes.
+    runtime:
+      serverRendering: Rendered by the shared layout in every page's first bytes.
+      csp: Needs no script or inline style; showing it on focus is a stylesheet rule.
+      noScript: Works fully; it is a link to a fragment.
+    sources:
+      - native <a>
+      - native <main>
+      - https://www.w3.org/WAI/WCAG22/Techniques/general/G1
+
+  - id: sticky-action-bar
+    purpose: Keeps a screen's primary action in reach while a long page scrolls, usually at the bottom of a narrow screen.
+    anatomy:
+      - A bar fixed or sticky at the bottom of the viewport, holding the primary action and at most one secondary action.
+      - Padding inside the bar for the device's safe area, with env(safe-area-inset-bottom).
+      - Space reserved at the end of the page, as tall as the bar, so the last content and the footer scroll clear of it.
+    role: A container of native buttons or links; it carries no landmark role unless it holds more than the page's actions.
+    accessibleName: Each action's own text; the bar needs no name of its own.
+    keyboard:
+      - Its actions come after the page content in the tab order, matching their place in the source.
+      - It traps no focus and needs no key of its own.
+    focus: A focused element is never hidden under the bar; scroll-padding-bottom on the scrolling element is the bar's height, so a field reached by Tab scrolls above it.
+    states:
+      default: Shown with its actions enabled.
+      unavailable: The primary action is disabled with the reason shown on the bar, or stays enabled and is answered with an error summary.
+      inline: At widths where the actions are already in view, they sit in the page flow and the bar is not rendered.
+    content:
+      - One primary action, worded as what it does.
+      - A price or count on the bar is the figure the page shows, from the same source.
+    runtime:
+      serverRendering: Rendered with the page; its position is a stylesheet rule, so it shows on the first paint without the layout shifting.
+      csp: Needs no script or inline style.
+      noScript: Works fully; position sticky or fixed is a stylesheet rule.
+    sources:
+      - native <button>
+      - https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html
+      - https://www.w3.org/WAI/WCAG22/Understanding/reflow.html
+
+  - id: status-message
+    purpose: Tells the user the result of an action that does not move focus, such as saved, sent or a count of results, without interrupting what they are doing.
+    anatomy:
+      - A live region present in the page from its first render, empty until a message arrives.
+      - The message text, with an optional icon that has an accessible name or is hidden from assistive technology.
+    role: role="status", or the output element, for a result or progress; role="alert" only for an error or warning that needs action now.
+    accessibleName: None; the message text is what is announced.
+    keyboard:
+      - It takes no focus and needs no key. A message with an action, such as Undo, keeps that action reachable by Tab and does not disappear while focus is in it.
+    focus: Focus stays where the user is; a message never moves it.
+    states:
+      empty: The region is rendered with no text, so the next message written into it is announced.
+      success: The result text, such as "Draft saved", with an icon or wording that does not rely on colour.
+      error: The text in an alert region, saying what failed and what to do next.
+    content:
+      - It states the result in a few words, using the action's own words, as "Draft saved" after "Save draft".
+      - A message that disappears stays long enough to read, and the result is also visible where it matters on the page.
+    runtime:
+      serverRendering: The server renders the empty region. A result known when the page loads is rendered as page content, because text already in a live region at load is not reliably announced.
+      csp: Needs no inline script; the app's bundled script writes the message text.
+      noScript: The result is shown on the page the server returns after the form posts.
+    sources:
+      - native <output>
+      - https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html
+      - https://www.w3.org/WAI/ARIA/apg/patterns/alert/
+
+  - id: empty-state
+    purpose: Fills a list, table or result area that has nothing to show, saying why it is empty and what the user can do next.
+    anatomy:
+      - A short heading or sentence saying what is empty and why.
+      - The next step, as one primary action or a way to change the filter.
+      - An optional illustration, hidden from assistive technology.
+    role: A native heading, paragraph and link or button in place of the region's items; it carries no live-region role.
+    accessibleName: The region keeps the name it has when it holds items; the action is named by its own text.
+    keyboard:
+      - The action is reached by Tab where the first item would have been.
+    focus: Focus is not moved to it. When a filter the user just changed empties the list, a status message gives the count.
+    states:
+      first-use: Nothing exists yet; it says what the area will hold and offers the action that creates the first item.
+      no-results: A search or filter matched nothing; it names the query or filter and offers to clear it.
+    content:
+      - A failed load is not an empty state; it shows the error and a way to retry instead.
+      - Nothing-yet and nothing-matched have their own words, and the action matches the page's own wording for creating the item.
+      - Its text is copy the user needs, so in UI source it keeps its qfai-text reason.
+    runtime:
+      serverRendering: Rendered by the server when the list it replaces is empty, not swapped in after a fetch on the client.
+      csp: Needs no script or inline style.
+      noScript: Works fully; the action is a link or a form.
+    sources:
+      - native <h2>
+      - native <p>
+      - native <a>
