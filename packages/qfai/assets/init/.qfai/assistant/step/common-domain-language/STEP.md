@@ -27,9 +27,8 @@ It runs in the discussion stage between `discussion-research` and
   words they already use for each thing.
 - `.qfai/assistant/skill/qfai-grilling/references/glossary-check.md`, for how
   a clash is raised and where a settled term is written.
-- `.qfai/assistant/rule/references/deliberation-record.md` and
-  `.qfai/assistant/step/common-grilling-record/STEP.md`, for the rows a round
-  writes.
+- `.qfai/assistant/rule/references/deliberation-record.md`, for the rows a
+  round writes.
 - `.agents/rules/document-schema.md`, before writing `01_policy/glossary.md`.
 
 ## Writes
