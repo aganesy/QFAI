@@ -676,6 +676,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   agents. An active turn with only an old state file starts a fresh count
   after upgrade.
 
+- The shipped-workflow pin command identifies malformed YAML declarations
+  and reports the expected shape before it refreshes any pins.
+
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 
