@@ -1249,7 +1249,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "920e9691664b8cd0fec7726cbb1bb9f45f54a06a15447683c7fb45315c31eb01"],
+  ["qfai-docs.yml", "c2d1247d19518737a510398badb83d24ff4ff8b95f48f60284c486a21b0b3599"],
   ["qfai-tests.yml", "1bba5ba5b736f732cfdd2797fefec01bcf1ca5b28ae10e6616310cfb3d35c9d1"],
   ["qfai-validate.yml", "f308c482908bc84cd768ff0e785adafb5a852d32152c6230f7b15bf0c14ceea3"],
 ]);
@@ -1410,7 +1410,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // This digest covers the seed's raw UTF-8/LF bytes, including all union rules.
   // `qfai init` copies those bytes only when the destination does not exist.
-  [".gitattributes", "67d86eff0b259b483214106c7255d415083426dc31205f9fb23b7e1df1679cb0"],
+  [".gitattributes", "299d637d719d12bc35661b530b96d10cdb8d6ddd209662885b433fcdfef8f96f"],
   // The shipped `.gitignore` IS the generated managed block, so every line of it
   // moves this digest by construction. The block ignores `.qfai/evidence/` whole
   // and re-includes nothing under it; its only negations are `!.qfai/` and the
@@ -2117,7 +2117,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 59c1776f5e0733f28474994271b13ccc5280b621d25a1ff99a7ca6b7222851bd>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 8bc6944826f9c1d7f593ed22e871ba011eacfd30a0eed71368856b84de4238bb>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2125,7 +2125,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body c677adddd538ac97404c2de34092628fb1d21e7a67eee3d54d718cd9a555cbd0>"}',
+    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body 38b2914ad0f0955b1a72272fd31681ffcca1e3fd6b442c0fc4fdaa521010841e>"}',
   ],
   [
     "qfai-docs.yml#docs",
@@ -2319,6 +2319,10 @@ export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
   // `node_modules/qfai/package.json`, prints it, and stops with a non-zero exit when it is not one
   // exact version. Reads one file, writes one line. 609 characters.
   "eac5aa604c041fccf1f050ea66703ef95b4d1bbc0d0c7ebe81a871eabb5fe67f",
+  // `qfai-docs.yml#checks` — creates only the temporary tools manifest with the KaTeX override.
+  "29674ce3b84db993de450268b6738118706e2df1ee11169cf93336ec283623b0",
+  // `qfai-docs.yml#checks` — reads the KaTeX version resolved by the temporary Mermaid install.
+  "7231eb4e366867e63d4052ec5ed49e1a1fcfb997a2fcfea9f87f6834bee9ee0f",
   // `qfai-validate.yml#validate` and `qfai-docs.yml#checks`, one payload run by `yarn node` in both —
   // prints the version of the QFAI a Yarn Plug'n'Play project depends on, or nothing when its
   // `package.json` declares none, and stops with a non-zero exit when the version Yarn resolves is

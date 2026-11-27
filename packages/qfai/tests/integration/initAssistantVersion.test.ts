@@ -104,14 +104,20 @@ describe("qfai init records the release that wrote the assistant tree", () => {
 
   // QFAI:AC-0001-0021-01
   // QFAI:EX-0001-0021-17
-  it("reports the bounded kept list and the separate refusal when both defer the version", async () => {
+  it.each([
+    { outcome: "kept assets only", refusesAsset: false },
+    { outcome: "kept and refused assets", refusesAsset: true },
+  ])("reports the bounded kept list for $outcome", async ({ refusesAsset }) => {
     const dir = await newTempDir();
     const skills = path.join(".qfai", "assistant", "skill");
     const matching = path.join(skills, "qfai-sdd", "SKILL.md");
     const blocked = path.join(".qfai", "assistant", "step", "implement-tdd");
-    await mkdir(path.dirname(path.join(dir, blocked)), { recursive: true });
-    await writeFile(path.join(dir, blocked), "project file\n", "utf-8");
+    if (refusesAsset) {
+      await mkdir(path.dirname(path.join(dir, blocked)), { recursive: true });
+      await writeFile(path.join(dir, blocked), "project file\n", "utf-8");
+    }
     await init(dir);
+    if (!refusesAsset) await rm(versionFile(dir));
     expect((await stat(path.join(dir, matching))).isFile()).toBe(true);
     const edited = (await readdir(path.join(dir, skills), { withFileTypes: true }))
       .filter((entry) => entry.isDirectory() && entry.name !== "qfai-sdd")
@@ -129,10 +135,13 @@ describe("qfai init records the release that wrote the assistant tree", () => {
 
     await expectAbsent(versionFile(dir));
     const summary =
-      /^Assistant VERSION stays absent when required assets cannot be verified\. Check the kept assets at (.+) and 1 more\. See warnings for paths that could not be written\.$/.exec(
+      /^Assistant VERSION stays absent when required assets cannot be verified\. Check the kept assets at (.+) and 1 more\.(.*)$/.exec(
         diagnostic ?? "",
       );
     expect(summary).not.toBeNull();
+    expect(summary?.[2]).toBe(
+      refusesAsset ? " See warnings for paths that could not be written." : "",
+    );
     const listed = (summary?.[1] ?? "").split(", ");
     expect(listed).toHaveLength(8);
     expect(new Set(listed).size).toBe(8);
@@ -143,7 +152,11 @@ describe("qfai init records the release that wrote the assistant tree", () => {
     const refusal = output
       .split(/\r?\n/)
       .find((line) => line.startsWith(`WARN: ${refused} was not written.`));
-    expect(refusal).toContain("non-directory blocks a parent path");
+    if (refusesAsset) {
+      expect(refusal).toContain("non-directory blocks a parent path");
+    } else {
+      expect(refusal).toBeUndefined();
+    }
   });
 
   // QFAI:AC-0001-0021-01

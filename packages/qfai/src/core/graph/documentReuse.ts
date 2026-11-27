@@ -31,10 +31,12 @@ import {
 import { assertGraphStoragePath, replaceGraphDirectory } from "./storage.js";
 
 type Inspect = (analysis: string, refresh: boolean, checked: CheckedCorpus) => Promise<boolean>;
+type CheckProcessing = (analysis: string) => Promise<boolean>;
 
 export async function restoreCompletedDocumentAnalysis(
   root: string,
   run: GraphProcess,
+  checkProcessing: CheckProcessing,
   inspect: Inspect,
   environment: GraphReuseEnvironment = graphReuseEnvironment(),
 ): Promise<"restored" | "cold"> {
@@ -59,7 +61,7 @@ export async function restoreCompletedDocumentAnalysis(
       )
         continue;
       const analysis = path.join(candidate, "analysis");
-      if (!(await safeDocumentCopy(root, analysis, run))) continue;
+      if (!(await safeDocumentCopy(root, analysis, run, checkProcessing))) continue;
       const current = graphAnalysisRoot(root, "graphify");
       staged = graphAnalysisStaging(current, "restoring", "graphify", randomUUID());
       await assertGraphStoragePath(root, staged);
@@ -69,7 +71,7 @@ export async function restoreCompletedDocumentAnalysis(
         staged = undefined;
         continue;
       }
-      const checked = await safeDocumentCopy(root, staged, run);
+      const checked = await safeDocumentCopy(root, staged, run, checkProcessing);
       if (checked && (await inspect(staged, true, checked))) {
         await replaceGraphDirectory(staged, current, root);
         return "restored";
@@ -143,10 +145,12 @@ export async function safeDocumentCopy(
   root: string,
   analysis: string,
   run: GraphProcess,
+  checkProcessing?: CheckProcessing,
 ): Promise<CheckedCorpus | undefined> {
   const deliberationDir = await graphDeliberationDir(root);
   const checked = await safeCompletedCorpus(analysis, deliberationDir, "graphify-out");
   if (!checked) return undefined;
+  if (checkProcessing && !(await checkProcessing(analysis))) return undefined;
   const result = await run(
     graphRuntimePaths(root).python,
     [

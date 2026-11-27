@@ -297,6 +297,10 @@ async function safeCorpusEntries(
   engineDirectory: string,
 ): Promise<boolean> {
   try {
+    if (relative === "") {
+      const root = await lstat(directory);
+      if (root.isSymbolicLink() || !root.isDirectory()) return false;
+    }
     for (const entry of await readdir(path.join(directory, ...relative.split("/")), {
       withFileTypes: true,
     })) {

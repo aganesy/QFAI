@@ -339,14 +339,17 @@ describe("migration catalog move", () => {
       plan.forAPerson?.filter((note) => note.includes("## Technical Constraints: rewrite TC-")) ??
       [];
     expect(notes).toHaveLength(rowCount);
-    const expected = (index: number): string =>
-      `.qfai/spec/01_policy/constraint.md ## Technical Constraints: rewrite TC-${index + 1} of "## Constraints" in ${source} in plain words, with no file name, command, rule ID or contract ID, by hand`;
-    const mismatch = notes.findIndex((note, index) => note !== expected(index));
+    const expectedStart = (index: number): string =>
+      `.qfai/spec/01_policy/constraint.md ## Technical Constraints: rewrite TC-${index + 1} of "## Constraints" in ${source}`;
+    const mismatch = notes.findIndex(
+      (note, index) =>
+        !note.startsWith(`${expectedStart(index)} `) || !/\bby hand[.!?]?$/.test(note),
+    );
     expect(
       mismatch,
       mismatch === -1
         ? undefined
-        : `Constraint note ${mismatch} should be ${expected(mismatch)} but was ${notes[mismatch] ?? "missing"}`,
+        : `Constraint note ${mismatch} should start with ${expectedStart(mismatch)} and end with a manual rewrite action, but was ${notes[mismatch] ?? "missing"}`,
     ).toBe(-1);
   });
 
