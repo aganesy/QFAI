@@ -755,14 +755,15 @@ describe("uiux validators", () => {
   });
 
   // QFAI:EX-0001-0039-71
+  // WCAG sRGB luminance gives 2.20 for grayscale channels 51 and 102, and 1.69 for 51 and 85.
   it.each([
-    ["low", "hsl()", "hsl(0, 0%, 75%)", "hsl(0, 0%, 80%)", ["warning"]],
-    ["high", "hsl()", "hsl(0, 0%, 0%)", "hsl(0, 0%, 100%)", []],
-    ["low", "space-separated rgb()", "rgb(191 191 191)", "rgb(204 204 204)", ["warning"]],
-    ["high", "space-separated rgb()", "rgb(0 0 0)", "rgb(255 255 255)", []],
+    ["low", "hsl()", "hsl(0, 0%, 20%)", "hsl(0, 0%, 40%)", "2.20"],
+    ["high", "hsl()", "hsl(0, 0%, 0%)", "hsl(0, 0%, 100%)", null],
+    ["low", "space-separated rgb()", "rgb(51 51 51)", "rgb(85 85 85)", "1.69"],
+    ["high", "space-separated rgb()", "rgb(0 0 0)", "rgb(255 255 255)", null],
   ])(
     "checks %s HTML mock contrast written in %s",
-    async (contrastKind, _format, foreground, background, expectedSeverities) => {
+    async (_contrastKind, _format, foreground, background, expectedRatio) => {
       const root = await newTempDir();
       const specsDir = path.join(root, ".qfai", "specs");
       await mkdir(specsDir, { recursive: true });
@@ -778,15 +779,23 @@ describe("uiux validators", () => {
         "utf-8",
       );
 
-      const compute = vi.spyOn(contrastRatio, "computeContrastRatio");
+      const compute =
+        expectedRatio === null ? vi.spyOn(contrastRatio, "computeContrastRatio") : undefined;
       try {
         const issues = await validateHtmlMock(root, "web", defaultConfig);
-        const expectedRatio = contrastKind === "high" ? expect.closeTo(21) : expect.any(Number);
-        expect(compute).toHaveReturnedWith(expectedRatio);
-        const contrast = issues.filter((item) => item.code === "QFAI-MOCK-008");
-        expect(contrast.map((item) => item.severity)).toEqual(expectedSeverities);
+        if (compute) expect(compute).toHaveReturnedWith(expect.closeTo(21));
+        expect(issues.filter((item) => item.code === "QFAI-MOCK-008")).toEqual(
+          expectedRatio === null
+            ? []
+            : [
+                expect.objectContaining({
+                  severity: "warning",
+                  message: expect.stringContaining(`Contrast ratio ${expectedRatio}:1`),
+                }),
+              ],
+        );
       } finally {
-        compute.mockRestore();
+        compute?.mockRestore();
       }
     },
   );
