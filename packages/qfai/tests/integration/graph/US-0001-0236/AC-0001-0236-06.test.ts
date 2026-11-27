@@ -104,7 +104,7 @@ describe("AC-0001-0236-06", () => {
       expect(output).toContain("Git already tracks generated output under .qfai/tools/.");
       expect(output).toContain("git ls-files -- .qfai/tools/");
       expect(output).toContain("git --literal-pathspecs rm --cached -- <path>");
-      expect(output).toContain("one exact path relative to the repository root");
+      expect(output).toContain("one exact path relative to that directory");
       expect(output).toContain("quote it for your shell");
       expect(output).toContain("This keeps the files in your working tree.");
       expect(output).not.toContain("Git still sees");
@@ -143,6 +143,50 @@ describe("AC-0001-0236-06", () => {
       }
     } finally {
       await project.dispose();
+    }
+  });
+
+  // QFAI:EX-0001-0237-31
+  it("scopes Git recovery advice to the initialized project inside a worktree", async () => {
+    const repository = await graphProject();
+    try {
+      const projectName = "nested app";
+      const projectRoot = path.join(repository.root, projectName);
+      const git = (args: string[], cwd = repository.root) => runGraphProcess("git", args, { cwd });
+      expect((await git(["init", "--quiet"])).exitCode).toBe(0);
+      for (const [directory, name] of [
+        [repository.root, "other.json"],
+        [projectRoot, "project.json"],
+      ]) {
+        const tools = path.join(directory, ".qfai", "tools");
+        await mkdir(tools, { recursive: true });
+        await writeFile(path.join(tools, name), name);
+      }
+      expect(
+        (
+          await git([
+            "add",
+            "--",
+            ".qfai/tools/other.json",
+            path.posix.join(projectName, ".qfai", "tools", "project.json"),
+          ])
+        ).exitCode,
+      ).toBe(0);
+
+      const listing = await git(["ls-files", "--", ".qfai/tools/"], projectRoot);
+      expect(listing.exitCode).toBe(0);
+      expect(listing.stdout.trim()).toBe(".qfai/tools/project.json");
+      const recovery = await ensureGraphGitignore(projectRoot, runGraphProcess);
+      expect(recovery.conflicts).toHaveLength(1);
+      expect(recovery.conflicts[0]).toContain(
+        "From the directory initialized by `qfai init`, review the indexed paths with `git ls-files -- .qfai/tools/`.",
+      );
+      expect(recovery.conflicts[0]).toContain(
+        "From that same directory, use `git --literal-pathspecs rm --cached -- <path>`",
+      );
+      expect(recovery.conflicts[0]).toContain("one exact path relative to that directory");
+    } finally {
+      await repository.dispose();
     }
   });
 });
