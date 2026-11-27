@@ -692,21 +692,31 @@ jobs:
         # SHIPPED-CI: not-applicable
         # Because: the shipped templates run no lint aggregate, so there is no entry on that side to run on Windows.
         run: pnpm run ci:gate:scans
-      - name: Measure Windows PowerShell startup before parity tests
+      - name: Time a serial Windows PowerShell no-op before parity tests
         # SHIPPED-CI: not-applicable
         # Because: this measures the Windows PowerShell process used by QFAI's own hook tests.
         shell: pwsh
         timeout-minutes: 3
+        continue-on-error: true
         env:
           TEMP: ${{ runner.temp }}\qfai tmp
           TMP: ${{ runner.temp }}\qfai tmp
         run: |
           $startup = [System.Diagnostics.Stopwatch]::StartNew()
-          & powershell.exe -NoProfile -Command 'exit 0'
-          $exitCode = $LASTEXITCODE
-          $startup.Stop()
-          Write-Host "Windows PowerShell startup: $($startup.ElapsedMilliseconds) ms (exit $exitCode)"
-          exit $exitCode
+          $process = Start-Process -FilePath powershell.exe -ArgumentList '-NoProfile', '-Command', 'exit 0' -WindowStyle Hidden -PassThru
+          try {
+            if (!$process.WaitForExit(120000)) {
+              Write-Warning 'Serial Windows PowerShell no-op exceeded 120 seconds.'
+              $process.Kill($true)
+              $process.WaitForExit(5000) | Out-Null
+              exit 1
+            }
+            $startup.Stop()
+            Write-Host "Serial Windows PowerShell no-op: $($startup.ElapsedMilliseconds) ms (exit $($process.ExitCode))"
+            exit $process.ExitCode
+          } finally {
+            $process.Dispose()
+          }
       - name: Run the Windows parity suites
         # SHIPPED-CI: not-applicable
         # Because: this profiles the repository's validation corpus, which
