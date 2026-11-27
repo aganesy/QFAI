@@ -588,7 +588,11 @@ describe("migration CLI contract shape", () => {
 
   function matchesCliRewriteNote(note: string, section: number): boolean {
     if (!note.startsWith(destinationPrefix)) return false;
-    const instruction = note.slice(destinationPrefix.length).trimStart();
+    const instruction =
+      note
+        .slice(destinationPrefix.length)
+        .trimStart()
+        .split(/[.!?;](?:\s|$)|,?\s+(?=(?:and|but)\s+(?:do not|never)\b)/iu, 1)[0] ?? "";
     return (
       legacySectionHeading.exec(instruction)?.[1] === String(section) &&
       legacyContractPath.test(instruction) &&
@@ -614,6 +618,18 @@ describe("migration CLI contract shape", () => {
         1,
       ),
     ).toBe(false);
+    expect(
+      matchesCliRewriteNote(
+        `${NEW}: rewrite "## Legacy 1" of ${OLD} using the migration tool, but do not edit by hand.`,
+        1,
+      ),
+    ).toBe(false);
+    expect(
+      matchesCliRewriteNote(
+        `${NEW}: rewrite "## Legacy 1" of ${OLD} by hand. Keep the section order.`,
+        1,
+      ),
+    ).toBe(true);
     expect(
       matchesCliRewriteNote(`${NEW}: manually rewrite section "## Legacy 1" from ${OLD}`, 1),
     ).toBe(true);
