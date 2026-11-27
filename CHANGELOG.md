@@ -2506,18 +2506,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
-- **The mdschema approval advice names the key current pnpm writes.** The
-  README and the `qfai doctor` fix for a checker that does not run said pnpm
-  records the approval under `onlyBuiltDependencies`, a setting pnpm 11
-  removed. Both now recommend `pnpm approve-builds` and say it records the
-  approval under `allowBuilds` for pnpm 10.31 or later and
-  `onlyBuiltDependencies` for earlier pnpm 10.
-
-- **`qfai doctor` explains where pnpm records mdschema approval.** pnpm 10
+- **The README and `qfai doctor` explain mdschema approval on pnpm.**
+  The `pnpm approve-builds` command is available from pnpm 10.1.0. pnpm 10
   updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
   From 10.31.0 it can also create the map when neither legacy list is set.
-  Other pnpm 10 configurations use `onlyBuiltDependencies`, and pnpm 11
-  uses `allowBuilds` by default.
+  In other configurations on pnpm 10.1.0 or later in the 10.x series, the
+  command uses `onlyBuiltDependencies`. pnpm 11 uses `allowBuilds` by default.
 
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
