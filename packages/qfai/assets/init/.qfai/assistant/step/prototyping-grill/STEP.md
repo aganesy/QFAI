@@ -36,9 +36,7 @@ settles, by talking, the questions that do not need a prototype to answer.
 
 ## Scope
 
-The loop covers every UI-bearing UI contract: a YAML file under
-`<contractsDir>/ui/` declaring a full `UI-NNNN` ID and a non-empty
-`screens[]`. Only those contracts enter the prototyping scope. One invocation
+A Markdown UI contract contributes its declared responsibility to the loop. Derive screen routes and interactions in the prototype. Existing YAML contracts contribute their declared screens. One invocation
 covers all of them: it does not ask which contract is primary, and reads no
 spec-level marker.
 

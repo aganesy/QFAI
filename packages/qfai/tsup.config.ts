@@ -46,6 +46,8 @@ export default defineConfig({
     __QFAI_TOOL_VERSION__: JSON.stringify(toolVersion),
   },
   esbuildOptions(options, context) {
+    // Preserve debugger mappings without publishing internal trace comments in embedded sources.
+    options.sourcesContent = false;
     if (context.format !== "cjs") {
       return;
     }

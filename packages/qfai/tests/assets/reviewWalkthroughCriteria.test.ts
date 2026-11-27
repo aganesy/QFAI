@@ -117,25 +117,27 @@ describe("four ordinal axes and nine diagnostic questions", () => {
       const review = await read(tree, REVIEWER_PROMPT);
 
       expect(ladder).toContain(
-        "The ladder decides where a region comes from, not whether it exists.",
+        "Derive screen regions from the UI contract's responsibility, inputs, outcomes and business rules.",
       );
-      expect(ladder).toContain("a region its pattern implies");
+      expect(ladder).toContain(
+        "Use the screen pattern to choose regions in the prototype or implementation.",
+      );
       expect(ladder).toContain(
         "1. **Does the project already have a component for it?** Reuse it.",
       );
       // Built one example at a time, a region is only ever used once when it
-      // is written; a region two contracts name is shared from its first use.
+      // is written; a region two screens need is shared from its first use.
       expect(ladder).toContain(
-        "When two or more UI contracts name the same region, extract a shared component at the region's first use.",
+        "When two or more screens need the same region, extract a shared component at the region's first use.",
       );
       expect(ladder).toContain(
-        "When only one UI contract names a region and it then appears on a second screen that no shared component serves, extract one then.",
+        "When a region later appears on a second screen and no shared component serves it, extract one then.",
       );
       expect(ladder).toContain(
         "wrap whatever rung 2, 3 or 4 supplied and use it on every screen, rather than authoring the region again.",
       );
       expect(ladder).toContain(
-        "Leaving an implied region out needs the reason in the screen's UI contract.",
+        "If an expected region is omitted, explain the choice in the prototype handoff or the implementation review.",
       );
       expect(ladder).not.toContain("Does this region need to exist at all?");
       expect(review).toMatch(/^\| 2 .*\| the same ladder, rungs 1, 3 and 4 +\|$/m);
