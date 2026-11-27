@@ -140,9 +140,10 @@ describe("qfai init records the release that wrote the assistant tree", () => {
     expect(listed).not.toContain(matching);
     const refused = path.join(blocked, "STEP.md");
     expect(listed).not.toContain(refused);
-    expect(output).toContain(
-      `${refused} was not written. An incompatible destination or parent path blocked the write.`,
-    );
+    const refusal = output
+      .split(/\r?\n/)
+      .find((line) => line.startsWith(`WARN: ${refused} was not written.`));
+    expect(refusal).toContain("non-directory blocks a parent path");
   });
 
   // QFAI:AC-0001-0021-01
