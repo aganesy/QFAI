@@ -746,6 +746,15 @@ describe("the project layer describes the repository it is in", () => {
     expect(tagCreations(comment)).toEqual(["git tag second <SHA>"]);
   });
 
+  it.each([
+    ["(", ")"],
+    ["(true)", ""],
+  ])("keeps the tag command after a comment adjacent to %s", (group, close) => {
+    const command = "git tag second 0123456789abcdef0123456789abcdef01234567";
+    const shell = [`${group}# note \\`, command, close].join("\n");
+    expect(tagCreations(shell)).toEqual([command]);
+  });
+
   it("checks the commit and ordering of a continued tag command", () => {
     const check = "git merge-base --is-ancestor <SHA> origin/main";
     const firstLine = "git tag --points-at=HEAD";
