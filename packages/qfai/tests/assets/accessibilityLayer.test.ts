@@ -64,9 +64,10 @@ describe("implement-scaffold writes the accessibility check from the shipped tem
   it("installs the adopter dev dependency and writes the spec in a UI project", async () => {
     const step = await read("step", "implement-scaffold", "STEP.md");
     const setup = section(step, "## Accessibility check");
-    expect(setup).toMatch(
-      /Skip this section when no UI contract declares a screen whose `route` starts with `\/`/,
+    expect(setup).toContain(
+      "For Markdown UI responsibilities on a web surface, obtain the concrete routes from the running app or prototype.",
     );
+    expect(setup).toContain("Skip when neither applies.");
     expect(setup).toMatch(/install it as one with the project's package manager/);
     expect(setup).toContain("references/accessibility-check.md");
     expect(setup).toMatch(/role-to-screen mapping § Per-role navigation journey uses/);

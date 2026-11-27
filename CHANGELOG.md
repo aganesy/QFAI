@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- UI, API and database contracts can now describe responsibilities, inputs,
+  outcomes and business rules in Markdown. Validation checks their document
+  structure, example references, and the business-rule annotations in source
+  and tests. Existing structured contracts can migrate individually.
+- Browser guidance records the reason and fallback when an implementation uses
+  a feature beyond its supported browser target.
+
 - **`qfai catalog design` derives the design tokens and the Tailwind theme
   from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
   Design Tokens Community Group 2025.10 format, with the colours, their
@@ -629,9 +636,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **Doctor's help explains `--dry-run` with `--out`.** A dry run previews
-  repairs. When a diagnosis is produced, `--out` still writes it. The contract
-  now records that relative output paths resolve against the checked project root.
+- **`qfai doctor` explains a workflow path that cannot be listed.** For
+  `ENOTDIR`, it asks the operator to check that `.github/workflows` and its
+  ancestors are directories. Other read failures retain the existing guidance.
 
 - QFAI Doctor warns when it cannot list `.github/workflows` while checking Node version pins.
 
@@ -643,6 +650,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - `gh-budget` reports oversized GitHub responses without saving a partial
   Actions job log.
+
+- `gh-budget` also discards a partial job log when a signal stops GitHub CLI.
+  It keeps the rate-limit reading if the headers arrived in full.
 
 - Plain `qfai init` preserves an assistant `VERSION` marker another writer creates
   during initialization.
@@ -1099,6 +1109,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   constraint table, and step 4 keeps every non-goal of a large old story.
   Both preserve the original order.
 
+- Migration step 3 also keeps large structure catalogue results, contract
+  index notes and changed constraint identifiers in order without exceeding
+  the JavaScript argument limit.
+
 - **A saved graph analysis whose copy fails no longer stops restoration.**
   Restoring a saved CodeGraph or Graphify analysis copies a cache entry's
   `analysis` folder. When a file inside it could not be read, the copy threw:
@@ -1153,6 +1167,13 @@ decisions` headings appeared anywhere in the file, so a record with several
 - **`qfai init --force` reports a directory in a template file's place.**
   The directory is listed as refused and its contents are preserved. The copy
   continues with the other template files. A dry run reports the same refusal.
+
+- Template copies keep nested file and selected-path order even when a
+  subtree has more files than JavaScript accepts as function arguments.
+
+- The template refusal warning names the two places to inspect. A directory
+  or special entry can occupy the destination, and a link or non-directory
+  can block a parent path.
 
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
@@ -1980,6 +2001,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   check, so doctor reported the required lane installed although GitHub had
   no workflow there. The lane now counts only as a readable regular file.
 
+- **Doctor's help explains `--dry-run` with `--out`.** A dry run previews
+  repairs. When a diagnosis is produced, `--out` still writes it. The contract
+  now records that relative output paths resolve against the checked project root.
+
 - **Verification reads its context from the configured spec and contract
   directories.** The `verify-context` step read the policy, contracts and
   `decisions.md` from the default `.qfai/spec` paths, and looked for gate
@@ -2152,6 +2177,10 @@ decisions` headings appeared anywhere in the file, so a record with several
   trace and exited 1, the status it documents for a budget refusal. It now
   prints one line naming the operation that failed, such as resolving a
   given thread, and exits 2 (#4737).
+
+- **`scripts/pr-threads.mjs` reports invalid GitHub JSON as an error.** A
+  malformed response now produces an operation-specific diagnostic and exit
+  status 2. A deferral stops before proceeding to its next write (#5882).
 
 - **`qfai init --force` keeps a project's own wrapper when the link replacing
   it cannot be written.** A file or directory of the project's at a skill or
@@ -2532,6 +2561,12 @@ decisions` headings appeared anywhere in the file, so a record with several
   removed. Both now recommend `pnpm approve-builds` and say it records the
   approval under `allowBuilds` for pnpm 10.31 or later and
   `onlyBuiltDependencies` for earlier pnpm 10.
+
+- **`qfai doctor` explains where pnpm records mdschema approval.** pnpm 10
+  updates an existing `allowBuilds` map in `pnpm-workspace.yaml` from 10.26.0.
+  From 10.31.0 it can also create the map when neither legacy list is set.
+  Other pnpm 10 configurations use `onlyBuiltDependencies`, and pnpm 11
+  uses `allowBuilds` by default.
 
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
