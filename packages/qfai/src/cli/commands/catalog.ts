@@ -12,6 +12,7 @@ import { isEnoent } from "../../core/fs/errno.js";
 import { type OwnerLockOptions, withOwnerLock } from "../../core/fs/ownerLock.js";
 import { findUnsafeWrapperComponent } from "../../core/init/fsGuards.js";
 import { error, info } from "../../core/logger.js";
+import { componentBriefLines, tokenFileCount } from "../../core/uiux/catalogBrief.js";
 import {
   COMPONENT_CATALOG_PATH,
   type ComponentScan,
@@ -38,11 +39,18 @@ export type CatalogComponentsOptions = {
   root: string;
   /** Compare with the committed file and write nothing. */
   check?: boolean;
+  /** Print the brief of the committed catalogue and write nothing. */
+  brief?: boolean;
   loadTypescript?: UiPlainTextOptions["loadTypescript"];
 };
 
 export async function runCatalogComponents(options: CatalogComponentsOptions): Promise<number> {
   const root = path.resolve(options.root);
+  if (options.brief) {
+    if (!options.check) return printBrief(root);
+    error("qfai catalog components: give --brief or --check, not both.");
+    return EXIT_CODES.findings;
+  }
   const { config, issues, configPath } = await loadConfig(root);
   // `loadConfig` falls back to the defaults on a configuration it cannot use, and scanning the
   // default surface would overwrite a catalogue the project's own paths produced.
@@ -79,6 +87,48 @@ export async function runCatalogComponents(options: CatalogComponentsOptions): P
       : `${target} is out of date with the source. Run \`qfai catalog components\` and commit it.`,
   );
   return EXIT_CODES.findings;
+}
+
+/**
+ * Prints the brief of the committed catalogue, then the design token line when the token file is
+ * there. It reads no configuration and scans no source: the brief is the catalogue as committed.
+ */
+async function printBrief(root: string): Promise<number> {
+  const target = COMPONENT_CATALOG_PATH.split(path.sep).join("/");
+  const committed = await readCatalog(root);
+  if (committed.state !== "read") {
+    error(
+      committed.state === "absent"
+        ? `${target} does not exist. Run \`qfai catalog components\` and commit it.`
+        : committed.state === "invalid"
+          ? `${target} is not a component catalogue. Run \`qfai catalog components\` and commit it.`
+          : `qfai catalog components: could not read ${target}: ${committed.reason}`,
+    );
+    return EXIT_CODES.findings;
+  }
+  const lines = componentBriefLines(committed.text, target);
+  try {
+    const tokens = await readGenerated(root, DESIGN_TOKENS_PATH);
+    if (tokens.state === "read") lines.push(await tokenLine(root, tokens.text));
+  } catch (caught) {
+    error(
+      `qfai catalog components: could not read ${DESIGN_TOKENS_PATH.split(path.sep).join("/")}: ${messageOf(caught)}`,
+    );
+    return EXIT_CODES.findings;
+  }
+  info(lines.join("\n"));
+  return EXIT_CODES.ok;
+}
+
+/** The token count and, when it is there, where the theme is. */
+async function tokenLine(root: string, text: string): Promise<string> {
+  const file = DESIGN_TOKENS_PATH.split(path.sep).join("/");
+  const count = tokenFileCount(text);
+  if (count === null) return `Design tokens: ${file} does not parse. Run \`qfai catalog design\`.`;
+  const theme = await readGenerated(root, DESIGN_THEME_PATH);
+  const where =
+    theme.state === "read" ? `; theme: ${DESIGN_THEME_PATH.split(path.sep).join("/")}` : "";
+  return `Design tokens: ${count} in ${file}${where}`;
 }
 
 function scanSurface(

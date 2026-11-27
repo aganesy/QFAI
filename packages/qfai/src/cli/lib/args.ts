@@ -117,6 +117,8 @@ export type ParsedArgs = {
     catalogAction?: "components" | "design";
     /** `--check` for `qfai catalog`: compare with the committed files, write nothing. */
     catalogCheck?: boolean;
+    /** `--brief` for `qfai catalog components`: print a brief of the committed catalogue. */
+    catalogBrief?: boolean;
     /** `--flow <BF-NNNN>` values for `qfai validate`. */
     validateFlowIds: string[];
     /** `--flow <BF-NNNN>` values for `qfai report`. */
@@ -630,6 +632,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           options.catalogCheck = true;
         } else {
           markInvalid(notValidHere("--check"));
+        }
+        break;
+      case "--brief":
+        if (command === "catalog" && options.catalogAction === "components") {
+          options.catalogBrief = true;
+        } else {
+          markInvalid(notValidHere("--brief"));
         }
         break;
       case "--order":

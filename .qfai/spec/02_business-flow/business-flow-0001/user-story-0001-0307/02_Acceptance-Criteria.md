@@ -98,4 +98,11 @@ Feature: Catalogue the components a project already has
     Then each entry records `tokens` with the names its own declaration references, once each and sorted, right before `realizes`, and the component that references none has no `tokens` key
     And a name referenced in another declarator of the same `const` list is not recorded, and a catalogue whose `tokens` is not a list of names is reported as not a components list
     And the shipped implementation UI guidance says to reference a theme value by its variable through `var(--…)` so that `tokens` lists it
+  # AC-0001-0307-15
+  Scenario: An agent's brief carries the committed catalogue
+    Given a committed `.qfai/catalog/components.yaml` and design token file
+    When `qfai catalog components --brief` runs
+    Then it writes nothing and prints one line per listed component with its name, file and every other key it holds, and one line with the token count and the theme
+    And a missing or invalid catalogue, or `--brief` with `--check`, exits 1 with one line
+    And the shipped implementation UI guidance and the prototyping generator prompt say to include that output in a screen unit's brief
 ```
