@@ -617,6 +617,35 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(created)).toEqual([{ kind: "FUNCTION", name: "f", lines: [1, 3] }]);
   });
 
+  // QFAI:EX-0001-0039-83
+  it.each([
+    { parameter: `U&"n!0061me" UESCAPE '!'`, type: "int", signature: "integer" },
+    { parameter: `U&"n!0061me" UESCAPE'!'`, type: "int", signature: "integer" },
+    { parameter: `U&"n!0061me"UESCAPE '!'`, type: "int", signature: "integer" },
+    { parameter: `U&"n!0061me"UESCAPE'!'`, type: "int", signature: "integer" },
+    { parameter: `U&"n=0061me" UESCAPE '='`, type: "int", signature: "integer" },
+    {
+      parameter: `IN u&"n!0061me" uescape '!'`,
+      type: "app.custom_type",
+      signature: "app.custom_type",
+    },
+  ])(
+    "ignores Unicode-quoted parameter $parameter before $type",
+    async ({ parameter, type, signature }) => {
+      const sql =
+        `CREATE FUNCTION f(${parameter} ${type}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE OR REPLACE FUNCTION f(other ${type}) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`;
+      const { statements, errors } = parseSqlContract(sql);
+      expect(errors).toEqual([]);
+      expect(collectCreatedObjects(statements).map((object) => object.signature)).toEqual([
+        signature,
+        signature,
+      ]);
+      const duplicate = (await runOn(HEADER + sql)).filter((issue) => issue.code === "QFAI-DB-002");
+      expect(duplicate.map((issue) => issue.severity)).toEqual(["error"]);
+    },
+  );
+
   // QFAI:EX-0001-0039-73
   it("matches equivalent qualified type names while keeping other routine types distinct", async () => {
     const types = [

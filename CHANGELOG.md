@@ -1429,6 +1429,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   separately. Equivalent ordinary double-quoted and bare spellings match. Case and
   punctuation that distinguish quoted identifiers are preserved.
 
+- SQL routine identity ignores a Unicode-quoted parameter name together with
+  its `UESCAPE` clause and retains the full input type.
+
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
   are two tables, not one redefinition. An index created without a name

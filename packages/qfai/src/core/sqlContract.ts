@@ -654,6 +654,7 @@ const ARRAY_TYPE_SUFFIX = /(?: array(?:\[\d*\])?|(?:\[\d*\])+)$/i;
 
 const ROUTINE_TYPE_PARTS = /"(?:[^"]|"")*"|[^"]+/g;
 const BARE_IDENTIFIER = new RegExp(`^${IDENTIFIER_START_CLASS}${IDENTIFIER_CHAR_CLASS}*$`);
+const ARGUMENT_WORD = /(?:"(?:[^"]|"")*"|[^"\s])+/g;
 
 /** Compare only complete qualified names and keep quotes whose contents affect identity. */
 function qualifiedArgumentName(type: string): string | undefined {
@@ -707,7 +708,7 @@ function identityArgumentTypes(argumentText: string, kind: string): string {
     const normalized = readArgumentDeclaration(argument).replace(ROUTINE_TYPE_PARTS, (part) =>
       part.startsWith('"') ? part : part.replace(/\s*([.(),[\]])\s*/g, "$1"),
     );
-    const words = normalized.match(/(?:"(?:[^"]|"")*"|[^"\s])+/g) ?? [];
+    const words = argumentWords(normalized);
     let mode = "in";
     const leadingMode = words[0]?.toLowerCase() ?? "";
     const namedMode = words[1]?.toLowerCase() ?? "";
@@ -766,6 +767,21 @@ const ARGUMENT_DECLARATION_TOKEN = new RegExp(
     String.raw`"(?:[^"]|"")*"|${IDENTIFIER_START_CLASS}${IDENTIFIER_CHAR_CLASS}*|\S`,
   "gi",
 );
+
+/** Keep a leading Unicode name and its escape clause in the same word. */
+function argumentWords(declaration: string): string[] {
+  const tokens = declaration.matchAll(ARGUMENT_DECLARATION_TOKEN);
+  const first = tokens.next().value;
+  const mode = first && ARGUMENT_MODES.has(first[0].toLowerCase()) ? first[0] : undefined;
+  const name = mode === undefined ? first : tokens.next().value;
+  if (name?.groups?.["escape"] === undefined) {
+    return declaration.match(ARGUMENT_WORD) ?? [];
+  }
+
+  const rest = declaration.slice(name.index + name[0].length);
+  const words = rest.match(ARGUMENT_WORD) ?? [];
+  return mode === undefined ? [name[0], ...words] : [mode, name[0], ...words];
+}
 
 /** Decode a Unicode-delimited identifier to the ordinary quoted spelling. */
 function decodeUnicodeIdentifier(token: string, escape: string): string | undefined {
