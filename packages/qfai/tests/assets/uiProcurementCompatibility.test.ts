@@ -113,42 +113,22 @@ describe("ui-procurement checks runtime compatibility", () => {
       );
     });
 
-    it(`${tree}: a platform feature is looked up per region and its source recorded`, async () => {
-      const read = async (...parts: string[]): Promise<string> =>
+    it(`${tree}: records browser-support exceptions and their fallback`, async () => {
+      const read = async (...parts: string[]) =>
         flat(await readFile(path.join(repoRoot, tree, "assistant", ...parts), "utf-8"));
-      const rule = await read("rule", "ui-procurement.md");
-      expect(rule).toContain("is looked up, not remembered");
-      expect(rule).toContain("in MDN, web.dev or the web-features data");
-      expect(rule).toContain("QFAI ships no list of its own.");
-      expect(rule).toContain(
-        "the URL of the source it was looked up in and the Baseline status that source gave",
-      );
-
-      const generator = await read(
-        "skill",
-        "qfai-prototyping",
-        "references",
-        "generator-prompt.md",
-      );
-      expect(generator).toContain(
-        "Before starting a new screen region, look up each platform feature",
-      );
-      expect(generator).toContain(
-        "list it in `progress.md` under the screen and region with the source URL",
-      );
+      for (const file of [
+        ["rule", "ui-procurement.md"],
+        ["skill", "qfai-implement", "references", "ui-affecting.md"],
+        ["skill", "qfai-prototyping", "references", "generator-prompt.md"],
+        ["skill", "qfai-prototyping", "references", "reviewer-prompt.md"],
+      ]) {
+        expect(await read(...file)).toContain(
+          "Only a feature beyond the browser-support target needs a selection record",
+        );
+      }
       const handoff = await read("skill", "qfai-prototyping", "references", "handoff.md");
-      expect(handoff).toContain('"platformFeatures": [');
-      expect(handoff).toContain('"source": "<URL it was looked up in>"');
-      expect(handoff).toContain('"baseline": "<Baseline status that source gave>"');
-
-      const implement = await read("skill", "qfai-implement", "references", "ui-affecting.md");
-      expect(implement).toContain("Look a feature up before starting a new screen region");
-      expect(implement).toContain("one `@platform` line per feature");
-
-      const prototypeReview = flat(await readFile(path.join(repoRoot, tree, REVIEWER), "utf-8"));
-      expect(prototypeReview).toContain(
-        "Each platform feature a screen relies on is in `progress.md` with its source URL and Baseline status",
-      );
+      expect(handoff).toContain("Omit it for ordinary selections");
+      expect(handoff).toMatch(/"platformFeatures".*"reason".*"fallback"/);
     });
 
     it(`${tree}: both code reviewers check the record and report a legacy pattern`, async () => {

@@ -1,5 +1,7 @@
 # UI Design Contract Normalization
 
+This guide applies to existing structured UI contracts. For new screens, use `templates/spec/03_contract/ui/ui-NNNN-title.md`.
+
 `/qfai-sdd` reads the screens and their behaviour obligations from the
 deliberation record it consumes and writes them into the UI contracts.
 Downstream skills read the story tree, contracts, and evidence.
