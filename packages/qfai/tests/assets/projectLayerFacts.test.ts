@@ -639,6 +639,14 @@ describe("the project layer describes the repository it is in", () => {
     },
   );
 
+  it("finds a duplicate package check after an earlier clean build fence", () => {
+    const build = "corepack pnpm ci:gate:build";
+    const duplicate = "pnpm verify:pack";
+    const guide = ["```bash", build, "```", "", "```sh", build, duplicate, "```"].join("\n");
+
+    expect(releaseBuildBlock(guide)).toEqual([`${build}\n`, `${build}\n${duplicate}\n`]);
+  });
+
   // The host command lists under `.instruction/03_ai-agents/` were copied from
   // another project: `generate:graphql`, `apply:backend`, `test:e2e` and `seed`
   // are scripts this repository never had, and a root `pnpm test` runs nothing.
