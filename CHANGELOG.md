@@ -653,6 +653,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Migration step 3 sends constraint rows that cite lowercase contract IDs to
   a person to rewrite in plain words.
 
+- Migration step 3 names contract IDs in the instructions for rewriting a
+  rejected constraint in plain words.
+
 - Markdown table parsing counts consecutive backslashes before a closing pipe.
   An odd count preserves the pipe as part of the last cell.
 
