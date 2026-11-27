@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { loadConfig } from "../../../src/core/config.js";
+import { escapeRegExp } from "../../../src/core/regex.js";
 import { validateProject } from "../../../src/core/validate.js";
 import { validateDocumentSchema } from "../../../src/core/validators/documentSchema.js";
 import {
@@ -578,8 +579,21 @@ describe("migration CLI contract shape", () => {
     expect((await run(step03, root)).output).toMatch(/## Operations\r?\nnone/);
   });
 
+  const legacySectionHeading = /(?<!#)## Legacy ([1-9]\d*)(?=$|[\s"'`,;:.)])/;
+  const destinationPrefix = `${NEW}:`;
+  const legacyContractPath = new RegExp(
+    String.raw`\b(?:of|from|in)\s+["']?${escapeRegExp(OLD)}(?=$|[\s"',;:)]|\.(?=\s|$))`,
+  );
+  const manualRewriteAction = /^(?:manually\s+rewrite\b|rewrite\b.*\bby hand\b)/i;
+
   function matchesCliRewriteNote(note: string, section: number): boolean {
-    return note === `${NEW}: rewrite "## Legacy ${section}" of ${OLD} by hand`;
+    if (!note.startsWith(destinationPrefix)) return false;
+    const instruction = note.slice(destinationPrefix.length).trimStart();
+    return (
+      legacySectionHeading.exec(instruction)?.[1] === String(section) &&
+      legacyContractPath.test(instruction) &&
+      manualRewriteAction.test(instruction)
+    );
   }
 
   it("checks migration note details independently of the instruction wording", () => {
@@ -611,7 +625,7 @@ describe("migration CLI contract shape", () => {
     );
 
     const plan = await planContracts(await context(root));
-    const notes = plan.forAPerson.filter((note) => note.startsWith(`${NEW}: rewrite "## Legacy `));
+    const notes = plan.forAPerson.filter((note) => legacySectionHeading.test(note));
     expect(notes).toHaveLength(sectionCount);
     const mismatch = notes.findIndex((note, index) => !matchesCliRewriteNote(note, index + 1));
     expect(mismatch).toBe(-1);
