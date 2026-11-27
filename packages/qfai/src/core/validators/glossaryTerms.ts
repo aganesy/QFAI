@@ -230,7 +230,11 @@ export async function validateGlossaryTerms(
   for (const file of [...files].sort()) {
     if (skipped.has(file) || REGISTER_FILES.has(path.basename(file))) continue;
     const fromRecords = path.relative(deliberation, file);
-    if (!fromRecords.startsWith("..") && !path.isAbsolute(fromRecords)) continue;
+    const outsideRecords =
+      fromRecords === ".." ||
+      fromRecords.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(fromRecords);
+    if (!outsideRecords) continue;
     const relative = path.relative(root, file).split(path.sep).join("/");
     const prose = blankCodeSpans(maskNonSpecRegions(await readFile(file, "utf8")));
     for (const hit of synonymHits(prose, synonyms, terms)) {
@@ -276,7 +280,14 @@ export async function validateGlossaryTestTitles(
   if (glossary === null || synonyms.length === 0) return [];
   const terms = termPatterns(glossary);
   const issues: Issue[] = [];
-  const files = (await readStoryTests()).files
+  let scan: StoryTestScan;
+  try {
+    scan = await readStoryTests();
+  } catch {
+    // The obligations pass reads the same scan and reports its failure as QFAI-SCAN-002.
+    return [];
+  }
+  const files = scan.files
     .filter((entry) => TEST_EXTENSIONS.has(path.extname(entry.file).toLowerCase()))
     .sort((a, b) => a.file.localeCompare(b.file));
   for (const { file, content } of files) {

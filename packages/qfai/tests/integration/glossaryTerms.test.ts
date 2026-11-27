@@ -45,17 +45,21 @@ async function findings(
   code: string,
   staleTerms: string[] = [],
   deliberationDir?: string,
+  options: { flowIds?: string[]; testFileGlobs?: string[] } = {},
 ) {
   const config = structuredClone(defaultConfig);
   if (deliberationDir) config.paths.deliberationDir = deliberationDir;
   config.paths.specsDir = specs;
   config.paths.contractsDir = `${specs}/03_contract`;
-  config.validation.traceability.testFileGlobs = ["tests/**/*.test.ts", "tests/**/*_test.py"];
+  config.validation.traceability.testFileGlobs = options.testFileGlobs ?? [
+    "tests/**/*.test.ts",
+    "tests/**/*_test.py",
+  ];
   if (staleTerms.length > 0) config.validation.staleTerms = staleTerms;
   const result = await validateProject(
     root,
     { config, issues: [], configPath: path.join(root, "qfai.config.yaml") },
-    { profile },
+    { profile, ...(options.flowIds ? { flowIds: options.flowIds } : {}) },
   );
   return result.issues.filter((item) => item.code === code);
 }
@@ -90,6 +94,12 @@ describe("the glossary table and its contexts", () => {
       glossary([["order", "A request.", "", "Billing"]], [["Billing", "Charging for orders."]]),
     );
     expect(await findings("sdd", "QFAI-DOCSCHEMA-001")).toEqual([]);
+
+    await put(
+      glossaryFile,
+      "# Glossary\n\n## Terms\n\n| Term | Definition | Avoid | Context | Owner |\n| --- | --- | --- | --- | --- |\n| order | A request. |  |  | ops |\n",
+    );
+    expect((await findings("sdd", "QFAI-DOCSCHEMA-001")).length).toBeGreaterThan(0);
   });
 
   // QFAI:EX-0001-0317-02
@@ -233,5 +243,54 @@ describe("test titles the check does not read", () => {
     await put("tests/a_test.py", "def test_client():\n    pass\n");
     const found = await findings("verify", "QFAI-STORY-022");
     expect(found.map((item) => [item.file, item.loc?.line])).toEqual([["tests/a.test.ts", 1]]);
+  });
+});
+
+describe("the scope and the edges of the check", () => {
+  // QFAI:EX-0001-0317-10
+  it("raises neither code under --flow for a flow that holds none of the documents", async () => {
+    await signInTree();
+    await put(
+      `${specs}/02_business-flow/business-flow-0002/business-flow.md`,
+      "# BF-0002: Other\n",
+    );
+    await put(testFile, 'describe("client sign-in", () => {});\n');
+    await put(
+      glossaryFile,
+      glossary([customer, ["order", "A request.", "", "Shipping"]], [["Billing", "Charging."]]),
+    );
+    expect(await findings("verify", "QFAI-STORY-022")).not.toEqual([]);
+    expect(await findings("verify", "QFAI-STORY-023")).not.toEqual([]);
+    const scoped = { flowIds: ["BF-0002"] };
+    expect(await findings("verify", "QFAI-STORY-022", [], undefined, scoped)).toEqual([]);
+    expect(await findings("verify", "QFAI-STORY-023", [], undefined, scoped)).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0317-11
+  it("finds a phrase across a line break at its first line, and a word in both lists raises both", async () => {
+    await signInTree();
+    await put(
+      contractFile,
+      "# CLI-0001: Sign in\n\nAn account\nholder may sign in.\n<!-- client -->\n",
+    );
+    const synonyms = await findings("sdd", "QFAI-STORY-022", ["client"]);
+    expect(
+      synonyms
+        .map((item) => [item.file, item.loc?.line, item.refs?.[0]])
+        .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+    ).toEqual([
+      [storyFile, 4, "client"],
+      [contractFile, 3, "account holder"],
+    ]);
+    const stale = await findings("sdd", "QFAI-STORY-016", ["client"]);
+    expect(stale.map((item) => item.file)).toContain(storyFile);
+  });
+
+  it("leaves a failed test scan to the obligations pass instead of throwing", async () => {
+    await put(glossaryFile, glossary([customer]));
+    const scanFailures = await findings("verify", "QFAI-SCAN-002", [], undefined, {
+      testFileGlobs: ["tests/\u0000/*.test.ts"],
+    });
+    expect(scanFailures.length).toBeGreaterThan(0);
   });
 });
