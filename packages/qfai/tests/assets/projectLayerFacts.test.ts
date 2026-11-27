@@ -602,6 +602,21 @@ describe("the project layer describes the repository it is in", () => {
     ]);
   });
 
+  it("reads listing filters and tag operands across shell continuations", () => {
+    const shell = [
+      "git tag --points-at=HEAD \\",
+      "--no-points-at vX.Y.Z",
+      "git tag --points-at=HEAD \\",
+      "vX.Y.Z",
+      "git tag --points-at=HEAD \\\\",
+      "--no-points-at vX.Y.Z",
+    ].join("\n");
+
+    const creations = tagCreations(shell);
+    expect(creations).toEqual(["git tag --points-at=HEAD --no-points-at vX.Y.Z"]);
+    expect(creations.some(namesItsCommit)).toBe(false);
+  });
+
   it("only expands an unambiguous long tag option", () => {
     expect(canonicalLongTagFlag("--mess")).toBe("--message");
     expect(canonicalLongTagFlag("--me")).toBe("--me");
