@@ -959,7 +959,7 @@ const UNDIALECTED_TEST_SOURCE_EXTENSIONS: readonly string[] = [
  * `QFAI-TEST-001` for the extensions with a dialect, `QFAI-TEST-002` for the
  * ones without.
  */
-const STUB_SOURCE_EXTENSIONS: readonly string[] = Array.from(
+export const STUB_SOURCE_EXTENSIONS: readonly string[] = Array.from(
   new Set([
     ...STUB_DIALECTS.flatMap((dialect) => dialect.extensions.map((ext) => ext.slice(1))),
     ...UNDIALECTED_TEST_SOURCE_EXTENSIONS,

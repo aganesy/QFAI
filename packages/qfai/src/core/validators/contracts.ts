@@ -11,11 +11,7 @@ import {
   hasDependencyDeclaration,
   stripContractDeclarationLines,
 } from "../contractsDecl.js";
-import {
-  collectApiContractFiles,
-  collectDbContractFiles,
-  collectUiContractFiles,
-} from "../discovery.js";
+import { collectUiContractFiles } from "../discovery.js";
 import {
   collectCreatedObjects,
   findRedefinitions,
@@ -56,13 +52,13 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   const apiRoot = path.join(contractsRoot, "api");
   const dbRoot = path.join(contractsRoot, "db");
 
-  const [uiFiles, apiFiles, dbFiles] = await Promise.all([
-    collectUiContractFiles(uiRoot),
-    collectApiContractFiles(apiRoot),
-    collectDbContractFiles(dbRoot),
-  ]);
+  const contractIndex = await buildContractIndex(root, config);
+  const structured = (file: string) => path.extname(file).toLowerCase() !== ".md";
+  const uiFiles = contractIndex.files.ui.filter(structured);
+  const apiFiles = contractIndex.files.api.filter(structured);
+  const dbFiles = contractIndex.files.db.filter(structured);
 
-  if (uiFiles.length === 0) {
+  if (contractIndex.files.ui.length === 0) {
     issues.push(
       issue(
         "QFAI-CONTRACT-000",
@@ -73,7 +69,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
       ),
     );
   }
-  if (apiFiles.length === 0) {
+  if (contractIndex.files.api.length === 0) {
     issues.push(
       issue(
         "QFAI-CONTRACT-000",
@@ -84,7 +80,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
       ),
     );
   }
-  if (dbFiles.length === 0) {
+  if (contractIndex.files.db.length === 0) {
     issues.push(
       issue(
         "QFAI-CONTRACT-000",
@@ -106,7 +102,6 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
     issues.push(...(await validateContractFile(file, "DB")));
   }
 
-  const contractIndex = await buildContractIndex(root, config);
   issues.push(...validateDuplicateContractIds(contractIndex.idToFiles));
   issues.push(...validateDependencyRefs(contractIndex));
 
