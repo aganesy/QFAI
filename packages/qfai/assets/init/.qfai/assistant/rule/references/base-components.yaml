@@ -2,7 +2,9 @@
 #
 # Read an entry before building its part, as ui-procurement.md rung 1 says. Build the part once as a
 # shared component that meets the entry, and name the entry's id in that component's @pattern doc
-# tag, so every screen reuses the one component and .qfai/catalog/components.yaml lists it.
+# tag, so every screen reuses the one component and .qfai/catalog/components.yaml lists it. Give it
+# @source authored with an @reason naming the entry's id: an entry describes a part and is not an
+# installed catalogue.
 #
 # Each entry has exactly these keys: id, purpose, anatomy, role, accessibleName, keyboard, focus,
 # states (each state and how it renders), content, runtime (serverRendering, csp, noScript) and

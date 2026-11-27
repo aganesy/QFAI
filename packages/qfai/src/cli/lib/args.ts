@@ -890,6 +890,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   ) {
     markInvalid("qfai session-review: give --session or --since, not both.");
   }
+  if (command === "catalog" && options.catalogBrief && options.catalogCheck) {
+    markInvalid("qfai catalog components: give --brief or --check, not both.");
+  }
   if (command === "catalog" && !options.help && !options.catalogAction) {
     markInvalid(subcommandReason("catalog", null));
   }

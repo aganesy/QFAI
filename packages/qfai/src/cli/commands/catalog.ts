@@ -25,6 +25,7 @@ import {
 import {
   DESIGN_THEME_PATH,
   DESIGN_TOKENS_PATH,
+  type GeneratedRead,
   countTokens,
   readDesignSource,
   readGenerated,
@@ -46,11 +47,7 @@ export type CatalogComponentsOptions = {
 
 export async function runCatalogComponents(options: CatalogComponentsOptions): Promise<number> {
   const root = path.resolve(options.root);
-  if (options.brief) {
-    if (!options.check) return printBrief(root);
-    error("qfai catalog components: give --brief or --check, not both.");
-    return EXIT_CODES.findings;
-  }
+  if (options.brief) return printBrief(root);
   const { config, issues, configPath } = await loadConfig(root);
   // `loadConfig` falls back to the defaults on a configuration it cannot use, and scanning the
   // default surface would overwrite a catalogue the project's own paths produced.
@@ -107,28 +104,41 @@ async function printBrief(root: string): Promise<number> {
     return EXIT_CODES.findings;
   }
   const lines = componentBriefLines(committed.text, target);
-  try {
-    const tokens = await readGenerated(root, DESIGN_TOKENS_PATH);
-    if (tokens.state === "read") lines.push(await tokenLine(root, tokens.text));
-  } catch (caught) {
-    error(
-      `qfai catalog components: could not read ${DESIGN_TOKENS_PATH.split(path.sep).join("/")}: ${messageOf(caught)}`,
-    );
-    return EXIT_CODES.findings;
+  const tokens = await briefRead(root, DESIGN_TOKENS_PATH);
+  if (tokens === null) return EXIT_CODES.findings;
+  if (tokens.state === "read") {
+    const line = await tokenLine(root, tokens.text);
+    if (line === null) return EXIT_CODES.findings;
+    lines.push(line);
   }
   info(lines.join("\n"));
   return EXIT_CODES.ok;
 }
 
-/** The token count and, when it is there, where the theme is. */
-async function tokenLine(root: string, text: string): Promise<string> {
+/**
+ * The token count and, when it is there, where the theme is; null once a failure to read the
+ * theme has been reported.
+ */
+async function tokenLine(root: string, text: string): Promise<string | null> {
   const file = DESIGN_TOKENS_PATH.split(path.sep).join("/");
   const count = tokenFileCount(text);
   if (count === null) return `Design tokens: ${file} does not parse. Run \`qfai catalog design\`.`;
-  const theme = await readGenerated(root, DESIGN_THEME_PATH);
+  const theme = await briefRead(root, DESIGN_THEME_PATH);
+  if (theme === null) return null;
   const where =
     theme.state === "read" ? `; theme: ${DESIGN_THEME_PATH.split(path.sep).join("/")}` : "";
   return `Design tokens: ${count} in ${file}${where}`;
+}
+
+/** A design file the brief reads, or null once one line naming the file that failed is printed. */
+async function briefRead(root: string, relative: string): Promise<GeneratedRead | null> {
+  try {
+    return await readGenerated(root, relative);
+  } catch (caught) {
+    const shown = relative.split(path.sep).join("/");
+    error(`qfai catalog components: could not read ${shown}: ${messageOf(caught)}`);
+    return null;
+  }
 }
 
 function scanSurface(

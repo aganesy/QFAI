@@ -55,14 +55,14 @@ const CATALOG_TEXT = [
   "  - name: Button",
   "    file: src/ui/button.tsx",
   "    props: [variant, size]",
+  "    variants:",
+  "      variant: [primary, ghost]",
+  "      size: [sm, md]",
   "    source: shadcn/ui button@2.1",
   "    states: [default, disabled]",
   "    pattern: button",
   "    a11y: APG button, Enter and Space activate",
-  "    variants:",
-  "      variant: [primary, ghost]",
-  "      size: [sm, md]",
-  "    tokens: [color.primary]",
+  "    tokens: [--color-primary]",
   "    realizes: [BR-UI-0003-0001]",
   "",
 ].join("\n");
@@ -93,7 +93,7 @@ describe("the brief made from the committed catalogue", () => {
       [
         `Components in ${CATALOG}:`,
         "- Page (src/page.tsx)",
-        "- Button (src/ui/button.tsx): pattern: button; states: default, disabled; props: variant, size; a11y: APG button, Enter and Space activate; source: shadcn/ui button@2.1; variants: variant: primary | ghost, size: sm | md; tokens: color.primary; realizes: BR-UI-0003-0001",
+        "- Button (src/ui/button.tsx): pattern: button; states: default, disabled; props: variant, size; a11y: APG button, Enter and Space activate; variants: variant: primary | ghost, size: sm | md; source: shadcn/ui button@2.1; tokens: --color-primary; realizes: BR-UI-0003-0001",
         `Design tokens: 3 in ${TOKENS}; theme: ${THEME}`,
         "",
       ].join("\n"),
@@ -116,7 +116,7 @@ describe("the brief made from the committed catalogue", () => {
   });
 
   // QFAI:EX-0001-0307-45
-  it("refuses a missing or invalid catalogue and --brief with --check in one line", async () => {
+  it("refuses a missing or invalid catalogue in one line and --brief with --check as a usage error", async () => {
     const root = await projectWith({});
     const absent = await cli(["catalog", "components", "--brief", "--root", root]);
     expect(absent).toEqual({
@@ -136,13 +136,33 @@ describe("the brief made from the committed catalogue", () => {
     });
 
     const both = await cli(["catalog", "components", "--brief", "--check", "--root", root]);
-    expect(both).toEqual({
-      code: 1,
-      out: "",
-      err: "qfai catalog components: give --brief or --check, not both.\n",
-    });
+    expect(both.code).toBe(2);
+    expect(both.out).toContain("qfai catalog components");
+    expect(both.err).toContain("qfai catalog components: give --brief or --check, not both.");
 
     expect((await cli(["catalog", "design", "--brief", "--root", root])).code).toBe(2);
+  });
+
+  // QFAI:EX-0001-0307-47
+  it("names the one file it could not read, the catalogue or a design file", async () => {
+    const couldNotRead = (file: string): RegExp =>
+      new RegExp(`^qfai catalog components: could not read ${file.replace(/\./g, "\\.")}: .+\\n$`);
+    const unreadable = await projectWith({});
+    await mkdir(path.join(unreadable, ...CATALOG.split("/")), { recursive: true });
+    const catalogue = await cli(["catalog", "components", "--brief", "--root", unreadable]);
+    expect(catalogue.code).toBe(1);
+    expect(catalogue.out).toBe("");
+    expect(catalogue.err).toMatch(couldNotRead(CATALOG));
+
+    for (const failing of [TOKENS, THEME]) {
+      const root = await projectWith({ [CATALOG]: CATALOG_TEXT, [TOKENS]: TOKENS_TEXT });
+      await rm(path.join(root, ...failing.split("/")), { force: true });
+      await mkdir(path.join(root, ...failing.split("/")), { recursive: true });
+      const run = await cli(["catalog", "components", "--brief", "--root", root]);
+      expect(run.code).toBe(1);
+      expect(run.out).toBe("");
+      expect(run.err).toMatch(couldNotRead(failing));
+    }
   });
 
   // QFAI:EX-0001-0307-46
@@ -166,5 +186,6 @@ describe("the brief made from the committed catalogue", () => {
     const prompt = await read("qfai-prototyping/references/generator-prompt.md");
     const order = prompt.slice(prompt.indexOf("## Read order"), prompt.indexOf("## HTML envelope"));
     expect(order).toContain("`npx qfai catalog components --brief`");
+    expect(order).toContain("`.qfai/assistant/rule/references/base-components.yaml`");
   });
 });

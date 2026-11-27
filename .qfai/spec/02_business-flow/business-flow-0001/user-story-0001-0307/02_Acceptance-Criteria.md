@@ -91,6 +91,8 @@ Feature: Catalogue the components a project already has
     Then each entry with such a member records `variants` right after `props`, mapping each such member, in the order `props` lists it, to its literal values as written, `undefined` and `null` aside
     And a member whose type is imported, mixed or a single literal records no variant, and an entry with none, a destructured one included, has no `variants` key
     And a committed catalogue whose `variants` is not a mapping from names to lists of strings is reported as malformed
+    And the shipped implementation UI guidance says to pass one of a prop's listed `variants` values rather than restyling the component
+
   # AC-0001-0307-13
   Scenario: Each component lists the theme variables its declaration references
     Given exported components whose declarations reference CSS custom properties through `var(--name)` in strings, template literals, style objects and Tailwind arbitrary values, and one that uses only a theme utility class
@@ -98,18 +100,20 @@ Feature: Catalogue the components a project already has
     Then each entry records `tokens` with the names its own declaration references, once each and sorted, right before `realizes`, and the component that references none has no `tokens` key
     And a name referenced in another declarator of the same `const` list is not recorded, and a catalogue whose `tokens` is not a list of names is reported as not a components list
     And the shipped implementation UI guidance says to reference a theme value by its variable through `var(--…)` so that `tokens` lists it
+
   # AC-0001-0307-14
   Scenario: A shipped base catalogue describes the parts most products need before a project builds them
     Given the assistant tree `qfai init` installs
     When an implementer is about to build an error summary, a field with an error, a step indicator, a confirm step, a skip link, a sticky action bar, a status message or an empty state
     Then `.qfai/assistant/rule/references/base-components.yaml` holds one entry for that part, with a unique kebab-case `id` and exactly the keys of its closed shape: purpose, anatomy, role, accessible name, keyboard, focus, states with how each renders, content rules, runtime notes on server rendering, content security policy and no-script, and sources
-    And the shipped implementation UI guidance and the procurement rule's reuse rung tell the implementer to read that entry, build the part once as a shared component and name the entry's `id` in its `@pattern`
+    And the shipped implementation UI guidance and the procurement rule's reuse rung tell the implementer to read that entry, build the part once as a shared component, name the entry's `id` in its `@pattern` and give it `@source authored` with an `@reason` naming that `id`
 
   # AC-0001-0307-15
   Scenario: An agent's brief carries the committed catalogue
     Given a committed `.qfai/catalog/components.yaml` and design token file
     When `qfai catalog components --brief` runs
     Then it writes nothing and prints one line per listed component with its name, file and every other key it holds, and one line with the token count and the theme
-    And a missing or invalid catalogue, or `--brief` with `--check`, exits 1 with one line
+    And a missing, invalid or unreadable catalogue, or a token file or theme that exists but cannot be read, exits 1 with one line naming that file
+    And `--brief` with `--check` is a usage error that exits 2
     And the shipped implementation UI guidance and the prototyping generator prompt say to include that output in a screen unit's brief
 ```

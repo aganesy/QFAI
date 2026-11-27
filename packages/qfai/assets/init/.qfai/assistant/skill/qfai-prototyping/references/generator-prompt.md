@@ -58,7 +58,10 @@ identity.
 9. When `.qfai/catalog/components.yaml` is committed, the output of
    `npx qfai catalog components --brief`, which the session agent includes in
    each screen unit's brief: one line per listed component and the design
-   token count. Build a region from the component listed for its pattern.
+   token count. Build a region from the component listed for its pattern. A
+   part no line lists but `.qfai/assistant/rule/references/base-components.yaml`
+   describes, such as an error summary or a skip link, is built to its entry
+   there.
 
 ## HTML envelope (every iteration)
 

@@ -151,6 +151,10 @@ describe("QFAI ships a base catalogue of the parts most products need", () => {
     expect(section).toContain(`\`${BASE_CATALOGUE_PATH}\``);
     expect(section).toContain("Build it once as a shared component");
     expect(section).toContain("name the entry's `id` in its `@pattern`");
+    expect(section).toContain("`@source authored` with an `@reason` naming the entry's `id`");
+    const shipped = await readFile(path.join(assistantAssets, BASE_CATALOGUE), "utf-8");
+    const header = shipped.slice(0, shipped.indexOf("\ncomponents:")).replace(/^# ?/gm, "");
+    expect(flat(header)).toContain("@source authored with an @reason naming the entry's id");
 
     const rule = flat(
       await readFile(path.join(assistantAssets, "rule", "ui-procurement.md"), "utf-8"),

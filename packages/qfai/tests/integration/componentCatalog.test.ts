@@ -819,4 +819,30 @@ describe("each component lists the string literal values its props take", () => 
       expect(findings[0]?.message).toContain("is not a `components:` list");
     }
   });
+
+  // QFAI:EX-0001-0307-48
+  it("ships the guidance to pass a listed variants value rather than restyle", async () => {
+    const guidance = await readFile(
+      path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "..",
+        "assets",
+        "init",
+        ".qfai",
+        "assistant",
+        "skill",
+        "qfai-implement",
+        "references",
+        "ui-affecting.md",
+      ),
+      "utf-8",
+    );
+    const start = guidance.indexOf("## Component catalogue");
+    const end = guidance.indexOf("\n## ", start + 1);
+    const section = guidance.slice(start, end).replace(/\s+/g, " ");
+    expect(section).toContain(
+      "Pass one of a prop's listed `variants` values rather than restyling",
+    );
+  });
 });

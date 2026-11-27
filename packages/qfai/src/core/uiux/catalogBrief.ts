@@ -20,6 +20,11 @@ export function componentBriefLines(catalogText: string, catalogPath: string): s
   return [`Components in ${catalogPath}:`, ...list.filter(isRecord).map(componentLine)];
 }
 
+/**
+ * One component's line: its fields joined by `; `.
+ * Ceiling: a free-text value that itself holds `; `, such as an `a11y` note, reads as two fields;
+ * accepted while the brief is read by an agent beside the catalogue; quoting values lifts it.
+ */
 function componentLine(entry: Record<string, unknown>): string {
   const head = `- ${String(entry.name)} (${String(entry.file)})`;
   const keys = Object.keys(entry).filter((key) => key !== "name" && key !== "file");

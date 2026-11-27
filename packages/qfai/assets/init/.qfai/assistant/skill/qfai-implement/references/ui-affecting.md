@@ -34,7 +34,9 @@ rather than restating the components by hand.
   read its entry in `.qfai/assistant/rule/references/base-components.yaml`: its anatomy, role and
   accessible name, keyboard and focus behaviour, states, content rules, runtime notes and sources.
   Build it once as a shared component that meets the entry, and name the entry's `id` in its
-  `@pattern`, as `@pattern error-summary`. Not needed for any other region.
+  `@pattern`, as `@pattern error-summary`. Give it `@source authored` with an `@reason` naming the
+  entry's `id`, as `@reason built to base entry error-summary`: the entry is a description, not an
+  installed catalogue. Not needed for any other region.
 - When you author a shared component, give it a doc comment, then run the command:
 
 ```tsx
@@ -62,7 +64,8 @@ inside its declaration or on its leading comment lines, so the catalogue's `real
 rule. Before writing a region for a rule, look for a listed component whose `realizes` holds it.
 
 A prop typed as a union of string literals, such as `variant: "default" | "outline"`, is listed
-under `variants` with its values. Pass one of those values rather than restyling the component.
+under `variants` with its values. Pass one of a prop's listed `variants` values rather than
+restyling the component.
 Reference a theme value by its variable, as `var(--color-brand)` or `bg-[var(--color-brand)]`,
 never by a literal colour or size, so the catalogue's `tokens` lists the variables a component
 uses. A utility class such as `bg-brand` is not listed there.

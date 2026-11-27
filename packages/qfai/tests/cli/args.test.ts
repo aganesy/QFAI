@@ -143,6 +143,20 @@ describe("parseArgs", () => {
     expect(parsed.options.rootExplicit).toBe(true);
   });
 
+  it("refuses --brief with --check on catalog components as a usage error", () => {
+    for (const argv of [
+      ["catalog", "components", "--brief", "--check"],
+      ["catalog", "components", "--check", "--brief"],
+    ]) {
+      const parsed = parseArgs(argv, process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.invalidReason).toBe(
+        "qfai catalog components: give --brief or --check, not both.",
+      );
+    }
+    expect(parseArgs(["catalog", "components", "--brief"], process.cwd()).invalid).toBe(false);
+  });
+
   it("parses --fail-on {never|warning|error} and rejects other values", () => {
     const cwd = process.cwd();
     for (const value of ["never", "warning", "error"] as const) {

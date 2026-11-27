@@ -122,8 +122,8 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     lines: [
       `${EXIT_CODES.ok} = the catalogue was written, --check found it up to date, or --brief printed it,`,
       `${EXIT_CODES.findings} = --check found it missing or out of date, --brief found it missing or`,
-      "      not a catalogue, --brief came with --check, qfai.config.yaml has an error,",
-      "      typescript cannot be loaded, or a read or write failure",
+      "      not a catalogue, qfai.config.yaml has an error, typescript cannot be loaded,",
+      "      or a read or write failure",
     ],
   },
   {

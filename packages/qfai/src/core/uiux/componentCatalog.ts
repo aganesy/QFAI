@@ -569,10 +569,18 @@ function componentsOfFile(
       : `${fromLineStart(statement.pos, statement.getStart())}\n${fromLineStart(declarator.pos, declarator.end)}`;
   // The text a component's theme variables are read from: the same parts, cut at their own first
   // character, so a declarator of a `const` list never takes a variable from the one before it.
+  // The leading part starts on the line after the one holding the statement's first position
+  // when that line holds code before it, so a comment after the previous statement stays its own.
+  const leadingStart = (statement: Candidate["statement"]): number => {
+    const lineStart = source.lastIndexOf("\n", statement.pos - 1) + 1;
+    if (source.slice(lineStart, statement.pos).trim() === "") return statement.pos;
+    const nextLine = source.indexOf("\n", statement.pos) + 1;
+    return nextLine === 0 || nextLine > statement.getStart() ? statement.getStart() : nextLine;
+  };
   const ownText = ({ statement, declarator }: Candidate): string =>
     declarator === undefined
-      ? source.slice(statement.pos, statement.end)
-      : `${source.slice(statement.pos, statement.getStart())}\n${declarator.getText()}`;
+      ? source.slice(leadingStart(statement), statement.end)
+      : `${source.slice(leadingStart(statement), statement.getStart())}\n${declarator.getText()}`;
   // Ceiling: a class component is not listed; reading `render` methods lifts it.
   const components: CatalogComponent[] = [];
   for (const name of exported) {
