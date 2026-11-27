@@ -146,7 +146,7 @@ describe("qfai init records the release that wrote the assistant tree", () => {
       "Assistant VERSION stays absent when required assets cannot be verified",
     );
     expect(output).toContain(
-      `${path.relative(dir, path.join(blocked, "STEP.md"))} was not written. An incompatible destination or parent path blocked the write.`,
+      `${path.relative(dir, path.join(blocked, "STEP.md"))} was not written. Check whether a directory or special entry occupies the destination, or a symbolic link or non-directory blocks a parent path.`,
     );
 
     await rm(blocked);

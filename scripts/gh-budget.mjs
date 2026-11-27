@@ -503,10 +503,14 @@ export function ghApi(apiPath, execute = execFileSync) {
     };
   } catch (cause) {
     const stdout = typeof cause?.stdout === "string" ? cause.stdout : "";
-    if (cause?.code === "ENOBUFS") {
+    const overflow = cause?.code === "ENOBUFS";
+    const signal = typeof cause?.signal === "string" ? cause.signal : undefined;
+    if (overflow || signal !== undefined) {
       const { head } = splitResponse(stdout);
       return {
-        error: `The GitHub response is too large. The limit is ${String(MAX_RESPONSE_BYTES)} bytes.`,
+        error: overflow
+          ? `The GitHub response is too large. The limit is ${String(MAX_RESPONSE_BYTES)} bytes.`
+          : `The GitHub CLI was interrupted (${signal}).`,
         reading: head === stdout ? undefined : readingFrom(head),
       };
     }

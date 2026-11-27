@@ -22,7 +22,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { defaultConfig, loadConfig, resolvePath } from "../../src/core/config.js";
 import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -170,17 +170,12 @@ describe("init assets root mirror", () => {
 
   // Self-validation uses the package's source and test directories.
   it("points repository self-validation at the package source and tests", async () => {
-    const buffer = await readOrNull(rootConfig);
-    expect(buffer, "qfai.config.yaml is missing at the repo root").not.toBeNull();
-    if (buffer === null) {
-      return;
-    }
-    const paths = asRecord(asRecord(parseYaml(buffer.toString("utf-8")))?.paths);
-    expect(paths).toMatchObject({ srcDir: "packages/qfai/src", testsDir: "packages/qfai/tests" });
-    const [sourceEntries, testEntries] = await Promise.all([
-      readdir(path.join(repoRoot, "packages", "qfai", "src")),
-      readdir(path.join(repoRoot, "packages", "qfai", "tests")),
-    ]);
+    const { config } = await loadConfig(repoRoot);
+    const sourceDir = resolvePath(repoRoot, config, "srcDir");
+    const testDir = resolvePath(repoRoot, config, "testsDir");
+    expect(sourceDir).toBe(path.join(repoRoot, "packages", "qfai", "src"));
+    expect(testDir).toBe(path.join(repoRoot, "packages", "qfai", "tests"));
+    const [sourceEntries, testEntries] = await Promise.all([readdir(sourceDir), readdir(testDir)]);
     expect(sourceEntries.length, "packages/qfai/src holds no files").toBeGreaterThan(0);
     expect(testEntries.length, "packages/qfai/tests holds no files").toBeGreaterThan(0);
   });
