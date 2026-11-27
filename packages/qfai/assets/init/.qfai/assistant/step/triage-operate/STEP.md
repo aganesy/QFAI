@@ -51,15 +51,21 @@ operation. This step runs it and reports what happened.
    merge adds no review requirement of its own. A conflict in any other file
    stops the operation as a tracked change it needs. Read the base repository's
    review requirements from the pull request's base branch and apply them
-   to the updated head after its checks pass.
+   to the updated head after its checks pass. Record the head commit whose
+   checks and review passed.
 5. For a pull request merge, fetch the base again just before the final merge.
    If the fetched base commit differs from the recorded commit, record the
    new commit and repeat the base refresh, checks and updated-head review
    for the new commit. Fetch the base again after each repeat. When the
    fetched base matches the recorded commit and checks and review requirements
    hold for the updated head, merge the pull request using the method the base
-   repository requires. Carry out any other named operation. Observe the
-   result, such as the merge commit, deploy status or closed item.
+   repository requires. Make the forge merge conditional on that reviewed
+   head commit. If the head changes, repeat the base refresh, checks, review
+   and final base fetch for the new head before attempting the conditional
+   merge again.
+   If the forge cannot enforce the precondition, report `needs-change`.
+   Carry out any other named operation. Observe the result, such as the
+   merge commit, deploy status or closed item.
 6. After a merge, check the merged result: the target branch holds the merge
    commit, and, when the user asked to see them pass or the project's policy
    requires it, the checks the project runs on that branch pass. A failure
