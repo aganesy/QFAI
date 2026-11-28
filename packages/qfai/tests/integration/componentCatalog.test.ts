@@ -172,6 +172,7 @@ describe("JSX needs the TypeScript compiler the project installs", () => {
   // QFAI:EX-0001-0307-06
   it.each([
     { scenario: "cannot load", missing: undefined },
+    { scenario: "lacks createSourceFile", missing: "createSourceFile" },
     { scenario: "lacks getLeadingCommentRanges", missing: "getLeadingCommentRanges" },
     { scenario: "lacks getTrailingCommentRanges", missing: "getTrailingCommentRanges" },
   ])(
