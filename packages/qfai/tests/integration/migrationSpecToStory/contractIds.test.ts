@@ -626,6 +626,12 @@ describe("migration CLI contract shape", () => {
     ).toBe(false);
     expect(
       matchesCliRewriteNote(
+        `${NEW}: rewrite "## Legacy 1" of ${OLD} using the migration tool, not by hand.`,
+        1,
+      ),
+    ).toBe(false);
+    expect(
+      matchesCliRewriteNote(
         `${NEW}: rewrite "## Legacy 1" of ${OLD} by hand. Keep the section order.`,
         1,
       ),
