@@ -371,6 +371,17 @@ describe("retrying a deferral that stopped part way", () => {
     expect(deferralWrites()).toEqual([write.join(" ")]);
   });
 
+  it("distinguishes the GraphQL endpoint from a REST input filename", () => {
+    const endpoint = "repos/example/project/issues/40/comments";
+    const restWrite = ["gh", "api", "--input", "graphql", endpoint];
+    const restRead = ["gh", "api", endpoint, "--input", "graphql", "--method", "GET"];
+    const graphqlWrite = ["gh", "api", "-X", "POST", "graphql", "-f", "query=mutation { record }"];
+    const graphqlRead = ["gh", "api", "graphql", "-f", "query=query { viewer { login } }"];
+    calls.list.push(restWrite, restRead, graphqlWrite, graphqlRead);
+
+    expect(deferralWrites()).toEqual([restWrite.join(" "), graphqlWrite.join(" ")]);
+  });
+
   const answer = (isResolved: boolean, replies: string[]): string =>
     JSON.stringify({
       data: {
