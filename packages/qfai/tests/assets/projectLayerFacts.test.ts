@@ -803,6 +803,11 @@ describe("the project layer describes the repository it is in", () => {
     expect(releaseTaggingStatements(guide)).toEqual([check + " && " + quoted]);
   });
 
+  it("joins raw CRLF inside a double-quoted release operand", () => {
+    const shell = ['git tag vX.Y.Z "0123\\', '4567"'].join("\r\n");
+    expect(joinShellContinuations(shell)).toBe('git tag vX.Y.Z "01234567"');
+  });
+
   it("keeps an escaped backslash before a quoted newline", () => {
     const shell = ['git tag -m "two lines ' + "\\\\", 'message" vX.Y.Z'].join("\n");
     expect(joinShellContinuations(shell)).toBe(shell);
