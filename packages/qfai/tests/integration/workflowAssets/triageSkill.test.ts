@@ -59,7 +59,8 @@ describe("qfai-triage as a stage skill", () => {
     const front = frontMatterOf(await readShipped(SKILL));
     const description = String(front.description);
     expect(description).toMatch(/^Use when invoked by name or handed a QFAI work order\b/);
-    expect(description.length).toBeLessThanOrEqual(1024);
+    expect(Array.from(`${String(front.name)}${description}`).length).toBeLessThanOrEqual(400);
+    expect(description).toContain("authorized current-task temp dir cleanup");
     expect(description).not.toMatch(/[<>]/);
     expect(Object.keys(front)).not.toContain("disable-model-invocation");
     expect(Object.keys(front)).not.toContain("routing-profile");
@@ -192,9 +193,11 @@ describe("qfai-triage invoked by name", () => {
     const completion = flat(sectionOf(skill, "## Completion"));
     expect(completion).toMatch(/never says a (?:tracked )?change is done/i);
     expect(completion).toMatch(/the stage commits only the records the Reviewer Gate allows/);
-    expect(String(frontMatterOf(skill).description)).toMatch(
-      /ending with no tracked change but its deliberation record, open questions and approval row:/,
+    const description = String(frontMatterOf(skill).description);
+    expect(description).toContain(
+      "Ordinary triage writes only its deliberation record, open questions and approval row.",
     );
+    expect(description).toContain("Authorized operations follow the Reviewer Gate.");
     expect(flat(sectionOf(skill, "## Inputs"))).toMatch(
       /still writes the run's deliberation record when it asks the user a question or takes an agent decision, except in a private security intake: a run where `triage-security-intake` takes a vulnerability report in privately writes no deliberation record that could disclose it\. Its questions, decisions and severity stay in the ignored intake record that step names/,
     );
@@ -434,7 +437,7 @@ describe("a question answered without a change", () => {
       "If the head changes, repeat the base refresh, checks, review and final base fetch for the new head before attempting the conditional merge again.",
     );
     expect(mergeRequest).toContain(
-      "If the forge cannot enforce the precondition, report `needs-change`.",
+      "If the forge cannot enforce the precondition, report `needs-change` and stop without merging.",
     );
     expect(procedure).not.toContain("only then merge");
     expect(procedure).not.toContain("ask for no new review of that merge");

@@ -100,7 +100,10 @@ export async function ensureGraphGitignore(
           "From the directory initialized by `qfai init`, review the indexed paths with `git ls-files -- .qfai/tools/`. " +
           "From that same directory, use `git --literal-pathspecs rm --cached -- <path>` to stop tracking a file. " +
           "Replace `<path>` with one exact path relative to that directory and quote it for your shell. " +
-          "This keeps the files in your working tree. Keep an effective ignore rule for future output.",
+          "This keeps the files in your working tree. " +
+          "If Git refuses because the staged content differs, review and preserve the staged version before retrying. " +
+          "The staged content must match HEAD or the working file. " +
+          "Keep an effective ignore rule for future output.",
       ],
     };
   }

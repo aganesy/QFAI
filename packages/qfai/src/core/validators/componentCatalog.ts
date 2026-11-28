@@ -55,7 +55,7 @@ export async function validateComponentCatalog(
     catalogueIssues.push(
       catalogueReadFinding(
         "Could not read the component catalogue: " + catalog.reason,
-        "Fix the reported catalogue path issue. " + REGENERATE,
+        catalog.suggestedAction ?? "Fix the reported catalogue path issue. " + REGENERATE,
       ),
     );
   }

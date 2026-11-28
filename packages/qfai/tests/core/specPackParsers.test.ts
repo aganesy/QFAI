@@ -175,6 +175,76 @@ describe("parseRenderedMarkdownTables", () => {
   });
 
   // QFAI:EX-0001-0039-77
+  it.each(["", "     Intro <!-- unfinished"])(
+    "omits a comment block in a list after %j before the next visible table",
+    (preceding) => {
+      const text = [
+        "123. Example:",
+        preceding,
+        "     <!-- draft",
+        "     " + header,
+        "     " + separator,
+        "     | Hidden | draft |",
+        "     -->",
+        "",
+        "     " + header,
+        "     " + separator,
+        "     | After | visible |",
+      ].join("\n");
+
+      expect(parseRenderedMarkdownTables(text)).toEqual([
+        { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+      ]);
+    },
+  );
+
+  // QFAI:EX-0001-0039-77
+  it("ends a list comment block at a dedented table even without a closer", () => {
+    const text = [
+      "123. <!-- draft",
+      "     " + header,
+      "     " + separator,
+      "     | Hidden | draft |",
+      "",
+      header,
+      separator,
+      "| After | visible |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      { headers: ["Label", "Expected"], rows: [["After", "visible"]] },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
+  it("masks only complete inline comments within a single table cell", () => {
+    const text = [
+      header,
+      separator,
+      "| Starts with <!-- | Ends with --> |",
+      "| Keep<!-- hidden \\| pipe --> visible | Next |",
+      "| `<!-- literal -->` | Another |",
+      "|<!-- hidden -->| Right |",
+      "| Left |<!-- hidden -->",
+      "| Text\\<!-- hidden -->| Right |",
+    ].join("\n");
+
+    expect(parseRenderedMarkdownTables(text)).toEqual([
+      {
+        headers: ["Label", "Expected"],
+        rows: [
+          ["Starts with <!--", "Ends with -->"],
+          ["Keep visible", "Next"],
+          ["`<!-- literal -->`", "Another"],
+          ["", "Right"],
+          ["Left", ""],
+          ["Text\\", "Right"],
+        ],
+      },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-77
   it.each([
     ["", ""],
     ["- - -\n", "  "],

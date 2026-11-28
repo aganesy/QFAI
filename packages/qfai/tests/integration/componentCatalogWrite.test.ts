@@ -67,6 +67,7 @@ vi.mock("node:fs/promises", async () => {
 
 const { runCliCaptured: cli } = await import("../helpers/cliCapture.js");
 const { runCatalogComponents } = await import("../../src/cli/commands/catalog.js");
+const { renderCatalog } = await import("../../src/core/uiux/componentCatalog.js");
 
 const roots: string[] = [];
 const CATALOG = ".qfai/catalog/components.yaml";
@@ -123,6 +124,50 @@ const packageRequire = createRequire(import.meta.url);
 const loadTypescript = (): unknown => packageRequire("typescript");
 
 const catalogFile = (root: string): string => path.join(root, ...CATALOG.split("/"));
+
+// QFAI:EX-0001-0307-29
+// QFAI:EX-0001-0307-30
+it("writes at the UTF-8 limit and preserves the catalogue when output is larger", async () => {
+  const root = await project();
+  const limit = 8 * 1024 * 1024;
+  const entry = { name: "Alpha", file: "src/a.tsx" };
+  const bytesForReason = limit - Buffer.byteLength(renderCatalog([{ ...entry, reason: "x" }])) + 1;
+  const reason = "é".repeat(Math.floor(bytesForReason / 2)) + "x".repeat(bytesForReason % 2);
+  expect(Buffer.byteLength(renderCatalog([{ ...entry, reason }]))).toBe(limit);
+
+  await mkdir(path.join(root, "src"));
+  const source = path.join(root, "src", "a.tsx");
+  const writeSource = (value: string) =>
+    writeFile(source, `/** @reason ${value} */\nexport function Alpha() { return <div />; }\n`);
+  await writeSource(reason);
+  expect(await runCatalogComponents({ root, loadTypescript })).toBe(0);
+  const previous = await readFile(catalogFile(root));
+  expect(previous.length).toBe(limit);
+
+  await writeSource(reason + "x");
+  const stderr = collectStderr();
+  expect(await runCatalogComponents({ root, loadTypescript })).toBe(1);
+  expect(stderr.join("")).toContain(`exceeds ${limit} bytes`);
+  expect(stderr.join("")).toContain("Shorten catalogue tags");
+  expect(stderr.join("")).toContain("uiux.surfacePaths");
+  expect((await readFile(catalogFile(root))).equals(previous)).toBe(true);
+
+  stderr.length = 0;
+  expect(await runCatalogComponents({ root, loadTypescript, check: true })).toBe(1);
+  expect(stderr.join("")).toContain(`generated output exceeds ${limit} bytes`);
+  expect(stderr.join("")).toContain("Shorten catalogue tags");
+  expect(stderr.join("")).toContain("nothing was compared");
+  expect((await readFile(catalogFile(root))).equals(previous)).toBe(true);
+
+  stderr.length = 0;
+  await truncate(catalogFile(root), limit + 1);
+  const oversized = await readFile(catalogFile(root));
+  expect(await runCatalogComponents({ root, loadTypescript, check: true })).toBe(1);
+  expect(stderr.join("")).toBe(
+    `qfai catalog components: could not read ${CATALOG}, so nothing was compared: The component catalogue exceeds ${limit} bytes.\n`,
+  );
+  expect((await readFile(catalogFile(root))).equals(oversized)).toBe(true);
+});
 
 // QFAI:EX-0001-0307-29
 it("stops reading the verified catalogue descriptor when the file grows past the limit", async () => {

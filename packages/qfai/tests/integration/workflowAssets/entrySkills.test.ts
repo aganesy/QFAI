@@ -491,6 +491,10 @@ describe("qfai-run", () => {
       /ask the forge's REST issue search once, as `\.agents\/rules\/api-budget\.md` says, for this repository's open issues and pull requests together where the forge's search covers both in one call; otherwise search open issues only/i,
     );
     expect(search).toMatch(/make no second call and no call per term/i);
+    expect(search).toContain(
+      "gh api -X GET search/issues -f q='repo:<owner>/<name> is:open is:issue <terms>'",
+    );
+    expect(search).toContain("GitHub uses the issue-only fallback");
     expect(search).toMatch(/at most five, joined with `OR`/i);
     expect(search).toMatch(
       /each term is a bare word of letters, digits, `\.`, `-`, `_` or `\/`; drop any other character, so no quote or shell metacharacter reaches the query/i,

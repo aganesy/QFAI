@@ -30,12 +30,16 @@ import {
   type TsNode,
   type UiPlainTextOptions,
 } from "../validators/uiPlainText.js";
+import { businessRuleCitations } from "../validators/storyTreeObligations.js";
 import { readSafe } from "../validators/utils.js";
 
 /** Where the catalogue is written and read, relative to the project root. */
 export const COMPONENT_CATALOG_PATH = path.join(".qfai", "catalog", "components.yaml");
 
-const MAX_CATALOG_BYTES = 8 * 1024 * 1024;
+export const COMPONENT_CATALOG_MAX_BYTES = 8 * 1024 * 1024;
+export const COMPONENT_CATALOG_SIZE_REASON = `The component catalogue exceeds ${COMPONENT_CATALOG_MAX_BYTES} bytes.`;
+export const COMPONENT_CATALOG_SIZE_RECOVERY =
+  "Shorten catalogue tags in selected component doc comments or narrow `uiux.surfacePaths`, then run `qfai catalog components`.";
 const CATALOG_OPTIONAL_FLAGS: Partial<Record<"O_NOFOLLOW" | "O_NONBLOCK", number>> = constants;
 const CATALOG_READ_FLAGS =
   constants.O_RDONLY |
@@ -85,11 +89,17 @@ export type CatalogComponent = {
   file: string;
   /** The members of its props type; absent when they cannot be read statically. */
   props?: string[];
+  /** Each prop typed as a union of string literals, with those values in written order. */
+  variants?: Record<string, string[]>;
   source?: string;
   reason?: string;
   states?: string[];
   pattern?: string;
   a11y?: string;
+  /** The CSS custom properties its declaration references through `var(--name)`, sorted. */
+  tokens?: string[];
+  /** The business-rule IDs its declaration cites on standalone comment lines, sorted. */
+  realizes?: string[];
 };
 
 /** A raw `<button>`, `<input>` or `<select>` in a surface file. */
@@ -120,7 +130,7 @@ export type ComponentScan =
 export type CatalogRead =
   | { state: "absent" }
   | { state: "invalid" }
-  | { state: "unreadable"; reason: string }
+  | { state: "unreadable"; reason: string; suggestedAction?: string }
   | { state: "read"; text: string; components: CatalogComponent[] };
 
 const HEADER = [
@@ -173,15 +183,18 @@ export async function scanComponents(
 /** The catalogue file's text for a list of components, byte-identical for the same list. */
 export function renderCatalog(components: readonly CatalogComponent[]): string {
   const entries = components.map((component) => {
-    const entry: Record<string, string | string[]> = {
+    const entry: Record<string, string | string[] | Record<string, string[]>> = {
       name: component.name,
       file: component.file,
     };
     if (component.props) entry.props = component.props;
+    if (component.variants) entry.variants = component.variants;
     for (const tag of DOC_TAGS) {
       const value = component[tag];
       if (value !== undefined) entry[tag] = value;
     }
+    if (component.tokens) entry.tokens = component.tokens;
+    if (component.realizes) entry.realizes = component.realizes;
     return entry;
   });
   return HEADER + stringify({ components: entries }, { lineWidth: 0 });
@@ -191,7 +204,14 @@ export function renderCatalog(components: readonly CatalogComponent[]): string {
 export async function inspectComponentCatalogPath(
   root: string,
 ): Promise<{ file: string; entry?: BigIntStats }> {
-  const segments = COMPONENT_CATALOG_PATH.split(path.sep);
+  return inspectCatalogArtifactPath(root, COMPONENT_CATALOG_PATH);
+}
+
+async function inspectCatalogArtifactPath(
+  root: string,
+  relative: string,
+): Promise<{ file: string; entry?: BigIntStats }> {
+  const segments = relative.split(path.sep);
   const shown = segments.join("/");
   const unsafe = await findUnsafeWrapperComponent(root, segments.slice(0, -1).join("/"));
   if (unsafe) {
@@ -199,7 +219,7 @@ export async function inspectComponentCatalogPath(
     throw new Error(unsafe.relativePath + " is " + reason + ".");
   }
 
-  const file = path.join(root, COMPONENT_CATALOG_PATH);
+  const file = path.join(root, relative);
   let existing;
   try {
     existing = await lstat(file, { bigint: true });
@@ -212,22 +232,28 @@ export async function inspectComponentCatalogPath(
   return { file, entry: existing };
 }
 
-/** The committed catalogue, if there is one and it holds a list of components. */
-export async function readCatalog(root: string): Promise<CatalogRead> {
-  const checked = await inspectComponentCatalogPath(root).catch((error: unknown) => ({
+export type CatalogArtifactRead =
+  Extract<CatalogRead, { state: "unreadable" | "absent" }> | { state: "read"; text: string };
+
+/** Read a bounded catalogue artifact, or verify a file is readable without loading it. */
+export async function readCatalogArtifact(
+  root: string,
+  relative: string,
+  mode: "text" | "presence" = "text",
+): Promise<CatalogArtifactRead> {
+  const checked = await inspectCatalogArtifactPath(root, relative).catch((error: unknown) => ({
     reason: describeError(error),
   }));
   if ("reason" in checked) return { state: "unreadable", reason: checked.reason };
   if (!checked.entry) return { state: "absent" };
 
-  let text: string;
   try {
     const handle = await open(checked.file, CATALOG_READ_FLAGS);
     try {
       const held = await handle.stat({ bigint: true });
       // Recheck the parents and named leaf before reading from this handle.
       // Ceiling: Node cannot pin the parent directory walk and open in one operation.
-      const current = await inspectComponentCatalogPath(root);
+      const current = await inspectCatalogArtifactPath(root, relative);
       if (
         !held.isFile() ||
         !sameObject(checked.entry, held) ||
@@ -236,26 +262,44 @@ export async function readCatalog(root: string): Promise<CatalogRead> {
       ) {
         return {
           state: "unreadable",
-          reason: "The component catalogue path changed during the read.",
+          reason:
+            relative === COMPONENT_CATALOG_PATH
+              ? "The component catalogue path changed during the read."
+              : "The catalogue artifact path changed during the read.",
         };
       }
+      if (mode === "presence") return { state: "read", text: "" };
       const bytes =
-        held.size > BigInt(MAX_CATALOG_BYTES)
+        held.size > BigInt(COMPONENT_CATALOG_MAX_BYTES)
           ? undefined
-          : await readHandleWithin(handle, MAX_CATALOG_BYTES);
+          : await readHandleWithin(handle, COMPONENT_CATALOG_MAX_BYTES);
       if (bytes === undefined) {
+        if (relative !== COMPONENT_CATALOG_PATH) {
+          return {
+            state: "unreadable",
+            reason: `The file exceeds ${COMPONENT_CATALOG_MAX_BYTES} bytes.`,
+          };
+        }
         return {
           state: "unreadable",
-          reason: `The component catalogue exceeds ${MAX_CATALOG_BYTES} bytes.`,
+          reason: COMPONENT_CATALOG_SIZE_REASON,
+          suggestedAction: COMPONENT_CATALOG_SIZE_RECOVERY,
         };
       }
-      text = bytes.toString("utf8");
+      return { state: "read", text: bytes.toString("utf8") };
     } finally {
       await handle.close();
     }
   } catch (error: unknown) {
     return { state: "unreadable", reason: hasErrnoCode(error) ? error.code : describeError(error) };
   }
+}
+
+/** The committed catalogue, if there is one and it holds a list of components. */
+export async function readCatalog(root: string): Promise<CatalogRead> {
+  const file = await readCatalogArtifact(root, COMPONENT_CATALOG_PATH);
+  if (file.state !== "read") return file;
+  const { text } = file;
 
   let parsed: unknown;
   try {
@@ -294,10 +338,30 @@ function catalogComponentOf(item: unknown): CatalogComponent | null {
     if (!isStringList(props)) return null;
     component.props = props;
   }
+  const variants = record.get("variants");
+  if (variants !== undefined) {
+    if (typeof variants !== "object" || variants === null || Array.isArray(variants)) return null;
+    const entries: [string, string[]][] = [];
+    for (const [prop, values] of new Map<string, unknown>(Object.entries(variants))) {
+      if (!isStringList(values)) return null;
+      entries.push([prop, values]);
+    }
+    component.variants = Object.fromEntries(entries);
+  }
   const states = record.get("states");
   if (states !== undefined) {
     if (!isStringList(states)) return null;
     component.states = states;
+  }
+  const tokens = record.get("tokens");
+  if (tokens !== undefined) {
+    if (!isStringList(tokens)) return null;
+    component.tokens = tokens;
+  }
+  const realizes = record.get("realizes");
+  if (realizes !== undefined) {
+    if (!isStringList(realizes)) return null;
+    component.realizes = realizes;
   }
   for (const tag of ["source", "reason", "pattern", "a11y"] as const) {
     const value = record.get(tag);
@@ -308,6 +372,20 @@ function catalogComponentOf(item: unknown): CatalogComponent | null {
   return component;
 }
 
+/**
+ * The CSS custom property names, leading `--` kept, that a text references through `var(--name`,
+ * in the order they appear: in a string, a template literal, a style object or a Tailwind
+ * arbitrary value such as `bg-[var(--color-brand)]`.
+ * Ceiling: a Tailwind theme utility such as `bg-brand`, or the `bg-(--color-brand)` shorthand, is
+ * not resolved to the variable behind it; reading the project's `@theme` and the class names a
+ * component uses lifts it.
+ */
+function themeVariableReferences(text: string): string[] {
+  return [...text.matchAll(/var\(\s*(--[\w-]+)/g)].flatMap((match) =>
+    match[1] === undefined ? [] : [match[1]],
+  );
+}
+
 function isStringList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
@@ -315,6 +393,45 @@ function isStringList(value: unknown): value is string[] {
 function compare(a: string, b: string): number {
   if (a === b) return 0;
   return a < b ? -1 : 1;
+}
+
+/** Mask everything outside compiler-recognized comments without moving line or token boundaries. */
+function citationCommentSource(ts: TsApi, root: TsNode, source: string): string {
+  const kind = ts.SyntaxKind;
+  const comments = new Map<number, number>();
+  const pending = [root];
+  for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
+    // JSX text is a token, and a JSDoc subtree contains text inside a comment found in trivia.
+    if (
+      node.kind === kind.JsxText ||
+      node.kind === kind.JsxTextAllWhiteSpaces ||
+      node.kind === kind.JSDocComment
+    ) {
+      continue;
+    }
+    const start = node.getStart();
+    if (node.pos < start) {
+      const ranges = [
+        ...(ts.getTrailingCommentRanges(source, node.pos) ?? []),
+        ...(ts.getLeadingCommentRanges(source, node.pos) ?? []),
+      ];
+      for (const range of ranges) {
+        if (range.end <= start) comments.set(range.pos, range.end);
+      }
+    }
+    for (const child of node.getChildren()) pending.push(child);
+  }
+
+  const mask = (text: string): string => text.replace(/[^\r\n\u2028\u2029 \t]/g, "x");
+  const parts: string[] = [];
+  let offset = 0;
+  for (const [start, end] of [...comments].sort(([left], [right]) => left - right)) {
+    if (end <= offset) continue;
+    parts.push(mask(source.slice(offset, start)), source.slice(Math.max(offset, start), end));
+    offset = end;
+  }
+  parts.push(mask(source.slice(offset)));
+  return parts.join("");
 }
 
 /** The components, raw elements and imported names of one file. */
@@ -341,6 +458,16 @@ function componentsOfFile(
       localTypes.set(statement.name.getText(), statement.type);
     }
   }
+  // Generic arguments are not substituted. A type parameter must not resolve to an unrelated
+  // file-level declaration of the same name.
+  const localTypeOf = (reference: TsNode, name: string): TsNode | undefined => {
+    for (let scope = reference.parent; scope !== undefined; scope = scope.parent) {
+      if (scope.typeParameters?.some((parameter) => parameter.name?.getText() === name)) {
+        return undefined;
+      }
+    }
+    return localTypes.get(name);
+  };
 
   const containsJsx = (node: TsNode | undefined): boolean => {
     if (!node) return false;
@@ -376,53 +503,131 @@ function componentsOfFile(
   // interfaces it extends) or type alias the same file declares, or an intersection of those.
   // Ceiling: a type imported from another module, or a part declared elsewhere, contributes no
   // names; resolving it through a type checker over the whole program lifts this.
-  const membersOf = (type: TsNode | undefined, seen: Set<string>): string[] | undefined => {
+  const memberName = (member: TsNode): string | undefined => {
+    const name = member.name?.getText().replace(/^["']|["']$/g, "");
+    return name === "" ? undefined : name;
+  };
+  type PropsMembers = { all: TsNode[]; constraints: Map<string, TsNode[]>; complete: boolean };
+  const membersOf = (type: TsNode | undefined, seen: Set<string>): PropsMembers | undefined => {
     if (!type) return undefined;
+    if (type.kind === k.ParenthesizedType) return membersOf(type.type, seen);
     if (type.kind === k.TypeLiteral || type.kind === k.InterfaceDeclaration) {
-      const own = (type.members ?? [])
-        .map((member) => member.name?.getText().replace(/^["']|["']$/g, ""))
-        .filter((name): name is string => name !== undefined && name !== "");
-      const inherited = (type.heritageClauses ?? [])
+      const own = (type.members ?? []).filter((member) => memberName(member) !== undefined);
+      const bases = (type.heritageClauses ?? [])
         .flatMap((clause) => clause.types ?? [])
-        .flatMap((base) => {
+        .map((base) => {
           const name = base.expression?.getText();
-          if (name === undefined || seen.has(name)) return [];
-          return membersOf(localTypes.get(name), new Set([...seen, name])) ?? [];
+          if (name === undefined || seen.has(name)) return undefined;
+          return membersOf(localTypeOf(base, name), new Set([...seen, name]));
         });
-      return [...own, ...inherited];
+      const inherited = bases.filter((base) => base !== undefined);
+      const constraints = new Map<string, TsNode[]>();
+      for (const member of own) {
+        const name = memberName(member);
+        if (name !== undefined && !constraints.has(name)) constraints.set(name, [member]);
+      }
+      for (const base of inherited) {
+        for (const [name, members] of base.constraints) {
+          if (!constraints.has(name)) constraints.set(name, members);
+        }
+      }
+      return {
+        all: [...own, ...inherited.flatMap((base) => base.all)],
+        constraints,
+        complete: bases.every((base) => base?.complete),
+      };
     }
     if (type.kind === k.TypeReference && type.typeName) {
       const name = type.typeName.getText();
       if (seen.has(name)) return undefined;
-      return membersOf(localTypes.get(name), new Set([...seen, name]));
+      return membersOf(localTypeOf(type, name), new Set([...seen, name]));
     }
     if (type.kind === k.IntersectionType) {
-      const parts = (type.types ?? []).map((part) => membersOf(part, seen));
-      if (parts.every((part) => part === undefined)) return undefined;
-      return parts.flatMap((part) => part ?? []);
+      const resolved = (type.types ?? []).map((part) => membersOf(part, seen));
+      const parts = resolved.filter((part) => part !== undefined);
+      if (parts.length === 0) return undefined;
+      const constraints = new Map<string, TsNode[]>();
+      const all = parts.flatMap((part) => part.all);
+      if (!resolved.every((part) => part?.complete)) return { all, constraints, complete: false };
+      for (const part of parts) {
+        for (const [name, members] of part.constraints) {
+          const combined = constraints.get(name);
+          if (combined === undefined) constraints.set(name, [...members]);
+          else for (const member of members) combined.push(member);
+        }
+      }
+      return { all, constraints, complete: true };
     }
     return undefined;
+  };
+  // The string literal values a type allows: a union of string literal types, its `undefined` and
+  // `null` members dropped, or a reference to a same-file type alias that is one.
+  // Ceiling: a single literal, a parenthesised union, or a union part that is itself a reference
+  // gives no values; resolving each part through the same-file aliases lifts it.
+  const literalValues = (type: TsNode | undefined, seen: Set<string>): string[] | undefined => {
+    if (!type) return undefined;
+    if (type.kind === k.TypeReference && type.typeName) {
+      const name = type.typeName.getText();
+      if (seen.has(name)) return undefined;
+      return literalValues(localTypeOf(type, name), new Set([...seen, name]));
+    }
+    if (type.kind !== k.UnionType) return undefined;
+    const values: string[] = [];
+    for (const part of type.types ?? []) {
+      if (part.kind === k.UndefinedKeyword) continue;
+      const literal = part.kind === k.LiteralType ? part.literal : undefined;
+      if (literal?.kind === k.NullKeyword) continue;
+      if (!literal || literal.kind !== k.StringLiteral || literal.text === undefined) {
+        return undefined;
+      }
+      values.push(literal.text);
+    }
+    return values.length > 0 ? values : undefined;
+  };
+  // Resolve inherited overrides before intersecting the choices imposed by independent types.
+  const variantsOf = (
+    constraints: PropsMembers["constraints"],
+  ): Record<string, string[]> | undefined => {
+    const entries: [string, string[]][] = [];
+    for (const [name, members] of constraints) {
+      const [first, ...remaining] = members.map((member) =>
+        member.kind === k.PropertySignature ? literalValues(member.type, new Set()) : undefined,
+      );
+      if (!first) continue;
+      const values = first.filter((value) => remaining.every((part) => part?.includes(value)));
+      if (values.length > 0) entries.push([name, values]);
+    }
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
   };
   const propsOf = (
     fn: TsNode | undefined,
     declared: TsNode | undefined,
     initializer: TsNode | undefined,
-  ): string[] | undefined => {
+  ): Pick<CatalogComponent, "props" | "variants"> => {
+    const typed = (members: PropsMembers): Pick<CatalogComponent, "props" | "variants"> => {
+      const variants = variantsOf(members.constraints);
+      return {
+        props: members.all.flatMap((member) => memberName(member) ?? []),
+        ...(variants ? { variants } : {}),
+      };
+    };
     const parameter = fn?.parameters?.[0];
     const fromParameter = membersOf(parameter?.type, new Set());
-    if (fromParameter) return fromParameter;
+    if (fromParameter) return typed(fromParameter);
     const binding = parameter?.name;
     if (binding && binding.kind === k.ObjectBindingPattern) {
-      return (binding.elements ?? [])
-        .filter((element) => element.dotDotDotToken === undefined)
-        .map((element) => (element.propertyName ?? element.name)?.getText() ?? "")
-        .filter((name) => name !== "");
+      return {
+        props: (binding.elements ?? [])
+          .filter((element) => element.dotDotDotToken === undefined)
+          .map((element) => (element.propertyName ?? element.name)?.getText() ?? "")
+          .filter((name) => name !== ""),
+      };
     }
     // `const Button: FC<ButtonProps> = ...` names the props as the annotation's type argument.
-    return (
+    const annotated =
       membersOf(declared?.typeArguments?.[0], new Set()) ??
-      membersOf(callTypeArgument(initializer), new Set())
-    );
+      membersOf(callTypeArgument(initializer), new Set());
+    return annotated ? typed(annotated) : {};
   };
   const isExported = (statement: TsNode): boolean =>
     (statement.modifiers ?? []).some((modifier) => modifier.kind === k.ExportKeyword);
@@ -438,6 +643,8 @@ function componentsOfFile(
     fn: TsNode | undefined;
     declared?: TsNode;
     initializer?: TsNode;
+    /** The one declarator of a `const` list that holds this component. */
+    declarator?: TsNode;
   };
   const candidates = new Map<string, Candidate>();
   const exported = new Set<string>();
@@ -454,6 +661,7 @@ function componentsOfFile(
         candidates.set(name.getText(), {
           statement,
           fn: functionOf(declaration.initializer),
+          declarator: declaration,
           ...(declaration.type ? { declared: declaration.type } : {}),
           ...(declaration.initializer ? { initializer: declaration.initializer } : {}),
         });
@@ -471,18 +679,50 @@ function componentsOfFile(
       if (target && target.kind === k.Identifier) exported.add(target.getText());
     }
   }
+  // When a declaration starts partway through a line, only indentation may precede a citation
+  // on that line. Inspect the prefix without including text from a different declaration.
+  const citationSource = source.includes("QFAI:")
+    ? citationCommentSource(ts, sourceFile, source)
+    : "";
+  const citationSlice = (start: number, end: number): string => {
+    const { character } = sourceFile.getLineAndCharacterOfPosition(start);
+    const prefix = source.slice(start - character, start);
+    const text = citationSource.slice(start, end);
+    return /[^ \t]/.test(prefix) ? text.replace(/^[^\r\n\u2028\u2029]*/, "") : text;
+  };
+  const declarationText = ({ statement, declarator }: Candidate): string =>
+    declarator === undefined
+      ? citationSlice(statement.pos, statement.end)
+      : `${citationSlice(statement.pos, statement.getStart())}\n${citationSlice(declarator.pos, declarator.end)}`;
+  // The text a component's theme variables are read from: the same parts, cut at their own first
+  // character, so a declarator of a `const` list never takes a variable from the one before it.
+  // The leading part starts on the line after the one holding the statement's first position
+  // when that line holds code before it, so a comment after the previous statement stays its own.
+  const leadingStart = (statement: Candidate["statement"]): number => {
+    const lineStart = source.lastIndexOf("\n", statement.pos - 1) + 1;
+    if (source.slice(lineStart, statement.pos).trim() === "") return statement.pos;
+    const nextLine = source.indexOf("\n", statement.pos) + 1;
+    return nextLine === 0 || nextLine > statement.getStart() ? statement.getStart() : nextLine;
+  };
+  const ownText = ({ statement, declarator }: Candidate): string =>
+    declarator === undefined
+      ? source.slice(leadingStart(statement), statement.end)
+      : `${source.slice(leadingStart(statement), statement.getStart())}\n${declarator.getText()}`;
   // Ceiling: a class component is not listed; reading `render` methods lifts it.
   const components: CatalogComponent[] = [];
   for (const name of exported) {
     const candidate = candidates.get(name);
     if (!candidate || !/^[A-Z]/.test(name) || !containsJsx(candidate.fn)) continue;
-    const props = propsOf(candidate.fn, candidate.declared, candidate.initializer);
     const { statement } = candidate;
+    const tokens = [...new Set(themeVariableReferences(ownText(candidate)))].sort(compare);
+    const realizes = [...new Set(businessRuleCitations(declarationText(candidate)))].sort(compare);
     components.push({
       name,
       file,
-      ...(props ? { props } : {}),
+      ...propsOf(candidate.fn, candidate.declared, candidate.initializer),
       ...docFields(source.slice(statement.pos, statement.getStart())),
+      ...(tokens.length > 0 ? { tokens } : {}),
+      ...(realizes.length > 0 ? { realizes } : {}),
     });
   }
 
