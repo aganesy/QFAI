@@ -24,7 +24,7 @@ Feature: Each run keeps one deliberation record
     Given a question the run put to the user
     When the record is written
     Then the question is one row of the Interview table
-    And a free answer is quoted word for word in Option 4
+    And a free answer is quoted word for word in Option 4, or as its translation marked `(translated from <language>)` when it is in another language than the record
     And a question with no candidate values leaves Options 1 to 3 empty, holds the answer in Option 4 and chooses 4
     And a source the options rest on is a URL in the Background cell
 

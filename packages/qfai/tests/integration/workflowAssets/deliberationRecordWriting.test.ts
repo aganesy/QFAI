@@ -93,6 +93,13 @@ describe("what an Interview row holds", () => {
     );
   });
 
+  // QFAI:EX-0001-0298-19
+  it("quotes a free answer in another language as a marked translation", async () => {
+    expect(await writing()).toMatch(
+      /a free answer in a language other than the record's is quoted as its translation into the record's language, marked `\(translated from <language>\)`/i,
+    );
+  });
+
   // QFAI:EX-0001-0298-07
   it("leaves Options 1 to 3 empty for a question with no candidate values", async () => {
     expect(await writing()).toMatch(

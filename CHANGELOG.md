@@ -263,6 +263,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A free answer in another language is quoted as a marked translation.** A
+  deliberation record keeps one language, so an answer the user gives in
+  another one goes into Option 4 as its translation, marked
+  `(translated from <language>)`, instead of word for word. A project that
+  checks its stored language no longer fails on a quoted answer.
+
 - **The end-of-session feedback review reads review findings too.** Besides the
   session itself, it reads the findings reviewer sub-agents returned and the
   inline review comments, review bodies and conversation comments on the pull
