@@ -956,7 +956,7 @@ describe("what the report may carry", () => {
       results: [
         { id: "x", isError: true, text: "the secret plan in /home/dev/app/src", exitCode: null },
       ],
-      userTurns: ["My private message: this is wrong."],
+      userTurns: ["Start.", "My private message: this is wrong."],
     };
     const sessions = [
       { agent: "claude" as const, sessionId: "s1", signals: summarise(events, FACTS) },
@@ -1046,6 +1046,21 @@ function commandExecution(id: string, status: string, exitCode?: number) {
   };
 }
 
+// QFAI:EX-0001-0294-29
+describe("the first typed turn of a session", () => {
+  it("is never listed as a correction, and later turns keep their numbers", () => {
+    const events = emptyEvents();
+    // The first request says "not X but Y" in Japanese, which is no correction yet.
+    const notButJa = String.fromCodePoint(0x3058, 0x3083, 0x306a, 0x304f, 0x3066);
+    for (const text of [`Write the docs, ${notButJa} the tests. Do not push.`, "Wrong file."]) {
+      readClaudeRecord({ type: "user", message: { role: "user", content: text } }, events);
+    }
+    const signals = summarise(events, FACTS);
+    expect(signals.typedTurns).toBe(2);
+    expect(signals.corrections).toEqual([{ turn: 2, words: ["wrong"] }]);
+  });
+});
+
 // QFAI:EX-0001-0294-10
 // QFAI:EX-0001-0294-11
 // QFAI:EX-0001-0294-12
@@ -1053,6 +1068,7 @@ function commandExecution(id: string, status: string, exitCode?: number) {
 describe("the gaps a host's record shapes and a shell line's syntax leave", () => {
   it("counts text the user typed beside a tool result in one Claude Code record", () => {
     const events = emptyEvents();
+    readClaudeRecord({ type: "user", message: { role: "user", content: "Run it." } }, events);
     readClaudeRecord(
       {
         type: "user",
@@ -1070,10 +1086,10 @@ describe("the gaps a host's record shapes and a shell line's syntax leave", () =
     );
     readClaudeRecord({ type: "user", message: { role: "user", content: "Now stop." } }, events);
     expect(events.results).toEqual([expect.objectContaining({ id: "t1", isError: false })]);
-    expect(events.userTurns).toEqual(["Wrong file, use the other one.", "Now stop."]);
+    expect(events.userTurns).toEqual(["Run it.", "Wrong file, use the other one.", "Now stop."]);
     expect(summarise(events, FACTS).corrections).toEqual([
-      { turn: 1, words: ["wrong"] },
-      { turn: 2, words: ["stop"] },
+      { turn: 2, words: ["wrong"] },
+      { turn: 3, words: ["stop"] },
     ]);
   });
 
