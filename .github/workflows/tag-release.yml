@@ -149,8 +149,8 @@ jobs:
           # squash and rebase alike — the mistake this workflow already made once. A direct push
           # to `main` is associated with no pull request and therefore tags nothing.
           #
-          # SHIPPED-CI: not-applicable
-          # Because: release association tagging belongs to this package repository.
+          # SHIPPED-CI: not-applicable (release association)
+          # Because: adopter workflows do not tag releases for this package repository.
           # Every page, not the first: the endpoint is paginated, and a release pull request
           # listed on a later page would otherwise end the run green with nothing tagged.
           # `--slurp` wraps the pages in one outer array; the next command flattens it.
@@ -185,7 +185,7 @@ jobs:
             reject "the answer to which pull request carried ${GITHUB_SHA} is not a JSON array of pull requests, so whether this is a release merge is unknown"
           fi
           if [ "$release_associated" != true ]; then
-            echo "tag-release: ${GITHUB_SHA} did not arrive from an approved release/v${claimed} merge into ${GITHUB_REF_NAME}; nothing to tag"
+            echo "tag-release: no associated pull request from ${GITHUB_REPOSITORY}:release/v${claimed} merged into ${GITHUB_REPOSITORY}:${GITHUB_REF_NAME} and produced ${GITHUB_SHA}; nothing to tag"
             echo "push=false" >> "$GITHUB_OUTPUT"
             echo "version=${claimed}" >> "$GITHUB_OUTPUT"
             exit 0

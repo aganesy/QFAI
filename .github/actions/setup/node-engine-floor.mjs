@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
-// SHIPPED-CI: not-applicable
-// Because: adopter workflows resolve Node from the consuming project's version file.
+// SHIPPED-CI: not-applicable (repository setup action)
+// Because: adopter workflows use the project's version file and fall back to Node 20.
 
 // The helper comes from the setup action's checkout and runs before the target's
 // dependencies are installed. Each alternative includes its lower bound.
@@ -26,11 +26,19 @@ export function nodeEngineFloor(range) {
 
 /** @param {string} file */
 function readEngineRange(file) {
+  const quotedPath = JSON.stringify(file);
+  let contents;
+  try {
+    contents = readFileSync(file, "utf8");
+  } catch {
+    throw new Error(`Cannot read manifest ${quotedPath}.`);
+  }
+
   let manifest;
   try {
-    manifest = JSON.parse(readFileSync(file, "utf8"));
+    manifest = JSON.parse(contents);
   } catch {
-    throw new Error("The manifest must be readable JSON.");
+    throw new Error(`Manifest ${quotedPath} contains malformed JSON.`);
   }
   const range = manifest?.engines?.node;
   if (typeof range !== "string") throw new Error("The manifest must declare engines.node.");
