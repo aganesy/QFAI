@@ -29,7 +29,7 @@ Feature: Hold the story tree and test titles to the glossary's terms
     Given a glossary row whose Avoid cell lists a word, and a JavaScript or TypeScript test file the story-test scan selects through `validation.traceability.testFileGlobs` or the acceptance layers under `paths.testsDir`
     When `qfai validate` runs in the `verify` or `full` profile
     Then a `describe`, `it`, `test` or `suite` call whose first argument is one string literal, comments aside and escapes decoded, holding that word raises `QFAI-STORY-022` at error at the call's line, naming the file, the word and the row's term
-    And the same word in a comment, in the test body, in an `each` table or in a test file of another language raises none
+    And the same word in a comment, in the test body or in a call there named like a test call, in an `each` table or in a test file of another language raises none
     And under `--flow` a test file raises none
 
   # AC-0001-0317-04

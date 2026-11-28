@@ -40,11 +40,23 @@ It runs in the discussion stage between `discussion-research` and
 
 The discussion stage writes no glossary row. The specification stage writes
 each settled-term row a discussion left in `open-questions.md` into the
-glossary, then deletes that row. Nothing else is written.
+glossary, then deletes that row, but only a row whose term an Interview row of
+the deliberation record the stage consumes settled; a row another discussion
+left stays as it is. Nothing else is written.
+
+## Before the first write
+
+In the specification stage, run Stage 0 of
+`.qfai/assistant/step/sdd-triage/STEP.md` first: name the deliberation record
+the stage consumes and run `npx qfai sdd preflight --record <path>`, then read
+only the input its `selectedInputPath` names. When the preflight stops, write
+nothing, leave `01_policy/glossary.md` and `open-questions.md` as they are,
+and stop; `sdd-triage` reports it.
 
 ## Procedure
 
-1. **List the candidates.** Collect the domain words the request and the
+1. **List the candidates.** In the specification stage, only after the
+   preflight above has passed. Collect the domain words the request and the
    research use: the things, the people and the events the work is about. A
    general programming word is not a candidate.
 2. **Read each against the glossary.** Put every candidate in one of these:

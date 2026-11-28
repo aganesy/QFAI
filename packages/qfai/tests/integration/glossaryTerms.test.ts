@@ -341,3 +341,25 @@ describe("what the review found the check misread", () => {
     ]);
   });
 });
+
+describe("a helper named like a test call", () => {
+  // QFAI:EX-0001-0317-15
+  it("is not read inside a test body, while a nested describe title still is", async () => {
+    await put(glossaryFile, glossary([customer]));
+    await put(
+      "tests/a.test.ts",
+      [
+        'describe("sign-in", () => {',
+        '  it("signs in", () => {',
+        "    const test = (name: string) => name;",
+        '    test("client");',
+        "  });",
+        '  describe("client area", () => {});',
+        "});",
+        "",
+      ].join("\n"),
+    );
+    const found = await findings("verify", "QFAI-STORY-022");
+    expect(found.map((item) => [item.file, item.loc?.line])).toEqual([["tests/a.test.ts", 6]]);
+  });
+});

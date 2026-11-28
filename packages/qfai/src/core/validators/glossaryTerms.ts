@@ -23,7 +23,21 @@ const TEST_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", "
  * `each` is left out: its first call takes the table, and the title belongs to the second.
  */
 const TEST_CALL =
-  /(?<![\p{L}\p{N}_$.])(?:describe|it|test|suite)((?:\s*\.\s*[A-Za-z_$][\w$]*)*)\s*\(/gu;
+  /(?<![\p{L}\p{N}_$.])(describe|it|test|suite)((?:\s*\.\s*[A-Za-z_$][\w$]*)*)\s*\(/gu;
+
+/** The index of the parenthesis that closes the one at `open`, in text with strings blanked. */
+function closingParen(masked: string, open: number): number {
+  let depth = 0;
+  for (let index = open; index < masked.length; index += 1) {
+    const char = masked.charAt(index);
+    if (char === "(") depth += 1;
+    else if (char === ")") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return masked.length;
+}
 
 type Synonym = { word: string; term: string; pattern: RegExp };
 
@@ -162,7 +176,7 @@ function synonymHits(
 
 function termPatterns(glossary: Glossary): RegExp[] {
   const terms = [...new Set(glossary.rows.map((row) => row.term).filter((term) => term !== ""))];
-  return terms.sort((a, b) => b.length - a.length).map((term) => wordPattern(term, "giu"));
+  return terms.map((term) => wordPattern(term, "giu"));
 }
 
 function rejectedSynonym(file: string, line: number, synonym: Synonym, where: string): Issue {
@@ -349,8 +363,13 @@ export async function validateGlossaryTestTitles(
     const relative = path.relative(root, file).split(path.sep).join("/");
     const masked = maskJsNonCode(content);
     const starts = lineStarts(content);
+    // A test's body is not read, so a call there named like a test call is a helper, not a title.
+    const bodies: [number, number][] = [];
     for (const call of masked.matchAll(TEST_CALL)) {
-      if (/\beach\b/.test(call[1] ?? "")) continue;
+      const open = call.index + call[0].length - 1;
+      if (bodies.some(([from, to]) => from < call.index && call.index < to)) continue;
+      if (call[1] === "it" || call[1] === "test") bodies.push([open, closingParen(masked, open)]);
+      if (/\beach\b/.test(call[2] ?? "")) continue;
       // The mask blanks strings and comments alike, so what comes before the title is read from
       // the source, not the masked text.
       const title = literalAt(content, skipBlank(content, call.index + call[0].length));

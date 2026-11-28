@@ -85,6 +85,17 @@ describe("terms a discussion settled", () => {
     );
     expect(flat(sectionOf(text, "## Passes when"))).toMatch(/no settled-term row waits/i);
     expect(flat(text)).toMatch(/discussion stage writes no glossary row/i);
+    expect(flat(text)).toMatch(/a row another discussion left stays as it is/i);
+  });
+
+  // QFAI:EX-0001-0318-06
+  it("runs the sdd-triage preflight before the first write, and writes nothing when it stops", async () => {
+    const text = await readShipped(`step/${STEP}/STEP.md`);
+    const before = flat(sectionOf(text, "## Before the first write"));
+    expect(before).toContain("npx qfai sdd preflight --record");
+    expect(before).toMatch(/selectedInputPath/);
+    expect(before).toMatch(/When the preflight stops, write nothing/i);
+    expect(text.indexOf("## Before the first write")).toBeLessThan(text.indexOf("## Procedure"));
   });
 });
 
