@@ -301,7 +301,8 @@ function readTagCommand(command: string): {
 
 /** Remove shell comments and unquoted backslash-newline pairs before splitting commands. */
 function stripCommentsAndJoinContinuations(shell: string): string {
-  const tokens = /"(?:[^"\\]|\\[\s\S])*"|'[^']*'|\\(?:\r?\n|[^\r\n])|[\s\S]/g;
+  // The guide uses <SHA> as an operand placeholder, so its closing bracket is part of the word.
+  const tokens = /<SHA>|"(?:[^"\\]|\\[\s\S])*"|'[^']*'|\\(?:\r?\n|[^\r\n])|[\s\S]/g;
   let mayStartComment = true;
   let copied = 0;
   let joined = "";
@@ -736,7 +737,7 @@ describe("the project layer describes the repository it is in", () => {
     expect(creations.some(namesItsCommit)).toBe(false);
   });
 
-  it("preserves a backslash at the end of a quoted line or shell comment", () => {
+  it("keeps quoted backslashes and the command after a shell comment", () => {
     const quoted = "git tag -m 'two lines \\\nmessage' vX.Y.Z";
     const comment = ["git tag --points-at=HEAD # listing \\", "git tag second <SHA>"].join("\n");
     expect(stripCommentsAndJoinContinuations(quoted)).toBe(quoted);
@@ -766,6 +767,15 @@ describe("the project layer describes the repository it is in", () => {
     const bare = "git tag version#draft <SHA>";
     const escaped = "git tag version\\#draft <SHA>";
     expect(tagCreations([bare, escaped].join("\n"))).toEqual([bare, escaped]);
+  });
+
+  it("keeps an attached hash on the release commit placeholder", () => {
+    const valid = "git tag vX.Y.Z <SHA>";
+    const invalid = valid + "#suffix";
+    expect(tagCreations(invalid)).toEqual([invalid]);
+    expect(namesItsCommit(invalid)).toBe(false);
+    expect(tagCreations(valid + " # note")).toEqual([valid]);
+    expect(namesItsCommit(valid)).toBe(true);
   });
 
   it("checks the commit and ordering of a continued tag command", () => {
