@@ -43,6 +43,7 @@ export function selectPnpPackage(api: unknown, directory: string): string | null
     info === null ||
     !("packageLocation" in info) ||
     typeof info.packageLocation !== "string" ||
+    !path.isAbsolute(info.packageLocation) ||
     path.relative(directory, info.packageLocation) !== ""
   ) {
     return null;

@@ -125,6 +125,7 @@ const loadTypescript = (): unknown => packageRequire("typescript");
 
 const catalogFile = (root: string): string => path.join(root, ...CATALOG.split("/"));
 
+// QFAI:EX-0001-0307-29
 // QFAI:EX-0001-0307-30
 it("writes at the UTF-8 limit and preserves the catalogue when output is larger", async () => {
   const root = await project();
@@ -150,6 +151,22 @@ it("writes at the UTF-8 limit and preserves the catalogue when output is larger"
   expect(stderr.join("")).toContain("Shorten catalogue tags");
   expect(stderr.join("")).toContain("uiux.surfacePaths");
   expect((await readFile(catalogFile(root))).equals(previous)).toBe(true);
+
+  stderr.length = 0;
+  expect(await runCatalogComponents({ root, loadTypescript, check: true })).toBe(1);
+  expect(stderr.join("")).toContain(`generated output exceeds ${limit} bytes`);
+  expect(stderr.join("")).toContain("Shorten catalogue tags");
+  expect(stderr.join("")).toContain("nothing was compared");
+  expect((await readFile(catalogFile(root))).equals(previous)).toBe(true);
+
+  stderr.length = 0;
+  await truncate(catalogFile(root), limit + 1);
+  const oversized = await readFile(catalogFile(root));
+  expect(await runCatalogComponents({ root, loadTypescript, check: true })).toBe(1);
+  expect(stderr.join("")).toBe(
+    `qfai catalog components: could not read ${CATALOG}, so nothing was compared: The component catalogue exceeds ${limit} bytes.\n`,
+  );
+  expect((await readFile(catalogFile(root))).equals(oversized)).toBe(true);
 });
 
 // QFAI:EX-0001-0307-29
