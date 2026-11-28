@@ -35,28 +35,31 @@ It runs in the discussion stage between `discussion-research` and
 
 | Stage         | Writes                                                                                                                                                                                                                                                                                                                           |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Discussion    | An Interview row of the run's deliberation record for each question put, and one `open-questions.md` row for each node left open and each settled term, naming the term and its definition                                                                                                                                       |
+| Discussion    | An Interview row of the run's deliberation record for each question put, and one `open-questions.md` row for each node left open and each settled term, naming the term, its definition and its context, or that it has none                                                                                                     |
 | Specification | An Interview row of the run's deliberation record for each question put, one `open-questions.md` row for each node left open, the settled rows of `01_policy/glossary.md` with its Avoid and Context cells and its `## Contexts` table, and the deletion of each settled-term `open-questions.md` row it wrote into the glossary |
 
 The discussion stage writes no glossary row. The specification stage writes
-each settled-term row a discussion left in `open-questions.md` into the
-glossary, then deletes that row, but only a row whose term an Interview row of
-the deliberation record the stage consumes settled; a row another discussion
-left stays as it is. Nothing else is written.
+a settled-term row a discussion left in `open-questions.md` into the glossary,
+then deletes that row, only when the row's term, definition and context are
+all those an Interview row of the deliberation record the stage consumes
+settled. A row that differs in any of them, such as the same word another
+discussion settled in another context, stays as it is. A stage that consumes
+no record consumes no such row. Nothing else is written.
 
 ## Before the first write
 
 In the specification stage, run Stage 0 of
-`.qfai/assistant/step/sdd-triage/STEP.md` first: name the deliberation record
-the stage consumes and run `npx qfai sdd preflight --record <path>`, then read
-only the input its `selectedInputPath` names. When the preflight stops, write
-nothing, leave `01_policy/glossary.md` and `open-questions.md` as they are,
-and stop; `sdd-triage` reports it.
+`.qfai/assistant/step/sdd-triage/STEP.md` in full first, and take the input it
+selects: the deliberation record through `npx qfai sdd preflight --record
+<path>`, an existing specification through `--import <path>`, or the user's
+explicit requirement as supplied. Read only that input. When Stage 0 stops,
+write nothing, leave `01_policy/glossary.md` and `open-questions.md` as they
+are, and stop; `sdd-triage` reports it.
 
 ## Procedure
 
-1. **List the candidates.** In the specification stage, only after the
-   preflight above has passed. Collect the domain words the request and the
+1. **List the candidates.** In the specification stage, only after Stage 0
+   above has selected the input. Collect the domain words the request and the
    research use: the things, the people and the events the work is about. A
    general programming word is not a candidate.
 2. **Read each against the glossary.** Put every candidate in one of these:
@@ -96,7 +99,7 @@ and stop; `sdd-triage` reports it.
 
 Read first: the request, the glossary, the run's deliberation record and
 `open-questions.md`. The step passes when, in the specification stage, no
-settled-term row waits in `open-questions.md`, and in either stage no candidate of step 1 is new, a synonym or read two
+settled-term row it consumes waits in `open-questions.md`, and in either stage no candidate of step 1 is new, a synonym or read two
 ways; a rejected synonym it only corrects in its own reading does not stop the
 pass. The pass names the glossary rows it read.
 

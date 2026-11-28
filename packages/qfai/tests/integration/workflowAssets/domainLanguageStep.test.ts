@@ -81,11 +81,14 @@ describe("terms a discussion settled", () => {
   it("are written into the glossary by the specification stage, which does not pass while one waits", async () => {
     const text = await readShipped(`step/${STEP}/STEP.md`);
     expect(flat(text)).toMatch(
-      /specification stage writes each settled-term row .* into the glossary, then deletes that row/i,
+      /specification stage writes a settled-term row .* into the glossary, then deletes that row/i,
     );
-    expect(flat(sectionOf(text, "## Passes when"))).toMatch(/no settled-term row waits/i);
+    expect(flat(sectionOf(text, "## Passes when"))).toMatch(
+      /no settled-term row it consumes waits/i,
+    );
     expect(flat(text)).toMatch(/discussion stage writes no glossary row/i);
-    expect(flat(text)).toMatch(/a row another discussion left stays as it is/i);
+    expect(flat(text)).toMatch(/term, definition and context are all those an Interview row/i);
+    expect(flat(text)).toMatch(/another discussion settled in another context, stays as it is/i);
   });
 
   // QFAI:EX-0001-0318-06
@@ -93,9 +96,20 @@ describe("terms a discussion settled", () => {
     const text = await readShipped(`step/${STEP}/STEP.md`);
     const before = flat(sectionOf(text, "## Before the first write"));
     expect(before).toContain("npx qfai sdd preflight --record");
-    expect(before).toMatch(/selectedInputPath/);
-    expect(before).toMatch(/When the preflight stops, write nothing/i);
+    expect(before).toMatch(/When Stage 0 stops, write nothing/i);
     expect(text.indexOf("## Before the first write")).toBeLessThan(text.indexOf("## Procedure"));
+  });
+
+  // QFAI:EX-0001-0318-07
+  it("takes an import or an explicit requirement when no record is consumed", async () => {
+    const before = flat(
+      sectionOf(await readShipped(`step/${STEP}/STEP.md`), "## Before the first write"),
+    );
+    expect(before).toContain("--import <path>");
+    expect(before).toMatch(/explicit requirement as supplied/i);
+    expect(flat(await readShipped(`step/${STEP}/STEP.md`))).toMatch(
+      /consumes no record consumes no such row/i,
+    );
   });
 });
 

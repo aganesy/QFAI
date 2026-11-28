@@ -18,8 +18,8 @@ Feature: Settle the domain terms before the interview and the specification
     When an agent reads `.qfai/assistant/step/common-domain-language/STEP.md`
     Then it reads the glossary with its Avoid and Context columns, the request and the research or the record
     And in the discussion stage it writes only Interview rows and one `open-questions.md` row per settled term, and in the specification stage it writes the glossary rows
-    And the specification stage runs the `sdd-triage` preflight before its first write and writes nothing when it stops
-    And it writes into the glossary each settled-term row whose term the consumed record settled, deletes that row and keeps a row another discussion left, and passes through only when, in that stage, no such row waits and, in either stage, no term is new, a synonym or read two ways
+    And the specification stage runs `sdd-triage`'s Stage 0 in full before its first write, takes the record, the import or the explicit requirement it selects, and writes nothing when it stops
+    And it writes into the glossary a settled-term row whose term, definition and context the consumed record settled, deletes that row and keeps any other, and passes through only when, in that stage, no such row waits and, in either stage, no term is new, a synonym or read two ways
     And it drafts a definition only from a use it cites, and asks for a new business term's definition with no recommended answer
     And it tries each definition on an edge case, and puts a change to an existing definition to the user
     And its Passes when section names what it reads first and when it passes
