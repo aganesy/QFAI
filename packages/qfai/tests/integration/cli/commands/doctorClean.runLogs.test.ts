@@ -125,7 +125,8 @@ describe("doctor --clean prunes stale validate run logs", () => {
       const stale = await seedRunLog(root, "run-20260401120000001", 30);
       await seedRunLog(root, "run-20260811120000002", 0);
 
-      const reportPath = path.join(root, "doctor.json");
+      const outPath = "doctor.json";
+      const reportPath = path.join(root, outPath);
       vi.stubEnv("CI", "");
       vi.stubEnv("GITHUB_ACTIONS", "");
       const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -135,7 +136,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
             root,
             rootExplicit: true,
             format: "json",
-            outPath: reportPath,
+            outPath,
             dryRun: true,
             ...options,
           });

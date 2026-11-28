@@ -2,10 +2,10 @@
  * Check layout review identifiers against the shipped registry.
  *
  * The reviewer records declared identifiers in `layoutAntiPatternsDetected[]`.
- * The story tree and CLI contracts point to the registry for that vocabulary.
- * This suite reads the registry and checks backticked identifiers in those
- * documents. A negative or historical example identifies the context on the
- * same line.
+ * The registry sweep checks backticked identifiers in business-flow Markdown
+ * and CLI contracts. A separate check looks for the retired `QFAI-PROT-025`
+ * code in business-flow Markdown. A negative or historical example identifies
+ * its context on the same line.
  */
 
 import { readFile } from "node:fs/promises";
@@ -20,17 +20,12 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 const REGISTRY_REL = "packages/qfai/assets/validators/layoutAntiPatterns.json";
 
-/** Where a stale identifier does damage: what a reviewer measures against. */
+/** Business-flow and CLI contract Markdown checked against the registry. */
 const SCANNED = [".qfai/spec/02_business-flow/**/*.md", ".qfai/spec/03_contract/cli/*.md"];
 
-/** The scan excludes the decision record, which can cite historical identifiers. */
-const EXEMPT_FILE = /(^\.qfai\/spec\/decisions\.md$)/;
-
 /**
- * Elsewhere the exemption is per line, not per file: to cite an identifier the
- * registry does not declare, the same line says so. A negative fixture and a
- * record of a superseded list both need one, and a file-level pass would let
- * the next claim in that file through unread.
+ * A line that cites an undeclared identifier must identify its context.
+ * Negative fixtures and superseded lists each need this qualifier.
  */
 const DISCLAIMED =
   /(earlier revision|no longer|retired|superseded|does not declare|not in the registry|undeclared|unknown|not declare)/i;
@@ -56,15 +51,17 @@ describe("the layout anti-pattern vocabulary is one list", () => {
     expect((await declaredIds()).size).toBeGreaterThan(0);
   });
 
-  it("no spec or CLI contract cites an identifier the registry does not declare", async () => {
+  it("checks layout identifiers in business-flow Markdown and CLI contracts", async () => {
     const declared = await declaredIds();
     const files = await fg(SCANNED, { cwd: repoRoot, absolute: false, dot: true });
-    expect(files.length, "the sweep must have found documents to be about").toBeGreaterThan(0);
+    expect(
+      files.length,
+      "the sweep must find business-flow Markdown or CLI contracts",
+    ).toBeGreaterThan(0);
 
     const offenders: string[] = [];
     for (const rel of files) {
       const posix = rel.replace(/\\/g, "/");
-      if (EXEMPT_FILE.test(posix)) continue;
       const text = await readFile(path.join(repoRoot, rel), "utf-8");
       const lines = text.split("\n");
       for (let i = 0; i < lines.length; i += 1) {
@@ -79,10 +76,13 @@ describe("the layout anti-pattern vocabulary is one list", () => {
       }
     }
 
-    expect(offenders, "an identifier no registry entry declares").toEqual([]);
+    expect(
+      offenders,
+      "undeclared layout identifiers in business-flow Markdown or CLI contracts",
+    ).toEqual([]);
   });
 
-  it("keeps the retired QFAI-PROT-025 code out of story-tree specs", async () => {
+  it("keeps the retired QFAI-PROT-025 code out of business-flow Markdown", async () => {
     const files = await fg([".qfai/spec/02_business-flow/**/*.md"], {
       cwd: repoRoot,
       absolute: false,
@@ -90,11 +90,12 @@ describe("the layout anti-pattern vocabulary is one list", () => {
     const offenders: string[] = [];
     for (const rel of files) {
       const posix = rel.replace(/\\/g, "/");
-      if (EXEMPT_FILE.test(posix)) continue;
       const text = await readFile(path.join(repoRoot, rel), "utf-8");
       if (text.includes("QFAI-PROT-025")) offenders.push(posix);
     }
 
-    expect(offenders, "story-tree files naming the retired code").toEqual([]);
+    expect(offenders, "business-flow Markdown files naming the retired QFAI-PROT-025 code").toEqual(
+      [],
+    );
   });
 });

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { loadConfig } from "../../../src/core/config.js";
+import { escapeRegExp } from "../../../src/core/regex.js";
 import { validateProject } from "../../../src/core/validate.js";
 import { validateDocumentSchema } from "../../../src/core/validators/documentSchema.js";
 import {
@@ -578,6 +579,40 @@ describe("migration CLI contract shape", () => {
     expect((await run(step03, root)).output).toMatch(/## Operations\r?\nnone/);
   });
 
+  const legacySectionHeading = /"## Legacy ([^"]*)"/;
+  const destinationPrefix = `${NEW}:`;
+  const legacyContractPath = new RegExp(
+    String.raw`\b(?:of|from|in)\s+["']?${escapeRegExp(OLD)}(?=$|[\s"',;:)]|\.(?=\s|$))`,
+  );
+  const manualRewriteAction = /^(?:manually\s+rewrite\b|rewrite\b.*\bby hand\b)/i;
+
+  function matchesCliRewriteNote(note: string, section: number): boolean {
+    if (!note.startsWith(destinationPrefix)) return false;
+    const instruction = note.slice(destinationPrefix.length).trimStart();
+    return (
+      legacySectionHeading.exec(instruction)?.[1] === String(section) &&
+      legacyContractPath.test(instruction) &&
+      manualRewriteAction.test(instruction)
+    );
+  }
+
+  it("checks migration note details independently of the instruction wording", () => {
+    expect(matchesCliRewriteNote(`${OLD}: rewrite "## Legacy 1" of ${NEW} by hand`, 1)).toBe(false);
+    expect(matchesCliRewriteNote(`${NEW}: rewrite "## Legacy 1" of ${OLD}.bak by hand`, 1)).toBe(
+      false,
+    );
+    expect(matchesCliRewriteNote(`${NEW}: rewrite "## Legacy 10" of ${OLD} by hand`, 1)).toBe(
+      false,
+    );
+    expect(matchesCliRewriteNote(`${NEW}: rewrite "## Legacy 1 extra" of ${OLD} by hand`, 1)).toBe(
+      false,
+    );
+    expect(matchesCliRewriteNote(`${NEW}: keep "## Legacy 1" of ${OLD} by hand`, 1)).toBe(false);
+    expect(
+      matchesCliRewriteNote(`${NEW}: manually rewrite section "## Legacy 1" from ${OLD}`, 1),
+    ).toBe(true);
+  });
+
   // QFAI:EX-0004-0006-38
   it("keeps every manual note from a large legacy CLI contract in source order", async () => {
     const root = await project();
@@ -593,11 +628,9 @@ describe("migration CLI contract shape", () => {
     );
 
     const plan = await planContracts(await context(root));
-    const notes = plan.forAPerson.filter((note) => note.startsWith(`${NEW}: rewrite "## Legacy `));
+    const notes = plan.forAPerson.filter((note) => note.includes('"## Legacy '));
     expect(notes).toHaveLength(sectionCount);
-    const mismatch = notes.findIndex(
-      (note, index) => note !== `${NEW}: rewrite "## Legacy ${index + 1}" of ${OLD} by hand`,
-    );
+    const mismatch = notes.findIndex((note, index) => !matchesCliRewriteNote(note, index + 1));
     expect(mismatch).toBe(-1);
   });
 

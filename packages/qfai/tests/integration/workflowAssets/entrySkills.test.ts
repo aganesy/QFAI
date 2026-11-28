@@ -1505,7 +1505,7 @@ describe("qfai-maintain", () => {
     );
     const commit = flat(await readShipped("step/verify-commit/STEP.md"));
     expect(commit).toMatch(
-      /`git --literal-pathspecs add -- <those paths>`\.[^.]*\b(?:separate|own) argument\b[^.]*\.(?=[^.]*\bshell\b)[^.]*\bquote and escape\b[^.]*\.[^.]*\bliteral\b[^.]*\bresolved paths\b/i,
+      /`git --literal-pathspecs add -- <those paths>`\.[^.]*\b(?:separate|own) argument\b[^.]*\.(?=[^.]*\bshell\b)[^.]*\bquote and escape\b[^.]*\.\s*Use the same literal filename handling for resolved paths\./i,
     );
     expect(commit).toContain(
       "first confirm that the combined diff in the stage report passed the added-line check, then stage the resolved paths and conclude the merge in progress with `git commit` and a message that names the base and gives each renumber as old → new with the renamed record's subject or path.",
