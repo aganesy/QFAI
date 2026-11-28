@@ -296,11 +296,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     reads `| Term | Definition | Avoid | Context |`. A glossary the 1.x
     migration writes already has them.
 
-- **Translated free answers and decision labels share one marker.** The
-  deliberation record puts a free answer in `Option 4 (other)` and chooses
-  `4`. It quotes an answer in the record's language word for word. For an
-  answer in another language, it writes the translation followed by
-  `(translated from <language>)` and leaves the original words out. The
+- **Translated Option 4 answers and decision labels share one marker.** A
+  deliberation record uses Option 4 for free answers and answers to questions
+  with no candidate values. It quotes an answer in the record's language word
+  for word. For an answer in another language, it records the translation
+  followed by `(translated from <language>)`, with the source language named in
+  English, and keeps the original words out of the entire record. The
   `qfai-sdd` decisions template uses the same marker after a translated
   option label. The marker stays in English in both files.
 

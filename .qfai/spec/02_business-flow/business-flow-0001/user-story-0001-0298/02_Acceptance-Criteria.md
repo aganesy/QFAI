@@ -27,8 +27,8 @@ Feature: Each run keeps one deliberation record
     And the record puts a free answer in Option 4 and chooses 4
     And a question with no candidate values leaves Options 1 to 3 empty, holds the answer in Option 4 and chooses 4
     And every answer in Option 4 is quoted word for word when it is in the record's language
-    And every answer in Option 4 in a different language is translated into the record's language and followed by "(translated from <language>)", with the source language named in English
-    And for a translated answer, the translation and its marker are the only copy of that answer in the entire record
+    And Option 4 holds an answer in a different language as a translation into the record's language followed by "(translated from <language>)", with the source language named in English
+    And the user's original wording appears nowhere in the record when an answer is translated
     And a source the options rest on is a URL in the Background cell
 
   # AC-0001-0298-04

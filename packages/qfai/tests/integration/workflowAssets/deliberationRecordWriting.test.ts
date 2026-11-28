@@ -99,7 +99,7 @@ describe("what an Interview row holds", () => {
   it("applies the translation rule to every answer in Option 4", async () => {
     const text = await writing();
     expect(text).toMatch(
-      /quote every answer in Option 4 word for word when it is in the record's language\. Otherwise, put its translation in Option 4 followed by `\(translated from <language>\)`, with the source language named in English/i,
+      /quote every answer in Option 4 word for word when it is in the record's language\. Otherwise, write its translation into the record's language in Option 4, followed by `\(translated from <language>\)`, with the source language named in English/i,
     );
     expect(text).toContain("Keep the original wording out of the entire record when translating.");
     expect(flat(await readShipped("step/discussion-interview/STEP.md"))).toMatch(
