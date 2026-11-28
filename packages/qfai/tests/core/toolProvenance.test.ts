@@ -85,7 +85,6 @@ it("accepts an external PnP copy only for the project that resolves that directo
   });
 });
 
-// QFAI:EX-0001-0039-79
 it("rejects a relative declaring location from the active PnP resolver", () => {
   const packageLocation = "declaring-project";
   const project = path.resolve(packageLocation);

@@ -22,6 +22,7 @@ export {
 export { validateExternalReferences } from "./externalReferences.js";
 export { validateStoryTreeDrift } from "./upstreamSsotGuard.js";
 export { validateDocumentSchema } from "./documentSchema.js";
+export { validateGlossaryTerms, validateGlossaryTestTitles } from "./glossaryTerms.js";
 export { validateStaleTerms } from "./staleTerms.js";
 export { validateInstructionAudit } from "./instructionAudit.js";
 export { validateForbiddenIdentifiers } from "./forbiddenIdentifiers.js";

@@ -100,9 +100,10 @@ const KINDS: Record<string, string[]> = {
     "triage-owned-cleanup",
     "triage-operate",
   ],
-  discussion: ["discussion-research", "discussion-interview"],
+  discussion: ["discussion-research", "common-domain-language", "discussion-interview"],
   diagnose: ["implement-diagnose", "implement-bisect", "implement-minimize", "implement-benchmark"],
   sdd: [
+    "common-domain-language",
     "sdd-triage",
     "sdd-flow",
     "sdd-story",
@@ -156,6 +157,7 @@ const STEPS = new Set([...Object.values(KINDS).flat(), SEAM_STEP]);
 // The steps a plan may mark pass-through: each runs, and passes with evidence when it can show
 // it has nothing to write.
 export const PASS_THROUGH_STEPS = [
+  "common-domain-language",
   "sdd-flow",
   "sdd-contract",
   "sdd-cycle",

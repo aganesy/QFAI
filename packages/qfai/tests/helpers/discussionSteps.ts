@@ -10,7 +10,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 /** The steps `qfai-discussion/SKILL.md` lists, in the order it runs them. */
-export const DISCUSSION_STEPS = ["discussion-research", "discussion-interview"] as const;
+export const DISCUSSION_STEPS = [
+  "discussion-research",
+  "common-domain-language",
+  "discussion-interview",
+] as const;
 
 export type DiscussionStep = (typeof DISCUSSION_STEPS)[number];
 

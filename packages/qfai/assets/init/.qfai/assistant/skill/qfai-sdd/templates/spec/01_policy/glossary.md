@@ -2,5 +2,5 @@
 
 ## Terms
 
-| Term | Definition |
-| ---- | ---------- |
+| Term | Definition | Avoid | Context |
+| ---- | ---------- | ----- | ------- |
