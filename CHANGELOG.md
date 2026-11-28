@@ -721,6 +721,21 @@ session-review` command still reads local transcripts only.
 
 ### Fixed
 
+- **The component catalogue keeps a numeric prop in its place.** A prop named
+  `1` used to move ahead of the other props under `variants`, in the written
+  catalogue and in `--brief`. The written catalogue now follows the order
+  `props` lists, and `--brief` the order the catalogue writes.
+
+- **`qfai catalog components --brief` keeps each component on one line.** A
+  vertical tab, a form feed or U+0085 inside a value now prints as a space, as
+  a line feed already did.
+
+- **`qfai catalog components` stops cleanly on an incomplete `typescript`.**
+  When the loaded package lacks `getLeadingCommentRanges` or
+  `getTrailingCommentRanges`, the command exits 1 with one line naming
+  `typescript` and the number of files, and writes no catalogue, instead of
+  failing part way through the scan.
+
 - **`qfai session-review` no longer lists the first typed turn as a
   correction.** Nothing precedes it to correct, and common phrasing in a first
   request, such as the Japanese for "not X but", made it a false lead. The turn
