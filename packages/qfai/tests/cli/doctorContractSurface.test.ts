@@ -107,15 +107,18 @@ function failOnValues(argsSource: string): string[] {
 }
 
 describe("`qfai doctor` CLI contract surface", () => {
-  it("says what doctor deletes, and that nothing else is deleted", async () => {
-    // A reader deciding whether the command is reversible must get one
-    // answer: a TTL-expired run log is removed, and nothing else is.
+  it("limits the clean pass to qualifying run-log directories", async () => {
     const rules = await readRules();
 
-    ruleWith(rules, "`--clean` removes each `<outDir>/run-<ts>/`");
-    ruleWith(rules, "A run log is the one thing doctor deletes", "nothing else is deleted");
+    ruleWith(
+      rules,
+      "`--clean` removes each `<outDir>/run-<ts>/`",
+      "The log-pruning pass under `--clean` deletes only these run-log directories.",
+    );
     for (const statement of rules.values()) {
-      expect(statement).not.toMatch(/does NOT delete anything|no path is removed on any flag/);
+      expect(statement).not.toMatch(
+        /does NOT delete anything|no path is removed on any flag|nothing else is deleted on any flag/,
+      );
     }
   });
 
@@ -188,6 +191,9 @@ describe("`qfai doctor` CLI contract surface", () => {
   it("names every path the mutating flags write", async () => {
     const rules = await readRules();
     const writes = ruleWith(rules, "`--autoremediate` writes only these paths");
+    expect(writes).toContain(
+      "unlinks only backup symlinks to that wrapper's current or legacy target",
+    );
 
     for (const written of [
       "`<root>/.gitignore`",

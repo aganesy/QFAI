@@ -28,7 +28,10 @@ const OPTIONAL_SEVERITY_ROW =
   /^\|\s*`relaxedFrom`\s*\|.*\|\s*(?:(?:the\s+)?(?:field|value|severity)\s+)?(?:is\s+)?(?:optional|may\s+be\s+(?:absent|omitted))\b[^|]*\|\s*$/i;
 
 function explainsExplorationDowngrade(text: string): boolean {
-  const wording = text.replace(/\s+/g, " ");
+  // A denial can contain the same transition as an affirmative explanation.
+  const wording = text
+    .replace(/\s+/g, " ")
+    .replace(/\bit (?:is|was) (?:false|not true) that\b[^.!?;]*/gi, "");
   return [
     /\b(?:was|is|had been) (?:lowered|downgraded|reduced|changed) from (?:an? )?error (?:to|into) (?:an? )?warning (?:by|due to|because of|under) exploration[- ]mode\b/i,
     /\b(?:began|started) as (?:an? )?error and (?:ended|finished) as (?:an? )?warning (?:by|due to|because of|under) exploration[- ]mode\b/i,
@@ -46,6 +49,22 @@ it("requires the original severity row to say that the field is optional", () =>
 it.each([
   ["An old finding began as an error and ended as a warning due to exploration mode.", true],
   ["Exploration mode downgraded the finding from error to warning.", true],
+  [
+    'An older finding has `relaxedFrom: "error"` and `severity: "warning"`. It is false that exploration mode downgraded the finding from error to warning.',
+    false,
+  ],
+  [
+    "It is not true that an older finding was lowered from error to warning by exploration mode.",
+    false,
+  ],
+  [
+    "It is false that a waiver lowered the finding from error to warning. Exploration mode downgraded the finding from error to warning.",
+    true,
+  ],
+  [
+    "It is false that a waiver lowered the finding from error to warning; exploration mode downgraded the finding from error to warning.",
+    true,
+  ],
   ["An older finding was not lowered from error to warning by exploration mode.", false],
   [
     "An older finding was lowered from error to warning by a waiver. Exploration mode had no effect.",

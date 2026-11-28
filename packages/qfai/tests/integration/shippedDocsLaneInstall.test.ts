@@ -19,7 +19,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -291,6 +291,39 @@ describe("the delivered document lane installs its checkers outside the project'
       }
     },
   );
+
+  it.skipIf(!HAS_BASH).each([
+    [INSTALL_STEP, "must be a local directory"],
+    ["Check Mermaid diagram syntax", "the temporary tools must be local directories"],
+  ])("rejects a linked tool directory before %s", async (step, diagnostic) => {
+    const body = await runBody(step);
+    const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-int-docs-directory-"));
+    try {
+      const prefix = path.join(stage, TOOLS_DIR);
+      const fixture = path.join(stage, "empty-directory");
+      await mkdir(prefix, { recursive: true });
+      await mkdir(fixture);
+      await symlink(fixture, path.join(prefix, "node_modules"), "junction");
+
+      const stubs = `
+npm() { echo 'npm was called'; }
+node() {
+  if [ "$1" = '-e' ]; then command node "$@"; else echo 'diagram checker was called'; fi
+}
+`;
+      const child = spawnSync("bash", ["-e", "-o", "pipefail", "-c", stubs + body], {
+        cwd: stage,
+        encoding: "utf-8",
+      });
+      if (child.error !== undefined) throw child.error;
+      expect(child.status, child.stderr).toBe(1);
+      expect(child.stderr).toContain(diagnostic);
+      expect(child.stdout).not.toContain("npm was called");
+      expect(child.stdout).not.toContain("diagram checker was called");
+    } finally {
+      await removeTempTree(stage);
+    }
+  });
 
   it.skipIf(!HAS_BASH || process.env.GITHUB_ACTIONS !== "true")(
     "installs patched KaTeX and parses a real diagram with the delivered docs steps",

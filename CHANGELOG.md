@@ -323,6 +323,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stated once, and the Standard commands home is named as
   `<paths.contractsDir>/tech.md#standard-commands-copy-paste`, so a project
   with its own contracts directory is pointed at the right file.
+- Oracle-strength guidance now asks tests of prose and tables to check the
+  operative words and demonstrate an assertion failure for each new clause
+  when that clause is removed on its own.
 
 - **Breaking: each contract kind has its own number sequence, and a business
   rule ID names its contract's kind.** A project with five DB contracts and
@@ -734,6 +737,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   validation and preserves the existing file when rendered output exceeds it.
   Small catalogue reads use a buffer that grows with the bytes read.
 
+- Component catalogue check mode reports when the selected metadata would
+  exceed the publication limit.
+
 - Restoring or publishing a completed document graph reuses the safety check
   on each copy during native freshness validation.
 
@@ -784,6 +790,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Validation accepts the QFAI copy selected by Yarn Plug’n’Play for the project,
   including a copy loaded from a shared cache outside the project directory.
+  The resolver must report an absolute location for the declaring package.
 
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
@@ -824,6 +831,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   records before `triage-handoff`. The row now names those exceptions, and
   none of them after a private security intake, as the skill's Reviewer Gate
   does. Closes #5540.
+
+- The triage skill summary distinguishes ordinary records from the tracked
+  changes the Reviewer Gate permits for authorized operations.
 
 - **The seeded Git attributes explain how to handle a restored question row.**
   After a union merge restores a deleted open question, the guidance calls for
@@ -1490,6 +1500,9 @@ decisions` headings appeared anywhere in the file, so a record with several
 
 - SQL routine identity ignores a Unicode-quoted parameter name together with
   its `UESCAPE` clause and retains the full input type.
+
+- SQL routine identity also retains the input type when it immediately follows
+  a Unicode-quoted parameter name without a `UESCAPE` clause.
 
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
@@ -3350,7 +3363,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   was deleted in between. Closes #4504.
 
 - Automatic release tagging verifies that the pushed commit came from merging the
-  version's release branch within this repository.
+  version's release branch within this repository. A skipped tag names the expected
+  release branch, target branch and pushed commit.
 
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the
@@ -3699,6 +3713,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   listening socket. A local backend
   stays local and a different origin needs its own authorization.
   Closes #4496.
+
+- Component catalogues keep a component's leading theme token comments in
+  files with LF, CRLF, or CR line endings.
 
 ## [2.5.0] - 2026-11-15
 
