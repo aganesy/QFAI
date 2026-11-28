@@ -22,9 +22,9 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   readlink,
   rm,
-  stat,
   utimes,
   writeFile,
 } from "node:fs/promises";
@@ -35,6 +35,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
 import * as autoremediateModule from "../../../../src/core/doctor/autoremediate.js";
+import { SKILL_INTEGRATION_DIRS } from "../../../../src/core/init/integrationDirs.js";
 import { recordAssistantVersion } from "../../../helpers/assistantVersion.js";
 import {
   canCreateSymlink,
@@ -153,16 +154,41 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     expect(await run()).toBe(0);
 
     const ignore = path.join(root, ".gitignore");
+    const files = [ignore, backupNote, runNote];
+    const directories = [backup, runLog, newestRun];
+    const wrappers = SKILL_INTEGRATION_DIRS.map((dir) =>
+      path.join(root, ...dir.split("/"), SHIPPED_SKILL),
+    );
+    // An old file timestamp makes a same-content write visible on the repeat pass.
     const earlier = new Date(2020, 0, 1);
-    await utimes(ignore, earlier, earlier);
+    await Promise.all(files.map((file) => utimes(file, earlier, earlier)));
+
+    const metadata = async (target: string) => {
+      const { ino, mtimeMs } = await lstat(target);
+      return { ino, mtimeMs };
+    };
     const snapshot = async () => ({
-      ignore: await readFile(ignore),
-      ignoreModified: (await stat(ignore)).mtimeMs,
-      wrapperTarget: await readlink(wrapper),
-      wrapperInode: (await lstat(wrapper)).ino,
-      backup: await readFile(backupNote),
-      runLog: await readFile(runNote),
-      newestRunInode: (await stat(newestRun)).ino,
+      files: await Promise.all(
+        files.map(async (file) => ({
+          path: path.relative(root, file),
+          bytes: await readFile(file),
+          ...(await metadata(file)),
+        })),
+      ),
+      wrappers: await Promise.all(
+        wrappers.map(async (link) => ({
+          path: path.relative(root, link),
+          target: await readlink(link),
+          ...(await metadata(link)),
+        })),
+      ),
+      directories: await Promise.all(
+        directories.map(async (dir) => ({
+          path: path.relative(root, dir),
+          entries: (await readdir(dir)).sort(),
+          ...(await metadata(dir)),
+        })),
+      ),
     });
     const before = await snapshot();
     stderr.mockClear();

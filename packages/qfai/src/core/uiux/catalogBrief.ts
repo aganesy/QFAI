@@ -16,15 +16,17 @@ const LEADING_KEYS = ["pattern", "states", "props", "a11y"] as const;
 export function componentBriefLines(catalogText: string, catalogPath: string): string[] | null {
   let parsed: unknown;
   try {
-    parsed = parse(catalogText);
+    // Mappings stay maps, so a numeric key such as a `variants` prop named `1` keeps its place.
+    parsed = parse(catalogText, { mapAsMap: true });
   } catch {
     return null;
   }
-  const list = isRecord(parsed) && Array.isArray(parsed.components) ? parsed.components : [];
+  const components: unknown = parsed instanceof Map ? parsed.get("components") : undefined;
+  const list: unknown[] = Array.isArray(components) ? components : [];
   if (list.length === 0) return [`Components in ${catalogPath}: none.`];
   const lines = [`Components in ${catalogPath}:`];
   for (const entry of list) {
-    if (!isRecord(entry)) return null;
+    if (!(entry instanceof Map)) return null;
     const line = componentLine(entry);
     if (line === null) return null;
     lines.push(line);
@@ -37,19 +39,22 @@ export function componentBriefLines(catalogText: string, catalogPath: string): s
  * Ceiling: a free-text value that itself holds `; `, such as an `a11y` note, reads as two fields;
  * accepted while the brief is read by an agent beside the catalogue; quoting values lifts it.
  */
-function componentLine(entry: Record<string, unknown>): string | null {
-  const head = `- ${String(entry.name)} (${String(entry.file)})`;
-  const keys = Object.keys(entry).filter((key) => key !== "name" && key !== "file");
+function componentLine(entry: ReadonlyMap<unknown, unknown>): string | null {
+  const entries = mapEntries(entry);
+  if (entries === null) return null;
+  const fieldsOf = new Map(entries);
+  const head = `- ${String(fieldsOf.get("name"))} (${String(fieldsOf.get("file"))})`;
+  const keys = [...fieldsOf.keys()].filter((key) => key !== "name" && key !== "file");
   const leading = LEADING_KEYS.filter((key) => keys.includes(key));
   const rest = keys.filter((key) => !LEADING_KEYS.some((lead) => lead === key));
   const fields: string[] = [];
   for (const key of [...leading, ...rest]) {
-    const value = valueText(entry[key]);
+    const value = valueText(fieldsOf.get(key));
     if (value === null) return null;
     fields.push(`${key}: ${value}`);
   }
   const line = fields.length === 0 ? head : `${head}: ${fields.join("; ")}`;
-  return line.replace(/\r\n|[\r\n\u2028\u2029]/g, " ");
+  return line.replace(/\r\n|[\r\n\v\f\u0085\u2028\u2029]/g, " ");
 }
 
 function valueText(value: unknown): string | null {
@@ -70,7 +75,7 @@ function valueText(value: unknown): string | null {
 
     const part = frame.value;
     const isList = Array.isArray(part);
-    if (!isList && !isRecord(part)) {
+    if (!isList && !(part instanceof Map)) {
       if (typeof part === "string") output.push(part);
       else if (part === null || typeof part === "number" || typeof part === "boolean") {
         output.push(JSON.stringify(part));
@@ -81,11 +86,14 @@ function valueText(value: unknown): string | null {
     active.add(part);
     pending.push({ leave: part });
 
-    const entries = Object.entries(part).reverse();
-    for (const [key, entry] of entries) {
+    const entries = isList ? Object.entries(part) : mapEntries(part);
+    if (entries === null) return null;
+    // Pushed last first, so the stack pops them in written order; every entry after the first
+    // is preceded by a separator.
+    for (const [index, [key, entry]] of [...entries.entries()].reverse()) {
       pending.push({ value: entry, separator: isList ? frame.separator : " | " });
       if (!isList) pending.push(`${key}: `);
-      if (key !== entries.at(-1)?.[0]) pending.push(isList ? frame.separator : ", ");
+      if (index > 0) pending.push(isList ? frame.separator : ", ");
     }
   }
   return output.join("");
@@ -114,6 +122,19 @@ export function tokenFileCount(text: string): number | null {
     for (const child of Object.values(node)) pending.push(child);
   }
   return count;
+}
+
+/**
+ * A parsed mapping's entries in written order, each key as the text it prints as, or null when a
+ * key is not a string, number or boolean, which no catalogue writes.
+ */
+function mapEntries(map: ReadonlyMap<unknown, unknown>): [string, unknown][] | null {
+  const entries: [string, unknown][] = [];
+  for (const [key, value] of map) {
+    if (typeof key !== "string" && typeof key !== "number" && typeof key !== "boolean") return null;
+    entries.push([String(key), value]);
+  }
+  return entries;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

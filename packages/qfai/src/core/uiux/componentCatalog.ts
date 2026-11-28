@@ -164,7 +164,7 @@ export async function scanComponents(
     };
   }
   const ts = loadTs(root, options.loadTypescript);
-  if (!ts) return { readable: false, unread: files.length };
+  if (!ts || !hasCommentRanges(ts)) return { readable: false, unread: files.length };
   const components: CatalogComponent[] = [];
   const rawElements: RawElement[] = [];
   const widgetMarkup: WidgetMarkup[] = [];
@@ -183,12 +183,13 @@ export async function scanComponents(
 /** The catalogue file's text for a list of components, byte-identical for the same list. */
 export function renderCatalog(components: readonly CatalogComponent[]): string {
   const entries = components.map((component) => {
-    const entry: Record<string, string | string[] | Record<string, string[]>> = {
+    const entry: Record<string, string | string[] | Map<string, string[]>> = {
       name: component.name,
       file: component.file,
     };
     if (component.props) entry.props = component.props;
-    if (component.variants) entry.variants = component.variants;
+    if (component.variants)
+      entry.variants = variantsInPropOrder(component.variants, component.props);
     for (const tag of DOC_TAGS) {
       const value = component[tag];
       if (value !== undefined) entry[tag] = value;
@@ -198,6 +199,24 @@ export function renderCatalog(components: readonly CatalogComponent[]): string {
     return entry;
   });
   return HEADER + stringify({ components: entries }, { lineWidth: 0 });
+}
+
+/**
+ * The variants as a map in the order `props` lists their props. An object puts a numeric key such
+ * as `1` before every other key, so the written order is taken from `props` instead.
+ */
+function variantsInPropOrder(
+  variants: Record<string, string[]>,
+  props: readonly string[] | undefined,
+): Map<string, string[]> {
+  const byProp = new Map(Object.entries(variants));
+  const ordered = new Map<string, string[]>();
+  for (const prop of props ?? []) {
+    const values = byProp.get(prop);
+    if (values) ordered.set(prop, values);
+  }
+  for (const [prop, values] of byProp) if (!ordered.has(prop)) ordered.set(prop, values);
+  return ordered;
 }
 
 /** The catalogue path and its identity, after refusing links and entries that are not regular files. */
@@ -393,6 +412,16 @@ function isStringList(value: unknown): value is string[] {
 function compare(a: string, b: string): number {
   if (a === b) return 0;
   return a < b ? -1 : 1;
+}
+
+/** Whether a loaded compiler offers the two comment-range methods the citation scan calls. */
+function hasCommentRanges(ts: object): boolean {
+  return (
+    "getLeadingCommentRanges" in ts &&
+    typeof ts.getLeadingCommentRanges === "function" &&
+    "getTrailingCommentRanges" in ts &&
+    typeof ts.getTrailingCommentRanges === "function"
+  );
 }
 
 /** Mask everything outside compiler-recognized comments without moving line or token boundaries. */
