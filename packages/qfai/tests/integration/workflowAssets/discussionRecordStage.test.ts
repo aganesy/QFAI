@@ -184,7 +184,7 @@ describe("the discussion interview runs as a grilling session", () => {
       "Cover every topic in `.qfai/assistant/skill/qfai-discussion/references/discussion-coverage-checklist.md`.",
     );
     expect(await skill()).toMatch(
-      /\| `discussion-interview` \| [^|]+ \| Always: concept, scope, stakeholders, and constraints \|/,
+      /\| `discussion-interview` +\| [^|]+ \| Always: concept, scope, stakeholders, and constraints *\|/,
     );
   });
 });

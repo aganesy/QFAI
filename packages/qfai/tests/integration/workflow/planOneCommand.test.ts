@@ -67,10 +67,10 @@ it("An extraction file returns the route plan with its stages, steps and points"
     head: [true, "add-feature", "change", 28],
     stage: ["sdd", "sdd"],
     step: {
-      name: "sdd-triage",
-      path: ".qfai/assistant/step/sdd-triage/STEP.md",
+      name: "common-domain-language",
+      path: ".qfai/assistant/step/common-domain-language/STEP.md",
       mode: null,
-      passThrough: false,
+      passThrough: true,
     },
     points: [["sdd-triage"], null, []],
   });

@@ -4,6 +4,7 @@ stages:
   - id: spec
     kind: sdd
     steps:
+      - { step: common-domain-language, passThrough: true }
       - { step: sdd-triage, mode: settled }
       - { step: sdd-story, passThrough: true }
       - { step: sdd-contract, passThrough: true }
