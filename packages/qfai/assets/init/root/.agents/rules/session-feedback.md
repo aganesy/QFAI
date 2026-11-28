@@ -161,12 +161,14 @@ ask which pull request the finding came from; otherwise it asks for nothing and
 repeats the advice the no-question final report gives. Where the user's number
 could also be one this session handed out, it first confirms which finding is
 meant. It then reads that pull request's review comments, as the pull-request
-exception in this section's reading list allows, and finds the finding there
-again, then treats it as above. Where the finding is not there, or the forge
-cannot be read, it says so. A finding from a reviewer sub-agent has no pull
-request and cannot be found again, so the message about it says it can be asked
-about only in this session, and under a no-question mode the final report says
-instead that it cannot be found again.
+exception in this section's reading list allows. The number came from another
+session and maps to nothing there, so it treats a finding as above only where
+exactly one security finding in those comments could be the one meant. Where
+several could, it says it could not identify the finding; where none is there,
+or the forge cannot be read, it says so. A finding from a reviewer sub-agent has
+no pull request and cannot be found again, so the message about it says it can
+be asked about only in this session, and under a no-question mode the final
+report says instead that it cannot be found again.
 
 ## 3. What a draft holds
 
