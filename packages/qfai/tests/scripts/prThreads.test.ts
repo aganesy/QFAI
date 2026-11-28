@@ -343,6 +343,14 @@ describe("retrying a deferral that stopped part way", () => {
     expect(deferralWrites()).toEqual([write.join(" ")]);
   });
 
+  it("ignores method-shaped input filenames before a REST method flag", () => {
+    const endpoint = "repos/example/project/issues/40/comments";
+    const read = ["gh", "api", endpoint, "--input", "-XPOST", "--method=GET"];
+    const write = ["gh", "api", endpoint, "--input", "-XGET", "-XPOST"];
+    calls.list.push(read, write);
+    expect(deferralWrites()).toEqual([write.join(" ")]);
+  });
+
   const answer = (isResolved: boolean, replies: string[]): string =>
     JSON.stringify({
       data: {
