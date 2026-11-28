@@ -1703,19 +1703,16 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /An\s+unfixed\s+one\s+is\s+held\s+back\s+and\s+named\s+to\s+the\s+user\s+in\s+the\s+review's\s+own\s+message,\s+beside\s+the\s+§\s+5\s+question\s+or\s+in\s+its\s+one\s+line\s+when\s+nothing\s+else\s+is\s+worth\s+reporting/,
         /The\s+message\s+numbers\s+each\s+held-back\s+finding\s+across\s+the\s+session,\s+such\s+as\s+held-back\s+security\s+finding\s+1,\s+never\s+reusing\s+a\s+number,\s+and\s+names\s+it\s+by\s+that\s+number\s+alone/,
         /`reply-forms\.md`\s+treats\s+a\s+place\s+whose\s+audience\s+cannot\s+be\s+confirmed\s+as\s+not\s+private/,
-        /Where\s+the\s+host\s+shows\s+that\s+the\s+message\s+reaches\s+the\s+user\s+alone,\s+the\s+message\s+also:\s+-\s+names\s+the\s+finding's\s+class\s+of\s+defect;\s+-\s+says\s+where\s+the\s+finding\s+is;\s+-\s+names\s+the\s+pull\s+request\s+it\s+came\s+from;\s+-\s+suggests\s+asking\s+for\s+the\s+finding's\s+draft\s+once\s+the\s+fix\s+counts\s+as\s+fixed/,
+        /Where\s+the\s+host\s+shows\s+that\s+the\s+message\s+reaches\s+the\s+user\s+alone,\s+the\s+message\s+also:\s+-\s+names\s+the\s+finding's\s+class\s+of\s+defect;\s+-\s+says\s+where\s+the\s+finding\s+is;\s+-\s+names\s+the\s+pull\s+request\s+it\s+came\s+from,\s+where\s+it\s+came\s+from\s+one;\s+-\s+suggests\s+asking\s+for\s+the\s+finding's\s+draft\s+once\s+the\s+fix\s+counts\s+as\s+fixed/,
         /Otherwise\s+it\s+does\s+none\s+of\s+these\s+four,\s+and\s+tells\s+the\s+user\s+to\s+continue\s+this\s+session\s+where\s+only\s+they\s+will\s+see\s+the\s+answer\s+and\s+ask\s+about\s+the\s+finding\s+there\s+by\s+its\s+number/,
         /An\s+answer\s+gives\s+the\s+four\s+only\s+where\s+the\s+host\s+shows\s+it\s+reaches\s+the\s+user\s+alone,\s+and\s+otherwise\s+repeats\s+this\s+advice/,
-        /No\s+other\s+pull\s+request\s+is\s+read,\s+except\s+the\s+pull\s+request\s+of\s+a\s+held-back\s+security\s+finding\s+the\s+user\s+later\s+asks\s+about/,
-        /Under\s+a\s+no-question\s+mode\s+the\s+final\s+report\s+names\s+it\s+by\s+its\s+number\s+alone,\s+since\s+others\s+may\s+read\s+that\s+report\.\s+It\s+tells\s+the\s+user\s+to\s+ask\s+about\s+it\s+in\s+a\s+session\s+where\s+only\s+they\s+will\s+see\s+the\s+answer\s+and\s+to\s+name\s+there\s+the\s+pull\s+request\s+it\s+may\s+have\s+come\s+from/,
+        /No\s+other\s+pull\s+request\s+is\s+read,\s+except\s+the\s+pull\s+request\s+of\s+a\s+held-back\s+security\s+finding\s+the\s+user\s+later\s+asks\s+about\s+where\s+questions\s+are\s+allowed\s+and\s+the\s+host\s+shows\s+the\s+session\s+reaches\s+the\s+user\s+alone\.\s+The\s+private\s+follow-up\s+below\s+governs\s+that\s+lookup/,
+        /Under\s+a\s+no-question\s+mode\s+the\s+final\s+report\s+names\s+it\s+by\s+its\s+number\s+alone,\s+since\s+others\s+may\s+read\s+that\s+report\.\s+It\s+tells\s+the\s+user\s+to\s+ask\s+about\s+it\s+in\s+a\s+session\s+where\s+questions\s+are\s+allowed\s+and\s+only\s+they\s+will\s+see\s+the\s+answer,\s+and\s+to\s+name\s+there\s+the\s+pull\s+request\s+it\s+may\s+have\s+come\s+from/,
         /No\s+record\s+of\s+a\s+held-back\s+finding\s+is\s+kept,\s+so\s+that\s+no\s+file\s+records\s+an\s+unfixed\s+defect/,
         /A\s+later\s+session\s+asked\s+about\s+a\s+held-back\s+finding\s+it\s+has\s+no\s+record\s+of\s+says\s+so/,
-        /Only\s+where\s+the\s+host\s+shows\s+that\s+the\s+session\s+reaches\s+the\s+user\s+alone\s+does\s+it\s+ask\s+which\s+pull\s+request\s+the\s+finding\s+came\s+from;\s+otherwise\s+it\s+asks\s+for\s+nothing\s+and\s+repeats\s+the\s+advice\s+the\s+no-question\s+final\s+report\s+gives/,
-        /Where\s+the\s+user's\s+number\s+could\s+also\s+be\s+one\s+this\s+session\s+handed\s+out,\s+it\s+first\s+confirms\s+which\s+finding\s+is\s+meant/,
-        /It\s+then\s+reads\s+that\s+pull\s+request's\s+review\s+comments,\s+as\s+the\s+pull-request\s+exception\s+in\s+this\s+section's\s+reading\s+list\s+allows/,
-        /it\s+treats\s+a\s+finding\s+as\s+above\s+only\s+where\s+exactly\s+one\s+security\s+finding\s+in\s+those\s+comments\s+could\s+be\s+the\s+one\s+meant/,
-        /Where\s+several\s+could,\s+it\s+says\s+it\s+could\s+not\s+identify\s+the\s+finding;\s+where\s+none\s+is\s+there,\s+or\s+the\s+forge\s+cannot\s+be\s+read,\s+it\s+says\s+so/,
-        /A\s+finding\s+from\s+a\s+reviewer\s+sub-agent\s+has\s+no\s+pull\s+request\s+and\s+cannot\s+be\s+found\s+again,\s+so\s+the\s+message\s+about\s+it\s+says\s+it\s+can\s+be\s+asked\s+about\s+only\s+in\s+this\s+session,\s+and\s+under\s+a\s+no-question\s+mode\s+the\s+final\s+report\s+says\s+instead\s+that\s+it\s+cannot\s+be\s+found\s+again/,
+        /It\s+applies\s+the\s+held-back\s+security\s+rules\s+only\s+when\s+exactly\s+one\s+security\s+finding\s+in\s+those\s+comments\s+could\s+be\s+the\s+one\s+meant/,
+        /Where\s+several\s+could,\s+it\s+says\s+it\s+could\s+not\s+identify\s+the\s+finding\.\s+Where\s+none\s+is\s+there\s+or\s+the\s+forge\s+cannot\s+be\s+read,\s+it\s+says\s+so/,
+        /A\s+finding\s+that\s+appears\s+only\s+in\s+a\s+reviewer\s+sub-agent's\s+report\s+cannot\s+be\s+found\s+again\s+from\s+pull\s+request\s+comments\.\s+The\s+message\s+says\s+it\s+can\s+be\s+asked\s+about\s+only\s+in\s+the\s+original\s+session\.\s+The\s+no-question\s+final\s+report\s+says\s+it\s+cannot\s+be\s+found\s+again/,
         /A\s+held-back\s+security\s+finding\s+goes\s+there\s+too,\s+named\s+by\s+its\s+number\s+alone,\s+with\s+the\s+advice\s+§\s+2\s+gives\s+for\s+a\s+no-question\s+mode/,
         /personal\s+data,\s+a\s+reviewer's\s+name\s+or\s+handle/,
         /The\s+draft\s+reports\s+the\s+gap\s+in\s+QFAI's\s+guidance,\s+never\s+the\s+project's\s+defect/,
@@ -1726,6 +1723,27 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       ]) {
         expect(text).toMatch(clause);
       }
+
+      // Keep the sole follow-up lookup after the restricted and sub-agent-only branches.
+      const paragraphs = text
+        .split(/\r?\n[ \t]*\r?\n/)
+        .map((paragraph) => paragraph.replace(/\s+/g, " ").trim());
+      const followUp = paragraphs.findIndex((paragraph) =>
+        paragraph.startsWith("No record of a held-back finding is kept"),
+      );
+      expect(followUp).toBeGreaterThanOrEqual(0);
+      expect(paragraphs[followUp]).toMatch(
+        /Under a no-question mode or where the host cannot show the session reaches the user alone, it asks nothing and repeats the advice from the no-question final report without looking up the finding or giving its details/,
+      );
+      expect(paragraphs[followUp + 1]).toMatch(
+        /^Where questions are allowed and the host shows the session reaches the user alone, it stops before asking for a pull request if the user identifies the finding as one that appears only in a reviewer sub-agent's report\..*the finding can be asked about only in the original session/,
+      );
+      expect(paragraphs[followUp + 2]).toMatch(
+        /^For other findings in that private branch, it confirms which finding is meant if the number could also be one it handed out\..*It asks which pull request the finding came from if the user has not named it\..*It then reads that pull request's review comments, as the pull-request exception in this section's reading list allows/,
+      );
+      expect(text.match(/\breads\s+that\s+pull\s+request's\s+review\s+comments\b/gi)).toHaveLength(
+        1,
+      );
     });
 
     // QFAI:AC-0001-0231-07
