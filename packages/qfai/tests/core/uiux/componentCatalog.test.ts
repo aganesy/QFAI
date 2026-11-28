@@ -247,6 +247,18 @@ describe("the scanner lists exported components", () => {
     });
     expect(scan).toEqual({ readable: false, unread: 2 });
   });
+
+  // QFAI:EX-0001-0307-06
+  it("reads no file with a compiler that lacks either comment-range method", async () => {
+    const root = await projectWith({ "src/a.tsx": BUTTON, "src/b.tsx": BUTTON });
+    const ts = realTypescript();
+    if (typeof ts !== "object" || ts === null) throw new Error("typescript did not load");
+    for (const missing of ["getLeadingCommentRanges", "getTrailingCommentRanges"]) {
+      const partial = Object.fromEntries(Object.entries(ts).filter(([key]) => key !== missing));
+      const scan = await scanComponents(root, config, { loadTypescript: () => partial });
+      expect(scan).toEqual({ readable: false, unread: 2 });
+    }
+  });
 });
 
 describe("each component lists the business rules its declaration cites", () => {
@@ -294,6 +306,7 @@ describe("each component lists the business rules its declaration cites", () => 
     const found = await components({
       "src/ui/order.tsx": [
         "/**",
+        " * QFAI:BR-UI-0003-0003",
         " * @pattern status",
         " */",
         "// QFAI:BR-UI-0003-0002",
@@ -314,7 +327,7 @@ describe("each component lists the business rules its declaration cites", () => 
         name: "OrderStatus",
         file: "src/ui/order.tsx",
         pattern: "status",
-        realizes: ["BR-UI-0003-0001", "BR-UI-0003-0002"],
+        realizes: ["BR-UI-0003-0001", "BR-UI-0003-0002", "BR-UI-0003-0003"],
       },
       { name: "OrderTotal", file: "src/ui/order.tsx" },
     ]);
@@ -325,6 +338,7 @@ describe("each component lists the business rules its declaration cites", () => 
         "    realizes:",
         "      - BR-UI-0003-0001",
         "      - BR-UI-0003-0002",
+        "      - BR-UI-0003-0003",
         "  - name: OrderTotal",
       ].join("\n"),
     );
@@ -514,6 +528,29 @@ describe("each component lists the string literal values its props take", () => 
       { variant: ["common"] },
       undefined,
     ]);
+  });
+
+  // QFAI:EX-0001-0307-37
+  it("writes a numeric prop's variants in the order props lists it", async () => {
+    const found = await components({
+      "src/ui/numbered.tsx": [
+        'type Props = { size: "sm" | "lg"; 1: "a" | "b" };',
+        "export const Numbered = (props: Props) => <div />;",
+      ].join("\n"),
+    });
+    expect(found[0]?.props).toEqual(["size", "1"]);
+    expect(renderCatalog(found)).toContain(
+      [
+        "    variants:",
+        "      size:",
+        "        - sm",
+        "        - lg",
+        '      "1":',
+        "        - a",
+        "        - b",
+        "",
+      ].join("\n"),
+    );
   });
 
   // QFAI:EX-0001-0307-35

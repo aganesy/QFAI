@@ -688,6 +688,35 @@ session-review` command still reads local transcripts only.
 
 ### Fixed
 
+- **`qfai catalog components --brief` no longer sends nonprinting characters
+  to the terminal.** A tab in a component's line now prints as a space, and
+  every other control, format or lone surrogate character, such as an escape
+  or a bidirectional override, prints as `\u{XXXX}` with its code point in
+  upper-case hex. Names, paths and free text in other scripts, and emoji, print
+  unchanged.
+
+- **The component catalogue keeps a numeric prop in its place.** A prop named
+  `1` used to move ahead of the other props under `variants`, in the written
+  catalogue and in `--brief`. The written catalogue now follows the order
+  `props` lists, and `--brief` the order the catalogue writes.
+
+- **`qfai catalog components --brief` keeps each component on one line.** A
+  vertical tab, a form feed or U+0085 inside a value now prints as a space, as
+  a line feed already did.
+
+- **`qfai catalog components --brief` refuses a catalogue key it cannot print,
+  and keeps keys that print alike apart.** A catalogue with a mapping key that
+  is not a string, number or boolean, such as `? [p, q]` or `~`, used to print
+  its entry and now exits 1 with one line saying it is not a component
+  catalogue. Two keys that print alike, such as `1` and `"1"`, are now listed
+  separately instead of as one.
+
+- **`qfai catalog components` stops cleanly on an incomplete `typescript`.**
+  When the loaded package lacks `getLeadingCommentRanges` or
+  `getTrailingCommentRanges`, the command exits 1 with one line naming
+  `typescript` and the number of files, and writes no catalogue, instead of
+  failing part way through the scan.
+
 - **`qfai session-review` no longer lists the first typed turn as a
   correction.** Nothing precedes it to correct, and common phrasing in a first
   request, such as the Japanese for "not X but", made it a false lead. The turn
