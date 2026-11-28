@@ -690,6 +690,12 @@ session-review` command still reads local transcripts only.
 
 ### Fixed
 
+- **`qfai session-review` no longer lists the first typed turn as a
+  correction.** Nothing precedes it to correct, and common phrasing in a first
+  request, such as the Japanese for "not X but", made it a false lead. The turn
+  still counts among the typed turns, and later turns keep their numbers.
+  Fixes #6120.
+
 - Specification tables inside a list item's HTML comment block are ignored.
   Inline comments are removed only within their own table cells, preserving the
   boundaries and visible content of adjacent cells.
