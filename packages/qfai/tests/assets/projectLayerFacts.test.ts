@@ -31,7 +31,7 @@ import { parse as parseYaml } from "yaml";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const LAYER = ".instruction/02_project";
-const NODE_RANGE_WILDCARD = String.raw`[x*](?![\w*]|\.[\dx*])`;
+const NODE_RANGE_WILDCARD = /[x*](?=$|[\s`]|\|\||[.,;:!?](?=\s|$))/.source;
 const NODE_RANGE_NUMBER = String.raw`v?\d+(?:\.[\dx*]+){0,2}`;
 const NODE_RANGE_CLAIM = new RegExp(
   /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?/
@@ -453,21 +453,31 @@ describe("the project layer describes the repository it is in", () => {
 
   it.each(["*", "x"])("reads the %s wildcard as the first or only Node range term", (wildcard) => {
     const range = `${wildcard} || ^20.19.0`;
+    const compactRange = `${wildcard}||^20.19.0`;
     expect(
       statedNodeRanges(
         [
           `Node.js requires ${wildcard}.`,
           `Node.js requires ${range}.`,
+          `Node.js requires ${compactRange}.`,
           `Node.js requires \`${wildcard}\`.`,
           `Set \`engines.node\` to \`${range}\`.`,
         ].join("\n"),
       ),
-    ).toEqual([wildcard, range, wildcard, range]);
+    ).toEqual([wildcard, range, compactRange, wildcard, range]);
   });
 
   it("ignores words and Markdown emphasis where a Node range could start", () => {
     expect(
-      statedNodeRanges("Node.js requires x86. Node.js requires *experimental* tooling."),
+      statedNodeRanges(
+        [
+          "Node.js requires x86.",
+          "Node.js requires x-ray tooling.",
+          "Node.js requires *experimental* tooling.",
+          "Node.js requires *(experimental)* tooling.",
+          "Node.js requires *“experimental”* tooling.",
+        ].join("\n"),
+      ),
     ).toEqual([]);
   });
 
