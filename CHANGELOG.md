@@ -296,6 +296,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     reads `| Term | Definition | Avoid | Context |`. A glossary the 1.x
     migration writes already has them.
 
+- **Translated Option 4 answers and decision labels share one marker.** A
+  deliberation record uses Option 4 for free answers and answers to questions
+  with no candidate values. It quotes an answer in the record's language word
+  for word. For an answer in another language, it records the translation
+  followed by `(translated from <language>)`, with the source language named in
+  English, and keeps the original words out of the entire record. The
+  `qfai-sdd` decisions template uses the same marker after a translated
+  option label. The marker stays in English in both files.
+
 - **The end-of-session feedback review reads review findings too.** Besides the
   session itself, it reads the findings reviewer sub-agents returned and the
   inline review comments, review bodies and conversation comments on the pull

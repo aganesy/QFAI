@@ -1214,8 +1214,9 @@ describe("qfai-run", () => {
     const example = template.split("\n").find((line) => line.startsWith("<the release checks"));
     expect(example).toMatch(/^<the release checks[^.]*\. - Rollback: \S/);
     expect(template.replace(/\s+/g, " ")).toMatch(
-      /when the question showed the chosen option's label in a language other than the one this file is written in, quote a rendering of the label in this file's language followed by `\(translated\)`/i,
+      /when the question showed the chosen option's label in a language other than the one this file is written in, quote a rendering of the label in this file's language followed by `\(translated from <language>\)`, as in `option "Remove it" \(translated from Japanese\)`/i,
     );
+    expect(template).toMatch(/the\s+marker\s+stays\s+in\s+English\./i);
     expect(release).toMatch(/which authorizes no push, merge, tag or publication/i);
     expect(release).toMatch(
       /record the approval as step 7 of `SKILL\.md` says: a `decisions\.md` row the run writes when the approval meets the recording test, the final report otherwise, or, when the release change is produced outside this run, the final report, with any row appended by the next change that touches `decisions\.md`/i,

@@ -87,9 +87,23 @@ describe("what an Interview row holds", () => {
   });
 
   // QFAI:EX-0001-0298-06
-  it("quotes a free answer word for word in Option 4 and chooses 4", async () => {
-    expect(await writing()).toMatch(
-      /quote a free answer word for word in `Option 4 \(other\)` and choose `4`/i,
+  it("chooses Option 4 for a free answer and quotes a same-language answer word for word", async () => {
+    const text = await writing();
+    expect(text).toMatch(/put a free answer in `Option 4 \(other\)` and choose `4`/i);
+    expect(text).toMatch(
+      /quote every answer in Option 4 word for word when it is in the record's language/i,
+    );
+  });
+
+  // QFAI:EX-0001-0298-18
+  it("applies the translation rule to every answer in Option 4", async () => {
+    const text = await writing();
+    expect(text).toMatch(
+      /quote every answer in Option 4 word for word when it is in the record's language\. Otherwise, write its translation into the record's language in Option 4, followed by `\(translated from <language>\)`, with the source language named in English/i,
+    );
+    expect(text).toContain("Keep the original wording out of the entire record when translating.");
+    expect(flat(await readShipped("step/discussion-interview/STEP.md"))).toMatch(
+      /each answer in `Option 4 \(other\)`, including an answer to a question with no candidate values, follows the record reference's language rule/i,
     );
   });
 

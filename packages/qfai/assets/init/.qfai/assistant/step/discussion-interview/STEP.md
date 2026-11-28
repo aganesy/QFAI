@@ -98,8 +98,9 @@ ends the session immediately and no further work follows it.
 
 The stage worker confirms:
 
-- every question put to the user is an Interview row of the run's record, with
-  a free answer quoted word for word in `Option 4 (other)`;
+- every question put to the user is an Interview row of the run's record;
+- each answer in `Option 4 (other)`, including an answer to a question with no
+  candidate values, follows the record reference's language rule;
 - every question left open is an `open-questions.md` row;
 - every required topic in the coverage checklist was put to the session, or is
   an `open-questions.md` row;
