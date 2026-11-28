@@ -143,6 +143,7 @@ it("writes at the UTF-8 limit and preserves the catalogue when output is larger"
   expect(await runCatalogComponents({ root, loadTypescript })).toBe(0);
   const previous = await readFile(catalogFile(root));
   expect(previous.length).toBe(limit);
+  expect(await runCatalogComponents({ root, loadTypescript, check: true })).toBe(0);
 
   await writeSource(reason + "x");
   const stderr = collectStderr();

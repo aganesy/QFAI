@@ -937,6 +937,8 @@ describe("assets guardrails", () => {
 
   // QFAI:EX-0001-0196-52
   it("ships a union merge for the two append-only registers, here and in the seed", async () => {
+    const localMerge =
+      /(?:^|\.\s+)(?:GitHub's merge ignores the driver, so a pull request can show a conflict a local merge does not:\s+resolve a conflict confined to the registers by merging|when a host shows a conflict confined to the registers,\s+merge) the base branch locally\./i;
     for (const file of [
       path.join(templateRootDir, ".gitattributes"),
       path.join(repoRoot, ".gitattributes"),
@@ -963,16 +965,14 @@ describe("assets guardrails", () => {
         .filter((line) => line.startsWith("#"))
         .map((line) => line.replace(/^#\s?/, "").trim())
         .join(" ");
-      // The comment's content, not its sentences: new rows are appended and a row keeps its ID,
-      // so union merging keeps both branches' rows; a decision row's wording may be restated; and
-      // only conflicts confined to the registers use a local base merge. The comment also
-      // describes which rows to remove after the merge and which to keep.
+      // Check why union merging keeps both branches' appended rows, when to merge the base
+      // locally, and which restored rows to remove in a separate commit before pushing.
       const terms = [
         /\bappended\b/i,
         /\bID\b/,
         /\brestated\b/i,
         /\bunion\b/i,
-        /(?:^|[.:]\s+)(?:resolve a conflict confined to the registers by merging|when a host shows a conflict confined to the registers,\s+merge) the base branch locally\./i,
+        localMerge,
         /\bif\b[^.]*\brestores\b[^.]*\bopen-question row deleted on one side,\s*delete (?:that row|it)\b[^.]*\bseparate commit\b[^.]*\bbefore pushing\b/i,
         /\bleave\b[^.]*\bother register rows and IDs\b[^.]*\bas the merge left them\b/i,
       ];
@@ -985,6 +985,9 @@ describe("assets guardrails", () => {
         /\brows are (?:only appended, )?never edited/i,
       );
     }
+    expect(
+      "Do not do the following: resolve a conflict confined to the registers by merging the base branch locally.",
+    ).not.toMatch(localMerge);
   });
 
   it("states the LF line-ending policy in the Drift Protocol", async () => {

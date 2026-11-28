@@ -42,6 +42,7 @@ const VOCABULARY: Record<string, string[]> = {
   test_fix: ["implement-test-fix"],
   regression_fix: ["implement-regression-fix"],
   sdd: [
+    "common-domain-language",
     "sdd-triage",
     "sdd-flow",
     "sdd-story",
@@ -83,11 +84,12 @@ const VOCABULARY: Record<string, string[]> = {
     "verify-manual",
     "verify-release-notes",
   ],
-  discussion: ["discussion-research", "discussion-interview"],
+  discussion: ["discussion-research", "common-domain-language", "discussion-interview"],
 };
 
 /** The steps a plan may mark pass-through. */
 const PASS_THROUGH = [
+  "common-domain-language",
   "sdd-flow",
   "sdd-contract",
   "sdd-cycle",

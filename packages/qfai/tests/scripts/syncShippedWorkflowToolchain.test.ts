@@ -16,6 +16,7 @@ const tests = "qfai-tests.yml";
 const docs = "qfai-docs.yml";
 const setupStart = "      - name: Resolve the package manager (pnpm route fails closed)";
 const installStep = "      - name: Install dependencies (lockfile-aware)";
+const extraDocsStep = "      - name: Docs-only setup";
 
 describe("shared setup in shipped workflows", () => {
   it("renders the shipped copies byte for byte", () => {
@@ -96,10 +97,16 @@ describe("shared setup in shipped workflows", () => {
       change: (text: string) =>
         text.replace(
           installStep,
-          ["      - name: Docs-only setup", "        run: echo docs-only", installStep].join("\n"),
+          [extraDocsStep, "        run: echo docs-only", installStep].join("\n"),
         ),
-      error:
-        /interrupted toolchain sequence in qfai-docs\.yml.*Install dependencies.*Docs-only setup.*keep the six setup steps together and put lane-specific steps after them/u,
+      error: (text: string) => {
+        const line = text.split(/\r?\n/u).indexOf(extraDocsStep) + 1;
+        expect(line).toBeGreaterThan(0);
+        return new RegExp(
+          String.raw`interrupted toolchain sequence in qfai-docs\.yml.*Install dependencies.*Docs-only setup" on line ${line}\..*keep the six setup steps together and put lane-specific steps after them`,
+          "u",
+        );
+      },
     },
     {
       description: "a truncated setup sequence",
@@ -145,7 +152,8 @@ describe("shared setup in shipped workflows", () => {
         writeFile(path.join(directory, docs), changedDocs, "utf8"),
       ]);
 
-      expect(() => syncShippedWorkflowToolchain(directory)).toThrow(error);
+      const expected = typeof error === "function" ? error(changedDocs) : error;
+      expect(() => syncShippedWorkflowToolchain(directory)).toThrow(expected);
       expect(await readFile(path.join(directory, tests), "utf8")).toBe(originalTests);
       expect(await readFile(path.join(directory, docs), "utf8")).toBe(changedDocs);
     } finally {
