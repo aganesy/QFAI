@@ -755,6 +755,22 @@ describe("the project layer describes the repository it is in", () => {
     expect(tagCreations(shell)).toEqual([command]);
   });
 
+  it.each([
+    ["(", ")"],
+    ["(true)", ""],
+  ])("ignores tag-shaped comment text adjacent to %s", (group, close) => {
+    const sha = "0123456789abcdef0123456789abcdef01234567";
+    const command = `git tag kept ${sha}`;
+    const comment = `${group}# note; git tag ignored ${sha} \\`;
+    expect(tagCreations([comment, command, close].join("\n"))).toEqual([command]);
+  });
+
+  it("keeps a hash within a shell word or an escape", () => {
+    const bare = "git tag version#draft <SHA>";
+    const escaped = "git tag version\\#draft <SHA>";
+    expect(tagCreations([bare, escaped].join("\n"))).toEqual([bare, escaped]);
+  });
+
   it("checks the commit and ordering of a continued tag command", () => {
     const check = "git merge-base --is-ancestor <SHA> origin/main";
     const firstLine = "git tag --points-at=HEAD";
