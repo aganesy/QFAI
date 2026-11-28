@@ -116,7 +116,9 @@ describe("`qfai doctor` CLI contract surface", () => {
       "The log-pruning pass under `--clean` deletes only these run-log directories.",
     );
     for (const statement of rules.values()) {
-      expect(statement).not.toMatch(/does NOT delete anything|no path is removed on any flag/);
+      expect(statement).not.toMatch(
+        /does NOT delete anything|no path is removed on any flag|nothing else is deleted on any flag/,
+      );
     }
   });
 

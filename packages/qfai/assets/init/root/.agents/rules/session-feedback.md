@@ -51,7 +51,7 @@ Claude Code and `codex` on Codex. It reads this project's local transcripts of
 that host, sends nothing anywhere, and prints counts for the latest session:
 the QFAI reminders shown, the rule, skill and step files read, the tool errors
 with their finding codes, the `qfai` commands with their exit status, the
-questions asked, and the typed turns that match correction words. It holds no
+questions asked, and the typed turns after the first that match correction words. It holds no
 message text. Treat the report as evidence, and cite its lines.
 
 The latest session is normally this one, but a session of the same host running
@@ -135,23 +135,40 @@ channel's release does not count, and where the evidence cannot show it, or
 cannot show whether the project releases or deploys at all, the finding stays
 held back. An unfixed one is held back and named to the user in the review's own
 message, beside the § 5 question or in its one line when nothing else is worth
-reporting. The message numbers each held-back finding, such as held-back
-security finding 1, and names it by that number alone. `reply-forms.md` treats a
-place whose audience cannot be confirmed as not private. Where the host shows
-that the message reaches the user alone, the message also:
+reporting. The message numbers each held-back finding across the session, such
+as held-back security finding 1, never reusing a number, and names it by that
+number alone. `reply-forms.md` treats a place whose audience cannot be confirmed
+as not private. Where the host shows that the message reaches the user alone,
+the message also:
 
 - names the finding's class of defect;
 - says where the finding is;
 - names the pull request it came from;
 - suggests asking for the finding's draft once the fix counts as fixed.
 
-Otherwise it does none of these four. It tells the user to continue this session
-where only they will see the answer and ask about the finding there by its
-number, since another session holds no record of it. An answer gives the four
-only where the host shows it reaches the user alone, and otherwise repeats this
-advice. Under a no-question mode the final report names it by its number alone,
-since others may read that report, and tells the user to ask about it where only
-they will see the answer.
+Otherwise it does none of these four, and tells the user to continue this
+session where only they will see the answer and ask about the finding there by
+its number. An answer gives the four only where the host shows it reaches the
+user alone, and otherwise repeats this advice. Under a no-question mode the
+final report names it by its number alone, since others may read that report. It
+tells the user to ask about it in a session where only they will see the answer
+and to name there the pull request it may have come from.
+
+No record of a held-back finding is kept, so that no file records an unfixed
+defect. A later session asked about a held-back finding it has no record of says
+so. Only where the host shows that the session reaches the user alone does it
+ask which pull request the finding came from; otherwise it asks for nothing and
+repeats the advice the no-question final report gives. Where the user's number
+could also be one this session handed out, it first confirms which finding is
+meant. It then reads that pull request's review comments, as the pull-request
+exception in this section's reading list allows. The number came from another
+session and maps to nothing there, so it treats a finding as above only where
+exactly one security finding in those comments could be the one meant. Where
+several could, it says it could not identify the finding; where none is there,
+or the forge cannot be read, it says so. A finding from a reviewer sub-agent has
+no pull request and cannot be found again, so the message about it says it can
+be asked about only in this session, and under a no-question mode the final
+report says instead that it cannot be found again.
 
 ## 3. What a draft holds
 
@@ -238,7 +255,7 @@ Nothing is asked and nothing is filed or written. No proposal is added either.
 The drafts and the proposals of § 4 and § 8 go in the final report, and the
 report says none was filed or added, and that the proposals of § 8 were not
 written. A held-back security finding goes there too, named by its number alone,
-with the advice to ask about it where only the user will see the answer.
+with the advice § 2 gives for a no-question mode.
 
 ## 8. Corrections to keep in the project
 

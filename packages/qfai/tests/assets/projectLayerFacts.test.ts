@@ -37,7 +37,8 @@ const NODE_RANGE_CLAIM = new RegExp(
   /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?/
     .source +
     `(?:\`((?:${/[~^<>=]*\s*v?\d/.source}|${NODE_RANGE_WILDCARD})[^\`]*)\`|` +
-    String.raw`((?:${NODE_RANGE_WILDCARD}|(?:[~^<>=]+\s*)?${NODE_RANGE_NUMBER})(?:[ \t]*(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?${NODE_RANGE_NUMBER})*))`,
+    String.raw`((?:${NODE_RANGE_WILDCARD}|(?:[~^<>=]+\s*)?${NODE_RANGE_NUMBER})` +
+    String.raw`(?:[ \t]*(?:\|\|[ \t]*${NODE_RANGE_WILDCARD}|(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?${NODE_RANGE_NUMBER}))*))`,
   "giu",
 );
 
@@ -454,18 +455,20 @@ describe("the project layer describes the repository it is in", () => {
   it.each(["*", "x"])("reads the %s wildcard as the first or only Node range term", (wildcard) => {
     const range = `${wildcard} || ^20.19.0`;
     const compactRange = `${wildcard}||^20.19.0`;
+    const rangeWithBoth = `${range} || ${wildcard}`;
     expect(
       statedNodeRanges(
         [
           `Node.js requires ${wildcard}.`,
           `Node.js requires ${range}.`,
           `Node.js requires ${compactRange}.`,
+          `Node.js requires ${rangeWithBoth}.`,
           `(Node.js requires ${wildcard}).`,
           `Node.js requires \`${wildcard}\`.`,
           `Set \`engines.node\` to \`${range}\`.`,
         ].join("\n"),
       ),
-    ).toEqual([wildcard, range, compactRange, wildcard, wildcard, range]);
+    ).toEqual([wildcard, range, compactRange, rangeWithBoth, wildcard, wildcard, range]);
   });
 
   it("ignores words and Markdown emphasis where a Node range could start", () => {
@@ -507,6 +510,11 @@ describe("the project layer describes the repository it is in", () => {
         `The release supports Node.js\n\`${extended}\`. Node.js requires ${bounded}.`,
       ),
     ).toEqual([extended, bounded]);
+  });
+
+  it.each(["*", "x"])("retains the standalone %s alternative in a plain Node claim", (wildcard) => {
+    const range = `^20.19.0 || ^22.13.0 || >=24.0.0 || ${wildcard}`;
+    expect(statedNodeRanges(`Node.js requires ${range}.`)).toEqual([range]);
   });
 
   // The floor is the one fact in this layer with a machine-readable source, and
