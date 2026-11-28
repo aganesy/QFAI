@@ -107,7 +107,12 @@ function isRestWrite(args: readonly string[]): boolean {
       const method = value?.toUpperCase();
       return method === undefined ? hasPayload : method !== "GET" && method !== "HEAD";
     }
-    if (REST_PAYLOAD_FLAGS.has(flag)) hasPayload = true;
+    const payloadFlag = flag.startsWith("--") ? flag.split("=", 1)[0] : flag.slice(0, 2);
+    if (payloadFlag && REST_PAYLOAD_FLAGS.has(payloadFlag)) {
+      const value =
+        flag === payloadFlag ? args[index + 1] : flag.slice(payloadFlag.length).replace(/^=/u, "");
+      if (value) hasPayload = true;
+    }
     if (API_VALUE_FLAGS.has(flag)) index++;
   }
   return hasPayload;
