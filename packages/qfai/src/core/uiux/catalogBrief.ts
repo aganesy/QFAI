@@ -17,6 +17,11 @@ export function componentBriefLines(catalogText: string, catalogPath: string): s
   let parsed: unknown;
   try {
     // Mappings stay maps, so a numeric key such as a `variants` prop named `1` keeps its place.
+    // Ceiling: this parses the text `readCatalog` already parsed, now keeping mappings as maps;
+    // both parses use the same parser and options apart from `mapAsMap`, so a text one refuses
+    // the other refuses too, and only the brief's own key and value checks refuse more. Accepted
+    // because sharing one parse changes the read result every catalogue check consumes; a
+    // second caller needing the mapping form lifts it.
     parsed = parse(catalogText, { mapAsMap: true });
   } catch {
     return null;
@@ -42,19 +47,40 @@ export function componentBriefLines(catalogText: string, catalogPath: string): s
 function componentLine(entry: ReadonlyMap<unknown, unknown>): string | null {
   const entries = mapEntries(entry);
   if (entries === null) return null;
-  const fieldsOf = new Map(entries);
-  const head = `- ${String(fieldsOf.get("name"))} (${String(fieldsOf.get("file"))})`;
-  const keys = [...fieldsOf.keys()].filter((key) => key !== "name" && key !== "file");
-  const leading = LEADING_KEYS.filter((key) => keys.includes(key));
-  const rest = keys.filter((key) => !LEADING_KEYS.some((lead) => lead === key));
+  // The entries are walked as written, so two keys that print alike, such as `1` and `"1"`,
+  // stay two fields.
+  const valueOf = (key: string): unknown => entries.find(([written]) => written === key)?.[1];
+  const head = `- ${String(valueOf("name"))} (${String(valueOf("file"))})`;
+  const others = entries.filter(([key]) => key !== "name" && key !== "file");
+  const isLeading = (key: string): boolean => LEADING_KEYS.some((lead) => lead === key);
+  const ordered = [
+    ...LEADING_KEYS.flatMap((lead) => others.filter(([key]) => key === lead)),
+    ...others.filter(([key]) => !isLeading(key)),
+  ];
   const fields: string[] = [];
-  for (const key of [...leading, ...rest]) {
-    const value = valueText(fieldsOf.get(key));
+  for (const [key, field] of ordered) {
+    const value = valueText(field);
     if (value === null) return null;
     fields.push(`${key}: ${value}`);
   }
   const line = fields.length === 0 ? head : `${head}: ${fields.join("; ")}`;
-  return line.replace(/\r\n|[\r\n\v\f\u0085\u2028\u2029]/g, " ");
+  return printable(line);
+}
+
+/**
+ * The line as a terminal shows it: each line break, with a CRLF pair as one, and each tab as a
+ * space; every other control, format or lone surrogate character as `\u{XXXX}`, upper-case hex.
+ * Ceiling: a backslash is not escaped, so text that already reads `\u{001B}` prints the same as
+ * an escaped ESC; accepted while an agent reads the brief beside the catalogue; escaping `\`
+ * lifts it.
+ */
+function printable(line: string): string {
+  return line
+    .replace(/\r\n|[\r\n\t\v\f\u0085\u2028\u2029]/g, " ")
+    .replace(/[\p{Cc}\p{Cf}\p{Cs}]/gu, (char) => {
+      const hex = (char.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, "0");
+      return `\\u{${hex}}`;
+    });
 }
 
 function valueText(value: unknown): string | null {
@@ -126,7 +152,8 @@ export function tokenFileCount(text: string): number | null {
 
 /**
  * A parsed mapping's entries in written order, each key as the text it prints as, or null when a
- * key is not a string, number or boolean, which no catalogue writes.
+ * key is not a string, number or boolean, which no catalogue writes: a `null` key such as `~`
+ * is refused too. Two keys that print alike stay two entries.
  */
 function mapEntries(map: ReadonlyMap<unknown, unknown>): [string, unknown][] | null {
   const entries: [string, unknown][] = [];

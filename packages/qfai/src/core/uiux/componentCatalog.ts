@@ -414,18 +414,20 @@ function compare(a: string, b: string): number {
   return a < b ? -1 : 1;
 }
 
+/** A loaded compiler that offers the two comment-range methods the citation scan calls. */
+type CommentRangeTsApi = TsApi &
+  Required<Pick<TsApi, "getLeadingCommentRanges" | "getTrailingCommentRanges">>;
+
 /** Whether a loaded compiler offers the two comment-range methods the citation scan calls. */
-function hasCommentRanges(ts: object): boolean {
+function hasCommentRanges(ts: TsApi): ts is CommentRangeTsApi {
   return (
-    "getLeadingCommentRanges" in ts &&
     typeof ts.getLeadingCommentRanges === "function" &&
-    "getTrailingCommentRanges" in ts &&
     typeof ts.getTrailingCommentRanges === "function"
   );
 }
 
 /** Mask everything outside compiler-recognized comments without moving line or token boundaries. */
-function citationCommentSource(ts: TsApi, root: TsNode, source: string): string {
+function citationCommentSource(ts: CommentRangeTsApi, root: TsNode, source: string): string {
   const kind = ts.SyntaxKind;
   const comments = new Map<number, number>();
   const pending = [root];
@@ -465,7 +467,7 @@ function citationCommentSource(ts: TsApi, root: TsNode, source: string): string 
 
 /** The components, raw elements and imported names of one file. */
 function componentsOfFile(
-  ts: TsApi,
+  ts: CommentRangeTsApi,
   file: string,
   source: string,
 ): {

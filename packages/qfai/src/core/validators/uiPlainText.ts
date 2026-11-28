@@ -155,11 +155,13 @@ export type TsApi = {
     getLineAndCharacterOfPosition(pos: number): { line: number; character: number };
     getLineStarts(): readonly number[];
   };
-  getLeadingCommentRanges(
+  /** Optional: not every loadable release offers it, so a caller checks before it calls. */
+  getLeadingCommentRanges?(
     text: string,
     pos: number,
   ): readonly { pos: number; end: number }[] | undefined;
-  getTrailingCommentRanges(
+  /** Optional: not every loadable release offers it, so a caller checks before it calls. */
+  getTrailingCommentRanges?(
     text: string,
     pos: number,
   ): readonly { pos: number; end: number }[] | undefined;
@@ -342,9 +344,10 @@ export function loadTs(root: string, load: UiPlainTextOptions["loadTypescript"])
 }
 
 /**
- * Whether a loaded module offers the compiler API this check calls. Checking
- * `createSourceFile` and `SyntaxKind` is enough: every release that has them
- * has the rest of the API named in `TsApi`.
+ * Whether a loaded module offers the compiler API this check calls. It checks
+ * `createSourceFile` and `SyntaxKind` and trusts the other required members of
+ * `TsApi`. A module can have both and still lack the comment-range methods, so
+ * `TsApi` declares those optional and a caller that needs them checks them.
  */
 function isTsApi(value: unknown): value is TsApi {
   return (
