@@ -585,6 +585,7 @@ describe("migration CLI contract shape", () => {
     String.raw`\b(?:of|from|in)\s+["']?${escapeRegExp(OLD)}(?=$|[\s"',;:)]|\.(?=\s|$))`,
   );
   const manualRewriteAction = /^(?:manually\s+rewrite\b|rewrite\b.*\bby hand\b(?!-))/i;
+  const negatedByHand = /\bnot\s+by\s+hand\b(?!-)/i;
 
   function matchesCliRewriteNote(note: string, section: number): boolean {
     if (!note.startsWith(destinationPrefix)) return false;
@@ -596,7 +597,8 @@ describe("migration CLI contract shape", () => {
     return (
       legacySectionHeading.exec(instruction)?.[1] === String(section) &&
       legacyContractPath.test(instruction) &&
-      manualRewriteAction.test(instruction)
+      manualRewriteAction.test(instruction) &&
+      !negatedByHand.test(instruction)
     );
   }
 
@@ -629,7 +631,19 @@ describe("migration CLI contract shape", () => {
     ).toBe(false);
     expect(
       matchesCliRewriteNote(
+        `${NEW}: rewrite "## Legacy 1" of ${OLD} using the migration tool, not by hand.`,
+        1,
+      ),
+    ).toBe(false);
+    expect(
+      matchesCliRewriteNote(
         `${NEW}: rewrite "## Legacy 1" of ${OLD} by hand. Keep the section order.`,
+        1,
+      ),
+    ).toBe(true);
+    expect(
+      matchesCliRewriteNote(
+        `${NEW}: rewrite "## Legacy 1" of ${OLD} by hand, not by hand-written scripts.`,
         1,
       ),
     ).toBe(true);
