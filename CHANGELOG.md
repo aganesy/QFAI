@@ -6,6 +6,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The component catalogue is a closed vocabulary agents build screens from.**
+  Each entry that `qfai catalog components` writes now also lists:
+  - `variants`: the values of each prop typed as a union of string literals;
+  - `tokens`: the theme variables its declaration references through
+    `var(--…)`;
+  - `realizes`: the business rules its declaration cites on standalone
+    `QFAI:BR-UI-`, `QFAI:BR-API-` or `QFAI:BR-DB-` comment lines.
+
+  `qfai catalog components --brief` prints the committed catalogue as one line
+  per component, with the design token count, for the brief a screen unit is
+  handed. QFAI also ships a base catalogue of the parts most products need
+  (error summary, field with error, step indicator, confirm step, skip link,
+  sticky action bar, status message and empty state) in
+  `.qfai/assistant/rule/references/base-components.yaml`; a project component
+  that builds one names its `id` in `@pattern`. A committed catalogue with
+  such props, variables or rules is out of date until
+  `qfai catalog components` runs again; rerun it and commit the result.
+
 - UI, API and database contracts can now describe responsibilities, inputs,
   outcomes and business rules in Markdown. Validation checks their document
   structure, example references, and the business-rule annotations in source
@@ -48,9 +66,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A fix could run every step, reviews and full suite included, while an open
   issue or pull request already covered the same problem, and the work was
   thrown away when the other change merged first. After its announcement and
-  before any edit, `qfai-run` now makes one REST search of the forge for open
-  issues and pull requests naming the request's files or symptom, leaving out
-  the one the request itself names. A match is a result that describes the
+  before any edit, `qfai-run` now makes one REST search for the request's
+  files or symptom, leaving out the item the request itself names. The
+  GitHub query uses `is:issue` so it works with GitHub App user tokens.
+  Forges with combined search include open issues and pull requests.
+  A match is a result that describes the
   same problem, not one that only shares words. On a match it writes nothing
   and asks the user, with at most three matches, whether to continue or to
   leave the problem to that work. Without a
@@ -270,6 +290,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stated once, and the Standard commands home is named as
   `<paths.contractsDir>/tech.md#standard-commands-copy-paste`, so a project
   with its own contracts directory is pointed at the right file.
+- Oracle-strength guidance now asks tests of prose and tables to check the
+  operative words and demonstrate an assertion failure for each new clause
+  when that clause is removed on its own.
 
 - **Breaking: each contract kind has its own number sequence, and a business
   rule ID names its contract's kind.** A project with five DB contracts and
@@ -681,6 +704,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   validation and preserves the existing file when rendered output exceeds it.
   Small catalogue reads use a buffer that grows with the bytes read.
 
+- Component catalogue check mode reports when the selected metadata would
+  exceed the publication limit.
+
 - Restoring or publishing a completed document graph reuses the safety check
   on each copy during native freshness validation.
 
@@ -731,6 +757,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Validation accepts the QFAI copy selected by Yarn Plug’n’Play for the project,
   including a copy loaded from a shared cache outside the project directory.
+  The resolver must report an absolute location for the declaring package.
 
 - The shipped merge procedure applies the repository's review requirements
   to the updated head after a base merge with conflicts only in the registers.
@@ -772,6 +799,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   none of them after a private security intake, as the skill's Reviewer Gate
   does. Closes #5540.
 
+- The triage skill summary distinguishes ordinary records from the tracked
+  changes the Reviewer Gate permits for authorized operations.
+
 - **The seeded Git attributes explain how to handle a restored question row.**
   After a union merge restores a deleted open question, the guidance calls for
   a separate cleanup commit before pushing. It preserves other rows and IDs.
@@ -792,7 +822,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Graph setup distinguishes tracked output from an ineffective ignore rule.**
   Its warning tells operators to run both recovery commands from the
   initialized project directory to stop tracking selected generated files
-  while keeping them in the working tree.
+  while keeping them in the working tree. It also tells operators to preserve
+  staged content if Git refuses the removal.
 
 - **A fault after the validators finish is now an unfinished run, not a
   crash.** When `qfai validate` or `qfai report --run-validate` failed to read
@@ -823,6 +854,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `<!-- mermaid-lint:ignore -->` could not be written there; an `.mdx` file
   now uses `{/* mermaid-lint:ignore */}` on the line above the fence instead.
   Closes #5341.
+
+- **The shipped docs workflow installs patched KaTeX for Mermaid.** Its
+  temporary npm tool directory selects KaTeX 0.18.2 for
+  GHSA-238p-pmpm-9mq7. The workflow verifies the resolved version before
+  checking diagram syntax.
 
 - **The prototyping doctor probes the project Playwright shim first.** It uses
   `npx --no-install playwright --version` if the shim is unavailable or fails.
@@ -1431,6 +1467,9 @@ decisions` headings appeared anywhere in the file, so a record with several
 
 - SQL routine identity ignores a Unicode-quoted parameter name together with
   its `UESCAPE` clause and retains the full input type.
+
+- SQL routine identity also retains the input type when it immediately follows
+  a Unicode-quoted parameter name without a `UESCAPE` clause.
 
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
@@ -3291,7 +3330,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   was deleted in between. Closes #4504.
 
 - Automatic release tagging verifies that the pushed commit came from merging the
-  version's release branch within this repository.
+  version's release branch within this repository. A skipped tag names the expected
+  release branch, target branch and pushed commit.
 
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the

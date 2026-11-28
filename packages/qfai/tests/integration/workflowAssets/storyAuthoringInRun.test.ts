@@ -7,6 +7,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
+import MarkdownIt from "markdown-it";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
@@ -29,6 +30,7 @@ const TRIAGE_STEP = "step/sdd-triage/STEP.md";
 const CHECKLISTS = "skill/qfai-sdd/references/sdd-phase-checklists.md";
 const STORY_STEP = "step/implement-tdd/STEP.md";
 const SEEDING = "## A diagnosed missing example";
+const markdown = new MarkdownIt("commonmark", { html: false });
 
 async function section(file: string, heading: string): Promise<string> {
   const text = flat(sectionOf(await readShipped(file), heading));
@@ -134,20 +136,30 @@ async function textFilesUnder(dir: string): Promise<string[]> {
 /** Every path citing `file`, including invalid suffixes and excluding fragments. */
 function citationsOf(text: string, file: string): string[] {
   const pathPart = "[^\\s`\"'()<>#\\[\\]]*";
-  const codeSpan = "(?<!`)(?<ticks>`+)(?!`)(?<code>[^\\r\\n]*?)(?<!`)\\k<ticks>(?!`)";
-  const barePath = `(?<bare>${pathPart}${file.replaceAll(".", "\\.")}${pathPart})`;
-  const pattern = new RegExp(`${codeSpan}|${barePath}`, "g");
-  return [...text.matchAll(pattern)].flatMap((match) => {
-    const code = match.groups?.code;
-    if (code !== undefined) {
-      const cited = code.split("#", 1)[0]?.trim() ?? "";
+  const barePath = new RegExp(`${pathPart}${file.replaceAll(".", "\\.")}${pathPart}`, "g");
+  const tokens = markdown.parse(text, {}).flatMap((block) => {
+    if (block.children) return block.children;
+    // Keep inspecting literal passages alongside the Markdown's resolved links.
+    if (block.type === "fence" || block.type === "code_block") {
+      return markdown.parseInline(block.content, {})[0]?.children ?? [];
+    }
+    return [];
+  });
+  return tokens.flatMap((token) => {
+    if (token.type === "link_open" || token.type === "code_inline") {
+      const reference = token.type === "link_open" ? token.attrGet("href") : token.content;
+      if (typeof reference !== "string") return [];
+      const cited = reference.split("#", 1)[0]?.trim() ?? "";
       return cited.includes(file) ? [cited] : [];
     }
-    const cited = match.groups?.bare ?? "";
-    const left = text[match.index - 1] ?? "";
-    const right = text[match.index + cited.length];
-    // A period in prose is punctuation. A period inside a citation is part of its path.
-    return [/[\x60"'(<]/.test(left) || right === "#" ? cited : cited.replace(/[.,;:!?]+$/, "")];
+    if (token.type !== "text") return [];
+    return Array.from(token.content.matchAll(barePath), (match) => {
+      const cited = match[0];
+      const left = token.content[match.index - 1] ?? "";
+      const right = token.content[match.index + cited.length];
+      // A period in prose is punctuation. A period inside a citation is part of its path.
+      return /[\x60"'(<]/.test(left) || right === "#" ? cited : cited.replace(/[.,;:!?]+$/, "");
+    });
   });
 }
 
@@ -160,6 +172,13 @@ it("keeps complete SDD citation paths while separating fragments and prose punct
     `Invalid \`${canonical}.bak#where-each-answer-goes\`.`,
     `Invalid \`${canonical}.\`.`,
     `Invalid \`\`${canonical} (copy)#where-each-answer-goes\`\`.`,
+    `[Read](${canonical}#where-each-answer-goes).`,
+    `[Invalid](${canonical}(copy)#where-each-answer-goes).`,
+    "[Read by reference][read-guide].",
+    "[Invalid by reference][invalid-guide].",
+    "",
+    `[read-guide]: ${canonical}#where-each-answer-goes`,
+    `[invalid-guide]: ${canonical}(adopt)#where-each-answer-goes`,
   ].join("\n");
 
   expect(citationsOf(text, file)).toEqual([
@@ -168,6 +187,10 @@ it("keeps complete SDD citation paths while separating fragments and prose punct
     `${canonical}.bak`,
     `${canonical}.`,
     `${canonical} (copy)`,
+    canonical,
+    `${canonical}(copy)`,
+    canonical,
+    `${canonical}(adopt)`,
   ]);
 });
 

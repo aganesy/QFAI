@@ -78,7 +78,10 @@ export type QfaiOutputConfig = {
 
 export type QfaiUiuxAuditConfig = {
   enabled?: boolean;
-  /** Deprecated legacy option. QFAI accepts and ignores the boolean. */
+  /**
+   * Deprecated legacy boolean retained when loading configuration for compatibility.
+   * The retained value has no effect on validation or prototype review.
+   */
   slopDetection?: boolean;
   maxRawTokenLiteralWarnings?: number;
   maxDuplicateFindingsPerRule?: number;
