@@ -1711,6 +1711,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /No\s+record\s+of\s+a\s+held-back\s+finding\s+is\s+kept,\s+so\s+that\s+no\s+file\s+records\s+an\s+unfixed\s+defect/,
         /A\s+later\s+session\s+asked\s+about\s+a\s+held-back\s+finding\s+it\s+has\s+no\s+record\s+of\s+says\s+so/,
         /Under\s+a\s+no-question\s+mode\s+it\s+asks\s+nothing,\s+reads\s+nothing\s+and\s+gives\s+the\s+advice\s+the\s+no-question\s+final\s+report\s+gives/,
+        /Where\s+the\s+user\s+says\s+the\s+finding\s+was\s+in\s+a\s+reviewer\s+sub-agent's\s+report\s+alone,\s+it\s+says\s+such\s+a\s+finding\s+can\s+be\s+asked\s+about\s+only\s+in\s+the\s+session\s+that\s+held\s+it\s+back,\s+and\s+asks\s+and\s+reads\s+nothing\s+more/,
         /Otherwise,\s+only\s+where\s+the\s+host\s+shows\s+that\s+the\s+session\s+reaches\s+the\s+user\s+alone\s+does\s+it\s+ask\s+which\s+pull\s+request\s+the\s+finding\s+came\s+from,\s+and,\s+where\s+the\s+user's\s+number\s+could\s+also\s+be\s+one\s+this\s+session\s+handed\s+out,\s+which\s+finding\s+is\s+meant/,
         /Where\s+the\s+host\s+does\s+not\s+show\s+that,\s+it\s+asks\s+for\s+nothing,\s+reads\s+nothing\s+and\s+repeats\s+the\s+advice\s+the\s+no-question\s+final\s+report\s+gives/,
         /Only\s+after\s+asking\s+does\s+it\s+read\s+that\s+pull\s+request's\s+review\s+comments,\s+as\s+the\s+pull-request\s+exception\s+in\s+this\s+section's\s+reading\s+list\s+allows/,
