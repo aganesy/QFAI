@@ -686,6 +686,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- JavaScript and TypeScript test-stub findings preserve the line and column
+  after every JavaScript line terminator.
+
 - Specification tables inside a list item's HTML comment block are ignored.
   Inline comments are removed only within their own table cells, preserving the
   boundaries and visible content of adjacent cells.
