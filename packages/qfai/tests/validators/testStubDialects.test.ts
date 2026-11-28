@@ -66,7 +66,6 @@ async function withTests<T>(
 const stubCodes = async (root: string): Promise<string[]> =>
   (await validateTestTodoStubs(root, CONFIG)).map((i) => i.code);
 
-// QFAI:EX-0001-0073-07
 it.each([
   ["LF", "\n"],
   ["CRLF", "\r\n"],
@@ -86,6 +85,23 @@ it.each([
     const issues = await validateTestTodoStubs(root, CONFIG);
     expect(issues.map(({ code, loc }) => [code, loc?.line, loc?.column])).toEqual([
       ["QFAI-TEST-001", 2, 3],
+      ["QFAI-TEST-001", 5, 3],
+    ]);
+  });
+});
+
+it("keeps a CRLF-continued string within its template substitution", async () => {
+  const stub = `it${TODO}("pending");`;
+  const source = [
+    'const rendered = `${("continued \\',
+    '}`" + `nested',
+    `  ${stub}`,
+    "`)}`;",
+    `  ${stub}`,
+  ].join("\r\n");
+  await withTests({ "tests/line-continuation.test.ts": source }, async (root) => {
+    const issues = await validateTestTodoStubs(root, CONFIG);
+    expect(issues.map(({ code, loc }) => [code, loc?.line, loc?.column])).toEqual([
       ["QFAI-TEST-001", 5, 3],
     ]);
   });

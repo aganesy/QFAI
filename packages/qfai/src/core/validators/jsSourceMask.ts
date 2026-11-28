@@ -149,7 +149,7 @@ function endOfQuoted(
  * first of them leaves the rest of the outer literal to be read as code and the
  * code after it as a literal, which hides every comment in between.
  */
-function endOfTemplate(source: string, start: number): number {
+function endOfTemplate(source: string, start: number, jsLineTerminators: boolean): number {
   for (let i = start + 1; i < source.length; i += 1) {
     const ch = source[i] ?? "";
     if (ch === "\\") {
@@ -160,7 +160,7 @@ function endOfTemplate(source: string, start: number): number {
       return i + 1;
     }
     if (ch === "$" && source[i + 1] === "{") {
-      const end = endOfSubstitution(source, i + 2);
+      const end = endOfSubstitution(source, i + 2, jsLineTerminators);
       if (end !== -1) i = end - 1;
     }
   }
@@ -175,14 +175,14 @@ function endOfTemplate(source: string, start: number): number {
  * backtick inside one does not count. A comment or a regex holding an unpaired
  * brace is not read: the span is then taken to end later than it does.
  */
-function endOfSubstitution(source: string, start: number): number {
+function endOfSubstitution(source: string, start: number, jsLineTerminators: boolean): number {
   let depth = 1;
   for (let i = start; i < source.length; i += 1) {
     const ch = source[i] ?? "";
     if (ch === "`") {
-      i = endOfTemplate(source, i) - 1;
+      i = endOfTemplate(source, i, jsLineTerminators) - 1;
     } else if (ch === "'" || ch === '"') {
-      i = endOfQuoted(source, i, ch) - 1;
+      i = endOfQuoted(source, i, ch, false, jsLineTerminators) - 1;
     } else if (ch === "{") {
       depth += 1;
     } else if (ch === "}") {
@@ -843,7 +843,10 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       endsExpression = true;
       lastWord = "";
     } else if (ch === "`") {
-      i = blankSpan(i, rawBacktick ? endOfRawBacktick(source, i) : endOfTemplate(source, i));
+      i = blankSpan(
+        i,
+        rawBacktick ? endOfRawBacktick(source, i) : endOfTemplate(source, i, jsLineTerminators),
+      );
       endsExpression = true;
       lastWord = "";
     } else if (regexLiterals && ch === "/" && !endsExpression) {
