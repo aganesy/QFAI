@@ -3,10 +3,16 @@
  * brief that hands out screen work carries the catalogue's rules instead of restating them.
  */
 
-import { parse, stringify } from "yaml";
+import { parse } from "yaml";
 
 /** The keys a component's line leads with, before the rest in the catalogue's own order. */
 const LEADING_KEYS = ["pattern", "states", "props", "a11y"] as const;
+
+const NON_FINITE_YAML_NUMBERS = new Map([
+  [Number.POSITIVE_INFINITY, ".inf"],
+  [Number.NEGATIVE_INFINITY, "-.inf"],
+  [Number.NaN, ".nan"],
+]);
 
 /**
  * The brief's component lines for a catalogue text `readCatalog` has read. Every key of an entry
@@ -73,8 +79,8 @@ function valueText(value: unknown): string | null {
     if (!isList && !isRecord(part)) {
       if (typeof part === "string") output.push(part);
       else if (part === null || typeof part === "number" || typeof part === "boolean") {
-        const nonFiniteNumber = typeof part === "number" && !Number.isFinite(part);
-        output.push(nonFiniteNumber ? stringify(part).trimEnd() : JSON.stringify(part));
+        const yamlNumber = typeof part === "number" ? NON_FINITE_YAML_NUMBERS.get(part) : undefined;
+        output.push(yamlNumber ?? JSON.stringify(part));
       } else return null;
       continue;
     }
