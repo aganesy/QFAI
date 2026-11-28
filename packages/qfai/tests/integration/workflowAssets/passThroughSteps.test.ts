@@ -12,6 +12,7 @@ import { flat, frontMatterOf, readShipped, sectionOf } from "../../helpers/shipp
 
 /** Every step a plan may mark pass-through. */
 const PASS_THROUGH = [
+  "common-domain-language",
   "sdd-flow",
   "sdd-contract",
   "sdd-cycle",

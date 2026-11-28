@@ -16,6 +16,7 @@ import {
 import { readStoryTreeModel, type StoryTreeModel } from "./storyTree/tree.js";
 import { validateStoryTreeStructure } from "./validators/storyTreeStructure.js";
 import { validateDocumentSchema } from "./validators/documentSchema.js";
+import { validateGlossaryTerms, validateGlossaryTestTitles } from "./validators/glossaryTerms.js";
 import { validateStaleTerms } from "./validators/staleTerms.js";
 import { validateForbiddenIdentifiers } from "./validators/forbiddenIdentifiers.js";
 import {
@@ -740,6 +741,7 @@ async function runStoryProfileValidators(
     ...(await timed(timings, "diagram-budget", () => validateDiagramBudget(root, config))),
     ...(await timed(timings, "document-schema", () => validateDocumentSchema(root, config))),
     ...(await timed(timings, "stale-terms", () => validateStaleTerms(root, config, model))),
+    ...(await timed(timings, "glossary-terms", () => validateGlossaryTerms(root, config, model))),
     ...(await timed(timings, "story-contract-index", () =>
       validateStoryTreeContractReferences(root, config, model),
     )),
@@ -822,6 +824,9 @@ async function runStoryProfileValidators(
           ...(await runPrototypingValidators(root, config, timings, platformOption)),
           ...(await atdd()),
           ...(await tdd(false, false)),
+          ...(await timed(timings, "glossary-test-titles", () =>
+            validateGlossaryTestTitles(root, config, readStoryTestsOnce),
+          )),
           // Whether a project with web screens checks them for accessibility at all. Only a
           // full scan reads both the UI contracts and every selected test file.
           ...(await timed(timings, "accessibility-layer", () =>
