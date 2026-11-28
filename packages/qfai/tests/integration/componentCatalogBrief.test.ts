@@ -279,10 +279,11 @@ describe("the brief made from the committed catalogue", () => {
       [CATALOG]: `components:\n  - name: Page\n    file: src/page.tsx\n    notes:\n      ${yaml}\n`,
     });
     const brief = await cli(["catalog", "components", "--brief", "--root", root]);
-    expect(brief.code).toBe(1);
-    expect(brief.out).toBe("");
-    expect(brief.err.trimEnd().split("\n")).toHaveLength(1);
-    expect(brief.err).toContain(`${CATALOG} is not a component catalogue`);
+    expect(brief).toEqual({
+      code: 1,
+      out: "",
+      err: `${CATALOG} is not a component catalogue. Run \`qfai catalog components\` and commit it.\n`,
+    });
   });
 
   // QFAI:EX-0001-0307-49
