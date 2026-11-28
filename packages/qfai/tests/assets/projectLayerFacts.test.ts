@@ -32,7 +32,7 @@ import { parse as parseYaml } from "yaml";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const LAYER = ".instruction/02_project";
 const NODE_RANGE_CLAIM =
-  /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?(?:`([~^<>=]*\s*v?\d[^`]*)`|((?:[~^<>=]+\s*)?v?\d+(?:\.[\dx*]+){0,2}(?:[ \t]*(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?v?\d+(?:\.[\dx*]+){0,2})*))/giu;
+  /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?(?:`([~^<>=]*\s*v?\d[^`]*)`|((?:[~^<>=]+\s*)?v?\d+(?:\.[\dx*]+){0,2}(?:[ \t]*(?:\|\|[ \t]*[x*](?![\w*]|\.[\dx*])|(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?v?\d+(?:\.[\dx*]+){0,2}))*))/giu;
 
 /**
  * A backticked repository-relative path: one that starts at a root-level entry
@@ -477,6 +477,11 @@ describe("the project layer describes the repository it is in", () => {
     ).toEqual([extended, bounded]);
   });
 
+  it.each(["*", "x"])("retains the standalone %s alternative in a plain Node claim", (wildcard) => {
+    const range = `^20.19.0 || ^22.13.0 || >=24.0.0 || ${wildcard}`;
+    expect(statedNodeRanges(`Node.js requires ${range}.`)).toEqual([range]);
+  });
+
   // The floor is the one fact in this layer with a machine-readable source, and
   // it moved twice without either file noticing. A stated floor must match; a
   // file that points at `package.json#engines` instead states nothing to match.
@@ -622,6 +627,16 @@ describe("the project layer describes the repository it is in", () => {
     const command = `git tag ${option} vX.Y.Z <SHA>`;
     expect(tagCreations(command)).toEqual([command]);
     expect(namesItsCommit(command)).toBe(false);
+  });
+
+  it("keeps either listing filter active when only the other is reset", () => {
+    const both = "git tag -in1k --points-at=HEAD";
+    expect(tagCreations(both + " -n-1 vX.Y.Z")).toEqual([]);
+    expect(tagCreations(both + " --no-points-at vX.Y.Z")).toEqual([]);
+
+    const creation = both + " -n-1 --no-points-at vX.Y.Z";
+    expect(tagCreations(creation)).toEqual([creation]);
+    expect(namesItsCommit(creation)).toBe(false);
   });
 
   it("uses the last points-at filter when checking tag creation", () => {
