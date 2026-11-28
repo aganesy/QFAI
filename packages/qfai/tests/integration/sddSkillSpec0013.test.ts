@@ -53,7 +53,7 @@ describe("shipped qfai-sdd story-tree contract", () => {
   // QFAI:AC-0001-0147-01
   // QFAI:EX-0001-0147-01
   it("writes concrete examples before the rules that cite them", async () => {
-    const steps = /^steps: \[(.*)\]$/m.exec(await parent())?.[1] ?? "";
+    const steps = /^steps:\s*\[([^\]]*)\]/m.exec(await parent())?.[1] ?? "";
     const flow = steps.indexOf("sdd-flow");
     const story = steps.indexOf("sdd-story");
     const contract = steps.indexOf("sdd-contract");

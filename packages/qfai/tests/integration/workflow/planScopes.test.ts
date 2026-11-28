@@ -547,6 +547,7 @@ it("A UI-only consistency repair reaches its actual design authoring step", asyn
       field(step, "passThrough"),
     ]),
   ).toEqual([
+    ["common-domain-language", true],
     ["sdd-triage", false],
     ["sdd-flow", true],
     ["sdd-story", true],

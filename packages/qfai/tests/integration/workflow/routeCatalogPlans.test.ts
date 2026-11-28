@@ -52,11 +52,11 @@ const CATALOG: [string, string][] = [
   ],
   [
     "decide-design",
-    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`; `close` (triage): `triage-close`; decision points `discussion-interview`; release point none; branch points `triage-close`, `adopted` to `add-feature`, `prototype-feature`, `change-compatibility`, `retire-feature` or `rename-concept`",
+    "Stages in order — `discussion` (discussion): `discussion-research`, `common-domain-language°`, `discussion-interview`; `close` (triage): `triage-close`; decision points `discussion-interview`; release point none; branch points `triage-close`, `adopted` to `add-feature`, `prototype-feature`, `change-compatibility`, `retire-feature` or `rename-concept`",
   ],
   [
     "decompose-epic",
-    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`; `split` (triage): `triage-decompose`; `close` (triage): `triage-close`; decision points `discussion-interview`, `triage-decompose`; release point none; branch points none",
+    "Stages in order — `discussion` (discussion): `discussion-research`, `common-domain-language°`, `discussion-interview`; `split` (triage): `triage-decompose`; `close` (triage): `triage-close`; decision points `discussion-interview`, `triage-decompose`; release point none; branch points none",
   ],
   [
     "retriage-bundle",
@@ -64,37 +64,37 @@ const CATALOG: [string, string][] = [
   ],
   [
     "repair-consistency",
-    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-flow°`, `sdd-story°`, `sdd-contract°`, `common-design-md°`, `sdd-cycle°`; `implement` (implement): `implement-scaffold`, `implement-tdd`, `implement-sweep°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `implement-sweep`; release point none; branch points `sdd-triage`, `retire` to `retire-mechanism`",
+    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `sdd` (sdd, then the specification review): `common-domain-language°`, `sdd-triage`, `sdd-flow°`, `sdd-story°`, `sdd-contract°`, `common-design-md°`, `sdd-cycle°`; `implement` (implement): `implement-scaffold`, `implement-tdd`, `implement-sweep°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `implement-sweep`; release point none; branch points `sdd-triage`, `retire` to `retire-mechanism`",
   ],
   [
     "retire-mechanism",
-    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `decide` (sdd): `sdd-triage`; `remove` (implement): `implement-retire`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
+    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `decide` (sdd): `common-domain-language°`, `sdd-triage`; `remove` (implement): `implement-retire`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
   [
     "restate-records",
-    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `spec` (sdd, then the specification review): `sdd-triage`, `sdd-story`, `sdd-contract°`; `tests` (test_fix): `implement-test-fix°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
+    "Stages in order — `diagnose` (diagnose): `implement-diagnose`; `spec` (sdd, then the specification review): `common-domain-language°`, `sdd-triage`, `sdd-story`, `sdd-contract°`; `tests` (test_fix): `implement-test-fix°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-15
   [
     "add-feature",
-    "Stages in order — `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-flow°`, `sdd-story`, `sdd-contract°`, `common-design-md°`, `sdd-cycle°`; `implement` (implement): `implement-scaffold`, `implement-tdd`; `docs` (maintenance): `maintain-edit°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
+    "Stages in order — `sdd` (sdd, then the specification review): `common-domain-language°`, `sdd-triage`, `sdd-flow°`, `sdd-story`, `sdd-contract°`, `common-design-md°`, `sdd-cycle°`; `implement` (implement): `implement-scaffold`, `implement-tdd`; `docs` (maintenance): `maintain-edit°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
   // QFAI:EX-0001-0220-16
   [
     "prototype-feature",
-    "Stages in order — `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-flow°`, `sdd-story`, `sdd-contract°`, `common-design-md`, `sdd-cycle°`; `prototype` (prototype): `prototyping-grill`, `prototyping-preflight`, `prototyping-loop`, `prototyping-handoff`; `implement` (implement): `implement-scaffold`, `implement-tdd`; `docs` (maintenance): `maintain-edit°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `prototyping-loop`; release point none; branch points none",
+    "Stages in order — `sdd` (sdd, then the specification review): `common-domain-language°`, `sdd-triage`, `sdd-flow°`, `sdd-story`, `sdd-contract°`, `common-design-md`, `sdd-cycle°`; `prototype` (prototype): `prototyping-grill`, `prototyping-preflight`, `prototyping-loop`, `prototyping-handoff`; `implement` (implement): `implement-scaffold`, `implement-tdd`; `docs` (maintenance): `maintain-edit°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `prototyping-loop`; release point none; branch points none",
   ],
   [
     "change-compatibility",
-    "Stages in order — `sdd` (sdd, then the specification review): `sdd-triage`, `sdd-contract`, `sdd-story`; `implement` (implement): `implement-scaffold`, `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
+    "Stages in order — `sdd` (sdd, then the specification review): `common-domain-language°`, `sdd-triage`, `sdd-contract`, `sdd-story`; `implement` (implement): `implement-scaffold`, `implement-tdd`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
   [
     "retire-feature",
-    "Stages in order — `spec` (sdd, then the specification review): `sdd-triage`, `sdd-story`, `sdd-contract°`; `remove` (implement): `implement-retire`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
+    "Stages in order — `spec` (sdd, then the specification review): `common-domain-language°`, `sdd-triage`, `sdd-story`, `sdd-contract°`; `remove` (implement): `implement-retire`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
   [
     "rename-concept",
-    "Stages in order — `spec` (sdd, then the specification review): `sdd-triage`, `sdd-flow°`, `sdd-story°`, `sdd-contract°`; `rename` (implement): `implement-refactor`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points `implement-refactor`, `behaviour-change` to `add-feature` or `change-compatibility`",
+    "Stages in order — `spec` (sdd, then the specification review): `common-domain-language°`, `sdd-triage`, `sdd-flow°`, `sdd-story°`, `sdd-contract°`; `rename` (implement): `implement-refactor`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points `implement-refactor`, `behaviour-change` to `add-feature` or `change-compatibility`",
   ],
   [
     "refactor-code",
@@ -180,11 +180,11 @@ const CATALOG: [string, string][] = [
   ],
   [
     "apply-settled",
-    "Stages in order — `spec` (sdd, then the specification review): `sdd-triage(settled)`, `sdd-story°`, `sdd-contract°`; `implement` (implement): `implement-settled-edit°`, `implement-scaffold°`, `implement-tdd°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points `sdd-triage`, `outside-record` to `decide-design`",
+    "Stages in order — `spec` (sdd, then the specification review): `common-domain-language°`, `sdd-triage(settled)`, `sdd-story°`, `sdd-contract°`; `implement` (implement): `implement-settled-edit°`, `implement-scaffold°`, `implement-tdd°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points `sdd-triage`, `outside-record` to `decide-design`",
   ],
   [
     "apply-settled-prototype",
-    "Stages in order — `spec` (sdd, then the specification review): `sdd-triage(settled)`, `sdd-story°`, `sdd-contract°`, `common-design-md`; `prototype` (prototype): `prototyping-grill`, `prototyping-preflight`, `prototyping-loop`, `prototyping-handoff`; `implement` (implement): `implement-scaffold°`, `implement-tdd°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `prototyping-loop`; release point none; branch points `sdd-triage`, `outside-record` to `decide-design`",
+    "Stages in order — `spec` (sdd, then the specification review): `common-domain-language°`, `sdd-triage(settled)`, `sdd-story°`, `sdd-contract°`, `common-design-md`; `prototype` (prototype): `prototyping-grill`, `prototyping-preflight`, `prototyping-loop`, `prototyping-handoff`; `implement` (implement): `implement-scaffold°`, `implement-tdd°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`, `prototyping-loop`; release point none; branch points `sdd-triage`, `outside-record` to `decide-design`",
   ],
 ];
 

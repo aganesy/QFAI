@@ -337,6 +337,8 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-016",
     "QFAI-STORY-020",
     "QFAI-STORY-021",
+    "QFAI-STORY-022",
+    "QFAI-STORY-023",
     "QFAI-SPACK-102",
   ],
   "story-contract-index": ["QFAI-CONTRACT-034"],
@@ -1289,6 +1291,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A decision row says what was decided and why in a few short sentences, so its Content and Approach together stay within 600 characters.",
   "QFAI-STORY-021":
     "When the Stack table of the contract-layer tech.md names a component catalogue, `uiux.registries` in qfai.config.yaml declares at least one registry to procure it from.",
+  "QFAI-STORY-022":
+    "No spec document's prose and no test title uses a word a glossary row lists under Avoid, so each term keeps the one name the glossary gives it.",
+  "QFAI-STORY-023":
+    "Every Context a glossary row names is declared by a row of the glossary's `## Contexts` table.",
   "QFAI-DOCSCHEMA-001":
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
@@ -1600,6 +1606,10 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Rewrite the row under its ID in the short form: the decision and its reason in one to three sentences, with the detail where it already lives.",
   "QFAI-STORY-021":
     "Add the catalogue's registry to `uiux.registries` in qfai.config.yaml, a name and a URL template carrying `{name}`, or write exactly `none` in the Component catalogue row if the project adopts no catalogue.",
+  "QFAI-STORY-022":
+    "Replace the word with the term the glossary row names, or remove the word from that row's Avoid cell if the line is right.",
+  "QFAI-STORY-023":
+    "Add a row naming the context to the glossary's `## Contexts` table, or correct the Context cell.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DELIB-001":

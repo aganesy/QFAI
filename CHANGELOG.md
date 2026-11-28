@@ -6,6 +6,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A domain-language step settles the request's terms before the interview
+  and the specification.** `common-domain-language` runs in the discussion
+  stage between `discussion-research` and `discussion-interview`, and first in
+  every specification stage, before `sdd-triage`, marked pass-through. It reads
+  each domain word against `01_policy/glossary.md`, corrects a rejected
+  synonym, proposes a synonym for a row's Avoid cell, and splits a word read
+  two ways into one row per bounded context. It drafts a definition only from
+  a use it cites, asks for a new business term's definition with no
+  recommended answer, and tries each definition on an edge case. In discussion
+  it leaves each settled term as an `open-questions.md` row; in the
+  specification stage it writes the glossary. `qfai-discussion` and `qfai-sdd`
+  list the step, and `npx qfai workflow plan` returns it. A sentence that names a
+  rejected word as a word writes it in a code span kept on one line, which
+  the check does not read; a test title leaves the word out.
 - **The component catalogue is a closed vocabulary agents build screens from.**
   Each entry that `qfai catalog components` writes now also lists:
   - `variants`: the values of each prop typed as a union of string literals;
@@ -263,6 +277,41 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Breaking: the glossary records each term's rejected synonyms and bounded
+  context, and `qfai validate` holds the story tree and test titles to them.**
+  The `## Terms` table of `01_policy/glossary.md` has the columns Term,
+  Definition, Avoid and Context. Avoid lists, comma-separated, the words a term
+  rejects; Context names the bounded context a row belongs to, and an optional
+  `## Contexts` table of Name and Purpose declares each context named.
+  - `qfai validate --profile sdd` reports a `## Terms` table without the four
+    columns (`QFAI-DOCSCHEMA-001`), a rejected synonym in a document under
+    `paths.specsDir` or `paths.contractsDir` (`QFAI-STORY-022`, error; the
+    glossary and the decision and open-question registers are not read), and
+    a Context that `## Contexts` does not declare (`QFAI-STORY-023`).
+  - In `verify` and `full`, a rejected synonym in the title of a JavaScript or
+    TypeScript test is also `QFAI-STORY-022`.
+  - `validation.staleTerms` and its `QFAI-STORY-016` warning are unchanged.
+  - Migration: add the Avoid and Context columns to the `## Terms` table of
+    `01_policy/glossary.md`, leaving their cells empty, so that the header
+    reads `| Term | Definition | Avoid | Context |`. A glossary the 1.x
+    migration writes already has them.
+
+- **A free answer in another language no longer puts that language into a
+  deliberation record.** When the user answers in a language other than the
+  one the project keeps its documents in, the record's `Option 4 (other)` now
+  holds a translation marked `(translated from <language>)`, and the user's
+  original words stay out of the record. Before, the record had to quote the
+  answer word for word, and a project's repository-language check then failed
+  on it.
+
+- **A translated decision label and a translated free answer carry the same
+  marker.** The `qfai-sdd` decisions template now asks for
+  `(translated from <language>)` right after a translated option label, as the
+  deliberation record does after a translated free answer, instead of
+  `(translated)`. The marker stays in English in either file so that tools can
+  find it, and the record reference says in one sentence that a free answer is
+  quoted word for word and chooses `4` unless it needs translating.
+
 - **The end-of-session feedback review reads review findings too.** Besides the
   session itself, it reads the findings reviewer sub-agents returned and the
   inline review comments, review bodies and conversation comments on the pull
@@ -275,12 +324,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The `qfai session-review` counts only hint at what was loaded. A security
   finding is drafted only once its fix has reached the users it affects in
   production or their distribution channel, and a finding stays held back where
-  it is unknown whether the project releases or deploys. An unfixed one is named
-  to the user by a number alone; its class of defect and location are given only
-  where the message reaches the user alone, and otherwise the user is advised to
-  ask about it in this session where only they see the answer. No record of a
-  held-back finding is kept: a later session asks the user for its pull request
-  and finds it again in that pull request's review comments. The `qfai
+  it is unknown whether the project releases or deploys. The review gives an
+  unfixed finding a number. It gives the class of defect and location only
+  where the host shows the message reaches the user alone. A no-question final
+  report gives the number and advises the user to ask in a private session
+  where questions are allowed.
+  QFAI keeps no record of a held-back finding. A later session looks for it in
+  pull request review comments only where questions are allowed and the host
+  shows the user alone receives the answer. A finding only in a sub-agent's
+  report can be asked about only in the original session. The `qfai
 session-review` command still reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
@@ -688,11 +740,43 @@ session-review` command still reads local transcripts only.
 
 ### Fixed
 
+- **`qfai catalog components --brief` no longer sends nonprinting characters
+  to the terminal.** A tab in a component's line now prints as a space, and
+  every other control, format or lone surrogate character, such as an escape
+  or a bidirectional override, prints as `\u{XXXX}` with its code point in
+  upper-case hex. Names, paths and free text in other scripts, and emoji, print
+  unchanged.
+
+- **The component catalogue keeps a numeric prop in its place.** A prop named
+  `1` used to move ahead of the other props under `variants`, in the written
+  catalogue and in `--brief`. The written catalogue now follows the order
+  `props` lists, and `--brief` the order the catalogue writes.
+
+- **`qfai catalog components --brief` keeps each component on one line.** A
+  vertical tab, a form feed or U+0085 inside a value now prints as a space, as
+  a line feed already did.
+
+- **`qfai catalog components --brief` refuses a catalogue key it cannot print,
+  and keeps keys that print alike apart.** A catalogue with a mapping key that
+  is not a string, number or boolean, such as `? [p, q]` or `~`, used to print
+  its entry and now exits 1 with one line saying it is not a component
+  catalogue. Two keys that print alike, such as `1` and `"1"`, are now listed
+  separately instead of as one.
+
+- **`qfai catalog components` stops cleanly on an incomplete `typescript`.**
+  When the loaded package lacks `getLeadingCommentRanges` or
+  `getTrailingCommentRanges`, the command exits 1 with one line naming
+  `typescript` and the number of files, and writes no catalogue, instead of
+  failing part way through the scan.
+
 - **`qfai session-review` no longer lists the first typed turn as a
   correction.** Nothing precedes it to correct, and common phrasing in a first
   request, such as the Japanese for "not X but", made it a false lead. The turn
   still counts among the typed turns, and later turns keep their numbers.
   Fixes #6120.
+
+- JavaScript and TypeScript test-stub findings preserve the line and column
+  after every JavaScript line terminator.
 
 - Specification tables inside a list item's HTML comment block are ignored.
   Inline comments are removed only within their own table cells, preserving the
@@ -3338,8 +3422,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   was deleted in between. Closes #4504.
 
 - Automatic release tagging verifies that the pushed commit came from merging the
-  version's release branch within this repository. A skipped tag names the expected
-  release branch, target branch and pushed commit.
+  version's release branch within this repository. When no pull request satisfies
+  the association checks, the diagnostic names the expected release branch,
+  target branch, and pushed commit.
 
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the
@@ -3689,8 +3774,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   stays local and a different origin needs its own authorization.
   Closes #4496.
 
-- Component catalogues keep a component's leading theme token comments in
-  files with LF, CRLF, or CR line endings.
+- Component catalogues list the theme tokens referenced in a component's leading
+  comments in files with LF, CRLF, or CR line endings.
 
 ## [2.5.0] - 2026-11-15
 
