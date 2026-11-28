@@ -87,18 +87,26 @@ const CONTROL_STATEMENT_KEYWORDS: ReadonlySet<string> = new Set([
   "with",
 ]);
 
-/** Blanks `[start, end)`, keeping newlines, and answers `end` for the caller. */
-function blank(out: string[], start: number, end: number): number {
+const JS_LINE_TERMINATOR = /[\r\n\u2028\u2029]/;
+
+/** Blanks `[start, end)`, keeping line boundaries, and returns `end`. */
+function blank(out: string[], start: number, end: number, jsLineTerminators: boolean): number {
   for (let i = start; i < end; i += 1) {
-    if (out[i] !== "\n") {
+    const character = out[i] ?? "";
+    if (character !== "\n" && !(jsLineTerminators && JS_LINE_TERMINATOR.test(character))) {
       out[i] = " ";
     }
   }
   return end;
 }
 
-/** End of a `//` comment — the newline itself is left in place. */
-function endOfLineComment(source: string, start: number): number {
+/** End of a line comment, leaving its line terminator in place. */
+function endOfLineComment(source: string, start: number, jsLineTerminators: boolean): number {
+  if (jsLineTerminators) {
+    const terminator = /[\r\n\u2028\u2029]/g;
+    terminator.lastIndex = start;
+    return terminator.exec(source)?.index ?? source.length;
+  }
   const newline = source.indexOf("\n", start);
   return newline === -1 ? source.length : newline;
 }
@@ -110,14 +118,20 @@ function endOfBlockComment(source: string, start: number): number {
 }
 
 /** End of a `'` / `"` string, or the newline when it is left unterminated. */
-function endOfQuoted(source: string, start: number, quote: string, multiline = false): number {
+function endOfQuoted(
+  source: string,
+  start: number,
+  quote: string,
+  multiline = false,
+  jsLineTerminators = false,
+): number {
   for (let i = start + 1; i < source.length; i += 1) {
     const ch = source[i] ?? "";
     if (ch === "\\") {
-      i += 1;
+      i += jsLineTerminators && source.startsWith("\r\n", i + 1) ? 2 : 1;
       continue;
     }
-    if (ch === "\n" && !multiline) {
+    if (!multiline && (ch === "\n" || (jsLineTerminators && ch === "\r"))) {
       return i;
     }
     if (ch === quote) {
@@ -135,7 +149,7 @@ function endOfQuoted(source: string, start: number, quote: string, multiline = f
  * first of them leaves the rest of the outer literal to be read as code and the
  * code after it as a literal, which hides every comment in between.
  */
-function endOfTemplate(source: string, start: number): number {
+function endOfTemplate(source: string, start: number, jsLineTerminators: boolean): number {
   for (let i = start + 1; i < source.length; i += 1) {
     const ch = source[i] ?? "";
     if (ch === "\\") {
@@ -146,7 +160,7 @@ function endOfTemplate(source: string, start: number): number {
       return i + 1;
     }
     if (ch === "$" && source[i + 1] === "{") {
-      const end = endOfSubstitution(source, i + 2);
+      const end = endOfSubstitution(source, i + 2, jsLineTerminators);
       if (end !== -1) i = end - 1;
     }
   }
@@ -161,14 +175,14 @@ function endOfTemplate(source: string, start: number): number {
  * backtick inside one does not count. A comment or a regex holding an unpaired
  * brace is not read: the span is then taken to end later than it does.
  */
-function endOfSubstitution(source: string, start: number): number {
+function endOfSubstitution(source: string, start: number, jsLineTerminators: boolean): number {
   let depth = 1;
   for (let i = start; i < source.length; i += 1) {
     const ch = source[i] ?? "";
     if (ch === "`") {
-      i = endOfTemplate(source, i) - 1;
+      i = endOfTemplate(source, i, jsLineTerminators) - 1;
     } else if (ch === "'" || ch === '"') {
-      i = endOfQuoted(source, i, ch) - 1;
+      i = endOfQuoted(source, i, ch, false, jsLineTerminators) - 1;
     } else if (ch === "{") {
       depth += 1;
     } else if (ch === "}") {
@@ -180,15 +194,21 @@ function endOfSubstitution(source: string, start: number): number {
 }
 
 /** End of a regex literal — `[…]` may hold an unescaped `/`; a newline cannot. */
-function endOfRegexLiteral(source: string, start: number, multiline = false): number {
+function endOfRegexLiteral(
+  source: string,
+  start: number,
+  multiline = false,
+  jsLineTerminators = false,
+): number {
   let inCharClass = false;
   for (let i = start + 1; i < source.length; i += 1) {
     const ch = source[i] ?? "";
     if (ch === "\\") {
+      if (jsLineTerminators && JS_LINE_TERMINATOR.test(source[i + 1] ?? "")) return i + 1;
       i += 1;
       continue;
     }
-    if (ch === "\n" && !multiline) {
+    if (!multiline && (ch === "\n" || (jsLineTerminators && JS_LINE_TERMINATOR.test(ch)))) {
       return i;
     }
     if (inCharClass) {
@@ -445,6 +465,9 @@ function endOfTripleQuoted(source: string, start: number, fence: string, raw = f
 
 /** Which span kinds {@link maskJsNonCode} blanks. */
 export type JsMaskOptions = {
+  /** Use JavaScript line terminators while keeping original offsets and line separators. */
+  readonly jsLineTerminators?: boolean;
+
   /**
    * Blank comment spans. Default `true`.
    *
@@ -668,7 +691,10 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
   const regexAfterWords = options.regexAfterWords ?? REGEX_AFTER_KEYWORD;
   const multilineQuoted = options.multilineQuoted ?? false;
   const multilineSlashy = options.multilineSlashy ?? false;
+  const jsLineTerminators = options.jsLineTerminators ?? false;
   const out = source.split("");
+  const blankSpan = (start: number, end: number): number =>
+    blank(out, start, end, jsLineTerminators);
   // Whether the token just read closes an expression. It is the whole
   // regex-vs-division test: `a / b` divides, `= /re/` does not. Comments leave
   // it untouched — they are transparent to the token before them.
@@ -707,9 +733,9 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
     }
     if (equalsBlockComments && ch === "=" && endOfEqualsBlockComment(source, i) !== -1) {
       const end = endOfEqualsBlockComment(source, i);
-      i = blankComments ? blank(out, i, end) : end;
+      i = blankComments ? blankSpan(i, end) : end;
     } else if (dollarSlashyStrings && ch === "$" && endOfDollarSlashy(source, i) !== -1) {
-      i = blank(out, i, endOfDollarSlashy(source, i));
+      i = blankSpan(i, endOfDollarSlashy(source, i));
       endsExpression = true;
       lastWord = "";
     } else if (
@@ -721,31 +747,31 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       // scanner let an apostrophe in it open a string.
       (next !== "!" || i > 0)
     ) {
-      const end = endOfLineComment(source, i);
-      i = blankComments ? blank(out, i, end) : end;
+      const end = endOfLineComment(source, i, jsLineTerminators);
+      i = blankComments ? blankSpan(i, end) : end;
     } else if (tripleQuoted && (ch === '"' || ch === "'") && source.startsWith(ch.repeat(3), i)) {
-      i = blank(out, i, endOfTripleQuoted(source, i, ch.repeat(3), rawTripleQuoted));
+      i = blankSpan(i, endOfTripleQuoted(source, i, ch.repeat(3), rawTripleQuoted));
       endsExpression = true;
       lastWord = "";
     } else if (parenStarComments && ch === "(" && next === "*") {
       const end = endOfParenStarComment(source, i);
-      i = blankComments ? blank(out, i, end) : end;
+      i = blankComments ? blankSpan(i, end) : end;
     } else if (
       verbatimStrings &&
       (ch === "@" || ch === '"') &&
       endOfVerbatimString(source, i) !== -1
     ) {
-      i = blank(out, i, endOfVerbatimString(source, i));
+      i = blankSpan(i, endOfVerbatimString(source, i));
       endsExpression = true;
       lastWord = "";
     } else if (slashComments && ch === "/" && next === "/") {
-      const end = endOfLineComment(source, i);
-      i = blankComments ? blank(out, i, end) : end;
+      const end = endOfLineComment(source, i, jsLineTerminators);
+      i = blankComments ? blankSpan(i, end) : end;
     } else if (ch === "/" && next === "*") {
       const end = nestedBlockComments
         ? endOfNestedBlockComment(source, i)
         : endOfBlockComment(source, i);
-      i = blankComments ? blank(out, i, end) : end;
+      i = blankComments ? blankSpan(i, end) : end;
     } else if (
       percentLiterals &&
       ch === "%" &&
@@ -760,7 +786,7 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
         i += 1;
         endsExpression = false;
       } else {
-        i = blank(out, i, end);
+        i = blankSpan(i, end);
         endsExpression = true;
         lastWord = "";
       }
@@ -768,7 +794,7 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       const end = endOfPhpHeredoc(source, i);
       // The header stays: it is code, and only the body it opens is a literal.
       const bodyStart = source.indexOf("\n", i);
-      i = bodyStart === -1 ? end : blank(out, bodyStart, end);
+      i = bodyStart === -1 ? end : blankSpan(bodyStart, end);
       endsExpression = true;
       lastWord = "";
     } else if (
@@ -777,7 +803,7 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       endOfRustRawString(source, i) !== -1 &&
       !WORD.test(source[i - 1] ?? "")
     ) {
-      i = blank(out, i, endOfRustRawString(source, i));
+      i = blankSpan(i, endOfRustRawString(source, i));
       endsExpression = true;
       lastWord = "";
     } else if (percentLiterals && ch === "<" && next === "<") {
@@ -793,7 +819,7 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
         if (bodyStart === -1) {
           i = end;
         } else {
-          blank(out, bodyStart, end);
+          blankSpan(bodyStart, end);
           heredocFrom = bodyStart;
           heredocTo = Math.max(heredocTo, end);
           i += 2;
@@ -808,20 +834,23 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
         i += 1;
         endsExpression = true;
       } else {
-        i = blank(out, i, end);
+        i = blankSpan(i, end);
         endsExpression = true;
         lastWord = "";
       }
     } else if (ch === "'" || ch === '"') {
-      i = blank(out, i, endOfQuoted(source, i, ch, multilineQuoted));
+      i = blankSpan(i, endOfQuoted(source, i, ch, multilineQuoted, jsLineTerminators));
       endsExpression = true;
       lastWord = "";
     } else if (ch === "`") {
-      i = blank(out, i, rawBacktick ? endOfRawBacktick(source, i) : endOfTemplate(source, i));
+      i = blankSpan(
+        i,
+        rawBacktick ? endOfRawBacktick(source, i) : endOfTemplate(source, i, jsLineTerminators),
+      );
       endsExpression = true;
       lastWord = "";
     } else if (regexLiterals && ch === "/" && !endsExpression) {
-      i = blank(out, i, endOfRegexLiteral(source, i, multilineSlashy));
+      i = blankSpan(i, endOfRegexLiteral(source, i, multilineSlashy, jsLineTerminators));
       endsExpression = true;
       lastWord = "";
     } else if (WORD.test(ch)) {
@@ -853,7 +882,7 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
   }
   const dataSection = options.dataSectionMarker?.exec(source) ?? null;
   if (dataSection !== null) {
-    blank(out, dataSection.index + dataSection[0].length, source.length);
+    blankSpan(dataSection.index + dataSection[0].length, source.length);
   }
   return out.join("");
 }
