@@ -699,10 +699,11 @@ function componentsOfFile(
   // The leading part starts on the line after the one holding the statement's first position
   // when that line holds code before it, so a comment after the previous statement stays its own.
   const leadingStart = (statement: Candidate["statement"]): number => {
-    const lineStart = source.lastIndexOf("\n", statement.pos - 1) + 1;
-    if (source.slice(lineStart, statement.pos).trim() === "") return statement.pos;
-    const nextLine = source.indexOf("\n", statement.pos) + 1;
-    return nextLine === 0 || nextLine > statement.getStart() ? statement.getStart() : nextLine;
+    const { line, character } = sourceFile.getLineAndCharacterOfPosition(statement.pos);
+    if (source.slice(statement.pos - character, statement.pos).trim() === "") return statement.pos;
+    const start = statement.getStart();
+    const nextLine = sourceFile.getLineStarts()[line + 1] ?? start;
+    return Math.min(start, nextLine);
   };
   const ownText = ({ statement, declarator }: Candidate): string =>
     declarator === undefined

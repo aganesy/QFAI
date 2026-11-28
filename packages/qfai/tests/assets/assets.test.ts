@@ -972,7 +972,7 @@ describe("assets guardrails", () => {
         /\bID\b/,
         /\brestated\b/i,
         /\bunion\b/i,
-        /\bconflict confined to the registers\b[^.]*\bbase branch locally\b/i,
+        /(?:^|[.:]\s+)(?:resolve a conflict confined to the registers by merging|when a host shows a conflict confined to the registers,\s+merge) the base branch locally\./i,
         /\bif\b[^.]*\brestores\b[^.]*\bopen-question row deleted on one side,\s*delete (?:that row|it)\b[^.]*\bseparate commit\b[^.]*\bbefore pushing\b/i,
         /\bleave\b[^.]*\bother register rows and IDs\b[^.]*\bas the merge left them\b/i,
       ];

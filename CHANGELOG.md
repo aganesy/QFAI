@@ -278,8 +278,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it is unknown whether the project releases or deploys. An unfixed one is named
   to the user by a number alone; its class of defect and location are given only
   where the message reaches the user alone, and otherwise the user is advised to
-  ask about it there. The `qfai session-review` command still reads local
-  transcripts only.
+  ask about it in this session where only they see the answer. No record of a
+  held-back finding is kept: a later session asks the user for its pull request
+  and finds it again in that pull request's review comments. The `qfai
+session-review` command still reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A
@@ -685,6 +687,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   refresh the workflow, or leave it: the removed branch never ran. Closes #4670.
 
 ### Fixed
+
+- **`qfai session-review` no longer lists the first typed turn as a
+  correction.** Nothing precedes it to correct, and common phrasing in a first
+  request, such as the Japanese for "not X but", made it a false lead. The turn
+  still counts among the typed turns, and later turns keep their numbers.
+  Fixes #6120.
 
 - Specification tables inside a list item's HTML comment block are ignored.
   Inline comments are removed only within their own table cells, preserving the
@@ -1467,6 +1475,9 @@ decisions` headings appeared anywhere in the file, so a record with several
 
 - SQL routine identity ignores a Unicode-quoted parameter name together with
   its `UESCAPE` clause and retains the full input type.
+
+- SQL routine identity also retains the input type when it immediately follows
+  a Unicode-quoted parameter name without a `UESCAPE` clause.
 
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
@@ -3677,6 +3688,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   listening socket. A local backend
   stays local and a different origin needs its own authorization.
   Closes #4496.
+
+- Component catalogues keep a component's leading theme token comments in
+  files with LF, CRLF, or CR line endings.
 
 ## [2.5.0] - 2026-11-15
 

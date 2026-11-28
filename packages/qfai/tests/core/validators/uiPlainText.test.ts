@@ -6,7 +6,7 @@
  * `qfai-text` comment justifies.
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
@@ -469,6 +469,11 @@ describe("the default loader resolves typescript from the project root", () => {
       "project/node_modules/typescript/package.json": '{"exports":{".":null}}',
       "project/src/a.tsx": "export const A = () => <p>Hi</p>;\n",
     });
+    const ancestorRequire = createRequire(path.join(workspace, "package.json"));
+    expect(ancestorRequire.resolve("typescript")).toBe(
+      await realpath(path.join(workspace, "node_modules", "typescript", "index.cjs")),
+    );
+    expect(ancestorRequire("typescript")).toHaveProperty("createSourceFile", expect.any(Function));
     const root = path.join(workspace, "project");
     const issues = await validateUiPlainText(root, configWith(["src/**"]));
     expect(codes(issues)).toEqual(["QFAI-UITEXT-003"]);
