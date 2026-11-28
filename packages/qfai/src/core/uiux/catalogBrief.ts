@@ -17,6 +17,11 @@ export function componentBriefLines(catalogText: string, catalogPath: string): s
   let parsed: unknown;
   try {
     // Mappings stay maps, so a numeric key such as a `variants` prop named `1` keeps its place.
+    // Ceiling: this parses the text `readCatalog` already parsed, now keeping mappings as maps;
+    // both parses use the same parser and options apart from `mapAsMap`, so a text one refuses
+    // the other refuses too, and only the brief's own key and value checks refuse more. Accepted
+    // because sharing one parse changes the read result every catalogue check consumes; a
+    // second caller needing the mapping form lifts it.
     parsed = parse(catalogText, { mapAsMap: true });
   } catch {
     return null;
@@ -42,14 +47,19 @@ export function componentBriefLines(catalogText: string, catalogPath: string): s
 function componentLine(entry: ReadonlyMap<unknown, unknown>): string | null {
   const entries = mapEntries(entry);
   if (entries === null) return null;
-  const fieldsOf = new Map(entries);
-  const head = `- ${String(fieldsOf.get("name"))} (${String(fieldsOf.get("file"))})`;
-  const keys = [...fieldsOf.keys()].filter((key) => key !== "name" && key !== "file");
-  const leading = LEADING_KEYS.filter((key) => keys.includes(key));
-  const rest = keys.filter((key) => !LEADING_KEYS.some((lead) => lead === key));
+  // The entries are walked as written, so two keys that print alike, such as `1` and `"1"`,
+  // stay two fields.
+  const valueOf = (key: string): unknown => entries.find(([written]) => written === key)?.[1];
+  const head = `- ${String(valueOf("name"))} (${String(valueOf("file"))})`;
+  const others = entries.filter(([key]) => key !== "name" && key !== "file");
+  const isLeading = (key: string): boolean => LEADING_KEYS.some((lead) => lead === key);
+  const ordered = [
+    ...LEADING_KEYS.flatMap((lead) => others.filter(([key]) => key === lead)),
+    ...others.filter(([key]) => !isLeading(key)),
+  ];
   const fields: string[] = [];
-  for (const key of [...leading, ...rest]) {
-    const value = valueText(fieldsOf.get(key));
+  for (const [key, field] of ordered) {
+    const value = valueText(field);
     if (value === null) return null;
     fields.push(`${key}: ${value}`);
   }
@@ -142,7 +152,8 @@ export function tokenFileCount(text: string): number | null {
 
 /**
  * A parsed mapping's entries in written order, each key as the text it prints as, or null when a
- * key is not a string, number or boolean, which no catalogue writes.
+ * key is not a string, number or boolean, which no catalogue writes: a `null` key such as `~`
+ * is refused too. Two keys that print alike stay two entries.
  */
 function mapEntries(map: ReadonlyMap<unknown, unknown>): [string, unknown][] | null {
   const entries: [string, unknown][] = [];

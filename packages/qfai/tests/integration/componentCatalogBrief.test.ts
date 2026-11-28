@@ -294,6 +294,16 @@ describe("the brief made from the committed catalogue", () => {
     expect(brief.out).toContain("- Page (src/page.tsx): variants: 1: a, 1: b, x: c\n");
   });
 
+  // QFAI:EX-0001-0307-49
+  it("separates component keys that print alike", async () => {
+    const root = await projectWith({
+      [CATALOG]: 'components:\n  - name: Page\n    file: src/page.tsx\n    1: [a]\n    "1": [b]\n',
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    expect(brief.out).toContain("- Page (src/page.tsx): 1: a; 1: b\n");
+  });
+
   // QFAI:EX-0001-0307-45
   it("refuses a missing or invalid catalogue in one line and --brief with --check as a usage error", async () => {
     const root = await projectWith({});

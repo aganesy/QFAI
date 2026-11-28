@@ -704,6 +704,13 @@ session-review` command still reads local transcripts only.
   vertical tab, a form feed or U+0085 inside a value now prints as a space, as
   a line feed already did.
 
+- **`qfai catalog components --brief` refuses a catalogue key it cannot print,
+  and keeps keys that print alike apart.** A catalogue with a mapping key that
+  is not a string, number or boolean, such as `? [p, q]` or `~`, used to print
+  its entry and now exits 1 with one line saying it is not a component
+  catalogue. Two keys that print alike, such as `1` and `"1"`, are now listed
+  separately instead of as one.
+
 - **`qfai catalog components` stops cleanly on an incomplete `typescript`.**
   When the loaded package lacks `getLeadingCommentRanges` or
   `getTrailingCommentRanges`, the command exits 1 with one line naming
