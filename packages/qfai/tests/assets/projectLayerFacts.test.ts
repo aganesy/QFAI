@@ -299,7 +299,7 @@ function readTagCommand(command: string): {
   return { creates, operands, optionsKnown };
 }
 
-/** Remove shell comments and unquoted backslash-newline pairs before splitting commands. */
+/** Remove shell comments and join unquoted and double-quoted line continuations. */
 function stripCommentsAndJoinContinuations(shell: string): string {
   // The guide's <SHA> operand is one word even when it spans a physical line break.
   const tokens =
@@ -328,6 +328,14 @@ function stripCommentsAndJoinContinuations(shell: string): string {
       copied = shell[newline - 1] === "\r" ? newline - 1 : newline;
       tokens.lastIndex = newline + 1;
       continue;
+    }
+    if (value.startsWith('"') && value.includes("\n")) {
+      // Consume other escapes in pairs so an escaped backslash stays literal.
+      const continued = value.replace(/\\(?:\r?\n|[\s\S])/g, (pair) =>
+        pair.endsWith("\n") ? "" : pair,
+      );
+      joined += shell.slice(copied, token.index) + continued;
+      copied = tokens.lastIndex;
     }
     mayStartComment = /^[\s;&|()<>]$/.test(value);
   }
@@ -814,6 +822,24 @@ describe("the project layer describes the repository it is in", () => {
     expect(releaseTagCreations(guide)).toEqual([command]);
     expect(namesItsCommit(command)).toBe(true);
     expect(releaseTaggingStatements(guide)).toEqual([check + " && " + command]);
+  });
+
+  it.each(["\n", "\r\n"])("keeps a double-quoted release operand across %j", (newline) => {
+    const sha = "0123456789abcdef0123456789abcdef01234567";
+    const check = "git merge-base --is-ancestor <SHA> origin/main";
+    const start = 'git tag vX.Y.Z "';
+    const quoted = start + sha + '"';
+    const continued = [start + sha.slice(0, 20) + "\\", sha.slice(20) + '"'].join(newline);
+    const guide = ["~~~sh", check + " &&", continued, "~~~"].join(newline);
+
+    expect(releaseTagCreations(guide)).toEqual([quoted]);
+    expect(namesItsCommit(quoted)).toBe(true);
+    expect(releaseTaggingStatements(guide)).toEqual([check + " && " + quoted]);
+  });
+
+  it("keeps an escaped backslash before a quoted newline", () => {
+    const shell = ['git tag -m "two lines ' + "\\\\", 'message" vX.Y.Z'].join("\n");
+    expect(stripCommentsAndJoinContinuations(shell)).toBe(shell);
   });
 
   it("only expands an unambiguous long tag option", () => {
