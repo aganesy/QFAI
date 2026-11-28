@@ -22,7 +22,8 @@ It runs in the discussion stage between `discussion-research` and
   `## Contexts` table.
 - The request, and in the discussion stage the research summary
   `discussion-research` reported. In the specification stage, the
-  deliberation record the stage consumes.
+  input Stage 0 selects: the deliberation record, an import or the explicit
+  requirement.
 - The story tree, the contracts and the code the request touches, for the
   words they already use for each thing.
 - `.qfai/assistant/skill/qfai-grilling/references/glossary-check.md`, for how
@@ -52,9 +53,10 @@ In the specification stage, run Stage 0 of
 `.qfai/assistant/step/sdd-triage/STEP.md` in full first, and take the input it
 selects: the deliberation record through `npx qfai sdd preflight --record
 <path>`, an existing specification through `--import <path>`, or the user's
-explicit requirement as supplied. Read only that input. When Stage 0 stops,
-write nothing, leave `01_policy/glossary.md` and `open-questions.md` as they
-are, and stop; `sdd-triage` reports it.
+explicit requirement as supplied. Read that input in place of a deliberation
+record. When Stage 0 stops, write nothing to the story tree, leave
+`01_policy/glossary.md` and `open-questions.md` as they are, and stop; report
+the stop as Stage 0 states it, since no later step of the stage runs.
 
 ## Procedure
 
@@ -97,8 +99,8 @@ are, and stop; `sdd-triage` reports it.
 
 ## Passes when
 
-Read first: the request, the glossary, the run's deliberation record and
-`open-questions.md`. The step passes when, in the specification stage, no
+Read first: the request, the glossary, the run's deliberation record or the
+input Stage 0 selects, and `open-questions.md`. The step passes when, in the specification stage, no
 settled-term row it consumes waits in `open-questions.md`, and in either stage no candidate of step 1 is new, a synonym or read two
 ways; a rejected synonym it only corrects in its own reading does not stop the
 pass. The pass names the glossary rows it read.

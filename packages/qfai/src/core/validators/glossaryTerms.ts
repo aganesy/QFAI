@@ -36,7 +36,9 @@ function closingParen(masked: string, open: number): number {
       if (depth === 0) return index;
     }
   }
-  return masked.length;
+  // No closing parenthesis, as in text the mask could not read: record no body rather than
+  // swallow the rest of the file.
+  return -1;
 }
 
 type Synonym = { word: string; term: string; pattern: RegExp };
@@ -302,6 +304,11 @@ const MAX_CODE_POINT = 0x10ffff;
  */
 function escapeAt(source: string, index: number): { value: string; length: number } | null {
   const char = source.charAt(index);
+  // A backslash before a line break continues the literal and stands for nothing.
+  if (char === "\r" && source.charAt(index + 1) === "\n") return { value: "", length: 2 };
+  if (char === "\n" || char === "\r" || char === "\u2028" || char === "\u2029") {
+    return { value: "", length: 1 };
+  }
   const unicode = /^u\{([0-9a-fA-F]{1,6})\}|^u([0-9a-fA-F]{4})|^x([0-9a-fA-F]{2})/.exec(
     source.slice(index, index + 9),
   );
@@ -376,7 +383,11 @@ export async function validateGlossaryTestTitles(
     for (const call of masked.matchAll(TEST_CALL)) {
       const open = call.index + call[0].length - 1;
       if (bodies.some(([from, to]) => from < call.index && call.index < to)) continue;
-      if (call[1] === "it" || call[1] === "test") bodies.push([open, closingParen(masked, open)]);
+      // `test.describe(...)` groups tests and is no test body; only a test case's call is one.
+      const testCase =
+        (call[1] === "it" || call[1] === "test") && !/\b(?:describe|each)\b/.test(call[2] ?? "");
+      const close = testCase ? closingParen(masked, open) : -1;
+      if (close >= 0) bodies.push([open, close]);
       if (/\beach\b/.test(call[2] ?? "")) continue;
       // The mask blanks strings and comments alike, so what comes before the title is read from
       // the source, not the masked text.

@@ -376,3 +376,27 @@ describe("a title the check cannot read", () => {
     expect(found.map((item) => [item.file, item.loc?.line])).toEqual([["tests/a.test.ts", 2]]);
   });
 });
+
+describe("a Playwright describe block", () => {
+  // QFAI:EX-0001-0317-17
+  it("is not a test body, so the titles inside it are still read", async () => {
+    await put(glossaryFile, glossary([customer]));
+    await put(
+      "tests/a.test.ts",
+      [
+        'test.describe("sign-in", () => {',
+        '  test("client signs in", async () => {});',
+        "});",
+        'test.describe.serial("area", () => {',
+        '  test("client area", async () => {});',
+        "});",
+        "",
+      ].join("\n"),
+    );
+    const found = await findings("verify", "QFAI-STORY-022");
+    expect(found.map((item) => [item.file, item.loc?.line])).toEqual([
+      ["tests/a.test.ts", 2],
+      ["tests/a.test.ts", 5],
+    ]);
+  });
+});

@@ -97,6 +97,7 @@ describe("terms a discussion settled", () => {
     const before = flat(sectionOf(text, "## Before the first write"));
     expect(before).toContain("npx qfai sdd preflight --record");
     expect(before).toMatch(/When Stage 0 stops, write nothing/i);
+    expect(before).toMatch(/leave `01_policy\/glossary.md` and `open-questions.md` as they are/);
     expect(text.indexOf("## Before the first write")).toBeLessThan(text.indexOf("## Procedure"));
   });
 
