@@ -170,26 +170,49 @@ describe("the check mode compares and writes nothing", () => {
 // QFAI:AC-0001-0307-03
 describe("JSX needs the TypeScript compiler the project installs", () => {
   // QFAI:EX-0001-0307-06
-  it("exits 1 naming typescript and the unread files, and writes nothing", async () => {
-    const root = await projectWith({
-      "src/a.tsx": component("Alpha", []),
-      "src/b.tsx": component("Beta", []),
-    });
-    const err: string[] = [];
-    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
-      err.push(String(chunk));
-      return true;
-    });
-    const code = await runCatalogComponents({
-      root,
-      loadTypescript: () => {
+  it.each([
+    { scenario: "cannot load", missing: undefined },
+    { scenario: "lacks getLeadingCommentRanges", missing: "getLeadingCommentRanges" },
+    { scenario: "lacks getTrailingCommentRanges", missing: "getTrailingCommentRanges" },
+  ])(
+    "exits 1 with one diagnostic and no catalogue when TypeScript $scenario",
+    async ({ missing }) => {
+      let loadTypescript: () => unknown = () => {
         throw new Error("not installed");
-      },
-    });
-    expect(code).toBe(1);
-    expect(err.join("")).toMatch(/2 \.tsx\/\.jsx file\(s\)[^\n]*`typescript`/);
-    await expect(readCatalogText(root)).rejects.toThrow();
-  });
+      };
+      if (missing !== undefined) {
+        const compiler: unknown = packageRequire("typescript");
+        if (typeof compiler !== "object" || compiler === null) {
+          throw new Error("the test requires a TypeScript compiler");
+        }
+        const entries = Object.entries(compiler);
+        expect(Object.fromEntries(entries)).toMatchObject({
+          createSourceFile: expect.any(Function),
+          getLeadingCommentRanges: expect.any(Function),
+          getTrailingCommentRanges: expect.any(Function),
+        });
+        const partial = Object.fromEntries(entries.filter(([key]) => key !== missing));
+        loadTypescript = () => partial;
+      }
+
+      const root = await projectWith({
+        "src/a.tsx": component("Alpha", []),
+        "src/b.tsx": component("Beta", []),
+      });
+      const err: string[] = [];
+      vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+        err.push(String(chunk));
+        return true;
+      });
+
+      expect(await runCatalogComponents({ root, loadTypescript })).toBe(1);
+      expect(err.join("").split(/\r?\n/u)).toEqual([
+        expect.stringMatching(/2 \.tsx\/\.jsx file\(s\)[^\r\n]*`typescript`/u),
+        "",
+      ]);
+      await expect(readCatalogText(root)).rejects.toMatchObject({ code: "ENOENT" });
+    },
+  );
 });
 
 // QFAI:AC-0001-0307-08
