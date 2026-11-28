@@ -164,8 +164,8 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     await Promise.all(files.map((file) => utimes(file, earlier, earlier)));
 
     const metadata = async (target: string) => {
-      const { ino, mtimeMs } = await lstat(target);
-      return { ino, mtimeMs };
+      const { dev, ino, mtimeNs } = await lstat(target, { bigint: true });
+      return { dev, ino, mtimeNs };
     };
     const snapshot = async () => ({
       files: await Promise.all(
