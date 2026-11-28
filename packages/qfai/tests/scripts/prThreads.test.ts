@@ -67,8 +67,10 @@ import {
 } from "../../../../scripts/pr-threads.mjs";
 
 const REST_PAYLOAD_FLAGS = new Set(["-f", "-F", "--raw-field", "--field", "--input"]);
-const REST_VALUE_FLAGS = new Set([
+const API_VALUE_FLAGS = new Set([
   ...REST_PAYLOAD_FLAGS,
+  "-X",
+  "--method",
   "--cache",
   "--hostname",
   "-H",
@@ -80,6 +82,17 @@ const REST_VALUE_FLAGS = new Set([
   "-t",
   "--template",
 ]);
+
+function apiEndpoint(args: readonly string[]): string | undefined {
+  for (let index = 0; index < args.length; index++) {
+    const argument = args[index];
+    if (argument === undefined) break;
+    if (argument === "--") return args[index + 1];
+    if (!argument.startsWith("-")) return argument;
+    if (API_VALUE_FLAGS.has(argument)) index++;
+  }
+  return undefined;
+}
 
 function isRestWrite(args: readonly string[]): boolean {
   let hasPayload = false;
@@ -95,7 +108,7 @@ function isRestWrite(args: readonly string[]): boolean {
       return method === undefined ? hasPayload : method !== "GET" && method !== "HEAD";
     }
     if (REST_PAYLOAD_FLAGS.has(flag)) hasPayload = true;
-    if (REST_VALUE_FLAGS.has(flag)) index++;
+    if (API_VALUE_FLAGS.has(flag)) index++;
   }
   return hasPayload;
 }
@@ -104,7 +117,7 @@ function deferralWrites(): string[] {
   return calls.list
     .filter(([command, operation, ...args]) => {
       if (command !== "gh" || operation !== "api") return false;
-      if (args.includes("graphql")) {
+      if (apiEndpoint(args) === "graphql") {
         return args.some((argument) => /^query=\s*mutation\b/u.test(argument));
       }
       return isRestWrite(args);
@@ -373,7 +386,7 @@ describe("retrying a deferral that stopped part way", () => {
 
   it("distinguishes the GraphQL endpoint from a REST input filename", () => {
     const endpoint = "repos/example/project/issues/40/comments";
-    const restWrite = ["gh", "api", "--input", "graphql", endpoint];
+    const restWrite = ["gh", "api", "--input", "graphql", endpoint, "--method=POST"];
     const restRead = ["gh", "api", endpoint, "--input", "graphql", "--method", "GET"];
     const graphqlWrite = ["gh", "api", "-X", "POST", "graphql", "-f", "query=mutation { record }"];
     const graphqlRead = ["gh", "api", "graphql", "-f", "query=query { viewer { login } }"];
