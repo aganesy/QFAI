@@ -301,13 +301,21 @@ function readTagCommand(command: string): {
 
 /** Remove shell comments and unquoted backslash-newline pairs before splitting commands. */
 function stripCommentsAndJoinContinuations(shell: string): string {
-  // The guide uses <SHA> as an operand placeholder, so its closing bracket is part of the word.
-  const tokens = /<SHA>|"(?:[^"\\]|\\[\s\S])*"|'[^']*'|\\(?:\r?\n|[^\r\n])|[\s\S]/g;
+  // The guide's <SHA> operand is one word even when it spans a physical line break.
+  const tokens =
+    /(?<placeholder><(?:\\\r?\n)*S(?:\\\r?\n)*H(?:\\\r?\n)*A(?:\\\r?\n)*>)|"(?:[^"\\]|\\[\s\S])*"|'[^']*'|\\(?:\r?\n|[^\r\n])|[\s\S]/g;
   let mayStartComment = true;
   let copied = 0;
   let joined = "";
   for (let token = tokens.exec(shell); token !== null; token = tokens.exec(shell)) {
     const value = token[0];
+    const placeholder = token.groups?.placeholder;
+    if (placeholder !== undefined) {
+      joined += shell.slice(copied, token.index) + placeholder.replace(/\\\r?\n/g, "");
+      copied = tokens.lastIndex;
+      mayStartComment = false;
+      continue;
+    }
     if (value === "\\\n" || value === "\\\r\n") {
       joined += shell.slice(copied, token.index);
       copied = tokens.lastIndex;
@@ -772,9 +780,12 @@ describe("the project layer describes the repository it is in", () => {
   it("keeps an attached hash on the release commit placeholder", () => {
     const valid = "git tag vX.Y.Z <SHA>";
     const invalid = valid + "#suffix";
-    expect(tagCreations(invalid)).toEqual([invalid]);
+    for (const placeholder of ["<SHA>", "<SH\\\nA>", "<SH\\\r\nA>"]) {
+      const command = "git tag vX.Y.Z " + placeholder;
+      expect(tagCreations(command + "#suffix")).toEqual([invalid]);
+      expect(tagCreations(command + " # note")).toEqual([valid]);
+    }
     expect(namesItsCommit(invalid)).toBe(false);
-    expect(tagCreations(valid + " # note")).toEqual([valid]);
     expect(namesItsCommit(valid)).toBe(true);
   });
 
