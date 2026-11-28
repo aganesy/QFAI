@@ -93,6 +93,18 @@ describe("what an Interview row holds", () => {
     );
   });
 
+  // QFAI:EX-0001-0298-18
+  it("records a translated free answer in Option 4, chooses 4, and leaves the original out", async () => {
+    const text = await writing();
+    expect(text).toMatch(
+      /quote a free answer word for word in `Option 4 \(other\)` and choose `4`; where the user answers in a language other than the record's, write instead the answer's translation into the record's language followed by `\(translated from <language>\)`, and leave the user's original words out of the record/i,
+    );
+    expect(text).toMatch(/the marker stays in English\./i);
+    expect(flat(await readShipped("step/discussion-interview/STEP.md"))).toMatch(
+      /a free answer quoted word for word in `Option 4 \(other\)`, or, when given in a language other than the record's, translated as the record reference says/i,
+    );
+  });
+
   // QFAI:EX-0001-0298-07
   it("leaves Options 1 to 3 empty for a question with no candidate values", async () => {
     expect(await writing()).toMatch(
