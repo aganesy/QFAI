@@ -66,28 +66,66 @@ import {
   unresolvedThreads,
 } from "../../../../scripts/pr-threads.mjs";
 
+const REST_PAYLOAD_FLAGS = new Set(["-f", "-F", "--raw-field", "--field", "--input"]);
+const API_VALUE_FLAGS = new Set([
+  ...REST_PAYLOAD_FLAGS,
+  "-X",
+  "--method",
+  "--cache",
+  "--hostname",
+  "-H",
+  "--header",
+  "-p",
+  "--preview",
+  "-q",
+  "--jq",
+  "-t",
+  "--template",
+]);
+
+function apiEndpoint(args: readonly string[]): string | undefined {
+  for (let index = 0; index < args.length; index++) {
+    const argument = args[index];
+    if (argument === undefined) break;
+    if (argument === "--") return args[index + 1];
+    if (!argument.startsWith("-")) return argument;
+    if (API_VALUE_FLAGS.has(argument)) index++;
+  }
+  return undefined;
+}
+
+function isRestWrite(args: readonly string[]): boolean {
+  let hasPayload = false;
+  for (let index = 0; index < args.length; index++) {
+    const flag = args[index];
+    if (flag === undefined || flag === "--") break;
+    if (flag === "--method" || flag.startsWith("--method=") || flag.startsWith("-X")) {
+      const value =
+        flag === "--method" || flag === "-X"
+          ? args[index + 1]
+          : flag.replace(/^(?:--method=|-X=?)/u, "");
+      const method = value?.toUpperCase();
+      return method === undefined ? hasPayload : method !== "GET" && method !== "HEAD";
+    }
+    const payloadFlag = flag.startsWith("--") ? flag.split("=", 1)[0] : flag.slice(0, 2);
+    if (payloadFlag && REST_PAYLOAD_FLAGS.has(payloadFlag)) {
+      const value =
+        flag === payloadFlag ? args[index + 1] : flag.slice(payloadFlag.length).replace(/^=/u, "");
+      if (value) hasPayload = true;
+    }
+    if (API_VALUE_FLAGS.has(flag)) index++;
+  }
+  return hasPayload;
+}
+
 function deferralWrites(): string[] {
   return calls.list
     .filter(([command, operation, ...args]) => {
       if (command !== "gh" || operation !== "api") return false;
-      if (args.includes("graphql")) {
+      if (apiEndpoint(args) === "graphql") {
         return args.some((argument) => /^query=\s*mutation\b/u.test(argument));
       }
-      const methodFlag = args.findIndex(
-        (argument) =>
-          argument === "--method" || argument.startsWith("--method=") || argument.startsWith("-X"),
-      );
-      const flag = args[methodFlag];
-      const methodValue =
-        flag === "--method" || flag === "-X"
-          ? args[methodFlag + 1]
-          : flag?.replace(/^(?:--method=|-X=?)/u, "");
-      const method = methodValue?.toUpperCase();
-      return method === undefined
-        ? args.some((argument) =>
-            ["-f", "-F", "--raw-field", "--field", "--input"].includes(argument),
-          )
-        : method !== "GET" && method !== "HEAD";
+      return isRestWrite(args);
     })
     .map((call) => call.join(" "));
 }
@@ -341,6 +379,55 @@ describe("retrying a deferral that stopped part way", () => {
     const write = ["gh", "api", endpoint, writeFlag];
     calls.list.push(["gh", "api", endpoint, readFlag, "-F", "per_page=100"], write);
     expect(deferralWrites()).toEqual([write.join(" ")]);
+  });
+
+  it("ignores method-shaped input filenames before a REST method flag", () => {
+    const endpoint = "repos/example/project/issues/40/comments";
+    const read = ["gh", "api", endpoint, "--input", "-XPOST", "--method=GET"];
+    const write = ["gh", "api", endpoint, "--input", "-XGET", "-XPOST"];
+    calls.list.push(read, write);
+    expect(deferralWrites()).toEqual([write.join(" ")]);
+  });
+
+  it("distinguishes the GraphQL endpoint from a REST input filename", () => {
+    const endpoint = "repos/example/project/issues/40/comments";
+    const restWrite = ["gh", "api", "--input", "graphql", endpoint, "--method=POST"];
+    const restRead = ["gh", "api", endpoint, "--input", "graphql", "--method", "GET"];
+    const graphqlWrite = ["gh", "api", "-X", "POST", "graphql", "-f", "query=mutation { record }"];
+    const graphqlRead = [
+      "gh",
+      "api",
+      "-X",
+      "POST",
+      "graphql",
+      "-f",
+      "query=query { viewer { login } }",
+    ];
+    calls.list.push(restWrite, restRead, graphqlWrite, graphqlRead);
+
+    expect(deferralWrites()).toEqual([restWrite.join(" "), graphqlWrite.join(" ")]);
+  });
+
+  it("counts attached REST payloads unless an explicit method makes the call read-only", () => {
+    const endpoint = "repos/example/project/issues/40/comments";
+    const writes = [
+      "--field=count=1",
+      "--raw-field=body=example",
+      "--input=body.json",
+      "-Fcount=1",
+      "-F=count=1",
+      "-fbody=example",
+      "-f=body=example",
+    ].map((payload) => ["gh", "api", endpoint, payload]);
+    calls.list.push(
+      ...writes,
+      ["gh", "api", endpoint, "--input=body.json", "--method=GET"],
+      ["gh", "api", endpoint, "-XHEAD", "--field=count=1"],
+      ["gh", "api", endpoint, "--input="],
+      ["gh", "api", endpoint, "--input", ""],
+    );
+
+    expect(deferralWrites()).toEqual(writes.map((write) => write.join(" ")));
   });
 
   const answer = (isResolved: boolean, replies: string[]): string =>
