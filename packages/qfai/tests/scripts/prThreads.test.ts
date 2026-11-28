@@ -389,7 +389,15 @@ describe("retrying a deferral that stopped part way", () => {
     const restWrite = ["gh", "api", "--input", "graphql", endpoint, "--method=POST"];
     const restRead = ["gh", "api", endpoint, "--input", "graphql", "--method", "GET"];
     const graphqlWrite = ["gh", "api", "-X", "POST", "graphql", "-f", "query=mutation { record }"];
-    const graphqlRead = ["gh", "api", "graphql", "-f", "query=query { viewer { login } }"];
+    const graphqlRead = [
+      "gh",
+      "api",
+      "-X",
+      "POST",
+      "graphql",
+      "-f",
+      "query=query { viewer { login } }",
+    ];
     calls.list.push(restWrite, restRead, graphqlWrite, graphqlRead);
 
     expect(deferralWrites()).toEqual([restWrite.join(" "), graphqlWrite.join(" ")]);
