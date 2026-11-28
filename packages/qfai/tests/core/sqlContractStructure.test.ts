@@ -107,6 +107,7 @@ describe("the statement splitter knows SQL's quoting rules", () => {
   it.each([
     ["\n", ""],
     ["\r\n", ""],
+    ["\r", ""],
     ["\n", " -- comment with ) and ;"],
   ])("keeps an E string's continuation across %j after %j", (lineEnding, comment) => {
     const sql = [
@@ -634,6 +635,30 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     async ({ parameter, type, signature }) => {
       const sql =
         `CREATE FUNCTION f(${parameter} ${type}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE OR REPLACE FUNCTION f(other ${type}) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`;
+      const { statements, errors } = parseSqlContract(sql);
+      expect(errors).toEqual([]);
+      expect(collectCreatedObjects(statements).map((object) => object.signature)).toEqual([
+        signature,
+        signature,
+      ]);
+      const duplicate = (await runOn(HEADER + sql)).filter((issue) => issue.code === "QFAI-DB-002");
+      expect(duplicate.map((issue) => issue.severity)).toEqual(["error"]);
+    },
+  );
+
+  // QFAI:EX-0001-0039-84
+  it.each([
+    ['U&"n\\0061me"int', "int", "integer"],
+    ['U&"n\\0061me" int', "int", "integer"],
+    ['IN U&"n\\0061me"app.custom_type', "app.custom_type", "app.custom_type"],
+    ['U&"n\\0061me"U&"\\0061pp".custom_type', "app.custom_type", "app.custom_type"],
+    ['U&"n\\0061me" "Custom Type"', '"Custom Type"', '"Custom Type"'],
+  ])(
+    "matches the input type after a Unicode parameter %s",
+    async (declaration, type, signature) => {
+      const sql =
+        `CREATE FUNCTION f(${declaration}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
         `CREATE OR REPLACE FUNCTION f(other ${type}) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`;
       const { statements, errors } = parseSqlContract(sql);
       expect(errors).toEqual([]);

@@ -491,6 +491,10 @@ describe("qfai-run", () => {
       /ask the forge's REST issue search once, as `\.agents\/rules\/api-budget\.md` says, for this repository's open issues and pull requests together where the forge's search covers both in one call; otherwise search open issues only/i,
     );
     expect(search).toMatch(/make no second call and no call per term/i);
+    expect(search).toContain(
+      "gh api -X GET search/issues -f q='repo:<owner>/<name> is:open is:issue <terms>'",
+    );
+    expect(search).toContain("GitHub uses the issue-only fallback");
     expect(search).toMatch(/at most five, joined with `OR`/i);
     expect(search).toMatch(
       /each term is a bare word of letters, digits, `\.`, `-`, `_` or `\/`; drop any other character, so no quote or shell metacharacter reaches the query/i,
@@ -1501,7 +1505,7 @@ describe("qfai-maintain", () => {
     );
     const commit = flat(await readShipped("step/verify-commit/STEP.md"));
     expect(commit).toMatch(
-      /`git --literal-pathspecs add -- <those paths>`\.[^.]*\b(?:separate|own) argument\b[^.]*\.(?=[^.]*\bshell\b)[^.]*\bquote and escape\b[^.]*\.[^.]*\bliteral\b[^.]*\bresolved paths\b/i,
+      /`git --literal-pathspecs add -- <those paths>`\.[^.]*\b(?:separate|own) argument\b[^.]*\.(?=[^.]*\bshell\b)[^.]*\bquote and escape\b[^.]*\.\s*Use the same literal filename handling for resolved paths\./i,
     );
     expect(commit).toContain(
       "first confirm that the combined diff in the stage report passed the added-line check, then stage the resolved paths and conclude the merge in progress with `git commit` and a message that names the base and gives each renumber as old → new with the renamed record's subject or path.",
