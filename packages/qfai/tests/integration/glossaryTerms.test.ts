@@ -309,3 +309,35 @@ describe("a rejected word that holds a glossary term", () => {
     ]);
   });
 });
+
+describe("what the review found the check misread", () => {
+  // QFAI:EX-0001-0317-13
+  it("masks a double-backtick code span that holds a single backtick", async () => {
+    await signInTree();
+    await put(
+      storyFile,
+      "# US-0001-0001: Sign in\n\n## User Story\nThe ``client `flag` setting`` stays.\n",
+    );
+    await put(contractFile, "# CLI-0001: Sign in\n\nNothing here.\n");
+    expect(await findings("sdd", "QFAI-STORY-022")).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0317-14
+  it("reads a title literal past a leading comment, decodes escapes, and leaves an expression alone", async () => {
+    await put(glossaryFile, glossary([customer]));
+    await put(
+      "tests/a.test.ts",
+      [
+        'it("client".replace("client", "customer"), () => {});',
+        'it(/* title */ "client a", () => {});',
+        'it("clien\\u0074 b", () => {});',
+        "",
+      ].join("\n"),
+    );
+    const found = await findings("verify", "QFAI-STORY-022");
+    expect(found.map((item) => [item.file, item.loc?.line])).toEqual([
+      ["tests/a.test.ts", 2],
+      ["tests/a.test.ts", 3],
+    ]);
+  });
+});

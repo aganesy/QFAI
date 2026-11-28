@@ -179,9 +179,13 @@ function rejectedSynonym(file: string, line: number, synonym: Synonym, where: st
   );
 }
 
-/** Code spans blanked, so an identifier or a quoted path is not read as prose. */
+/**
+ * Code spans on one line blanked, so an identifier or a quoted path is not read as prose. A span
+ * closes at the next run of exactly as many backticks as opened it, so a span opened with two
+ * may hold a single one.
+ */
 function blankCodeSpans(text: string): string {
-  return text.replace(/(`+)[^`\n]*?\1/g, (span) => " ".repeat(span.length));
+  return text.replace(/(?<!`)(`+)(?!`)[^\n]*?(?<!`)\1(?!`)/g, (span) => " ".repeat(span.length));
 }
 
 /**
@@ -249,7 +253,49 @@ export async function validateGlossaryTerms(
   return issues;
 }
 
-/** The string literal that opens at `start`, or null for any other argument. */
+/** The index after the whitespace and comments that start at `index`. */
+function skipBlank(source: string, index: number): number {
+  let at = index;
+  for (;;) {
+    while (/\s/.test(source.charAt(at))) at += 1;
+    if (source.startsWith("/*", at)) {
+      const close = source.indexOf("*/", at + 2);
+      at = close < 0 ? source.length : close + 2;
+    } else if (source.startsWith("//", at)) {
+      const close = source.indexOf("\n", at);
+      at = close < 0 ? source.length : close + 1;
+    } else {
+      return at;
+    }
+  }
+}
+
+const SIMPLE_ESCAPES: Readonly<Record<string, string>> = {
+  n: "\n",
+  r: "\r",
+  t: "\t",
+  b: "\b",
+  f: "\f",
+  v: "\v",
+  "0": "\0",
+};
+
+/** The character an escape at `index` (just after the backslash) stands for, and its length. */
+function escapeAt(source: string, index: number): { value: string; length: number } {
+  const char = source.charAt(index);
+  const hex = (digits: string): string => String.fromCodePoint(Number.parseInt(digits, 16));
+  const unicode = /^u\{([0-9a-fA-F]{1,6})\}|^u([0-9a-fA-F]{4})|^x([0-9a-fA-F]{2})/.exec(
+    source.slice(index, index + 9),
+  );
+  if (unicode)
+    return { value: hex(unicode[1] ?? unicode[2] ?? unicode[3] ?? ""), length: unicode[0].length };
+  return { value: SIMPLE_ESCAPES[char] ?? char, length: 1 };
+}
+
+/**
+ * The value of the string literal that opens at `start` and is the whole argument, followed by
+ * `,` or `)`, or null for any other argument, an expression that starts with a literal included.
+ */
 function literalAt(source: string, start: number): string | null {
   const quote = source[start];
   if (quote !== '"' && quote !== "'" && quote !== "`") return null;
@@ -257,11 +303,15 @@ function literalAt(source: string, start: number): string | null {
   for (let index = start + 1; index < source.length; index += 1) {
     const char = source.charAt(index);
     if (char === "\\") {
-      value += source.charAt(index + 1);
-      index += 1;
+      const escaped = escapeAt(source, index + 1);
+      value += escaped.value;
+      index += escaped.length;
       continue;
     }
-    if (char === quote) return value;
+    if (char === quote) {
+      const after = source.charAt(skipBlank(source, index + 1));
+      return after === "," || after === ")" ? value : null;
+    }
     if (quote === "`" && char === "$" && source[index + 1] === "{") return null;
     value += char;
   }
@@ -301,11 +351,9 @@ export async function validateGlossaryTestTitles(
     const starts = lineStarts(content);
     for (const call of masked.matchAll(TEST_CALL)) {
       if (/\beach\b/.test(call[1] ?? "")) continue;
-      // The mask blanks a string to spaces, so the whitespace before the title is read from
+      // The mask blanks strings and comments alike, so what comes before the title is read from
       // the source, not the masked text.
-      let start = call.index + call[0].length;
-      while (/\s/.test(content[start] ?? "")) start += 1;
-      const title = literalAt(content, start);
+      const title = literalAt(content, skipBlank(content, call.index + call[0].length));
       if (title === null) continue;
       const line = lineOf(starts, call.index);
       for (const hit of synonymHits(title, synonyms, terms)) {

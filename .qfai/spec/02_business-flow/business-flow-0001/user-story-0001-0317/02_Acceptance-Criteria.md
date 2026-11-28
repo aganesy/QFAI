@@ -28,7 +28,7 @@ Feature: Hold the story tree and test titles to the glossary's terms
   Scenario: A rejected synonym in a test title is an error
     Given a glossary row whose Avoid cell lists a word, and a JavaScript or TypeScript test file the story-test scan selects through `validation.traceability.testFileGlobs` or the acceptance layers under `paths.testsDir`
     When `qfai validate` runs in the `verify` or `full` profile
-    Then a `describe`, `it`, `test` or `suite` call whose first argument is a string literal holding that word raises `QFAI-STORY-022` at error at the call's line, naming the file, the word and the row's term
+    Then a `describe`, `it`, `test` or `suite` call whose first argument is one string literal, comments aside and escapes decoded, holding that word raises `QFAI-STORY-022` at error at the call's line, naming the file, the word and the row's term
     And the same word in a comment, in the test body, in an `each` table or in a test file of another language raises none
     And under `--flow` a test file raises none
 
