@@ -700,6 +700,9 @@ session-review` command still reads local transcripts only.
   still counts among the typed turns, and later turns keep their numbers.
   Fixes #6120.
 
+- JavaScript and TypeScript test-stub findings preserve the line and column
+  after every JavaScript line terminator.
+
 - Specification tables inside a list item's HTML comment block are ignored.
   Inline comments are removed only within their own table cells, preserving the
   boundaries and visible content of adjacent cells.
