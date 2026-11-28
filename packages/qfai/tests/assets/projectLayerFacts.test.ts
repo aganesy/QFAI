@@ -444,6 +444,26 @@ describe("the project layer describes the repository it is in", () => {
     expect(undeferring, `each guide cites ${rule}`).toEqual([]);
   });
 
+  it.each(["*", "x"])("reads the %s wildcard as the first or only Node range term", (wildcard) => {
+    const range = `${wildcard} || ^20.19.0`;
+    expect(
+      statedNodeRanges(
+        [
+          `Node.js requires ${wildcard}.`,
+          `Node.js requires ${range}.`,
+          `Node.js requires \`${wildcard}\`.`,
+          `Set \`engines.node\` to \`${range}\`.`,
+        ].join("\n"),
+      ),
+    ).toEqual([wildcard, range, wildcard, range]);
+  });
+
+  it("ignores words and Markdown emphasis where a Node range could start", () => {
+    expect(
+      statedNodeRanges("Node.js requires x86. Node.js requires *experimental* tooling."),
+    ).toEqual([]);
+  });
+
   it("reads complete Node ranges and ignores unrelated version claims", () => {
     expect(
       statedNodeRanges(
