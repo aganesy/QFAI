@@ -4,7 +4,7 @@
  * compares file sizes before it reads any contents.
  */
 
-import { lstat, mkdir, open, readFile, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readFile, stat, writeFile } from "node:fs/promises";
 import type * as NativeFs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
@@ -98,6 +98,11 @@ it("makes one refresh copy when a code query finds the analysis not current and 
     const priorSource = "export function checkout() { return 2; }\n";
     const activeSource = path.join(fixture.analysis, "checkout.ts");
     await writeFile(activeSource, priorSource);
+    const replacementAttempts: Promise<{
+      targetPath: string;
+      isDirectory: boolean;
+      sameDirectory: boolean;
+    }>[] = [];
     const run: GraphProcess = async (command, args, options) => {
       if (args.includes("status")) {
         fixture.calls.push({ command, args });
@@ -105,6 +110,26 @@ it("makes one refresh copy when a code query finds the analysis not current and 
       }
       if (args.includes("--liftoff-only")) {
         fixture.calls.push({ command, args });
+        if (
+          args[0] === "--liftoff-only" &&
+          args.length === 4 &&
+          path.basename(args[1] ?? "") === "codegraph-native.mjs"
+        ) {
+          const target = args[3];
+          if (target === undefined)
+            throw new Error("CodeGraph generation did not receive a target");
+          const targetPath = path.resolve(options.cwd, target);
+          const observation = Promise.all([
+            stat(targetPath, { bigint: true }),
+            stat(fixture.analysis, { bigint: true }),
+          ]).then(([staged, active]) => ({
+            targetPath,
+            isDirectory: staged.isDirectory(),
+            sameDirectory: staged.dev === active.dev && staged.ino === active.ino,
+          }));
+          replacementAttempts.push(observation);
+          await observation;
+        }
         return { exitCode: 1, stdout: "" };
       }
       if (args.includes("--version")) return { exitCode: 1, stdout: "" };
@@ -119,19 +144,13 @@ it("makes one refresh copy when a code query finds the analysis not current and 
         path.basename(call.args[2] ?? "").startsWith(".refreshing-codegraph-"),
     );
     expect(refreshChecks).toHaveLength(1);
-    const replacementAttempts = fixture.calls.filter(
-      ({ args }) =>
-        args[0] === "--liftoff-only" &&
-        args.length === 4 &&
-        path.basename(args[1] ?? "") === "codegraph-native.mjs",
-    );
     expect(replacementAttempts).toHaveLength(1);
-    const target = replacementAttempts[0]?.args[3];
-    if (target === undefined) throw new Error("CodeGraph generation did not receive a target");
-    const targetPath = path.resolve(target);
-    const activePath = path.resolve(fixture.analysis);
-    expect(targetPath).not.toBe(activePath);
-    expect(path.dirname(targetPath)).toBe(path.dirname(activePath));
+    const [attempt] = replacementAttempts;
+    if (attempt === undefined) throw new Error("CodeGraph generation was not observed");
+    const { targetPath, isDirectory, sameDirectory } = await attempt;
+    expect(isDirectory).toBe(true);
+    expect(sameDirectory).toBe(false);
+    expect(path.dirname(targetPath)).toBe(path.dirname(path.resolve(fixture.analysis)));
     expect(await readFile(activeSource, "utf8")).toBe(priorSource);
   } finally {
     await fixture.dispose();
