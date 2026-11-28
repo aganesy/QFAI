@@ -363,3 +363,16 @@ describe("a helper named like a test call", () => {
     expect(found.map((item) => [item.file, item.loc?.line])).toEqual([["tests/a.test.ts", 6]]);
   });
 });
+
+describe("a title the check cannot read", () => {
+  // QFAI:EX-0001-0317-16
+  it("is skipped, and the titles after it are still checked", async () => {
+    await put(glossaryFile, glossary([customer]));
+    await put(
+      "tests/a.test.ts",
+      ['it("bad \\u{110000} client", () => {});', 'it("client b", () => {});', ""].join("\n"),
+    );
+    const found = await findings("verify", "QFAI-STORY-022");
+    expect(found.map((item) => [item.file, item.loc?.line])).toEqual([["tests/a.test.ts", 2]]);
+  });
+});

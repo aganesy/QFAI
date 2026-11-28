@@ -294,15 +294,22 @@ const SIMPLE_ESCAPES: Readonly<Record<string, string>> = {
   "0": "\0",
 };
 
-/** The character an escape at `index` (just after the backslash) stands for, and its length. */
-function escapeAt(source: string, index: number): { value: string; length: number } {
+const MAX_CODE_POINT = 0x10ffff;
+
+/**
+ * The character an escape at `index` (just after the backslash) stands for, and its length, or
+ * null for an escape no code point answers, which leaves the literal unreadable.
+ */
+function escapeAt(source: string, index: number): { value: string; length: number } | null {
   const char = source.charAt(index);
-  const hex = (digits: string): string => String.fromCodePoint(Number.parseInt(digits, 16));
   const unicode = /^u\{([0-9a-fA-F]{1,6})\}|^u([0-9a-fA-F]{4})|^x([0-9a-fA-F]{2})/.exec(
     source.slice(index, index + 9),
   );
-  if (unicode)
-    return { value: hex(unicode[1] ?? unicode[2] ?? unicode[3] ?? ""), length: unicode[0].length };
+  if (unicode) {
+    const codePoint = Number.parseInt(unicode[1] ?? unicode[2] ?? unicode[3] ?? "", 16);
+    if (codePoint > MAX_CODE_POINT) return null;
+    return { value: String.fromCodePoint(codePoint), length: unicode[0].length };
+  }
   return { value: SIMPLE_ESCAPES[char] ?? char, length: 1 };
 }
 
@@ -318,6 +325,7 @@ function literalAt(source: string, start: number): string | null {
     const char = source.charAt(index);
     if (char === "\\") {
       const escaped = escapeAt(source, index + 1);
+      if (escaped === null) return null;
       value += escaped.value;
       index += escaped.length;
       continue;
