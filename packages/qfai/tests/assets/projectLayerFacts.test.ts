@@ -299,7 +299,7 @@ function readTagCommand(command: string): {
   return { creates, operands, optionsKnown };
 }
 
-/** Remove unquoted backslash-newline pairs before finding command boundaries. */
+/** Join shell line continuations before finding command boundaries. */
 function joinShellContinuations(shell: string): string {
   const tokens = /"(?:[^"\\]|\\[\s\S])*"|'[^']*'|\\(?:\r?\n|[^\r\n])|[\s\S]/g;
   let mayStartComment = true;
@@ -317,6 +317,14 @@ function joinShellContinuations(shell: string): string {
       if (newline === -1) break;
       tokens.lastIndex = newline + 1;
       continue;
+    }
+    if (value.startsWith('"') && value.includes("\n")) {
+      // Consume other escapes in pairs so an escaped backslash stays literal.
+      const continued = value.replace(/\\(?:\r?\n|[\s\S])/g, (pair) =>
+        pair.endsWith("\n") ? "" : pair,
+      );
+      joined += shell.slice(copied, token.index) + continued;
+      copied = tokens.lastIndex;
     }
     mayStartComment = /^[\s;&|()<>]$/.test(value);
   }
