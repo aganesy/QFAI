@@ -4,7 +4,7 @@ title: QFAI Discussion (Exploration Planner)
 description: "Use when invoked by name or handed a QFAI work order. Its subject is a product idea or problem whose scope is not settled yet."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
-steps: [discussion-research, discussion-interview]
+steps: [discussion-research, common-domain-language, discussion-interview]
 requires: []
 mode: interactive-by-default
 ---
@@ -41,10 +41,11 @@ it, then move to the next. A work order runs the steps it names, as
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#a-plans-steps`
 states.
 
-| Step                   | File                                                | Runs                                                  |
-| ---------------------- | --------------------------------------------------- | ----------------------------------------------------- |
-| `discussion-research`  | `.qfai/assistant/step/discussion-research/STEP.md`  | Always, first                                         |
-| `discussion-interview` | `.qfai/assistant/step/discussion-interview/STEP.md` | Always: concept, scope, stakeholders, and constraints |
+| Step                     | File                                                  | Runs                                                            |
+| ------------------------ | ----------------------------------------------------- | --------------------------------------------------------------- |
+| `discussion-research`    | `.qfai/assistant/step/discussion-research/STEP.md`    | Always, first                                                   |
+| `common-domain-language` | `.qfai/assistant/step/common-domain-language/STEP.md` | After research: the request's domain terms against the glossary |
+| `discussion-interview`   | `.qfai/assistant/step/discussion-interview/STEP.md`   | Always: concept, scope, stakeholders, and constraints           |
 
 An interview that ends `stopped` ends the run: no later step runs, and every
 open decision is reported as open.
