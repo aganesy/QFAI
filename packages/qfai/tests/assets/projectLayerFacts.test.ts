@@ -31,8 +31,15 @@ import { parse as parseYaml } from "yaml";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const LAYER = ".instruction/02_project";
-const NODE_RANGE_CLAIM =
-  /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?(?:`([~^<>=]*\s*v?\d[^`]*)`|((?:[~^<>=]+\s*)?v?\d+(?:\.[\dx*]+){0,2}(?:[ \t]*(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?v?\d+(?:\.[\dx*]+){0,2})*))/giu;
+const NODE_RANGE_WILDCARD = String.raw`[x*](?![\w*]|\.[\dx*])`;
+const NODE_RANGE_NUMBER = String.raw`v?\d+(?:\.[\dx*]+){0,2}`;
+const NODE_RANGE_CLAIM = new RegExp(
+  /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?/
+    .source +
+    `(?:\`((?:${/[~^<>=]*\s*v?\d/.source}|${NODE_RANGE_WILDCARD})[^\`]*)\`|` +
+    String.raw`((?:${NODE_RANGE_WILDCARD}|(?:[~^<>=]+\s*)?${NODE_RANGE_NUMBER})(?:[ \t]*(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?${NODE_RANGE_NUMBER})*))`,
+  "giu",
+);
 
 /**
  * A backticked repository-relative path: one that starts at a root-level entry
