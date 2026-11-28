@@ -311,8 +311,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it is unknown whether the project releases or deploys. An unfixed one is named
   to the user by a number alone; its class of defect and location are given only
   where the message reaches the user alone, and otherwise the user is advised to
-  ask about it there. The `qfai session-review` command still reads local
-  transcripts only.
+  ask about it in this session where only they see the answer. No record of a
+  held-back finding is kept: a later session asks the user for its pull request
+  and finds it again in that pull request's review comments. The `qfai
+session-review` command still reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A
@@ -718,6 +720,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   refresh the workflow, or leave it: the removed branch never ran. Closes #4670.
 
 ### Fixed
+
+- **`qfai session-review` no longer lists the first typed turn as a
+  correction.** Nothing precedes it to correct, and common phrasing in a first
+  request, such as the Japanese for "not X but", made it a false lead. The turn
+  still counts among the typed turns, and later turns keep their numbers.
+  Fixes #6120.
 
 - Specification tables inside a list item's HTML comment block are ignored.
   Inline comments are removed only within their own table cells, preserving the
@@ -3363,8 +3371,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   was deleted in between. Closes #4504.
 
 - Automatic release tagging verifies that the pushed commit came from merging the
-  version's release branch within this repository. A skipped tag names the expected
-  release branch, target branch and pushed commit.
+  version's release branch within this repository. When no pull request satisfies
+  the association checks, the diagnostic names the expected release branch,
+  target branch, and pushed commit.
 
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the

@@ -658,9 +658,11 @@ export function correctionWords(text: string): string[] {
   return words.sort(compareText);
 }
 
+/** The typed turns that match a correction word; the first has nothing before it to correct. */
 function findCorrections(turns: readonly string[]): Correction[] {
   const corrections: Correction[] = [];
   turns.forEach((text, index) => {
+    if (index === 0) return;
     const words = correctionWords(text);
     if (words.length > 0) corrections.push({ turn: index + 1, words });
   });
