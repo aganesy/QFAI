@@ -66,6 +66,24 @@ import {
   unresolvedThreads,
 } from "../../../../scripts/pr-threads.mjs";
 
+function deferralWrites(): string[] {
+  return calls.list
+    .filter(([command, operation, ...args]) => {
+      if (command !== "gh" || operation !== "api") return false;
+      if (args.includes("graphql")) {
+        return args.some((argument) => /^query=\s*mutation\b/u.test(argument));
+      }
+      const methodFlag = args.findIndex((argument) => argument === "--method" || argument === "-X");
+      const method = methodFlag >= 0 ? args[methodFlag + 1]?.toUpperCase() : undefined;
+      return method === undefined
+        ? args.some((argument) =>
+            ["-f", "-F", "--raw-field", "--field", "--input"].includes(argument),
+          )
+        : method !== "GET" && method !== "HEAD";
+    })
+    .map((call) => call.join(" "));
+}
+
 function thread(overrides: Record<string, unknown>): Record<string, unknown> {
   return {
     id: "T1",
@@ -324,20 +342,15 @@ describe("retrying a deferral that stopped part way", () => {
     });
   const recorded = `${JSON.stringify("Deferred from pull request 12.\n\n<!-- qfai-deferred-thread:T1 -->")}\n`;
 
-  const writes = (): string[] =>
-    calls.list
-      .filter(([command]) => command === "gh")
-      .slice(2)
-      .map((c) => c.join(" "));
-
   it("after the issue entry was posted, replies and resolves without posting it again", () => {
     calls.threadAnswer = answer(false, []);
     calls.issueAnswer = recorded;
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     expect(run(["defer", "12", "T1", "40"])).toBe(0);
-    expect(writes()).toHaveLength(2);
-    expect(writes()[0]).toContain("addPullRequestReviewThreadReply");
-    expect(writes()[1]).toContain("resolveReviewThread");
+    const writes = deferralWrites();
+    expect(writes).toHaveLength(2);
+    expect(writes[0]).toContain("addPullRequestReviewThreadReply");
+    expect(writes[1]).toContain("resolveReviewThread");
   });
 
   it("finds its own entry when GitHub answers with another form of the given thread id", () => {
@@ -345,9 +358,10 @@ describe("retrying a deferral that stopped part way", () => {
     calls.issueAnswer = recorded;
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     expect(run(["defer", "12", "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3VGhyZWFkMQ==", "40"])).toBe(0);
-    expect(writes()).toHaveLength(2);
-    expect(writes()[0]).toContain("addPullRequestReviewThreadReply");
-    expect(writes()[1]).toContain("resolveReviewThread");
+    const writes = deferralWrites();
+    expect(writes).toHaveLength(2);
+    expect(writes[0]).toContain("addPullRequestReviewThreadReply");
+    expect(writes[1]).toContain("resolveReviewThread");
   });
 
   it("after the reply was posted too, only resolves", () => {
@@ -355,8 +369,9 @@ describe("retrying a deferral that stopped part way", () => {
     calls.issueAnswer = recorded;
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     expect(run(["defer", "12", "T1", "40"])).toBe(0);
-    expect(writes()).toHaveLength(1);
-    expect(writes()[0]).toContain("resolveReviewThread");
+    const writes = deferralWrites();
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toContain("resolveReviewThread");
   });
 
   it("after every step, writes nothing and says the thread is already deferred", () => {
@@ -364,7 +379,7 @@ describe("retrying a deferral that stopped part way", () => {
     calls.issueAnswer = recorded;
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
     expect(run(["defer", "12", "T1", "40"])).toBe(0);
-    expect(writes()).toHaveLength(0);
+    expect(deferralWrites()).toHaveLength(0);
     expect(log.mock.calls.join(" ")).toContain("already deferred");
   });
 });
@@ -635,8 +650,7 @@ describe("a call to gh that fails", () => {
     expect(code).toBe(2);
     expect(text).toBe(`GitHub returned invalid JSON while ${testCase.operation}.`);
     expect(printed).toBe(false);
-    const ghCalls = calls.list.filter(([command]) => command === "gh");
-    expect(ghCalls.slice(2).map((call) => call.join(" "))).toEqual(
+    expect(deferralWrites()).toEqual(
       testCase.attemptedWrites.map((write) => expect.stringContaining(write)),
     );
   });

@@ -4,7 +4,7 @@
  * way `qfai validate` reads it.
  */
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
@@ -177,6 +177,11 @@ describe("JSX needs the TypeScript compiler the project installs", () => {
       "project/qfai.config.yaml": 'uiux:\n  surfacePaths: ["src/**"]\n',
       "project/src/a.tsx": "export const A = () => <p>Hi</p>;\n",
     });
+    const ancestorRequire = createRequire(path.join(workspace, "package.json"));
+    expect(ancestorRequire.resolve("typescript")).toBe(
+      await realpath(path.join(workspace, "node_modules", "typescript", "index.cjs")),
+    );
+    expect(ancestorRequire("typescript")).toHaveProperty("createSourceFile", expect.any(Function));
     const root = path.join(workspace, "project");
     const found = await uitext(root);
     expect(found.map((item) => [item.code, item.file])).toEqual([
