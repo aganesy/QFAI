@@ -695,6 +695,9 @@ session-review` command still reads local transcripts only.
   upper-case hex. Letters and single-code-point emoji print unchanged. A
   zero-width joiner in an emoji sequence prints as `\u{200D}`.
 
+- **`qfai catalog components --brief` reports an invalid collection key once.**
+  The invalid-catalogue diagnostic includes the regeneration command.
+
 - **The component catalogue keeps a numeric prop in its place.** A prop named
   `1` used to move ahead of the other props under `variants`, in the written
   catalogue and in `--brief`. The written catalogue now follows the order

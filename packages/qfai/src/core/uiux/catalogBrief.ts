@@ -22,7 +22,7 @@ export function componentBriefLines(catalogText: string, catalogPath: string): s
     // the other refuses too, and only the brief's own key and value checks refuse more. Accepted
     // because sharing one parse changes the read result every catalogue check consumes; a
     // second caller needing the mapping form lifts it.
-    parsed = parse(catalogText, { mapAsMap: true });
+    parsed = parse(catalogText, { mapAsMap: true, logLevel: "error" });
   } catch {
     return null;
   }

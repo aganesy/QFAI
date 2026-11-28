@@ -102,7 +102,8 @@ export async function runCatalogComponents(options: CatalogComponentsOptions): P
  */
 async function printBrief(root: string): Promise<number> {
   const target = COMPONENT_CATALOG_PATH.split(path.sep).join("/");
-  const committed = await readCatalog(root);
+  // The brief owns its diagnostics and still rejects YAML errors.
+  const committed = await readCatalog(root, { logLevel: "error" });
   if (committed.state !== "read") {
     error(
       committed.state === "absent"

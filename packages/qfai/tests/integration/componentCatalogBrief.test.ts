@@ -44,6 +44,18 @@ async function projectWith(files: Readonly<Record<string, string>>): Promise<str
   return root;
 }
 
+async function briefWithoutWarnings(root: string): ReturnType<typeof cli> {
+  // Node can print an emitted warning after the in-process CLI capture has ended.
+  const warning = vi.spyOn(process, "emitWarning").mockImplementation(() => undefined);
+  try {
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(warning).not.toHaveBeenCalled();
+    return brief;
+  } finally {
+    warning.mockRestore();
+  }
+}
+
 /** Every file under the root with its text, so a run that writes nothing leaves it equal. */
 async function snapshot(root: string): Promise<Record<string, string>> {
   const entries = await readdir(root, { recursive: true, withFileTypes: true });
@@ -274,23 +286,28 @@ describe("the brief made from the committed catalogue", () => {
   it.each([
     { name: "a sequence key", yaml: "? [p, q]\n      : x" },
     { name: "a null key", yaml: "~: x" },
+    { name: "a duplicate key", yaml: "repeated: first\n      repeated: second" },
   ])("rejects $name with one diagnostic", async ({ yaml }) => {
     const root = await projectWith({
       [CATALOG]: `components:\n  - name: Page\n    file: src/page.tsx\n    notes:\n      ${yaml}\n`,
     });
-    // Node can print an emitted warning after the in-process CLI capture has ended.
-    const warning = vi.spyOn(process, "emitWarning").mockImplementation(() => undefined);
-    try {
-      const brief = await cli(["catalog", "components", "--brief", "--root", root]);
-      expect(brief).toEqual({
-        code: 1,
-        out: "",
-        err: `${CATALOG} is not a component catalogue. Run \`qfai catalog components\` and commit it.\n`,
-      });
-      expect(warning).not.toHaveBeenCalled();
-    } finally {
-      warning.mockRestore();
-    }
+    expect(await briefWithoutWarnings(root)).toEqual({
+      code: 1,
+      out: "",
+      err: `${CATALOG} is not a component catalogue. Run \`qfai catalog components\` and commit it.\n`,
+    });
+  });
+
+  it("prints catalogue content that YAML can read with a warning", async () => {
+    const root = await projectWith({
+      [CATALOG]:
+        "components:\n  - name: Page\n    file: src/page.tsx\n    notes: !unknown sample\n",
+    });
+    expect(await briefWithoutWarnings(root)).toEqual({
+      code: 0,
+      out: `Components in ${CATALOG}:\n- Page (src/page.tsx): notes: sample\n`,
+      err: "",
+    });
   });
 
   // QFAI:EX-0001-0307-49

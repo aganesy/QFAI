@@ -315,14 +315,17 @@ export async function readCatalogArtifact(
 }
 
 /** The committed catalogue, if there is one and it holds a list of components. */
-export async function readCatalog(root: string): Promise<CatalogRead> {
+export async function readCatalog(
+  root: string,
+  parseOptions?: { logLevel: "error" },
+): Promise<CatalogRead> {
   const file = await readCatalogArtifact(root, COMPONENT_CATALOG_PATH);
   if (file.state !== "read") return file;
   const { text } = file;
 
   let parsed: unknown;
   try {
-    parsed = parse(text);
+    parsed = parse(text, parseOptions ? { logLevel: parseOptions.logLevel } : undefined);
   } catch {
     return { state: "invalid" };
   }
