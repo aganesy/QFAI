@@ -730,6 +730,9 @@ session-review` command still reads local transcripts only.
 - JavaScript and TypeScript test-stub findings preserve the line and column
   after every JavaScript line terminator.
 
+- `qfai catalog components --brief` displays YAML infinities and `NaN` as
+  `.inf`, `-.inf` and `.nan`, keeping them distinct from `null`.
+
 - Specification tables inside a list item's HTML comment block are ignored.
   Inline comments are removed only within their own table cells, preserving the
   boundaries and visible content of adjacent cells.

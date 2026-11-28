@@ -8,6 +8,12 @@ import { parse } from "yaml";
 /** The keys a component's line leads with, before the rest in the catalogue's own order. */
 const LEADING_KEYS = ["pattern", "states", "props", "a11y"] as const;
 
+const NON_FINITE_YAML_NUMBERS = new Map([
+  [Number.POSITIVE_INFINITY, ".inf"],
+  [Number.NEGATIVE_INFINITY, "-.inf"],
+  [Number.NaN, ".nan"],
+]);
+
 /**
  * The brief's component lines for a catalogue text `readCatalog` has read. Every key of an entry
  * other than `name` and `file` is shown, so a key the catalogue gains later appears unchanged: a
@@ -73,7 +79,8 @@ function valueText(value: unknown): string | null {
     if (!isList && !isRecord(part)) {
       if (typeof part === "string") output.push(part);
       else if (part === null || typeof part === "number" || typeof part === "boolean") {
-        output.push(JSON.stringify(part));
+        const yamlNumber = typeof part === "number" ? NON_FINITE_YAML_NUMBERS.get(part) : undefined;
+        output.push(yamlNumber ?? JSON.stringify(part));
       } else return null;
       continue;
     }

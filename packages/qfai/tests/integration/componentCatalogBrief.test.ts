@@ -87,6 +87,25 @@ const TOKENS_TEXT = JSON.stringify({
 
 // QFAI:AC-0001-0307-15
 describe("the brief made from the committed catalogue", () => {
+  // QFAI:EX-0001-0307-51
+  it("keeps non-finite YAML numbers distinct from null", async () => {
+    const root = await projectWith({
+      [CATALOG]: [
+        "components:",
+        "  - name: Page",
+        "    file: src/page.tsx",
+        "    limits: [.Inf, -.INF, .NaN, null, 2.5, false]",
+        "",
+      ].join("\n"),
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    expect(brief.err).toBe("");
+    expect(brief.out).toBe(
+      `Components in ${CATALOG}:\n- Page (src/page.tsx): limits: .inf, -.inf, .nan, null, 2.5, false\n`,
+    );
+  });
+
   // QFAI:EX-0001-0307-44
   it("prints one line per component and the design tokens, writing nothing", async () => {
     const root = await projectWith({
