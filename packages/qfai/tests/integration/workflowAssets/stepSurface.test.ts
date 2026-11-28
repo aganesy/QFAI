@@ -97,6 +97,7 @@ describe("the skills a workflow run's steps belong to", () => {
     expect(await skillSteps("qfai-maintain")).toEqual(["maintain-edit"]);
     expect(await skillSteps("qfai-verify")).toEqual(VERIFY_STEPS);
     expect(await skillSteps("qfai-sdd")).toEqual([
+      "common-domain-language",
       "sdd-triage",
       "sdd-flow",
       "sdd-story",
@@ -220,13 +221,17 @@ describe("the skills a workflow run's steps belong to", () => {
 
   // QFAI:AC-0001-0199-03
   // QFAI:EX-0001-0199-03
-  it("runs only qfai-discussion's two steps in the decide plans, neither of them pass-through", async () => {
+  it("runs only qfai-discussion's three steps in the decide plans, only the domain-language step pass-through", async () => {
     const owned = await skillSteps("qfai-discussion");
-    expect(owned).toEqual(["discussion-research", "discussion-interview"]);
+    expect(owned).toEqual([
+      "discussion-research",
+      "common-domain-language",
+      "discussion-interview",
+    ]);
     expect(await stageNames("decide-design", "discussion")).toEqual([owned]);
     const discussion = await kindSteps(["discussion"]);
     expect(discussion.names).toEqual(owned);
-    expect(discussion.passThrough).toEqual([]);
+    expect(discussion.passThrough).toEqual(["common-domain-language"]);
   });
 
   // QFAI:AC-0001-0204-02
@@ -289,6 +294,7 @@ describe("a parent skill invoked by name", () => {
   it("skips the DESIGN.md step on a flow no UI contract serves and reviews the rest once", async () => {
     const steps = await skillSteps("qfai-sdd");
     expect(steps).toEqual([
+      "common-domain-language",
       "sdd-triage",
       "sdd-flow",
       "sdd-story",

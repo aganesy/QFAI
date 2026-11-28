@@ -6,7 +6,7 @@ stages:
     steps: [implement-diagnose]
   - id: decide
     kind: sdd
-    steps: [sdd-triage]
+    steps: [{ step: common-domain-language, passThrough: true }, sdd-triage]
     after: [diagnose]
   - id: remove
     kind: implement

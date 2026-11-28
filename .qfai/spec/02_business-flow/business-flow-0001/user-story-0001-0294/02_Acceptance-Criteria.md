@@ -25,7 +25,7 @@ Feature: Review a finished session from its local transcript
     Given a transcript of a session that used QFAI
     When the command reports it
     Then it counts the QFAI hook reminders shown, per reminder; the files read under the agent rule and skill directories and `.qfai/assistant/`, with repeats and result bytes; the tool errors per tool, with the QFAI finding codes they carry; the `qfai` commands run, with their exit status; and the structured-question items asked
-    And it lists each typed user turn that matches a fixed word list, by turn number and matched word
+    And it counts every typed user turn, the first included, and lists each typed turn after the first that matches a fixed word list, by its number among all typed turns and with every word it matched
     And a line that is not a JSON record is skipped and counted
 
   # AC-0001-0294-04
