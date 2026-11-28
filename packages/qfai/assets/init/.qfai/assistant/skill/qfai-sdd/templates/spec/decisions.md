@@ -50,8 +50,7 @@ after any opening citation above:
 When the question showed the chosen option's label in a language other than
 the one this file is written in, quote a rendering of the label in this
 file's language followed by `(translated from <language>)`, as in
-`option "Remove it" (translated from Japanese)`. The marker stays in English
-so that tools can find it.
+`option "Remove it" (translated from Japanese)`. The marker stays in English.
 
 Content and Approach together stay within 600 characters; validation warns
 on a longer row. Write a `|` inside a cell as `\|`.

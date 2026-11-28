@@ -100,7 +100,7 @@ The stage worker confirms:
 
 - every question put to the user is an Interview row of the run's record, with
   a free answer quoted word for word in `Option 4 (other)`, or, when given in
-  another language than the record's, translated as the record reference
+  a language other than the record's, translated as the record reference
   says;
 - every question left open is an `open-questions.md` row;
 - every required topic in the coverage checklist was put to the session, or is

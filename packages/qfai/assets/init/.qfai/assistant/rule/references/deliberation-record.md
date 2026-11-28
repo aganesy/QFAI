@@ -9,8 +9,8 @@ A run keeps a memo of the questions it put to the user and the decisions its age
 - **Where.** One Markdown file directly under `paths.deliberationDir` (default `.qfai/deliberation`), named `<YYYYMMDDhhmmss>-<slug>.md`: the time in UTC and a slug naming the subject. It is tracked in git.
 - **When.** A run writes one only when it asks the user a question or takes an Agent decisions row. Each stage of the run writes under a subheading of its own in the same file.
 - **Interview.** One row per question put to the user. The options offered go into Options 1 to 3 in the order offered, and `Chosen option number` holds the number of the one picked.
-  Quote a free answer word for word in `Option 4 (other)` and choose `4`; where the user answers in a language other than the record's, write instead its translation into the record's language followed by `(translated from <language>)`,
-  and leave the user's original words out of the record. The marker stays in English so that tools can find it.
+  Quote a free answer word for word in `Option 4 (other)` and choose `4`; where the user answers in a language other than the record's, write instead the answer's translation into the record's language followed by `(translated from <language>)`,
+  and leave the user's original words out of the record. The marker stays in English.
   A question with no candidate values leaves Options 1 to 3 empty, holds the answer in Option 4 and chooses `4`. A source the options rest on goes into Background as a URL.
 - **Both tables.** Each stage subheading keeps its Interview and Agent decisions headings. A table the stage has no row for stays as its header and delimiter row, so a run that asked nothing keeps an empty Interview table.
 - **Agent decisions.** One row per choice that no specification, contract, rule or convention settles and whose answer changes an artifact's meaning, behaviour, structure or policy, and one per decision settled between agents. Consider at least three options for each row. A choice a convention settles, a formatting choice and a choice with one possible answer are not rows.

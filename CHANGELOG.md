@@ -263,21 +263,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **A free answer in another language no longer puts that language into a
-  deliberation record.** When the user answers in a language other than the
-  one the project keeps its documents in, the record's `Option 4 (other)` now
-  holds a translation marked `(translated from <language>)`, and the user's
-  original words stay out of the record. Before, the record had to quote the
-  answer word for word, and a project's repository-language check then failed
-  on it.
-
-- **A translated decision label and a translated free answer carry the same
-  marker.** The `qfai-sdd` decisions template now asks for
-  `(translated from <language>)` right after a translated option label, as the
-  deliberation record does after a translated free answer, instead of
-  `(translated)`. The marker stays in English in either file so that tools can
-  find it, and the record reference says in one sentence that a free answer is
-  quoted word for word and chooses `4` unless it needs translating.
+- **Translated free answers and decision labels share one marker.** The
+  deliberation record puts a free answer in `Option 4 (other)` and chooses
+  `4`. It quotes an answer in the record's language word for word. For an
+  answer in another language, it writes the translation followed by
+  `(translated from <language>)` and leaves the original words out. The
+  `qfai-sdd` decisions template uses the same marker after a translated
+  option label. The marker stays in English in both files.
 
 - **The end-of-session feedback review reads review findings too.** Besides the
   session itself, it reads the findings reviewer sub-agents returned and the
