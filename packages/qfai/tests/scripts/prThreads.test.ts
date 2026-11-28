@@ -66,6 +66,40 @@ import {
   unresolvedThreads,
 } from "../../../../scripts/pr-threads.mjs";
 
+const REST_PAYLOAD_FLAGS = new Set(["-f", "-F", "--raw-field", "--field", "--input"]);
+const REST_VALUE_FLAGS = new Set([
+  ...REST_PAYLOAD_FLAGS,
+  "--cache",
+  "--hostname",
+  "-H",
+  "--header",
+  "-p",
+  "--preview",
+  "-q",
+  "--jq",
+  "-t",
+  "--template",
+]);
+
+function isRestWrite(args: readonly string[]): boolean {
+  let hasPayload = false;
+  for (let index = 0; index < args.length; index++) {
+    const flag = args[index];
+    if (flag === undefined || flag === "--") break;
+    if (flag === "--method" || flag.startsWith("--method=") || flag.startsWith("-X")) {
+      const value =
+        flag === "--method" || flag === "-X"
+          ? args[index + 1]
+          : flag.replace(/^(?:--method=|-X=?)/u, "");
+      const method = value?.toUpperCase();
+      return method === undefined ? hasPayload : method !== "GET" && method !== "HEAD";
+    }
+    if (REST_PAYLOAD_FLAGS.has(flag)) hasPayload = true;
+    if (REST_VALUE_FLAGS.has(flag)) index++;
+  }
+  return hasPayload;
+}
+
 function deferralWrites(): string[] {
   return calls.list
     .filter(([command, operation, ...args]) => {
@@ -73,21 +107,7 @@ function deferralWrites(): string[] {
       if (args.includes("graphql")) {
         return args.some((argument) => /^query=\s*mutation\b/u.test(argument));
       }
-      const methodFlag = args.findIndex(
-        (argument) =>
-          argument === "--method" || argument.startsWith("--method=") || argument.startsWith("-X"),
-      );
-      const flag = args[methodFlag];
-      const methodValue =
-        flag === "--method" || flag === "-X"
-          ? args[methodFlag + 1]
-          : flag?.replace(/^(?:--method=|-X=?)/u, "");
-      const method = methodValue?.toUpperCase();
-      return method === undefined
-        ? args.some((argument) =>
-            ["-f", "-F", "--raw-field", "--field", "--input"].includes(argument),
-          )
-        : method !== "GET" && method !== "HEAD";
+      return isRestWrite(args);
     })
     .map((call) => call.join(" "));
 }
@@ -340,6 +360,14 @@ describe("retrying a deferral that stopped part way", () => {
     const endpoint = "repos/example/project/issues/40/comments";
     const write = ["gh", "api", endpoint, writeFlag];
     calls.list.push(["gh", "api", endpoint, readFlag, "-F", "per_page=100"], write);
+    expect(deferralWrites()).toEqual([write.join(" ")]);
+  });
+
+  it("ignores method-shaped input filenames before a REST method flag", () => {
+    const endpoint = "repos/example/project/issues/40/comments";
+    const read = ["gh", "api", endpoint, "--input", "-XPOST", "--method=GET"];
+    const write = ["gh", "api", endpoint, "--input", "-XGET", "-XPOST"];
+    calls.list.push(read, write);
     expect(deferralWrites()).toEqual([write.join(" ")]);
   });
 
