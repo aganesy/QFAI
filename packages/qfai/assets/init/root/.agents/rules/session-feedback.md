@@ -143,7 +143,7 @@ the message also:
 
 - names the finding's class of defect;
 - says where the finding is;
-- names the pull request it came from;
+- names the pull request it came from, where it came from one;
 - suggests asking for the finding's draft once the fix counts as fixed.
 
 Otherwise it does none of these four, and tells the user to continue this
@@ -156,19 +156,21 @@ and to name there the pull request it may have come from.
 
 No record of a held-back finding is kept, so that no file records an unfixed
 defect. A later session asked about a held-back finding it has no record of says
-so. Only where the host shows that the session reaches the user alone does it
-ask which pull request the finding came from; otherwise it asks for nothing and
-repeats the advice the no-question final report gives. Where the user's number
-could also be one this session handed out, it first confirms which finding is
-meant. It then reads that pull request's review comments, as the pull-request
-exception in this section's reading list allows. The number came from another
-session and maps to nothing there, so it treats a finding as above only where
-exactly one security finding in those comments could be the one meant. Where
-several could, it says it could not identify the finding; where none is there,
-or the forge cannot be read, it says so. A finding from a reviewer sub-agent has
-no pull request and cannot be found again, so the message about it says it can
-be asked about only in this session, and under a no-question mode the final
-report says instead that it cannot be found again.
+so. Under a no-question mode it asks nothing and gives the advice of § 7.
+Otherwise, only where the host shows that the session reaches the user alone
+does it ask which pull request the finding came from, and, where the user's
+number could also be one this session handed out, which finding is meant; where
+it does not, it asks for nothing and repeats the advice the no-question final
+report gives. It then reads that pull request's review comments, as the
+pull-request exception in this section's reading list allows. The number came
+from another session and maps to nothing there, so it treats a finding as above
+only where exactly one security finding in those comments could be the one
+meant. Where several could, it says it could not identify the finding; where
+none is there, or the forge cannot be read, it says so. A finding from a
+reviewer sub-agent is in no pull request's review comments and cannot be found
+again, so the message about it says it can be asked about only in this session,
+and under a no-question mode the final report says instead that it cannot be
+found again.
 
 ## 3. What a draft holds
 
