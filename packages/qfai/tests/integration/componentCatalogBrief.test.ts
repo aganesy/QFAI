@@ -17,7 +17,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runCliCaptured as cli } from "../helpers/cliCapture.js";
 
@@ -278,12 +278,19 @@ describe("the brief made from the committed catalogue", () => {
     const root = await projectWith({
       [CATALOG]: `components:\n  - name: Page\n    file: src/page.tsx\n    notes:\n      ${yaml}\n`,
     });
-    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
-    expect(brief).toEqual({
-      code: 1,
-      out: "",
-      err: `${CATALOG} is not a component catalogue. Run \`qfai catalog components\` and commit it.\n`,
-    });
+    // Node can print an emitted warning after the in-process CLI capture has ended.
+    const warning = vi.spyOn(process, "emitWarning").mockImplementation(() => undefined);
+    try {
+      const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+      expect(brief).toEqual({
+        code: 1,
+        out: "",
+        err: `${CATALOG} is not a component catalogue. Run \`qfai catalog components\` and commit it.\n`,
+      });
+      expect(warning).not.toHaveBeenCalled();
+    } finally {
+      warning.mockRestore();
+    }
   });
 
   // QFAI:EX-0001-0307-49
