@@ -151,7 +151,10 @@ export type TsApi = {
     target: number,
     setParents: boolean,
     kind: number,
-  ): TsNode & { getLineAndCharacterOfPosition(pos: number): { line: number; character: number } };
+  ): TsNode & {
+    getLineAndCharacterOfPosition(pos: number): { line: number; character: number };
+    getLineStarts(): readonly number[];
+  };
   getLeadingCommentRanges(
     text: string,
     pos: number,
