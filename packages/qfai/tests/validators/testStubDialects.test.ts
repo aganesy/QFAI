@@ -66,6 +66,47 @@ async function withTests<T>(
 const stubCodes = async (root: string): Promise<string[]> =>
   (await validateTestTodoStubs(root, CONFIG)).map((i) => i.code);
 
+it.each([
+  ["LF", "\n"],
+  ["CRLF", "\r\n"],
+  ["CR", "\r"],
+  ["line separator", "\u2028"],
+  ["paragraph separator", "\u2029"],
+])("reports physical stub locations after a comment with %s", async (_name, separator) => {
+  const stub = `it${TODO}("pending");`;
+  const source = [
+    `// ${stub}`,
+    `  ${stub}`,
+    "const sample = `" + stub,
+    stub + "`;",
+    `  ${stub}`,
+  ].join(separator);
+  await withTests({ "tests/line-breaks.test.ts": source }, async (root) => {
+    const issues = await validateTestTodoStubs(root, CONFIG);
+    expect(issues.map(({ code, loc }) => [code, loc?.line, loc?.column])).toEqual([
+      ["QFAI-TEST-001", 2, 3],
+      ["QFAI-TEST-001", 5, 3],
+    ]);
+  });
+});
+
+it("keeps a CRLF-continued string within its template substitution", async () => {
+  const stub = `it${TODO}("pending");`;
+  const source = [
+    'const rendered = `${("continued \\',
+    '}`" + `nested',
+    `  ${stub}`,
+    "`)}`;",
+    `  ${stub}`,
+  ].join("\r\n");
+  await withTests({ "tests/line-continuation.test.ts": source }, async (root) => {
+    const issues = await validateTestTodoStubs(root, CONFIG);
+    expect(issues.map(({ code, loc }) => [code, loc?.line, loc?.column])).toEqual([
+      ["QFAI-TEST-001", 5, 3],
+    ]);
+  });
+});
+
 describe("every supported stack's stub construct is detected", () => {
   const cases: Array<[string, string, string]> = [
     ["tests/a.test.ts", JS_STUB, "vitest/jest"],

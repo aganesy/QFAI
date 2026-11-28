@@ -54,7 +54,7 @@ Feature: doctor --autoremediate mode
   # AC-0003-0009-07
   Scenario: A converged live repair pass leaves its targets unchanged
     Given Doctor runs outside CI with a current managed ignore block, installed runtime dependencies, run logs inside the TTL, no repairable wrapper finding, and no eligible link backup
-    When `qfai doctor --autoremediate --yes` runs again
+    When `qfai doctor --profile qfai-implement --autoremediate --yes` runs again
     Then no dependency is installed and no run log is pruned
     And `.gitignore` remains byte-identical and the wrappers, backups and run logs remain unchanged
 ```

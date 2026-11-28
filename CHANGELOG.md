@@ -6,6 +6,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A domain-language step settles the request's terms before the interview
+  and the specification.** `common-domain-language` runs in the discussion
+  stage between `discussion-research` and `discussion-interview`, and first in
+  every specification stage, before `sdd-triage`, marked pass-through. It reads
+  each domain word against `01_policy/glossary.md`, corrects a rejected
+  synonym, proposes a synonym for a row's Avoid cell, and splits a word read
+  two ways into one row per bounded context. It drafts a definition only from
+  a use it cites, asks for a new business term's definition with no
+  recommended answer, and tries each definition on an edge case. In discussion
+  it leaves each settled term as an `open-questions.md` row; in the
+  specification stage it writes the glossary. `qfai-discussion` and `qfai-sdd`
+  list the step, and `npx qfai workflow plan` returns it. A sentence that names a
+  rejected word as a word writes it in a code span kept on one line, which
+  the check does not read; a test title leaves the word out.
 - **The component catalogue is a closed vocabulary agents build screens from.**
   Each entry that `qfai catalog components` writes now also lists:
   - `variants`: the values of each prop typed as a union of string literals;
@@ -262,6 +276,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the screen contains.
 
 ### Changed
+
+- **Breaking: the glossary records each term's rejected synonyms and bounded
+  context, and `qfai validate` holds the story tree and test titles to them.**
+  The `## Terms` table of `01_policy/glossary.md` has the columns Term,
+  Definition, Avoid and Context. Avoid lists, comma-separated, the words a term
+  rejects; Context names the bounded context a row belongs to, and an optional
+  `## Contexts` table of Name and Purpose declares each context named.
+  - `qfai validate --profile sdd` reports a `## Terms` table without the four
+    columns (`QFAI-DOCSCHEMA-001`), a rejected synonym in a document under
+    `paths.specsDir` or `paths.contractsDir` (`QFAI-STORY-022`, error; the
+    glossary and the decision and open-question registers are not read), and
+    a Context that `## Contexts` does not declare (`QFAI-STORY-023`).
+  - In `verify` and `full`, a rejected synonym in the title of a JavaScript or
+    TypeScript test is also `QFAI-STORY-022`.
+  - `validation.staleTerms` and its `QFAI-STORY-016` warning are unchanged.
+  - Migration: add the Avoid and Context columns to the `## Terms` table of
+    `01_policy/glossary.md`, leaving their cells empty, so that the header
+    reads `| Term | Definition | Avoid | Context |`. A glossary the 1.x
+    migration writes already has them.
 
 - **The end-of-session feedback review reads review findings too.** Besides the
   session itself, it reads the findings reviewer sub-agents returned and the
@@ -693,6 +726,9 @@ session-review` command still reads local transcripts only.
   request, such as the Japanese for "not X but", made it a false lead. The turn
   still counts among the typed turns, and later turns keep their numbers.
   Fixes #6120.
+
+- JavaScript and TypeScript test-stub findings preserve the line and column
+  after every JavaScript line terminator.
 
 - Specification tables inside a list item's HTML comment block are ignored.
   Inline comments are removed only within their own table cells, preserving the
@@ -3338,8 +3374,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   was deleted in between. Closes #4504.
 
 - Automatic release tagging verifies that the pushed commit came from merging the
-  version's release branch within this repository. A skipped tag names the expected
-  release branch, target branch and pushed commit.
+  version's release branch within this repository. When no pull request satisfies
+  the association checks, the diagnostic names the expected release branch,
+  target branch, and pushed commit.
 
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the
@@ -3689,8 +3726,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   stays local and a different origin needs its own authorization.
   Closes #4496.
 
-- Component catalogues keep a component's leading theme token comments in
-  files with LF, CRLF, or CR line endings.
+- Component catalogues list the theme tokens referenced in a component's leading
+  comments in files with LF, CRLF, or CR line endings.
 
 ## [2.5.0] - 2026-11-15
 
