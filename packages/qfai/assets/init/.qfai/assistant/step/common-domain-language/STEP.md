@@ -56,7 +56,7 @@ selects: the deliberation record through `npx qfai sdd preflight --record
 explicit requirement as supplied. Read that input in place of a deliberation
 record. When Stage 0 stops, write nothing to the story tree, leave
 `01_policy/glossary.md` and `open-questions.md` as they are, and stop; report
-the stop as Stage 0 states it, since no later step of the stage runs.
+which Stage 0 stop condition applied, since no later step of the stage runs.
 
 ## Procedure
 

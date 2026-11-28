@@ -96,7 +96,8 @@ describe("terms a discussion settled", () => {
     const text = await readShipped(`step/${STEP}/STEP.md`);
     const before = flat(sectionOf(text, "## Before the first write"));
     expect(before).toContain("npx qfai sdd preflight --record");
-    expect(before).toMatch(/When Stage 0 stops, write nothing/i);
+    expect(before).toMatch(/When Stage 0 stops, write nothing to the story tree/i);
+    expect(before).toMatch(/report which Stage 0 stop condition applied/i);
     expect(before).toMatch(/leave `01_policy\/glossary.md` and `open-questions.md` as they are/);
     expect(text.indexOf("## Before the first write")).toBeLessThan(text.indexOf("## Procedure"));
   });

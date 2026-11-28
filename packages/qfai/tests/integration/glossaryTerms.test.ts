@@ -400,3 +400,21 @@ describe("a Playwright describe block", () => {
     ]);
   });
 });
+
+describe("test calls the scan reads past", () => {
+  // QFAI:EX-0001-0317-18
+  it("reads titles after a call that never closes", async () => {
+    await put(glossaryFile, glossary([customer]));
+    await put("tests/a.test.ts", ['it("x", () => {', 'it("client b", () => {});', ""].join("\n"));
+    const found = await findings("verify", "QFAI-STORY-022");
+    expect(found.map((item) => [item.file, item.loc?.line])).toEqual([["tests/a.test.ts", 2]]);
+  });
+
+  // QFAI:EX-0001-0317-19
+  it("joins a title split by a line continuation", async () => {
+    await put(glossaryFile, glossary([customer]));
+    await put("tests/a.test.ts", ['it("cli\\', 'ent signs in", () => {});', ""].join("\n"));
+    const found = await findings("verify", "QFAI-STORY-022");
+    expect(found.map((item) => [item.file, item.loc?.line])).toEqual([["tests/a.test.ts", 1]]);
+  });
+});
