@@ -143,7 +143,7 @@ the message also:
 
 - names the finding's class of defect;
 - says where the finding is;
-- names the pull request it came from;
+- names the pull request it came from, where it came from one;
 - suggests asking for the finding's draft once the fix counts as fixed.
 
 Otherwise it does none of these four, and tells the user to continue this
@@ -151,24 +151,35 @@ session where only they will see the answer and ask about the finding there by
 its number. An answer gives the four only where the host shows it reaches the
 user alone, and otherwise repeats this advice. Under a no-question mode the
 final report names it by its number alone, since others may read that report. It
-tells the user to ask about it in a session where only they will see the answer
-and to name there the pull request it may have come from.
+tells the user to ask about it in a session where questions are allowed and
+only they will see the answer, and to name there the pull request it may have
+come from.
 
 No record of a held-back finding is kept, so that no file records an unfixed
 defect. A later session asked about a held-back finding it has no record of says
-so. Only where the host shows that the session reaches the user alone does it
-ask which pull request the finding came from; otherwise it asks for nothing and
-repeats the advice the no-question final report gives. Where the user's number
-could also be one this session handed out, it first confirms which finding is
-meant. It then reads that pull request's review comments, as the pull-request
-exception in this section's reading list allows. The number came from another
-session and maps to nothing there, so it treats a finding as above only where
-exactly one security finding in those comments could be the one meant. Where
-several could, it says it could not identify the finding; where none is there,
-or the forge cannot be read, it says so. A finding from a reviewer sub-agent has
-no pull request and cannot be found again, so the message about it says it can
-be asked about only in this session, and under a no-question mode the final
-report says instead that it cannot be found again.
+so. Under a no-question mode or where the host cannot show the session reaches
+the user alone, it asks nothing and repeats the advice from the no-question
+final report without looking up the finding or giving its details.
+
+Where questions are allowed and the host shows the session reaches the user
+alone, it stops before asking for a pull request if the user identifies the
+finding as one that appears only in a reviewer sub-agent's report. It says
+that the finding can be asked about only in the original session.
+
+For other findings in that private branch, it confirms which finding is meant
+if the number could also be one it handed out. It asks which pull request the
+finding came from if the user has not named it. It then reads that pull
+request's review comments, as the pull-request exception in this section's
+reading list allows. The number came from another session and maps to
+nothing there. It applies the held-back security rules only when exactly one
+security finding in those comments could
+be the one meant. Where several could, it says it could not identify the
+finding. Where none is there or the forge cannot be read, it says so.
+
+A finding that appears only in a reviewer sub-agent's report cannot be found
+again from pull request comments. The message says it can be asked about only
+in the original session. The no-question final report says it cannot be found
+again.
 
 ## 3. What a draft holds
 
