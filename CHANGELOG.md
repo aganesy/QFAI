@@ -278,12 +278,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it is unknown whether the project releases or deploys. An unfixed one is named
   to the user by a number alone; its class of defect and location are given only
   where the message reaches the user alone, and otherwise the user is advised to
-  ask about it in the same session, where only they see the answer; under a
-  no-question mode the report asks them to name its pull request in such a
-  session. No record of a held-back finding is kept: a later session where only
-  the user sees the answer asks for its pull request and finds it again in that
-  pull request's review comments. The `qfai session-review` command still reads
-  local transcripts only.
+  continue the session where only they see the answer and ask about it there;
+  under a no-question mode the report asks them to name its pull request in a
+  session where only they see the answer. No record of a held-back finding is
+  kept: a later session where only the user sees the answer asks for its pull
+  request and finds it again in that pull request's review comments. The `qfai
+session-review` command still reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A
