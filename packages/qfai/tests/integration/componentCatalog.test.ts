@@ -188,6 +188,7 @@ describe("JSX needs the TypeScript compiler the project installs", () => {
         const entries = Object.entries(compiler);
         expect(Object.fromEntries(entries)).toMatchObject({
           createSourceFile: expect.any(Function),
+          SyntaxKind: expect.any(Object),
           getLeadingCommentRanges: expect.any(Function),
           getTrailingCommentRanges: expect.any(Function),
         });
