@@ -450,6 +450,29 @@ describe("each component lists the theme variables its declaration references", 
     );
   });
 
+  // QFAI:EX-0001-0307-38
+  it.each([
+    { name: "LF", lineEnding: "\n" },
+    { name: "CRLF", lineEnding: "\r\n" },
+    { name: "CR", lineEnding: "\r" },
+  ])("keeps a component's own leading token comment with $name", async ({ lineEnding }) => {
+    const found = await components({
+      "src/ui/pair.tsx": [
+        "export function First() {",
+        "  return <p />;",
+        "} // var(--previous)",
+        "// var(--accent)",
+        "export function Second() {",
+        '  return <p style={{ color: "var(--self)" }} />;',
+        "}",
+      ].join(lineEnding),
+    });
+    expect(found).toEqual([
+      { name: "First", file: "src/ui/pair.tsx" },
+      { name: "Second", file: "src/ui/pair.tsx", tokens: ["--accent", "--self"] },
+    ]);
+  });
+
   // QFAI:EX-0001-0307-39
   it("reads a tokens list back and treats any other tokens value as invalid", async () => {
     const entry = ["components:", "  - name: Badge", "    file: src/ui/badge.tsx"];

@@ -432,7 +432,7 @@ flowchart LR
   - Counts what this project's own Claude Code and Codex transcripts show, for the session review
     in `.agents/rules/session-feedback.md`: the QFAI reminders shown, the rule, skill and step files
     read, the tool errors with their finding codes, the `qfai` commands with their exit status, the
-    structured questions asked, and the typed turns that match a fixed list of correction words.
+    structured questions asked, and the typed turns after the first that match a fixed list of correction words.
     It reads local files only, sends nothing anywhere, and prints counts and matched words, never
     message text. With no option it reports, for each agent, the session whose transcript changed
     last; `--agent claude|codex`, `--session <id>` and `--since <value>` choose others. `--since`

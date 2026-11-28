@@ -32,7 +32,7 @@ import { parse as parseYaml } from "yaml";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const LAYER = ".instruction/02_project";
 const NODE_RANGE_CLAIM =
-  /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?(?:`([~^<>=]*\s*v?\d[^`]*)`|((?:[~^<>=]+\s*)?v?\d+(?:\.[\dx*]+){0,2}(?:[ \t]*(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?v?\d+(?:\.[\dx*]+){0,2})*))/giu;
+  /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?(?:`([~^<>=]*\s*v?\d[^`]*)`|((?:[~^<>=]+\s*)?v?\d+(?:\.[\dx*]+){0,2}(?:[ \t]*(?:\|\|[ \t]*[x*](?![\w*]|\.[\dx*])|(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?v?\d+(?:\.[\dx*]+){0,2}))*))/giu;
 
 /**
  * A backticked repository-relative path: one that starts at a root-level entry
@@ -291,14 +291,36 @@ function readTagCommand(command: string): {
     }
   }
 
-  // A continued command may clear the count or name the tag on its next line.
-  const continued = command.endsWith("\\");
   const creates =
     !optionsKnown ||
     (!hasPointsAtFilter &&
-      (!hasAnnotationCount || continued) &&
-      (operands.length > 0 || (args.length > 0 && (!hasListModifier || continued))));
+      !hasAnnotationCount &&
+      (operands.length > 0 || (args.length > 0 && !hasListModifier)));
   return { creates, operands, optionsKnown };
+}
+
+/** Remove unquoted backslash-newline pairs before finding command boundaries. */
+function joinShellContinuations(shell: string): string {
+  const tokens = /"(?:[^"\\]|\\[\s\S])*"|'[^']*'|\\(?:\r?\n|[^\r\n])|[\s\S]/g;
+  let mayStartComment = true;
+  let copied = 0;
+  let joined = "";
+  for (let token = tokens.exec(shell); token !== null; token = tokens.exec(shell)) {
+    const value = token[0];
+    if (value === "\\\n" || value === "\\\r\n") {
+      joined += shell.slice(copied, token.index);
+      copied = tokens.lastIndex;
+      continue;
+    }
+    if (value === "#" && mayStartComment) {
+      const newline = shell.indexOf("\n", tokens.lastIndex);
+      if (newline === -1) break;
+      tokens.lastIndex = newline + 1;
+      continue;
+    }
+    mayStartComment = /^[\s;&|()<>]$/.test(value);
+  }
+  return joined + shell.slice(copied);
 }
 
 function splitShellCommands(line: string): string[] {
@@ -322,13 +344,12 @@ function splitShellCommands(line: string): string[] {
 
 /** Potential tag creation commands in shell input, checked one command at a time. */
 function tagCreations(shell: string): string[] {
-  return shell
+  return joinShellContinuations(shell)
     .split(/\r?\n/)
     .flatMap(splitShellCommands)
     .map((part) => part.trim())
     .filter((part) => /^git\s+tag(?:\s|$)/.test(part))
-    .filter((part) => readTagCommand(part).creates)
-    .map((part) => part.replace(/\\$/, "").trim());
+    .filter((part) => readTagCommand(part).creates);
 }
 
 /**
@@ -366,6 +387,7 @@ function releaseTagCreations(guide: string): string[] {
 
 function releaseTaggingStatements(guide: string): string[] {
   const statements = releaseShellBlocks(releaseMarkdown.parse(guide, {}))
+    .map(joinShellContinuations)
     .map((body) => body.replace(/&&[ \t]*\r?\n\s*/g, "&& "))
     .flatMap((body) => body.split(/\r?\n/))
     .map((line) => line.trim());
@@ -447,6 +469,11 @@ describe("the project layer describes the repository it is in", () => {
         `The release supports Node.js\n\`${extended}\`. Node.js requires ${bounded}.`,
       ),
     ).toEqual([extended, bounded]);
+  });
+
+  it.each(["*", "x"])("retains the standalone %s alternative in a plain Node claim", (wildcard) => {
+    const range = `^20.19.0 || ^22.13.0 || >=24.0.0 || ${wildcard}`;
+    expect(statedNodeRanges(`Node.js requires ${range}.`)).toEqual([range]);
   });
 
   // The floor is the one fact in this layer with a machine-readable source, and
@@ -596,6 +623,16 @@ describe("the project layer describes the repository it is in", () => {
     expect(namesItsCommit(command)).toBe(false);
   });
 
+  it("keeps either listing filter active when only the other is reset", () => {
+    const both = "git tag -in1k --points-at=HEAD";
+    expect(tagCreations(both + " -n-1 vX.Y.Z")).toEqual([]);
+    expect(tagCreations(both + " --no-points-at vX.Y.Z")).toEqual([]);
+
+    const creation = both + " -n-1 --no-points-at vX.Y.Z";
+    expect(tagCreations(creation)).toEqual([creation]);
+    expect(namesItsCommit(creation)).toBe(false);
+  });
+
   it("uses the last points-at filter when checking tag creation", () => {
     const implicit = "git tag --points-at=HEAD --no-points-at vX.Y.Z";
     expect(tagCreations(implicit)).toEqual([implicit]);
@@ -698,8 +735,51 @@ describe("the project layer describes the repository it is in", () => {
       "git tag vX.Y.Z",
     ]);
     expect(tagCreations('git tag --format="%(refname)" \\\n  vX.Y.Z')).toEqual([
-      'git tag --format="%(refname)"',
+      'git tag --format="%(refname)"   vX.Y.Z',
     ]);
+  });
+
+  it.each(["\n", "\r\n"])("reads listing filters and tag operands across %j", (newline) => {
+    const shell = [
+      "git tag --points-at=HEAD \\",
+      "--no-points-at vX.Y.Z",
+      "git tag --points-at=HEAD \\",
+      "vX.Y.Z",
+      "git tag --points-at=HEAD \\\\",
+      "--no-points-at vX.Y.Z",
+    ].join(newline);
+
+    const creations = tagCreations(shell);
+    expect(creations).toEqual(["git tag --points-at=HEAD --no-points-at vX.Y.Z"]);
+    expect(creations.some(namesItsCommit)).toBe(false);
+  });
+
+  it("preserves a backslash at the end of a quoted line or shell comment", () => {
+    const quoted = "git tag -m 'two lines \\\nmessage' vX.Y.Z";
+    const comment = ["git tag --points-at=HEAD # listing \\", "git tag second <SHA>"].join("\n");
+    expect(joinShellContinuations(quoted)).toBe(quoted);
+    expect(tagCreations(comment)).toEqual(["git tag second <SHA>"]);
+  });
+
+  it.each([
+    ["(", ")"],
+    ["(true)", ""],
+  ])("keeps the tag command after a comment adjacent to %s", (group, close) => {
+    const command = "git tag second 0123456789abcdef0123456789abcdef01234567";
+    const shell = [`${group}# note \\`, command, close].join("\n");
+    expect(tagCreations(shell)).toEqual([command]);
+  });
+
+  it("checks the commit and ordering of a continued tag command", () => {
+    const check = "git merge-base --is-ancestor <SHA> origin/main";
+    const firstLine = "git tag --points-at=HEAD";
+    const lastLine = "--no-points-at vX.Y.Z <SHA>";
+    const guide = ["~~~sh", check + " &&", firstLine + " \\", lastLine, "~~~"].join("\n");
+    const command = firstLine + " " + lastLine;
+
+    expect(releaseTagCreations(guide)).toEqual([command]);
+    expect(namesItsCommit(command)).toBe(true);
+    expect(releaseTaggingStatements(guide)).toEqual([check + " && " + command]);
   });
 
   it("only expands an unambiguous long tag option", () => {
@@ -731,12 +811,13 @@ describe("the project layer describes the repository it is in", () => {
     expect(namesItsCommit(invalid)).toBe(false);
   });
 
-  it("keeps an annotation count in scope when a continuation can clear it", () => {
+  it("uses the final annotation count across a shell continuation", () => {
     const firstLine = "git tag -in1k";
     const command = [firstLine + " \\", "  -n-1 vX.Y.Z"].join("\n");
     const candidates = tagCreations(command);
-    expect(candidates).toEqual([firstLine]);
+    expect(candidates).toEqual([firstLine + "   -n-1 vX.Y.Z"]);
     expect(candidates.filter(namesItsCommit)).toEqual([]);
+    expect(tagCreations([firstLine + " \\", "  vX.Y.Z"].join("\n"))).toEqual([]);
   });
 
   // Pasted as separate lines, the block tagged even when the ancestry check
