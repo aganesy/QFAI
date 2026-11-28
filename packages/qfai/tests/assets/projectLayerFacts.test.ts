@@ -32,7 +32,7 @@ import { parse as parseYaml } from "yaml";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const LAYER = ".instruction/02_project";
 const NODE_RANGE_CLAIM =
-  /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?(?:`([~^<>=]*\s*v?\d[^`]*)`|((?:[~^<>=]+\s*)?v?\d+(?:\.[\dx*]+){0,2}(?:[ \t]*(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?v?\d+(?:\.[\dx*]+){0,2})*))/giu;
+  /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?(?:`([~^<>=]*\s*v?\d[^`]*)`|((?:[~^<>=]+\s*)?v?\d+(?:\.[\dx*]+){0,2}(?:[ \t]*(?:\|\|[ \t]*[x*](?![\w*]|\.[\dx*])|(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?v?\d+(?:\.[\dx*]+){0,2}))*))/giu;
 
 /**
  * A backticked repository-relative path: one that starts at a root-level entry
@@ -483,6 +483,11 @@ describe("the project layer describes the repository it is in", () => {
         `The release supports Node.js\n\`${extended}\`. Node.js requires ${bounded}.`,
       ),
     ).toEqual([extended, bounded]);
+  });
+
+  it.each(["*", "x"])("retains the standalone %s alternative in a plain Node claim", (wildcard) => {
+    const range = `^20.19.0 || ^22.13.0 || >=24.0.0 || ${wildcard}`;
+    expect(statedNodeRanges(`Node.js requires ${range}.`)).toEqual([range]);
   });
 
   // The floor is the one fact in this layer with a machine-readable source, and
