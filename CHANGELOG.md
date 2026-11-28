@@ -686,6 +686,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai catalog components --brief` no longer sends nonprinting characters
+  to the terminal.** A tab in a component's line now prints as a space, and
+  every other control, format or lone surrogate character, such as an escape
+  or a bidirectional override, prints as `\u{XXXX}` with its code point in
+  upper-case hex. Names, paths and free text in other scripts, and emoji, print
+  unchanged.
+
 - **The component catalogue keeps a numeric prop in its place.** A prop named
   `1` used to move ahead of the other props under `variants`, in the written
   catalogue and in `--brief`. The written catalogue now follows the order

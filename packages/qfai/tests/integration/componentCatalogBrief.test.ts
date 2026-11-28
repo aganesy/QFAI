@@ -160,6 +160,49 @@ describe("the brief made from the committed catalogue", () => {
     expect(lines[2]).toContain("a11y: Enter activates it now;");
   });
 
+  // QFAI:EX-0001-0307-50
+  it.each([
+    { name: "a tab as a space", yaml: '"Enter\\tactivates"', shown: "a11y: Enter activates;" },
+    {
+      name: "an escape as its code point",
+      yaml: '"Enter\\e[31m"',
+      shown: "a11y: Enter\\u{001B}[31m;",
+    },
+    {
+      name: "a bidi override as its code point",
+      yaml: '"Enter\\u202Eok"',
+      shown: "a11y: Enter\\u{202E}ok;",
+    },
+    {
+      name: "a zero-width space as its code point",
+      yaml: '"En\\u200Bter"',
+      shown: "a11y: En\\u{200B}ter;",
+    },
+  ])("prints $name on the component's line", async ({ yaml, shown }) => {
+    const root = await projectWith({
+      [CATALOG]: CATALOG_TEXT.replace(
+        "    a11y: APG button, Enter and Space activate",
+        `    a11y: ${yaml}`,
+      ),
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    expect(brief.err).toBe("");
+    const lines = brief.out.trimEnd().split("\n");
+    expect(lines).toHaveLength(3);
+    expect(lines[2]).toContain(shown);
+  });
+
+  // QFAI:EX-0001-0307-50
+  it("prints a non-ASCII name, emoji and ordinary spaces unchanged", async () => {
+    const root = await projectWith({
+      [CATALOG]: CATALOG_TEXT.replace("  - name: Page", "  - name: Bouton–Été 🎉 x"),
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    expect(brief.out.split("\n")[1]).toBe("- Bouton–Été 🎉 x (src/page.tsx)");
+  });
+
   // QFAI:EX-0001-0307-49
   it("prints a numeric variant prop where the catalogue writes it", async () => {
     const root = await projectWith({

@@ -54,7 +54,20 @@ function componentLine(entry: ReadonlyMap<unknown, unknown>): string | null {
     fields.push(`${key}: ${value}`);
   }
   const line = fields.length === 0 ? head : `${head}: ${fields.join("; ")}`;
-  return line.replace(/\r\n|[\r\n\v\f\u0085\u2028\u2029]/g, " ");
+  return printable(line);
+}
+
+/**
+ * The line as a terminal shows it: each line break, with a CRLF pair as one, and each tab as a
+ * space; every other control, format or lone surrogate character as `\u{XXXX}`, upper-case hex.
+ */
+function printable(line: string): string {
+  return line
+    .replace(/\r\n|[\r\n\t\v\f\u0085\u2028\u2029]/g, " ")
+    .replace(/[\p{Cc}\p{Cf}\p{Cs}]/gu, (char) => {
+      const hex = (char.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, "0");
+      return `\\u{${hex}}`;
+    });
 }
 
 function valueText(value: unknown): string | null {
