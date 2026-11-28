@@ -299,22 +299,33 @@ function readTagCommand(command: string): {
   return { creates, operands, optionsKnown };
 }
 
-/** Remove unquoted backslash-newline pairs before finding command boundaries. */
-function joinShellContinuations(shell: string): string {
-  const tokens = /"(?:[^"\\]|\\[\s\S])*"|'[^']*'|\\(?:\r?\n|[^\r\n])|[\s\S]/g;
+/** Remove shell comments and unquoted backslash-newline pairs before splitting commands. */
+function stripCommentsAndJoinContinuations(shell: string): string {
+  // The guide's <SHA> operand is one word even when it spans a physical line break.
+  const tokens =
+    /(?<placeholder><(?:\\\r?\n)*S(?:\\\r?\n)*H(?:\\\r?\n)*A(?:\\\r?\n)*>)|"(?:[^"\\]|\\[\s\S])*"|'[^']*'|\\(?:\r?\n|[^\r\n])|[\s\S]/g;
   let mayStartComment = true;
   let copied = 0;
   let joined = "";
   for (let token = tokens.exec(shell); token !== null; token = tokens.exec(shell)) {
     const value = token[0];
+    const placeholder = token.groups?.placeholder;
+    if (placeholder !== undefined) {
+      joined += shell.slice(copied, token.index) + placeholder.replace(/\\\r?\n/g, "");
+      copied = tokens.lastIndex;
+      mayStartComment = false;
+      continue;
+    }
     if (value === "\\\n" || value === "\\\r\n") {
       joined += shell.slice(copied, token.index);
       copied = tokens.lastIndex;
       continue;
     }
     if (value === "#" && mayStartComment) {
+      joined += shell.slice(copied, token.index);
       const newline = shell.indexOf("\n", tokens.lastIndex);
-      if (newline === -1) break;
+      if (newline === -1) return joined;
+      copied = shell[newline - 1] === "\r" ? newline - 1 : newline;
       tokens.lastIndex = newline + 1;
       continue;
     }
@@ -326,15 +337,10 @@ function joinShellContinuations(shell: string): string {
 function splitShellCommands(line: string): string[] {
   const parts: string[] = [];
   // The capture group identifies quoted or escaped text to leave in the command.
-  const tokens = /("(?:[^"\\]|\\.)*"|'[^']*'|\\.)|(^|\s)#|#|&&|\|\||;|\|/g;
+  const tokens = /("(?:[^"\\]|\\.)*"|'[^']*'|\\.)|&&|\|\||;|\|/g;
   let start = 0;
   for (const token of line.matchAll(tokens)) {
     if (token[1] !== undefined) continue;
-    if (token[2] !== undefined || (token[0] === "#" && token.index === start)) {
-      parts.push(line.slice(start, token.index));
-      return parts;
-    }
-    if (token[0] === "#") continue;
     parts.push(line.slice(start, token.index));
     start = token.index + token[0].length;
   }
@@ -344,7 +350,7 @@ function splitShellCommands(line: string): string[] {
 
 /** Potential tag creation commands in shell input, checked one command at a time. */
 function tagCreations(shell: string): string[] {
-  return joinShellContinuations(shell)
+  return stripCommentsAndJoinContinuations(shell)
     .split(/\r?\n/)
     .flatMap(splitShellCommands)
     .map((part) => part.trim())
@@ -387,7 +393,7 @@ function releaseTagCreations(guide: string): string[] {
 
 function releaseTaggingStatements(guide: string): string[] {
   const statements = releaseShellBlocks(releaseMarkdown.parse(guide, {}))
-    .map(joinShellContinuations)
+    .map(stripCommentsAndJoinContinuations)
     .map((body) => body.replace(/&&[ \t]*\r?\n\s*/g, "&& "))
     .flatMap((body) => body.split(/\r?\n/))
     .map((line) => line.trim());
@@ -754,10 +760,10 @@ describe("the project layer describes the repository it is in", () => {
     expect(creations.some(namesItsCommit)).toBe(false);
   });
 
-  it("preserves a backslash at the end of a quoted line or shell comment", () => {
+  it("keeps quoted backslashes and the command after a shell comment", () => {
     const quoted = "git tag -m 'two lines \\\nmessage' vX.Y.Z";
     const comment = ["git tag --points-at=HEAD # listing \\", "git tag second <SHA>"].join("\n");
-    expect(joinShellContinuations(quoted)).toBe(quoted);
+    expect(stripCommentsAndJoinContinuations(quoted)).toBe(quoted);
     expect(tagCreations(comment)).toEqual(["git tag second <SHA>"]);
   });
 
@@ -768,6 +774,34 @@ describe("the project layer describes the repository it is in", () => {
     const command = "git tag second 0123456789abcdef0123456789abcdef01234567";
     const shell = [`${group}# note \\`, command, close].join("\n");
     expect(tagCreations(shell)).toEqual([command]);
+  });
+
+  it.each([
+    ["(", ")"],
+    ["(true)", ""],
+  ])("ignores tag-shaped comment text adjacent to %s", (group, close) => {
+    const sha = "0123456789abcdef0123456789abcdef01234567";
+    const command = `git tag kept ${sha}`;
+    const comment = `${group}# note; git tag ignored ${sha} \\`;
+    expect(tagCreations([comment, command, close].join("\n"))).toEqual([command]);
+  });
+
+  it("keeps a hash within a shell word or an escape", () => {
+    const bare = "git tag version#draft <SHA>";
+    const escaped = "git tag version\\#draft <SHA>";
+    expect(tagCreations([bare, escaped].join("\n"))).toEqual([bare, escaped]);
+  });
+
+  it("keeps an attached hash on the release commit placeholder", () => {
+    const valid = "git tag vX.Y.Z <SHA>";
+    const invalid = valid + "#suffix";
+    for (const placeholder of ["<SHA>", "<SH\\\nA>", "<SH\\\r\nA>"]) {
+      const command = "git tag vX.Y.Z " + placeholder;
+      expect(tagCreations(command + "#suffix")).toEqual([invalid]);
+      expect(tagCreations(command + " # note")).toEqual([valid]);
+    }
+    expect(namesItsCommit(invalid)).toBe(false);
+    expect(namesItsCommit(valid)).toBe(true);
   });
 
   it("checks the commit and ordering of a continued tag command", () => {
