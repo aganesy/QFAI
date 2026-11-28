@@ -296,6 +296,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     reads `| Term | Definition | Avoid | Context |`. A glossary the 1.x
     migration writes already has them.
 
+- **A free answer in another language no longer puts that language into a
+  deliberation record.** When the user answers in a language other than the
+  one the project keeps its documents in, the record's `Option 4 (other)` now
+  holds a translation marked `(translated from <language>)`, and the user's
+  original words stay out of the record. Before, the record had to quote the
+  answer word for word, and a project's repository-language check then failed
+  on it.
+
 - **The end-of-session feedback review reads review findings too.** Besides the
   session itself, it reads the findings reviewer sub-agents returned and the
   inline review comments, review bodies and conversation comments on the pull
