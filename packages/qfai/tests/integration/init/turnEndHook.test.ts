@@ -402,6 +402,30 @@ describe("turn-end hook", () => {
   });
 
   // QFAI:EX-0001-0244-23
+  it.each([
+    { eventName: "Stop", idKind: "empty", agentId: "" },
+    { eventName: "Stop", idKind: "numeric", agentId: 42 },
+    { eventName: "SubagentStop", idKind: "empty", agentId: "" },
+    { eventName: "SubagentStop", idKind: "numeric", agentId: 42 },
+  ])(
+    "uses the same failure state for omitted and $idKind IDs in $eventName",
+    async ({ eventName, agentId }) => {
+      const fail = await script("fail.js", "type error\n", 1);
+      await project([`- Typecheck: \`${fail}\``, "- Turn-end check: Typecheck"]);
+
+      const event = { session_id: "fallback", hook_event_name: eventName, stop_hook_active: true };
+      const initial = parsed(await hook(event));
+      expect(initial.decision).toBe("block");
+      expect(initial.reason).toContain("type error");
+
+      const repeated = parsed(await hook({ ...event, agent_id: agentId }));
+      expect(repeated.decision).toBeUndefined();
+      expect(repeated.systemMessage).toContain("ended anyway");
+      expect(repeated.systemMessage).toContain("Typecheck");
+    },
+  );
+
+  // QFAI:EX-0001-0244-23
   it("starts a fresh failure count when a legacy state file exists", async () => {
     const fail = await script("fail.js", "type error\n", 1);
     await project([`- Typecheck: \`${fail}\``, "- Turn-end check: Typecheck"]);

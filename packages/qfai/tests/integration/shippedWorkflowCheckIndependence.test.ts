@@ -193,6 +193,7 @@ describe("delivered document checks run independently and require a complete res
       },
       {
         commands: [
+          "node -e '",
           "node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools",
           "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools",
         ],

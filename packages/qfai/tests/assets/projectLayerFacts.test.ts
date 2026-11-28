@@ -32,7 +32,7 @@ import { parse as parseYaml } from "yaml";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const LAYER = ".instruction/02_project";
 const NODE_RANGE_CLAIM =
-  /(?:\^|>=)\s*\d+(?:\.\d+){0,2}(?:\s*\|\|\s*(?:\^|>=)\s*\d+(?:\.\d+){0,2})*/g;
+  /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?(?:`([~^<>=]*\s*v?\d[^`]*)`|((?:[~^<>=]+\s*)?v?\d+(?:\.[\dx*]+){0,2}(?:[ \t]*(?:\|\|[ \t]*|(?=[~^<>=]))(?:[~^<>=]+[ \t]*)?v?\d+(?:\.[\dx*]+){0,2})*))/giu;
 
 /**
  * A backticked repository-relative path: one that starts at a root-level entry
@@ -87,6 +87,13 @@ function declaredNodeRange(manifest: unknown): string | undefined {
   if (!isRecord(engines)) return undefined;
   const node = engines["node"];
   return typeof node === "string" ? node : undefined;
+}
+
+function statedNodeRanges(markdown: string): string[] {
+  return Array.from(
+    withoutFencedBlocks(markdown).matchAll(NODE_RANGE_CLAIM),
+    ([, codeRange, plainRange]) => codeRange ?? plainRange,
+  ).filter((range) => range !== undefined);
 }
 
 function citedPaths(markdown: string): string[] {
@@ -262,7 +269,9 @@ function readTagCommand(command: string): {
     if (flag === "--points-at" || clearsPointsAt) hasPointsAtFilter = !clearsPointsAt;
 
     const listModifier = TAG_LIST_MODIFIERS.has(flag);
-    hasListModifier ||= listModifier || clearsPointsAt;
+    const resetsListFormatting =
+      value === undefined && (flag === "--no-sort" || flag === "--no-format");
+    hasListModifier ||= listModifier || clearsPointsAt || resetsListFormatting;
     const longWithValue = listModifier || VALUE_TAKING_TAG_FLAGS.has(flag);
     const knownSwitch =
       TAG_SWITCHES.has(flag) && (value === undefined || !flag.startsWith("--no-"));
@@ -282,14 +291,36 @@ function readTagCommand(command: string): {
     }
   }
 
-  // A continued command may clear the count or name the tag on its next line.
-  const continued = command.endsWith("\\");
   const creates =
     !optionsKnown ||
     (!hasPointsAtFilter &&
-      (!hasAnnotationCount || continued) &&
-      (operands.length > 0 || (args.length > 0 && (!hasListModifier || continued))));
+      !hasAnnotationCount &&
+      (operands.length > 0 || (args.length > 0 && !hasListModifier)));
   return { creates, operands, optionsKnown };
+}
+
+/** Remove unquoted backslash-newline pairs before finding command boundaries. */
+function joinShellContinuations(shell: string): string {
+  const tokens = /"(?:[^"\\]|\\[\s\S])*"|'[^']*'|\\(?:\r?\n|[^\r\n])|[\s\S]/g;
+  let mayStartComment = true;
+  let copied = 0;
+  let joined = "";
+  for (let token = tokens.exec(shell); token !== null; token = tokens.exec(shell)) {
+    const value = token[0];
+    if (value === "\\\n" || value === "\\\r\n") {
+      joined += shell.slice(copied, token.index);
+      copied = tokens.lastIndex;
+      continue;
+    }
+    if (value === "#" && mayStartComment) {
+      const newline = shell.indexOf("\n", tokens.lastIndex);
+      if (newline === -1) break;
+      tokens.lastIndex = newline + 1;
+      continue;
+    }
+    mayStartComment = /^[\s;&|()<>]$/.test(value);
+  }
+  return joined + shell.slice(copied);
 }
 
 function splitShellCommands(line: string): string[] {
@@ -313,13 +344,12 @@ function splitShellCommands(line: string): string[] {
 
 /** Potential tag creation commands in shell input, checked one command at a time. */
 function tagCreations(shell: string): string[] {
-  return shell
+  return joinShellContinuations(shell)
     .split(/\r?\n/)
     .flatMap(splitShellCommands)
     .map((part) => part.trim())
     .filter((part) => /^git\s+tag(?:\s|$)/.test(part))
-    .filter((part) => readTagCommand(part).creates)
-    .map((part) => part.replace(/\\$/, "").trim());
+    .filter((part) => readTagCommand(part).creates);
 }
 
 /**
@@ -357,19 +387,37 @@ function releaseTagCreations(guide: string): string[] {
 
 function releaseTaggingStatements(guide: string): string[] {
   const statements = releaseShellBlocks(releaseMarkdown.parse(guide, {}))
+    .map(joinShellContinuations)
     .map((body) => body.replace(/&&[ \t]*\r?\n\s*/g, "&& "))
     .flatMap((body) => body.split(/\r?\n/))
     .map((line) => line.trim());
   return statements.filter((statement) => tagCreations(statement).length > 0);
 }
 
-function releaseBuildBlock(guide: string): string | undefined {
-  return releaseShellBlocks(releaseMarkdown.parse(guide, {})).find((body) =>
+function releaseBuildChecks(guide: string): { blocks: string[]; duplicates: string[] } {
+  const blocks = releaseShellBlocks(releaseMarkdown.parse(guide, {})).filter((body) =>
     /^\s*corepack pnpm ci:gate:build$/m.test(body),
   );
+  const duplicates = blocks.filter((body) => /^\s*pnpm verify:pack$/m.test(body));
+  return { blocks, duplicates };
 }
 
 describe("the project layer describes the repository it is in", () => {
+  it("declares the same Node range in the workspace and published package", async () => {
+    const workspacePath = path.join(repoRoot, "package.json");
+    const publishedPath = path.join(repoRoot, "packages", "qfai", "package.json");
+    const [workspace, published] = await Promise.all([
+      readFile(workspacePath, "utf-8"),
+      readFile(publishedPath, "utf-8"),
+    ]);
+    const publishedRange = declaredNodeRange(JSON.parse(published));
+
+    expect(publishedRange, "packages/qfai/package.json#engines.node").toBeDefined();
+    expect(declaredNodeRange(JSON.parse(workspace)), "package.json#engines.node").toBe(
+      publishedRange,
+    );
+  });
+
   it("names no repository path that does not exist", async () => {
     const missing: string[] = [];
     for (const name of await layerFiles()) {
@@ -396,6 +444,33 @@ describe("the project layer describes the repository it is in", () => {
     expect(undeferring, `each guide cites ${rule}`).toEqual([]);
   });
 
+  it("reads complete Node ranges and ignores unrelated version claims", () => {
+    expect(
+      statedNodeRanges(
+        [
+          "Use pnpm `^10.7.0` and a Node.js version matching `^20.19.0 || ^22.13.0 || >=24.0.0`.",
+          "Set `engines.node` to `>=22.13.0`. Use pnpm `^10.7.0`.",
+          "With Node.js already installed, use pnpm `^10.7.0`.",
+          "```md",
+          "An example supports Node.js `^18.0.0`.",
+          "```",
+        ].join("\n"),
+      ),
+    ).toEqual(["^20.19.0 || ^22.13.0 || >=24.0.0", ">=22.13.0"]);
+  });
+
+  it("retains extra alternatives and comparator bounds in a Node claim", () => {
+    const supported = "^20.19.0 || ^22.13.0 || >=24.0.0";
+    const extended = `${supported} || 23.x`;
+    const bounded = `${supported} <26.0.0`;
+
+    expect(
+      statedNodeRanges(
+        `The release supports Node.js\n\`${extended}\`. Node.js requires ${bounded}.`,
+      ),
+    ).toEqual([extended, bounded]);
+  });
+
   // The floor is the one fact in this layer with a machine-readable source, and
   // it moved twice without either file noticing. A stated floor must match; a
   // file that points at `package.json#engines` instead states nothing to match.
@@ -409,7 +484,7 @@ describe("the project layer describes the repository it is in", () => {
     const disagreeing: string[] = [];
     for (const name of await layerFiles()) {
       const text = await readFile(path.join(repoRoot, LAYER, name), "utf-8");
-      for (const [stated] of text.matchAll(NODE_RANGE_CLAIM)) {
+      for (const stated of statedNodeRanges(text)) {
         if (stated.replace(/\s+/g, "") !== engines?.replace(/\s+/g, "")) {
           disagreeing.push(`${name}: ${stated}`);
         }
@@ -430,9 +505,7 @@ describe("the project layer describes the repository it is in", () => {
     expect(engines, "package.json declares no Node range").not.toBeUndefined();
 
     const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
-    const stated = [...withoutFencedBlocks(guide).matchAll(NODE_RANGE_CLAIM)].map(
-      ([match]) => match,
-    );
+    const stated = statedNodeRanges(guide);
 
     expect(stated.length, "the release guide states no Node floor to check").toBeGreaterThan(0);
     expect(
@@ -507,6 +580,7 @@ describe("the project layer describes the repository it is in", () => {
   it("checks the tag's commit independently of a quoted message", () => {
     expect(namesItsCommit('git tag -m "See HEAD for details" vX.Y.Z <SHA>')).toBe(true);
     expect(namesItsCommit('git tag -am "See HEAD for details" vX.Y.Z <SHA>')).toBe(true);
+    expect(namesItsCommit("git tag -aml vX.Y.Z <SHA>")).toBe(true);
     expect(namesItsCommit('git tag --mess "See HEAD for details" vX.Y.Z <SHA>')).toBe(true);
     expect(namesItsCommit("git tag vX.Y.Z <SHA> --message 'Compare HEAD and @'")).toBe(true);
     expect(namesItsCommit('git tag -- vX.Y.Z "<SHA>"')).toBe(true);
@@ -544,6 +618,16 @@ describe("the project layer describes the repository it is in", () => {
     expect(namesItsCommit(command)).toBe(false);
   });
 
+  it("keeps either listing filter active when only the other is reset", () => {
+    const both = "git tag -in1k --points-at=HEAD";
+    expect(tagCreations(both + " -n-1 vX.Y.Z")).toEqual([]);
+    expect(tagCreations(both + " --no-points-at vX.Y.Z")).toEqual([]);
+
+    const creation = both + " -n-1 --no-points-at vX.Y.Z";
+    expect(tagCreations(creation)).toEqual([creation]);
+    expect(namesItsCommit(creation)).toBe(false);
+  });
+
   it("uses the last points-at filter when checking tag creation", () => {
     const implicit = "git tag --points-at=HEAD --no-points-at vX.Y.Z";
     expect(tagCreations(implicit)).toEqual([implicit]);
@@ -557,6 +641,23 @@ describe("the project layer describes the repository it is in", () => {
     expect(tagCreations("git tag --no-points-at")).toEqual([]);
     expect(tagCreations("git tag --points-at")).toEqual([]);
     expect(tagCreations("git tag --no-points-at --points-at")).toEqual([]);
+    expect(tagCreations("git tag --points-at HEAD --no-points-at --list vX.Y.Z")).toEqual([]);
+
+    const unknown = "git tag --no-unknown --points-at HEAD --no-points-at --list vX.Y.Z";
+    expect(tagCreations(unknown)).toEqual([unknown]);
+    expect(namesItsCommit(unknown)).toBe(false);
+  });
+
+  it.each(["--no-sort", "--no-format"])("lists tags with %s and no tag operand", (option) => {
+    expect(tagCreations(`git tag ${option}`)).toEqual([]);
+
+    const implicit = `git tag ${option} vX.Y.Z`;
+    expect(tagCreations(implicit)).toEqual([implicit]);
+    expect(namesItsCommit(implicit)).toBe(false);
+
+    const explicit = `${implicit} <SHA>`;
+    expect(tagCreations(explicit)).toEqual([explicit]);
+    expect(namesItsCommit(explicit)).toBe(true);
   });
 
   it.each(["git tag vX.Y.Z --me --contains", "git tag --me --sort vX.Y.Z"])(
@@ -629,8 +730,51 @@ describe("the project layer describes the repository it is in", () => {
       "git tag vX.Y.Z",
     ]);
     expect(tagCreations('git tag --format="%(refname)" \\\n  vX.Y.Z')).toEqual([
-      'git tag --format="%(refname)"',
+      'git tag --format="%(refname)"   vX.Y.Z',
     ]);
+  });
+
+  it.each(["\n", "\r\n"])("reads listing filters and tag operands across %j", (newline) => {
+    const shell = [
+      "git tag --points-at=HEAD \\",
+      "--no-points-at vX.Y.Z",
+      "git tag --points-at=HEAD \\",
+      "vX.Y.Z",
+      "git tag --points-at=HEAD \\\\",
+      "--no-points-at vX.Y.Z",
+    ].join(newline);
+
+    const creations = tagCreations(shell);
+    expect(creations).toEqual(["git tag --points-at=HEAD --no-points-at vX.Y.Z"]);
+    expect(creations.some(namesItsCommit)).toBe(false);
+  });
+
+  it("preserves a backslash at the end of a quoted line or shell comment", () => {
+    const quoted = "git tag -m 'two lines \\\nmessage' vX.Y.Z";
+    const comment = ["git tag --points-at=HEAD # listing \\", "git tag second <SHA>"].join("\n");
+    expect(joinShellContinuations(quoted)).toBe(quoted);
+    expect(tagCreations(comment)).toEqual(["git tag second <SHA>"]);
+  });
+
+  it.each([
+    ["(", ")"],
+    ["(true)", ""],
+  ])("keeps the tag command after a comment adjacent to %s", (group, close) => {
+    const command = "git tag second 0123456789abcdef0123456789abcdef01234567";
+    const shell = [`${group}# note \\`, command, close].join("\n");
+    expect(tagCreations(shell)).toEqual([command]);
+  });
+
+  it("checks the commit and ordering of a continued tag command", () => {
+    const check = "git merge-base --is-ancestor <SHA> origin/main";
+    const firstLine = "git tag --points-at=HEAD";
+    const lastLine = "--no-points-at vX.Y.Z <SHA>";
+    const guide = ["~~~sh", check + " &&", firstLine + " \\", lastLine, "~~~"].join("\n");
+    const command = firstLine + " " + lastLine;
+
+    expect(releaseTagCreations(guide)).toEqual([command]);
+    expect(namesItsCommit(command)).toBe(true);
+    expect(releaseTaggingStatements(guide)).toEqual([check + " && " + command]);
   });
 
   it("only expands an unambiguous long tag option", () => {
@@ -662,12 +806,13 @@ describe("the project layer describes the repository it is in", () => {
     expect(namesItsCommit(invalid)).toBe(false);
   });
 
-  it("keeps an annotation count in scope when a continuation can clear it", () => {
+  it("uses the final annotation count across a shell continuation", () => {
     const firstLine = "git tag -in1k";
     const command = [firstLine + " \\", "  -n-1 vX.Y.Z"].join("\n");
     const candidates = tagCreations(command);
-    expect(candidates).toEqual([firstLine]);
+    expect(candidates).toEqual([firstLine + "   -n-1 vX.Y.Z"]);
     expect(candidates.filter(namesItsCommit)).toEqual([]);
+    expect(tagCreations([firstLine + " \\", "  vX.Y.Z"].join("\n"))).toEqual([]);
   });
 
   // Pasted as separate lines, the block tagged even when the ancestry check
@@ -772,9 +917,9 @@ describe("the project layer describes the repository it is in", () => {
     expect(guide, "the guide runs the build check with bare node").not.toMatch(
       /^\s*node (?:\.\/)?scripts\/check-build-warnings\.mjs/m,
     );
-    const block = releaseBuildBlock(guide);
-    expect(block, "no shell block runs corepack pnpm ci:gate:build").toBeDefined();
-    expect(block, "the block runs verify:pack a second time").not.toMatch(/^\s*pnpm verify:pack$/m);
+    const { blocks, duplicates } = releaseBuildChecks(guide);
+    expect(blocks.length, "no shell block runs corepack pnpm ci:gate:build").toBeGreaterThan(0);
+    expect(duplicates, "a build block runs verify:pack a second time").toEqual([]);
   });
 
   it.each([
@@ -790,12 +935,21 @@ describe("the project layer describes the repository it is in", () => {
       const build = "corepack pnpm ci:gate:build";
       const duplicate = "pnpm verify:pack";
       const guide = ["```" + shell, build, duplicate, "```"].join(newline);
-      const block = releaseBuildBlock(guide);
-      expect(block).toBeDefined();
-      expect(block).toContain(build);
-      expect(block).toMatch(/^\s*pnpm verify:pack$/m);
+      const { blocks, duplicates } = releaseBuildChecks(guide);
+      expect(blocks).toHaveLength(1);
+      expect(duplicates).toEqual(blocks);
     },
   );
+
+  it("finds a duplicate package check after an earlier clean build fence", () => {
+    const build = "corepack pnpm ci:gate:build";
+    const duplicate = "pnpm verify:pack";
+    const guide = ["```bash", build, "```", "", "```sh", build, duplicate, "```"].join("\n");
+
+    const { blocks, duplicates } = releaseBuildChecks(guide);
+    expect(blocks).toHaveLength(2);
+    expect(duplicates).toEqual([blocks[1]]);
+  });
 
   // The host command lists under `.instruction/03_ai-agents/` were copied from
   // another project: `generate:graphql`, `apply:backend`, `test:e2e` and `seed`

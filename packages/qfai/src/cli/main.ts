@@ -372,8 +372,12 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       process.exitCode = await (
         options.catalogAction === "design" ? runCatalogDesign : runCatalogComponents
       )({
-        root: await resolveRoot(options),
+        root:
+          options.catalogBrief && !options.rootExplicit
+            ? (await findConfigRoot(options.root)).root
+            : await resolveRoot(options),
         ...(options.catalogCheck ? { check: true } : {}),
+        ...(options.catalogBrief ? { brief: true } : {}),
       });
       return;
 
@@ -515,7 +519,7 @@ Commands:
   sdd merge-docs               Merge each conflicted story-tree document from the index by table row and sentence, leave what it cannot settle between conflict markers, and check the result's document schema
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
-  catalog components           Write .qfai/catalog/components.yaml from the components the uiux.surfacePaths files export (--check compares and writes nothing)
+  catalog components           Write .qfai/catalog/components.yaml from the components the uiux.surfacePaths files export (--check compares and writes nothing; --brief prints a brief of the committed catalogue for an agent's prompt)
   catalog design               Write .qfai/catalog/design.tokens.json and the Tailwind 4 theme .qfai/catalog/theme.css from root DESIGN.md (--check compares and writes nothing)
   workflow plan                Print the route plan for a request extraction (--in <path|->), a route (--route <route>, with --in for a chosen candidate's extraction), or an operation on finished work (--order)
 
@@ -549,6 +553,7 @@ Options:
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
   --timings                     validate: print the time each finding family took, slowest first; runs the UI/UX checks one after another
   --check                       catalog components / design: exit 1 when a committed catalogue file is missing, does not parse, or is out of date, without writing it
+  --brief                       catalog components: print one line per component of the committed catalogue, and the design token count, without writing anything
   --out <path>                  report/doctor/db-drift/session-review: output path (a relative path is resolved against --root)
   --in <path>                   report: validate.json input path (takes precedence over the config)
   --run-validate                report: run validate first, then generate the report

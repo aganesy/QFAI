@@ -1784,6 +1784,35 @@ describe("one lane runs on the floor `engines.node` declares", () => {
     }
   });
 
+  it("distinguishes unreadable manifests from malformed JSON without echoing their contents", () => {
+    const resolver = path.join(path.dirname(SETUP_ACTION), "node-engine-floor.mjs");
+    const root = mkdtempSync(path.join(tmpdir(), "qfai-node-floor-errors-"));
+    const missing = "missing\nmanifest.json";
+    const malformed = "invalid manifest.json";
+    const manifestContents = "PRIVATE-MANIFEST-CONTENT";
+    try {
+      writeFileSync(path.join(root, malformed), manifestContents, "utf-8");
+      for (const { file, reason } of [
+        { file: missing, reason: `Cannot read manifest ${JSON.stringify(missing)}.` },
+        {
+          file: malformed,
+          reason: `Manifest ${JSON.stringify(malformed)} contains malformed JSON.`,
+        },
+      ]) {
+        const result = spawnSync(process.execPath, [resolver, file], {
+          cwd: root,
+          encoding: "utf-8",
+        });
+        expect(result.status, result.error?.message).toBe(1);
+        expect(result.stdout).toBe("");
+        expect(result.stderr).toBe(`Cannot resolve the Node.js floor. ${reason}\n`);
+        expect(result.stderr).not.toContain(manifestContents);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("pins the lowest version from a disjunctive engines range in a separate checkout", () => {
     const step = setupActionSteps().find((candidate) => candidate["id"] === "shim");
     const body = step?.["run"];
@@ -4264,8 +4293,9 @@ describe("release automation performs decisions rather than making them", () => 
           { ...release, base: { ...release.base, repo: { full_name: "other/repo" } } },
         ],
         ["different base branch", { ...release, base: { ...release.base, ref: "maintenance" } }],
-        ["open PR", { ...release, state: "open", merged_at: null }],
-        ["closed without merging", { ...release, merged_at: null }],
+        ["open PR with a merge timestamp", { ...release, state: "open" }],
+        ["closed PR without a merge timestamp", { ...release, merged_at: null }],
+        ["closed PR with an empty merge timestamp", { ...release, merged_at: "" }],
         ["different merge commit", { ...release, merge_commit_sha: "aaaaaaaa" }],
       ] as const;
 
@@ -4281,6 +4311,15 @@ describe("release automation performs decisions rather than making them", () => 
           skipped: true,
         });
       }
+    });
+
+    it("names the release association that a skipped tag requires", () => {
+      const run = runGate("[]", "1.10.2");
+
+      expect(run).toMatchObject({ status: 0, tagged: false, skipped: true });
+      expect(run.output).toContain(
+        `no associated pull request from ${repository}:release/v1.10.2 merged into ${repository}:main and produced ${pushedCommit}; nothing to tag`,
+      );
     });
 
     it("tags a release merge and declines everything else, measured by running it", () => {

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-const packageRoot = path.resolve(import.meta.dirname, "../../..");
+const packageRoot = path.resolve(import.meta.dirname, "../..");
 const registryPath = path.join("assets", "validators", "layoutAntiPatterns.json");
 const ids = ["lap-007-state-not-represented", "lap-008-no-back-affordance", "lap-009", "lap-010"];
 
