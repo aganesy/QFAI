@@ -107,6 +107,7 @@ describe("the statement splitter knows SQL's quoting rules", () => {
   it.each([
     ["\n", ""],
     ["\r\n", ""],
+    ["\r", ""],
     ["\n", " -- comment with ) and ;"],
   ])("keeps an E string's continuation across %j after %j", (lineEnding, comment) => {
     const sql = [
@@ -617,6 +618,35 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(created)).toEqual([{ kind: "FUNCTION", name: "f", lines: [1, 3] }]);
   });
 
+  // QFAI:EX-0001-0039-83
+  it.each([
+    { parameter: `U&"n!0061me" UESCAPE '!'`, type: "int", signature: "integer" },
+    { parameter: `U&"n!0061me" UESCAPE'!'`, type: "int", signature: "integer" },
+    { parameter: `U&"n!0061me"UESCAPE '!'`, type: "int", signature: "integer" },
+    { parameter: `U&"n!0061me"UESCAPE'!'`, type: "int", signature: "integer" },
+    { parameter: `U&"n=0061me" UESCAPE '='`, type: "int", signature: "integer" },
+    {
+      parameter: `IN u&"n!0061me" uescape '!'`,
+      type: "app.custom_type",
+      signature: "app.custom_type",
+    },
+  ])(
+    "ignores Unicode-quoted parameter $parameter before $type",
+    async ({ parameter, type, signature }) => {
+      const sql =
+        `CREATE FUNCTION f(${parameter} ${type}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE OR REPLACE FUNCTION f(other ${type}) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`;
+      const { statements, errors } = parseSqlContract(sql);
+      expect(errors).toEqual([]);
+      expect(collectCreatedObjects(statements).map((object) => object.signature)).toEqual([
+        signature,
+        signature,
+      ]);
+      const duplicate = (await runOn(HEADER + sql)).filter((issue) => issue.code === "QFAI-DB-002");
+      expect(duplicate.map((issue) => issue.severity)).toEqual(["error"]);
+    },
+  );
+
   // QFAI:EX-0001-0039-73
   it("matches equivalent qualified type names while keeping other routine types distinct", async () => {
     const types = [
@@ -773,17 +803,22 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
   );
 
   // QFAI:EX-0001-0039-76
-  it.each(["DEFAULT(NULL)", "DEFAULT'text'", "DEFAULT E'text'"])(
-    "recognizes %s as a clause after a qualified type named default",
-    async (defaultClause) => {
+  it.each([
+    { type: "app.default", defaultClause: "DEFAULT(NULL)" },
+    { type: "app.default", defaultClause: "DEFAULT'text'" },
+    { type: "app.default", defaultClause: "DEFAULT E'text'" },
+    { type: '"Default"', defaultClause: "DEFAULT(NULL)" },
+  ])(
+    "recognizes $defaultClause as a clause after the type $type",
+    async ({ type, defaultClause }) => {
       const sql =
-        `CREATE FUNCTION f(value app.default ${defaultClause}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
-        `CREATE OR REPLACE FUNCTION f(value app.default DEFAULT NULL) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`;
+        `CREATE FUNCTION f(value ${type} ${defaultClause}) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE OR REPLACE FUNCTION f(value ${type} DEFAULT NULL) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`;
       const { statements, errors } = parseSqlContract(sql);
       expect(errors).toEqual([]);
       expect(collectCreatedObjects(statements).map((object) => object.signature)).toEqual([
-        "app.default",
-        "app.default",
+        type,
+        type,
       ]);
       const redefinitions = (await runOn(HEADER + sql)).filter(
         (issue) => issue.code === "QFAI-DB-002",

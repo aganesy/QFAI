@@ -5,7 +5,8 @@
  *   pull request and the working tree. It reserves nothing.
  *   A scope named twice gets two consecutive candidates.
  * - `check` names each ID this branch adds that main or a fetched open pull
- *   request also adds. Other branches' unpublished changes are outside this
+ *   request also adds. Declarations inherited from a shared commit do not
+ *   collide. Other branches' unpublished changes are outside this
  *   snapshot, and simultaneous publishers may still collide. Commit edits,
  *   check a clean tree and push the same HEAD.
  *
@@ -626,9 +627,20 @@ function mergeInProgress(reader) {
   }
 }
 
+function commonBases(reader, commit) {
+  try {
+    return reader.text(["merge-base", "--all", "HEAD", commit]).trim().split(/\r?\n/);
+  } catch (cause) {
+    if (cause?.status === 1) return [];
+    throw cause;
+  }
+}
+
 function checkCommand(reader, pulls, heads) {
-  const base = declared(reader.atCommit(reader.text(["merge-base", "HEAD", heads.main]).trim()));
+  const mainBase = reader.text(["merge-base", "HEAD", heads.main]).trim();
+  const base = declared(reader.atCommit(mainBase));
   const mine = added(declared(reader.inWorkingTree()), base);
+  const declarationsByBase = new Map([[mainBase, base]]);
   const isAncestorOfHead = (commit) => {
     try {
       reader.git(["merge-base", "--is-ancestor", commit, "HEAD"]);
@@ -640,10 +652,19 @@ function checkCommand(reader, pulls, heads) {
   };
   const others = [
     { label: MAIN, ids: added(declared(reader.atCommit(heads.main)), base) },
-    ...otherHeads(pulls, heads.pulls, isAncestorOfHead).map(({ label, commit }) => ({
-      label,
-      ids: added(declared(reader.atCommit(commit)), base),
-    })),
+    ...otherHeads(pulls, heads.pulls, isAncestorOfHead).map(({ label, commit }) => {
+      const published = declared(reader.atCommit(commit));
+      const ids = new Set([...mine].filter((id) => published.has(id)));
+      if (ids.size === 0) return { label, ids };
+      // Separate merges from main can leave more than one shared base. The
+      // commit that introduced a shared ID can be in any of those histories.
+      for (const ancestor of commonBases(reader, commit)) {
+        const inherited = declarationsByBase.get(ancestor) ?? declared(reader.atCommit(ancestor));
+        declarationsByBase.set(ancestor, inherited);
+        for (const id of ids) if (inherited.has(id)) ids.delete(id);
+      }
+      return { label, ids };
+    }),
   ];
   const found = collisions(mine, others);
   if (found.length === 0) {
