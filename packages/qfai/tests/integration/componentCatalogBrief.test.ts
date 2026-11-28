@@ -124,7 +124,7 @@ describe("the brief made from the committed catalogue", () => {
     expect(plain.out).not.toContain("Design tokens");
   });
 
-  // QFAI:EX-0001-0307-44
+  // QFAI:EX-0001-0307-49
   it("keeps multiline catalogue text on its component's line", async () => {
     const root = await projectWith({
       [CATALOG]: CATALOG_TEXT.replace(
@@ -145,7 +145,91 @@ describe("the brief made from the committed catalogue", () => {
     expect(lines[2]).toContain("a11y: Enter activates the button. Space also activates it.");
   });
 
-  // QFAI:EX-0001-0307-44
+  // QFAI:EX-0001-0307-49
+  it("prints vertical tab, form feed and next line as spaces on the component's line", async () => {
+    const root = await projectWith({
+      [CATALOG]: CATALOG_TEXT.replace(
+        "    a11y: APG button, Enter and Space activate",
+        '    a11y: "Enter\\vactivates\\fit\\Nnow"',
+      ),
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    const lines = brief.out.trimEnd().split("\n");
+    expect(lines).toHaveLength(3);
+    expect(lines[2]).toContain("a11y: Enter activates it now;");
+  });
+
+  // QFAI:EX-0001-0307-50
+  it.each([
+    { name: "a tab as a space", yaml: '"Enter\\tactivates"', shown: "a11y: Enter activates;" },
+    {
+      name: "an escape as its code point",
+      yaml: '"Enter\\e[31m"',
+      shown: "a11y: Enter\\u{001B}[31m;",
+    },
+    {
+      name: "a bidi override as its code point",
+      yaml: '"Enter\\u202Eok"',
+      shown: "a11y: Enter\\u{202E}ok;",
+    },
+    {
+      name: "a zero-width space as its code point",
+      yaml: '"En\\u200Bter"',
+      shown: "a11y: En\\u{200B}ter;",
+    },
+    {
+      name: "a lone surrogate as its code point",
+      yaml: '"En\\uD800ter"',
+      shown: "a11y: En\\u{D800}ter;",
+    },
+    {
+      name: "an astral format character as its five-digit code point",
+      yaml: '"En\\U000E0001ter"',
+      shown: "a11y: En\\u{E0001}ter;",
+    },
+  ])("prints $name on the component's line", async ({ yaml, shown }) => {
+    const root = await projectWith({
+      [CATALOG]: CATALOG_TEXT.replace(
+        "    a11y: APG button, Enter and Space activate",
+        `    a11y: ${yaml}`,
+      ),
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    expect(brief.err).toBe("");
+    const lines = brief.out.trimEnd().split("\n");
+    expect(lines).toHaveLength(3);
+    expect(lines[2]).toContain(shown);
+  });
+
+  // QFAI:EX-0001-0307-50
+  it("prints non-ASCII text and escapes an emoji sequence's zero-width joiner", async () => {
+    const root = await projectWith({
+      [CATALOG]: CATALOG_TEXT.replace("  - name: Page", "  - name: Bouton–Été 🎉 👨\u200D👩 x"),
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    expect(brief.err).toBe("");
+    const lines = brief.out.trimEnd().split("\n");
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toBe("- Bouton–Été 🎉 👨\\u{200D}👩 x (src/page.tsx)");
+  });
+
+  // QFAI:EX-0001-0307-49
+  it("prints a numeric variant prop where the catalogue writes it", async () => {
+    const root = await projectWith({
+      [CATALOG]: CATALOG_TEXT.replace(
+        "      size: [sm, md]",
+        '      size: [sm, md]\n      "1": [a, b]',
+      ),
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    expect(brief.out).toContain("variants: variant: primary | ghost, size: sm | md, 1: a | b;");
+  });
+
+  // QFAI:EX-0001-0307-49
   it("names the readable theme when the design token file is malformed", async () => {
     const root = await projectWith({
       [CATALOG]: CATALOG_TEXT,
@@ -160,7 +244,7 @@ describe("the brief made from the committed catalogue", () => {
     expect(lastLine).toContain(THEME);
   });
 
-  // QFAI:EX-0001-0307-44
+  // QFAI:EX-0001-0307-49
   it("counts tokens in deeply nested groups", async () => {
     const groups = 12_000;
     const root = await projectWith({
@@ -184,6 +268,43 @@ describe("the brief made from the committed catalogue", () => {
     expect(brief.out).toBe("");
     expect(brief.err.trimEnd().split("\n")).toHaveLength(1);
     expect(brief.err).toContain(`${CATALOG} is not a component catalogue`);
+  });
+
+  // QFAI:EX-0001-0307-45
+  it.each([
+    { name: "a sequence key", yaml: "? [p, q]\n      : x" },
+    { name: "a null key", yaml: "~: x" },
+  ])("rejects $name with one diagnostic", async ({ yaml }) => {
+    const root = await projectWith({
+      [CATALOG]: `components:\n  - name: Page\n    file: src/page.tsx\n    notes:\n      ${yaml}\n`,
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief).toEqual({
+      code: 1,
+      out: "",
+      err: `${CATALOG} is not a component catalogue. Run \`qfai catalog components\` and commit it.\n`,
+    });
+  });
+
+  // QFAI:EX-0001-0307-49
+  it("separates mapping keys that print alike", async () => {
+    const root = await projectWith({
+      [CATALOG]:
+        'components:\n  - name: Page\n    file: src/page.tsx\n    variants: { 1: [a], "1": [b], x: [c] }\n',
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    expect(brief.out).toContain("- Page (src/page.tsx): variants: 1: a, 1: b, x: c\n");
+  });
+
+  // QFAI:EX-0001-0307-49
+  it("separates component keys that print alike", async () => {
+    const root = await projectWith({
+      [CATALOG]: 'components:\n  - name: Page\n    file: src/page.tsx\n    1: [a]\n    "1": [b]\n',
+    });
+    const brief = await cli(["catalog", "components", "--brief", "--root", root]);
+    expect(brief.code).toBe(0);
+    expect(brief.out).toContain("- Page (src/page.tsx): 1: a; 1: b\n");
   });
 
   // QFAI:EX-0001-0307-45
