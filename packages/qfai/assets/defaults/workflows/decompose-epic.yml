@@ -3,7 +3,10 @@ family: decide
 stages:
   - id: discussion
     kind: discussion
-    steps: [discussion-research, discussion-interview]
+    steps:
+      - discussion-research
+      - { step: common-domain-language, passThrough: true }
+      - discussion-interview
   - id: split
     kind: triage
     steps: [triage-decompose]

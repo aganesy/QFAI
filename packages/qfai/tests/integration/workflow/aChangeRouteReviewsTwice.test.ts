@@ -80,7 +80,7 @@ async function scopesFor(value: WorkflowExtraction): Promise<string[]> {
   );
 }
 
-const SPEC_STAGE = "spec[sdd-triage sdd-story° sdd-contract°]{spec}";
+const SPEC_STAGE = "spec[common-domain-language° sdd-triage sdd-story° sdd-contract°]{spec}";
 const NOTE = "note[verify-change-note°]{code}";
 const GATES = "verify[verify-qfai-gate verify-repo-gate verify-commit]";
 const CI_REQUEST = extraction({
@@ -150,7 +150,7 @@ it("The specification stage follows the route's last sdd stage, or else precedes
       route: "retire-mechanism",
       stages: [
         "diagnose[implement-diagnose]",
-        "decide[sdd-triage]",
+        "decide[common-domain-language° sdd-triage]",
         "spec[sdd-story° sdd-contract°]{spec}",
         "remove[implement-retire]",
         NOTE,

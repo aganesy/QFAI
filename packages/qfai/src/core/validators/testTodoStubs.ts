@@ -70,6 +70,7 @@ import { issue } from "./utils.js";
 type StubDialect = {
   extensions: readonly string[];
   pattern: RegExp;
+  jsLineTerminators?: boolean;
   /** Named in the finding, so the message is not vitest/jest-shaped everywhere. */
   runner: string;
   /**
@@ -532,7 +533,8 @@ const STUB_DIALECTS: readonly StubDialect[] = [
     // comment or literal is the one place the construct's text appears without
     // a test being parked. Both opt-ins are the JS dialect's alone.
     spansLines: true,
-    mask: maskJsNonCode,
+    jsLineTerminators: true,
+    mask: (source) => maskJsNonCode(source, { jsLineTerminators: true }),
   },
   {
     extensions: [".py"],
@@ -886,12 +888,12 @@ function collectStubIssues(
   // Offset just past the last newline seen, so the column is one subtraction
   // rather than a re-scan of the line.
   let lineStart = 0;
+  const lineBreaks = dialect.jsLineTerminators ? /\r\n|[\r\n\u2028\u2029]/g : /\n/g;
   for (const hit of hits) {
     const between = scannable.slice(scanned, hit.index);
-    const breaks = between.split("\n").length - 1;
-    lineNumber += breaks;
-    if (breaks > 0) {
-      lineStart = scanned + between.lastIndexOf("\n") + 1;
+    for (const lineBreak of between.matchAll(lineBreaks)) {
+      lineNumber += 1;
+      lineStart = scanned + lineBreak.index + lineBreak[0].length;
     }
     scanned = hit.index;
     issues.push(
