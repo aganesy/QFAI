@@ -46,12 +46,12 @@ work is not complete.
 
 ## 2. What to review
 
-First run `npx qfai session-review --agent <host>` once, with `claude` on
-Claude Code and `codex` on Codex. It reads this project's local transcripts of
-that host, sends nothing anywhere, and prints counts for the latest session:
-the QFAI reminders shown, the rule, skill and step files read, the tool errors
-with their finding codes, the `qfai` commands with their exit status, the
-questions asked, and the typed turns that match correction words. It holds no
+First run `npx qfai session-review --agent <host>` once, with `claude` on Claude
+Code and `codex` on Codex. It reads this project's local transcripts of that
+host, sends nothing anywhere, and prints counts for the latest session: the QFAI
+reminders shown, the rule, skill and step files read, the tool errors with their
+finding codes, the `qfai` commands with their exit status, the questions asked,
+and the typed turns after the first that match correction words. It holds no
 message text. Treat the report as evidence, and cite its lines.
 
 The latest session is normally this one, but a session of the same host running

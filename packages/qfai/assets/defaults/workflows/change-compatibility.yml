@@ -3,7 +3,8 @@ family: change
 stages:
   - id: sdd
     kind: sdd
-    steps: [sdd-triage, sdd-contract, sdd-story]
+    steps:
+      [{ step: common-domain-language, passThrough: true }, sdd-triage, sdd-contract, sdd-story]
     review: spec
   - id: implement
     kind: implement

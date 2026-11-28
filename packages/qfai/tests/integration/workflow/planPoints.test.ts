@@ -116,10 +116,11 @@ it("draft-release-notes drafts, then releases at its end with no verify stage", 
 });
 
 // QFAI:EX-0001-0209-01
-it("add-feature returns the six sdd steps in order, with the four pass-through steps marked", async () => {
+it("add-feature returns the seven sdd steps in order, with the five pass-through steps marked", async () => {
   const [sdd] = (await planned("add-feature")).stages;
 
   expect(sdd?.steps.map((step) => [step.name, step.passThrough])).toEqual([
+    ["common-domain-language", true],
     ["sdd-triage", false],
     ["sdd-flow", true],
     ["sdd-story", false],
