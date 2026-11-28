@@ -78,6 +78,7 @@ function printable(line: string): string {
   return line
     .replace(/\r\n|[\r\n\t\v\f\u0085\u2028\u2029]/g, " ")
     .replace(/[\p{Cc}\p{Cf}\p{Cs}]/gu, (char) => {
+      // The character class always matches a nonempty string.
       const hex = (char.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, "0");
       return `\\u{${hex}}`;
     });

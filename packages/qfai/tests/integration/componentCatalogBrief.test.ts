@@ -204,16 +204,16 @@ describe("the brief made from the committed catalogue", () => {
   });
 
   // QFAI:EX-0001-0307-50
-  it("prints a non-ASCII name, emoji and ordinary spaces unchanged", async () => {
+  it("prints non-ASCII text and escapes an emoji sequence's zero-width joiner", async () => {
     const root = await projectWith({
-      [CATALOG]: CATALOG_TEXT.replace("  - name: Page", "  - name: Bouton–Été 🎉 x"),
+      [CATALOG]: CATALOG_TEXT.replace("  - name: Page", "  - name: Bouton–Été 🎉 👨\u200D👩 x"),
     });
     const brief = await cli(["catalog", "components", "--brief", "--root", root]);
     expect(brief.code).toBe(0);
     expect(brief.err).toBe("");
     const lines = brief.out.trimEnd().split("\n");
     expect(lines).toHaveLength(3);
-    expect(lines[1]).toBe("- Bouton–Été 🎉 x (src/page.tsx)");
+    expect(lines[1]).toBe("- Bouton–Été 🎉 👨\\u{200D}👩 x (src/page.tsx)");
   });
 
   // QFAI:EX-0001-0307-49
@@ -271,10 +271,12 @@ describe("the brief made from the committed catalogue", () => {
   });
 
   // QFAI:EX-0001-0307-45
-  it("rejects a mapping key that is not a scalar in one line", async () => {
+  it.each([
+    { name: "a sequence key", yaml: "? [p, q]\n      : x" },
+    { name: "a null key", yaml: "~: x" },
+  ])("rejects $name with one diagnostic", async ({ yaml }) => {
     const root = await projectWith({
-      [CATALOG]:
-        "components:\n  - name: Page\n    file: src/page.tsx\n    notes:\n      ? [p, q]\n      : x\n",
+      [CATALOG]: `components:\n  - name: Page\n    file: src/page.tsx\n    notes:\n      ${yaml}\n`,
     });
     const brief = await cli(["catalog", "components", "--brief", "--root", root]);
     expect(brief.code).toBe(1);

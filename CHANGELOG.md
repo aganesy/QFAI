@@ -692,8 +692,8 @@ session-review` command still reads local transcripts only.
   to the terminal.** A tab in a component's line now prints as a space, and
   every other control, format or lone surrogate character, such as an escape
   or a bidirectional override, prints as `\u{XXXX}` with its code point in
-  upper-case hex. Names, paths and free text in other scripts, and emoji, print
-  unchanged.
+  upper-case hex. Letters and single-code-point emoji print unchanged. A
+  zero-width joiner in an emoji sequence prints as `\u{200D}`.
 
 - **The component catalogue keeps a numeric prop in its place.** A prop named
   `1` used to move ahead of the other props under `variants`, in the written
