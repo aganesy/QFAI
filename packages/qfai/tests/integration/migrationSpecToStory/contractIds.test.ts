@@ -584,7 +584,7 @@ describe("migration CLI contract shape", () => {
   const legacyContractPath = new RegExp(
     String.raw`\b(?:of|from|in)\s+["']?${escapeRegExp(OLD)}(?=$|[\s"',;:)]|\.(?=\s|$))`,
   );
-  const manualRewriteAction = /^(?:manually\s+rewrite\b|rewrite\b.*\bby hand\b)/i;
+  const manualRewriteAction = /^(?:manually\s+rewrite\b|rewrite\b.*\bby hand\b(?!-))/i;
   const negatedByHand = /\bnot\s+by\s+hand\b(?!-)/i;
 
   function matchesCliRewriteNote(note: string, section: number): boolean {
@@ -610,6 +610,9 @@ describe("migration CLI contract shape", () => {
     expect(matchesCliRewriteNote(`${NEW}: rewrite "## Legacy 10" of ${OLD} by hand`, 1)).toBe(
       false,
     );
+    expect(
+      matchesCliRewriteNote(`${NEW}: rewrite "## Legacy 1" of ${OLD} by hand-written scripts`, 1),
+    ).toBe(false);
     expect(matchesCliRewriteNote(`${NEW}: rewrite "## Legacy 1 extra" of ${OLD} by hand`, 1)).toBe(
       false,
     );
