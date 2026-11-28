@@ -403,6 +403,28 @@ describe("retrying a deferral that stopped part way", () => {
     expect(deferralWrites()).toEqual([restWrite.join(" "), graphqlWrite.join(" ")]);
   });
 
+  it("counts attached REST payloads unless an explicit method makes the call read-only", () => {
+    const endpoint = "repos/example/project/issues/40/comments";
+    const writes = [
+      "--field=count=1",
+      "--raw-field=body=example",
+      "--input=body.json",
+      "-Fcount=1",
+      "-F=count=1",
+      "-fbody=example",
+      "-f=body=example",
+    ].map((payload) => ["gh", "api", endpoint, payload]);
+    calls.list.push(
+      ...writes,
+      ["gh", "api", endpoint, "--input=body.json", "--method=GET"],
+      ["gh", "api", endpoint, "-XHEAD", "--field=count=1"],
+      ["gh", "api", endpoint, "--input="],
+      ["gh", "api", endpoint, "--input", ""],
+    );
+
+    expect(deferralWrites()).toEqual(writes.map((write) => write.join(" ")));
+  });
+
   const answer = (isResolved: boolean, replies: string[]): string =>
     JSON.stringify({
       data: {
