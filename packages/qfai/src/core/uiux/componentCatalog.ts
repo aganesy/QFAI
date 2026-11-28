@@ -164,7 +164,7 @@ export async function scanComponents(
     };
   }
   const ts = loadTs(root, options.loadTypescript);
-  if (!ts) return { readable: false, unread: files.length };
+  if (!ts || !hasCommentRanges(ts)) return { readable: false, unread: files.length };
   const components: CatalogComponent[] = [];
   const rawElements: RawElement[] = [];
   const widgetMarkup: WidgetMarkup[] = [];
@@ -183,12 +183,13 @@ export async function scanComponents(
 /** The catalogue file's text for a list of components, byte-identical for the same list. */
 export function renderCatalog(components: readonly CatalogComponent[]): string {
   const entries = components.map((component) => {
-    const entry: Record<string, string | string[] | Record<string, string[]>> = {
+    const entry: Record<string, string | string[] | Map<string, string[]>> = {
       name: component.name,
       file: component.file,
     };
     if (component.props) entry.props = component.props;
-    if (component.variants) entry.variants = component.variants;
+    if (component.variants)
+      entry.variants = variantsInPropOrder(component.variants, component.props);
     for (const tag of DOC_TAGS) {
       const value = component[tag];
       if (value !== undefined) entry[tag] = value;
@@ -198,6 +199,24 @@ export function renderCatalog(components: readonly CatalogComponent[]): string {
     return entry;
   });
   return HEADER + stringify({ components: entries }, { lineWidth: 0 });
+}
+
+/**
+ * The variants as a map in the order `props` lists their props. An object puts a numeric key such
+ * as `1` before every other key, so the written order is taken from `props` instead.
+ */
+function variantsInPropOrder(
+  variants: Record<string, string[]>,
+  props: readonly string[] | undefined,
+): Map<string, string[]> {
+  const byProp = new Map(Object.entries(variants));
+  const ordered = new Map<string, string[]>();
+  for (const prop of props ?? []) {
+    const values = byProp.get(prop);
+    if (values) ordered.set(prop, values);
+  }
+  for (const [prop, values] of byProp) if (!ordered.has(prop)) ordered.set(prop, values);
+  return ordered;
 }
 
 /** The catalogue path and its identity, after refusing links and entries that are not regular files. */
@@ -296,14 +315,17 @@ export async function readCatalogArtifact(
 }
 
 /** The committed catalogue, if there is one and it holds a list of components. */
-export async function readCatalog(root: string): Promise<CatalogRead> {
+export async function readCatalog(
+  root: string,
+  parseOptions?: { logLevel: "error" },
+): Promise<CatalogRead> {
   const file = await readCatalogArtifact(root, COMPONENT_CATALOG_PATH);
   if (file.state !== "read") return file;
   const { text } = file;
 
   let parsed: unknown;
   try {
-    parsed = parse(text);
+    parsed = parse(text, parseOptions ? { logLevel: parseOptions.logLevel } : undefined);
   } catch {
     return { state: "invalid" };
   }
@@ -395,8 +417,20 @@ function compare(a: string, b: string): number {
   return a < b ? -1 : 1;
 }
 
+/** A loaded compiler that offers the two comment-range methods the citation scan calls. */
+type CommentRangeTsApi = TsApi &
+  Required<Pick<TsApi, "getLeadingCommentRanges" | "getTrailingCommentRanges">>;
+
+/** Whether a loaded compiler offers the two comment-range methods the citation scan calls. */
+function hasCommentRanges(ts: TsApi): ts is CommentRangeTsApi {
+  return (
+    typeof ts.getLeadingCommentRanges === "function" &&
+    typeof ts.getTrailingCommentRanges === "function"
+  );
+}
+
 /** Mask everything outside compiler-recognized comments without moving line or token boundaries. */
-function citationCommentSource(ts: TsApi, root: TsNode, source: string): string {
+function citationCommentSource(ts: CommentRangeTsApi, root: TsNode, source: string): string {
   const kind = ts.SyntaxKind;
   const comments = new Map<number, number>();
   const pending = [root];
@@ -436,7 +470,7 @@ function citationCommentSource(ts: TsApi, root: TsNode, source: string): string 
 
 /** The components, raw elements and imported names of one file. */
 function componentsOfFile(
-  ts: TsApi,
+  ts: CommentRangeTsApi,
   file: string,
   source: string,
 ): {
