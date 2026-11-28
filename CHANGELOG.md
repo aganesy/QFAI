@@ -316,12 +316,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The `qfai session-review` counts only hint at what was loaded. A security
   finding is drafted only once its fix has reached the users it affects in
   production or their distribution channel, and a finding stays held back where
-  it is unknown whether the project releases or deploys. An unfixed one is named
-  to the user by a number alone; its class of defect and location are given only
-  where the message reaches the user alone, and otherwise the user is advised to
-  ask about it in this session where only they see the answer. No record of a
-  held-back finding is kept: a later session asks the user for its pull request
-  and finds it again in that pull request's review comments. The `qfai
+  it is unknown whether the project releases or deploys. The review gives an
+  unfixed finding a number. It gives the class of defect and location only
+  where the host shows the message reaches the user alone. A no-question final
+  report gives the number and advises the user to ask in a private session
+  where questions are allowed.
+  QFAI keeps no record of a held-back finding. A later session looks for it in
+  pull request review comments only where questions are allowed and the host
+  shows the user alone receives the answer. A finding only in a sub-agent's
+  report can be asked about only in the original session. The `qfai
 session-review` command still reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
@@ -728,6 +731,21 @@ session-review` command still reads local transcripts only.
   refresh the workflow, or leave it: the removed branch never ran. Closes #4670.
 
 ### Fixed
+
+- **The component catalogue keeps a numeric prop in its place.** A prop named
+  `1` used to move ahead of the other props under `variants`, in the written
+  catalogue and in `--brief`. The written catalogue now follows the order
+  `props` lists, and `--brief` the order the catalogue writes.
+
+- **`qfai catalog components --brief` keeps each component on one line.** A
+  vertical tab, a form feed or U+0085 inside a value now prints as a space, as
+  a line feed already did.
+
+- **`qfai catalog components` stops cleanly on an incomplete `typescript`.**
+  When the loaded package lacks `getLeadingCommentRanges` or
+  `getTrailingCommentRanges`, the command exits 1 with one line naming
+  `typescript` and the number of files, and writes no catalogue, instead of
+  failing part way through the scan.
 
 - **`qfai session-review` no longer lists the first typed turn as a
   correction.** Nothing precedes it to correct, and common phrasing in a first
@@ -3734,8 +3752,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   stays local and a different origin needs its own authorization.
   Closes #4496.
 
-- Component catalogues keep a component's leading theme token comments in
-  files with LF, CRLF, or CR line endings.
+- Component catalogues list the theme tokens referenced in a component's leading
+  comments in files with LF, CRLF, or CR line endings.
 
 ## [2.5.0] - 2026-11-15
 
