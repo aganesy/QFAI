@@ -799,6 +799,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   none of them after a private security intake, as the skill's Reviewer Gate
   does. Closes #5540.
 
+- The triage skill summary distinguishes ordinary records from the tracked
+  changes the Reviewer Gate permits for authorized operations.
+
 - **The seeded Git attributes explain how to handle a restored question row.**
   After a union merge restores a deleted open question, the guidance calls for
   a separate cleanup commit before pushing. It preserves other rows and IDs.
@@ -1464,6 +1467,9 @@ decisions` headings appeared anywhere in the file, so a record with several
 
 - SQL routine identity ignores a Unicode-quoted parameter name together with
   its `UESCAPE` clause and retains the full input type.
+
+- SQL routine identity also retains the input type when it immediately follows
+  a Unicode-quoted parameter name without a `UESCAPE` clause.
 
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
@@ -3324,7 +3330,8 @@ decisions` headings appeared anywhere in the file, so a record with several
   was deleted in between. Closes #4504.
 
 - Automatic release tagging verifies that the pushed commit came from merging the
-  version's release branch within this repository.
+  version's release branch within this repository. A skipped tag names the expected
+  release branch, target branch and pushed commit.
 
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the
@@ -3673,6 +3680,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   listening socket. A local backend
   stays local and a different origin needs its own authorization.
   Closes #4496.
+
+- Component catalogues keep a component's leading theme token comments in
+  files with LF, CRLF, or CR line endings.
 
 ## [2.5.0] - 2026-11-15
 

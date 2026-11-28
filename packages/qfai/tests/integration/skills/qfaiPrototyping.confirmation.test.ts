@@ -470,6 +470,7 @@ describe.each(TREES)("%s", (tree) => {
     expect(launcherProbe).toContain(
       "It probes `node_modules/.bin/playwright`, including its Windows variants, then `npx --no-install playwright --version`.",
     );
+    expect(launcherProbe).toMatch(/\. Use the resolved launcher throughout the loop\./);
     expect(launcherProbe).not.toMatch(/scripts\/|\bPATH\b/);
     expect(preflight).toContain(
       "When that check fails, install nothing. The step stops and reports the missing Playwright launcher as a prerequisite",
