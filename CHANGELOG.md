@@ -282,8 +282,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   under a no-question mode the report asks them to name its pull request in a
   session where only they see the answer. No record of a held-back finding is
   kept: a later session where only the user sees the answer asks for its pull
-  request and finds it again in that pull request's review comments. The `qfai
-session-review` command still reads local transcripts only.
+  request and finds it again in that pull request's review comments; a finding
+  the user places in a reviewer sub-agent's report alone can be asked about only
+  in the session that held it back. The `qfai session-review` command still
+  reads local transcripts only.
 - **`qfai-configure` checks its test globs before it writes them.** The
   sampling step now runs before the step that writes `qfai.config.yaml`, so a
   proposal that matches no file stops the run with the key never touched. A
