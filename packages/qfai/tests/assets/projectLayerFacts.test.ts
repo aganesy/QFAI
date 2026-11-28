@@ -777,6 +777,24 @@ describe("the project layer describes the repository it is in", () => {
     expect(releaseTaggingStatements(guide)).toEqual([check + " && " + command]);
   });
 
+  it.each(["\n", "\r\n"])("keeps a double-quoted release operand across %j", (newline) => {
+    const sha = "0123456789abcdef0123456789abcdef01234567";
+    const check = "git merge-base --is-ancestor <SHA> origin/main";
+    const start = 'git tag vX.Y.Z "';
+    const quoted = start + sha + '"';
+    const continued = [start + sha.slice(0, 20) + "\\", sha.slice(20) + '"'].join(newline);
+    const guide = ["~~~sh", check + " &&", continued, "~~~"].join(newline);
+
+    expect(releaseTagCreations(guide)).toEqual([quoted]);
+    expect(namesItsCommit(quoted)).toBe(true);
+    expect(releaseTaggingStatements(guide)).toEqual([check + " && " + quoted]);
+  });
+
+  it("keeps an escaped backslash before a quoted newline", () => {
+    const shell = ['git tag -m "two lines ' + "\\\\", 'message" vX.Y.Z'].join("\n");
+    expect(joinShellContinuations(shell)).toBe(shell);
+  });
+
   it("only expands an unambiguous long tag option", () => {
     expect(canonicalLongTagFlag("--mess")).toBe("--message");
     expect(canonicalLongTagFlag("--me")).toBe("--me");
