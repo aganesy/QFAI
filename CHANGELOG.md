@@ -686,6 +686,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The component catalogue keeps a numeric prop in its place.** A prop named
+  `1` used to move ahead of the other props under `variants`, in the written
+  catalogue and in `--brief`. The written catalogue now follows the order
+  `props` lists, and `--brief` the order the catalogue writes.
+
+- **`qfai catalog components --brief` keeps each component on one line.** A
+  vertical tab, a form feed or U+0085 inside a value now prints as a space, as
+  a line feed already did.
+
+- **`qfai catalog components` stops cleanly on an incomplete `typescript`.**
+  When the loaded package lacks `getLeadingCommentRanges` or
+  `getTrailingCommentRanges`, the command exits 1 with one line naming
+  `typescript` and the number of files, and writes no catalogue, instead of
+  failing part way through the scan.
+
 - Specification tables inside a list item's HTML comment block are ignored.
   Inline comments are removed only within their own table cells, preserving the
   boundaries and visible content of adjacent cells.
