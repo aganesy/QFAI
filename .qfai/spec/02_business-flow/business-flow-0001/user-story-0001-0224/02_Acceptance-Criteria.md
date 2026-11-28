@@ -9,8 +9,10 @@ Feature: Follow a route in the session
     Given a free-text change request in workflow mode `active`
     When the session has planned it
     Then it states the goal, the stages in plain words and the files it may change before the first stage
-    And on a route that changes files, when the project has a forge remote and the session can reach its API, it runs the forge's single supported search for matching open work after the announcement and before the policy check or any edit
-    And in an interactive run with matches it presents the matches and asks whether to continue before making any edit
+    And on a route that changes files it determines whether the project has a forge remote and the session can reach its API without making an API call
+    And when both are available it runs the forge's single supported search for matching open work after the announcement and before the policy check or any edit
+    And in an interactive run with matches it presents them, asks whether to continue, and waits without editing
+    And in that interactive run it proceeds only when the user chooses to continue
     And in a no-question run with matches it continues and lists the matches first in the final report as an assumption
     And on a route that changes files, if the forge remote is missing or the session cannot reach the API, the announcement says no search was made and the work continues
     And it runs every step the plan names, in plan order
