@@ -73,8 +73,16 @@ function deferralWrites(): string[] {
       if (args.includes("graphql")) {
         return args.some((argument) => /^query=\s*mutation\b/u.test(argument));
       }
-      const methodFlag = args.findIndex((argument) => argument === "--method" || argument === "-X");
-      const method = methodFlag >= 0 ? args[methodFlag + 1]?.toUpperCase() : undefined;
+      const methodFlag = args.findIndex(
+        (argument) =>
+          argument === "--method" || argument.startsWith("--method=") || argument.startsWith("-X"),
+      );
+      const flag = args[methodFlag];
+      const methodValue =
+        flag === "--method" || flag === "-X"
+          ? args[methodFlag + 1]
+          : flag?.replace(/^(?:--method=|-X=?)/u, "");
+      const method = methodValue?.toUpperCase();
       return method === undefined
         ? args.some((argument) =>
             ["-f", "-F", "--raw-field", "--field", "--input"].includes(argument),
@@ -322,6 +330,17 @@ describe("retrying a deferral that stopped part way", () => {
   afterEach(() => {
     calls.list.length = 0;
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    ["--method=GET", "--method=POST"],
+    ["-XGET", "-XPOST"],
+    ["-X=GET", "-X=POST"],
+  ])("distinguishes a parameterized %s read from an attached write", (readFlag, writeFlag) => {
+    const endpoint = "repos/example/project/issues/40/comments";
+    const write = ["gh", "api", endpoint, writeFlag];
+    calls.list.push(["gh", "api", endpoint, readFlag, "-F", "per_page=100"], write);
+    expect(deferralWrites()).toEqual([write.join(" ")]);
   });
 
   const answer = (isResolved: boolean, replies: string[]): string =>

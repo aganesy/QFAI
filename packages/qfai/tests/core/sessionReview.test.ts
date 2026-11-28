@@ -1059,6 +1059,14 @@ describe("the first typed turn of a session", () => {
     expect(signals.typedTurns).toBe(2);
     expect(signals.corrections).toEqual([{ turn: 2, words: ["wrong"] }]);
   });
+
+  it("lists nothing for a session whose only typed turn holds a correction word", () => {
+    const events = emptyEvents();
+    readClaudeRecord({ type: "user", message: { role: "user", content: "Wrong file." } }, events);
+    const signals = summarise(events, FACTS);
+    expect(signals.typedTurns).toBe(1);
+    expect(signals.corrections).toEqual([]);
+  });
 });
 
 // QFAI:EX-0001-0294-10

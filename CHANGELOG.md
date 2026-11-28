@@ -723,6 +723,9 @@ session-review` command still reads local transcripts only.
   still counts among the typed turns, and later turns keep their numbers.
   Fixes #6120.
 
+- JavaScript and TypeScript test-stub findings preserve the line and column
+  after every JavaScript line terminator.
+
 - Specification tables inside a list item's HTML comment block are ignored.
   Inline comments are removed only within their own table cells, preserving the
   boundaries and visible content of adjacent cells.
@@ -3367,8 +3370,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   was deleted in between. Closes #4504.
 
 - Automatic release tagging verifies that the pushed commit came from merging the
-  version's release branch within this repository. A skipped tag names the expected
-  release branch, target branch and pushed commit.
+  version's release branch within this repository. When no pull request satisfies
+  the association checks, the diagnostic names the expected release branch,
+  target branch, and pushed commit.
 
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the
