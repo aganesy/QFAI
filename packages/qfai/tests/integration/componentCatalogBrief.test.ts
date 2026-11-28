@@ -178,6 +178,16 @@ describe("the brief made from the committed catalogue", () => {
       yaml: '"En\\u200Bter"',
       shown: "a11y: En\\u{200B}ter;",
     },
+    {
+      name: "a lone surrogate as its code point",
+      yaml: '"En\\uD800ter"',
+      shown: "a11y: En\\u{D800}ter;",
+    },
+    {
+      name: "an astral format character as its five-digit code point",
+      yaml: '"En\\U000E0001ter"',
+      shown: "a11y: En\\u{E0001}ter;",
+    },
   ])("prints $name on the component's line", async ({ yaml, shown }) => {
     const root = await projectWith({
       [CATALOG]: CATALOG_TEXT.replace(
@@ -200,7 +210,10 @@ describe("the brief made from the committed catalogue", () => {
     });
     const brief = await cli(["catalog", "components", "--brief", "--root", root]);
     expect(brief.code).toBe(0);
-    expect(brief.out.split("\n")[1]).toBe("- Bouton–Été 🎉 x (src/page.tsx)");
+    expect(brief.err).toBe("");
+    const lines = brief.out.trimEnd().split("\n");
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toBe("- Bouton–Été 🎉 x (src/page.tsx)");
   });
 
   // QFAI:EX-0001-0307-49

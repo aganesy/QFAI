@@ -60,6 +60,9 @@ function componentLine(entry: ReadonlyMap<unknown, unknown>): string | null {
 /**
  * The line as a terminal shows it: each line break, with a CRLF pair as one, and each tab as a
  * space; every other control, format or lone surrogate character as `\u{XXXX}`, upper-case hex.
+ * Ceiling: a backslash is not escaped, so text that already reads `\u{001B}` prints the same as
+ * an escaped ESC; accepted while an agent reads the brief beside the catalogue; escaping `\`
+ * lifts it.
  */
 function printable(line: string): string {
   return line
