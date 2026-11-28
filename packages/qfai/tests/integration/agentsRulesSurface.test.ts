@@ -1710,6 +1710,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /Under\s+a\s+no-question\s+mode\s+the\s+final\s+report\s+names\s+it\s+by\s+its\s+number\s+alone,\s+since\s+others\s+may\s+read\s+that\s+report\.\s+It\s+tells\s+the\s+user\s+to\s+ask\s+about\s+it\s+in\s+a\s+session\s+where\s+only\s+they\s+will\s+see\s+the\s+answer\s+and\s+to\s+name\s+there\s+the\s+pull\s+request\s+it\s+may\s+have\s+come\s+from/,
         /No\s+record\s+of\s+a\s+held-back\s+finding\s+is\s+kept,\s+so\s+that\s+no\s+file\s+records\s+an\s+unfixed\s+defect/,
         /A\s+later\s+session\s+asked\s+about\s+a\s+held-back\s+finding\s+it\s+has\s+no\s+record\s+of\s+says\s+so/,
+        /Under\s+a\s+no-question\s+mode\s+or\s+where\s+the\s+host\s+cannot\s+show\s+the\s+session\s+reaches\s+the\s+user\s+alone,\s+it\s+asks\s+nothing\s+and\s+repeats\s+the\s+advice\s+from\s+the\s+no-question\s+final\s+report/,
         /Only\s+where\s+the\s+host\s+shows\s+that\s+the\s+session\s+reaches\s+the\s+user\s+alone\s+does\s+it\s+ask\s+which\s+pull\s+request\s+the\s+finding\s+came\s+from;\s+otherwise\s+it\s+asks\s+for\s+nothing\s+and\s+repeats\s+the\s+advice\s+the\s+no-question\s+final\s+report\s+gives/,
         /Where\s+the\s+user's\s+number\s+could\s+also\s+be\s+one\s+this\s+session\s+handed\s+out,\s+it\s+first\s+confirms\s+which\s+finding\s+is\s+meant/,
         /It\s+then\s+reads\s+that\s+pull\s+request's\s+review\s+comments,\s+as\s+the\s+pull-request\s+exception\s+in\s+this\s+section's\s+reading\s+list\s+allows/,
