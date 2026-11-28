@@ -1468,6 +1468,9 @@ decisions` headings appeared anywhere in the file, so a record with several
 - SQL routine identity ignores a Unicode-quoted parameter name together with
   its `UESCAPE` clause and retains the full input type.
 
+- SQL routine identity also retains the input type when it immediately follows
+  a Unicode-quoted parameter name without a `UESCAPE` clause.
+
 - **`QFAI-DB-002` reads object names closer to PostgreSQL.** A bare name now
   folds only ASCII `A`-`Z`, so `CREATE TABLE Äpfel` and `CREATE TABLE äpfel`
   are two tables, not one redefinition. An index created without a name
@@ -3677,6 +3680,9 @@ decisions` headings appeared anywhere in the file, so a record with several
   listening socket. A local backend
   stays local and a different origin needs its own authorization.
   Closes #4496.
+
+- Component catalogues keep a component's leading theme token comments in
+  files with LF, CRLF, or CR line endings.
 
 ## [2.5.0] - 2026-11-15
 
