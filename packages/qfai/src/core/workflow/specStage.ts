@@ -11,6 +11,7 @@ const SPEC_STAGE_ID = "spec";
 
 // The steps of the specification stage the change routes share.
 const SPEC_STEPS: readonly PlanStep[] = [
+  { name: "common-domain-language", passThrough: true },
   { name: "sdd-triage" },
   { name: "sdd-story", passThrough: true },
   { name: "sdd-contract", passThrough: true },

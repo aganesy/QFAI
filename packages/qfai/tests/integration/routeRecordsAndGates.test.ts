@@ -159,7 +159,7 @@ describe("a step with no open design decision starts no griller", () => {
   // QFAI:EX-0001-0223-12
   it("still grills a design decision the repository cannot settle, and only a critical one reaches the user", async () => {
     const steps = await plannedSteps("add-feature");
-    expect(steps[0]).toBe("sdd-triage");
+    expect(steps.slice(0, 2)).toEqual(["common-domain-language", "sdd-triage"]);
     const triage = flat(await read("step/sdd-triage/STEP.md"));
     expect(triage).toContain("references/sdd-pre-draft-grilling.md");
     const checkpoint = flat(await read("skill/qfai-sdd/references/sdd-pre-draft-grilling.md"));

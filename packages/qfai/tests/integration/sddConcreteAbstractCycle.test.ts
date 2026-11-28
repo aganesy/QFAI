@@ -111,7 +111,7 @@ function storyTree(registers: { decisions?: string; openQuestions?: string }) {
 describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
   // QFAI:AC-0001-0147-08
   it("sits between the contracts and the gate, and sends a sub-agent that wrote no rule to find", async () => {
-    const steps = /^steps: \[(.*)\]$/m.exec(await readShipped(SKILL))?.[1] ?? "";
+    const steps = /^steps:\s*\[([^\]]*)\]/m.exec(await readShipped(SKILL))?.[1] ?? "";
     const contracts = steps.indexOf("sdd-contract");
     const cycle = steps.indexOf("sdd-cycle");
     const gate = steps.indexOf("sdd-gate");
