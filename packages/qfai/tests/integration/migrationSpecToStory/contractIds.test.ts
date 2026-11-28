@@ -585,6 +585,7 @@ describe("migration CLI contract shape", () => {
     String.raw`\b(?:of|from|in)\s+["']?${escapeRegExp(OLD)}(?=$|[\s"',;:)]|\.(?=\s|$))`,
   );
   const manualRewriteAction = /^(?:manually\s+rewrite\b|rewrite\b.*\bby hand\b)/i;
+  const negatedByHand = /\bnot\s+by\s+hand\b/i;
 
   function matchesCliRewriteNote(note: string, section: number): boolean {
     if (!note.startsWith(destinationPrefix)) return false;
@@ -596,7 +597,8 @@ describe("migration CLI contract shape", () => {
     return (
       legacySectionHeading.exec(instruction)?.[1] === String(section) &&
       legacyContractPath.test(instruction) &&
-      manualRewriteAction.test(instruction)
+      manualRewriteAction.test(instruction) &&
+      !negatedByHand.test(instruction)
     );
   }
 
