@@ -618,6 +618,16 @@ describe("the project layer describes the repository it is in", () => {
     expect(namesItsCommit(command)).toBe(false);
   });
 
+  it("keeps either listing filter active when only the other is reset", () => {
+    const both = "git tag -in1k --points-at=HEAD";
+    expect(tagCreations(both + " -n-1 vX.Y.Z")).toEqual([]);
+    expect(tagCreations(both + " --no-points-at vX.Y.Z")).toEqual([]);
+
+    const creation = both + " -n-1 --no-points-at vX.Y.Z";
+    expect(tagCreations(creation)).toEqual([creation]);
+    expect(namesItsCommit(creation)).toBe(false);
+  });
+
   it("uses the last points-at filter when checking tag creation", () => {
     const implicit = "git tag --points-at=HEAD --no-points-at vX.Y.Z";
     expect(tagCreations(implicit)).toEqual([implicit]);
