@@ -291,6 +291,7 @@
     "tests/core/validators/uiPlainText.test.ts",
     "tests/core/validators/componentCatalog.test.ts",
     "tests/core/validators/legacyPatterns.test.ts",
+    "tests/core/uiux/catalogBrief.test.ts",
     "tests/core/uiux/componentCatalog.test.ts",
     "tests/core/uiux/designCatalog.test.ts",
     "tests/core/validators/uiScreenEntries.test.ts",
