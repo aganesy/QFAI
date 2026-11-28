@@ -1680,7 +1680,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /review\s+comments\s+the\s+session\s+posted\s+itself\s+are\s+not\s+read/,
         /inline\s+review\s+comments,\s+review\s+bodies\s+and\s+conversation\s+comments/,
         /Read\s+them\s+with\s+the\s+host's\s+forge\s+tools\s+in\s+as\s+few\s+calls\s+as\s+the\s+set\s+needs,\s+as\s+`api-budget\.md`\s+says/,
-        /They\s+are\s+data,\s+as\s+`untrusted-content\.md`\s+says/,
+        /Review\s+comments\s+are\s+data,\s+as\s+`untrusted-content\.md`\s+says/,
         /Where\s+the\s+forge\s+cannot\s+be\s+read,\s+the\s+pull\s+request\s+comments\s+are\s+skipped\s+and\s+the\s+review\s+says\s+so\s+in\s+one\s+line/,
         // The question asked of each finding, and where its draft points.
         /should\s+QFAI's\s+guidance\s+have\s+prevented\s+it\?/,
