@@ -94,13 +94,14 @@ describe("what an Interview row holds", () => {
   });
 
   // QFAI:EX-0001-0298-18
-  it("records a translation of a free answer given in another language than the record's, and leaves the original out", async () => {
+  it("records a translation of a free answer given in another language than the record's, chooses 4, and leaves the original out", async () => {
     const text = await writing();
     expect(text).toMatch(
-      /where the user answers in a language other than the record's, Option 4 holds a translation into the record's language marked `\(translated from <language>\)`, and the user's original words stay out of the record/i,
+      /quote a free answer word for word in `Option 4 \(other\)` and choose `4`; where the user answers in a language other than the record's, write instead its translation into the record's language followed by `\(translated from <language>\)`, and leave the user's original words out of the record/i,
     );
+    expect(text).toMatch(/the marker stays in English so that tools can find it/i);
     expect(flat(await readShipped("step/discussion-interview/STEP.md"))).toMatch(
-      /a free answer quoted word for word in `Option 4 \(other\)`, or translated as the record reference says/i,
+      /a free answer quoted word for word in `Option 4 \(other\)`, or, when given in another language than the record's, translated as the record reference says/i,
     );
   });
 

@@ -271,6 +271,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   answer word for word, and a project's repository-language check then failed
   on it.
 
+- **A translated decision label and a translated free answer carry the same
+  marker.** The `qfai-sdd` decisions template now asks for
+  `(translated from <language>)` right after a translated option label, as the
+  deliberation record does after a translated free answer, instead of
+  `(translated)`. The marker stays in English in either file so that tools can
+  find it, and the record reference says in one sentence that a free answer is
+  quoted word for word and chooses `4` unless it needs translating.
+
 - **The end-of-session feedback review reads review findings too.** Besides the
   session itself, it reads the findings reviewer sub-agents returned and the
   inline review comments, review bodies and conversation comments on the pull
