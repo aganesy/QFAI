@@ -31,7 +31,7 @@ import { parse as parseYaml } from "yaml";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const LAYER = ".instruction/02_project";
-const NODE_RANGE_WILDCARD = /[x*](?=$|[\s`]|\|\||[.,;:!?](?=\s|$))/.source;
+const NODE_RANGE_WILDCARD = /[x*](?=$|[\s`]|\|\||[.,;:!?)]+(?=\s|$))/.source;
 const NODE_RANGE_NUMBER = String.raw`v?\d+(?:\.[\dx*]+){0,2}`;
 const NODE_RANGE_CLAIM = new RegExp(
   /(?:\bNode(?:\.js)?(?:\s+(?:versions?|range|matching|requires?|is|are))*|`?\bengines\.node`?)\s*(?:(?:to\b|[:=—])\s*)?/
@@ -460,11 +460,12 @@ describe("the project layer describes the repository it is in", () => {
           `Node.js requires ${wildcard}.`,
           `Node.js requires ${range}.`,
           `Node.js requires ${compactRange}.`,
+          `(Node.js requires ${wildcard}).`,
           `Node.js requires \`${wildcard}\`.`,
           `Set \`engines.node\` to \`${range}\`.`,
         ].join("\n"),
       ),
-    ).toEqual([wildcard, range, compactRange, wildcard, range]);
+    ).toEqual([wildcard, range, compactRange, wildcard, wildcard, range]);
   });
 
   it("ignores words and Markdown emphasis where a Node range could start", () => {
