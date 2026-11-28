@@ -937,6 +937,8 @@ describe("assets guardrails", () => {
 
   // QFAI:EX-0001-0196-52
   it("ships a union merge for the two append-only registers, here and in the seed", async () => {
+    const localMerge =
+      /(?:^|[.:]\s+)(?:resolve a conflict confined to the registers by merging|when a host shows a conflict confined to the registers,\s+merge) the base branch locally\./i;
     for (const file of [
       path.join(templateRootDir, ".gitattributes"),
       path.join(repoRoot, ".gitattributes"),
@@ -972,7 +974,7 @@ describe("assets guardrails", () => {
         /\bID\b/,
         /\brestated\b/i,
         /\bunion\b/i,
-        /(?:^|[.:]\s+)(?:resolve a conflict confined to the registers by merging|when a host shows a conflict confined to the registers,\s+merge) the base branch locally\./i,
+        localMerge,
         /\bif\b[^.]*\brestores\b[^.]*\bopen-question row deleted on one side,\s*delete (?:that row|it)\b[^.]*\bseparate commit\b[^.]*\bbefore pushing\b/i,
         /\bleave\b[^.]*\bother register rows and IDs\b[^.]*\bas the merge left them\b/i,
       ];
@@ -985,6 +987,9 @@ describe("assets guardrails", () => {
         /\brows are (?:only appended, )?never edited/i,
       );
     }
+    expect(
+      "Do not do the following: resolve a conflict confined to the registers by merging the base branch locally.",
+    ).not.toMatch(localMerge);
   });
 
   it("states the LF line-ending policy in the Drift Protocol", async () => {
