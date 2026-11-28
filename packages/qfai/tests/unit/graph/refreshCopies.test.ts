@@ -99,9 +99,9 @@ it("makes one refresh copy when a code query finds the analysis not current and 
     const activeSource = path.join(fixture.analysis, "checkout.ts");
     await writeFile(activeSource, priorSource);
     const replacementAttempts: Promise<{
-      targetPath: string;
       isDirectory: boolean;
       sameDirectory: boolean;
+      sameParent: boolean;
     }>[] = [];
     const run: GraphProcess = async (command, args, options) => {
       if (args.includes("status")) {
@@ -122,10 +122,13 @@ it("makes one refresh copy when a code query finds the analysis not current and 
           const observation = Promise.all([
             stat(targetPath, { bigint: true }),
             stat(fixture.analysis, { bigint: true }),
-          ]).then(([staged, active]) => ({
-            targetPath,
+            stat(path.dirname(targetPath), { bigint: true }),
+            stat(path.dirname(path.resolve(fixture.analysis)), { bigint: true }),
+          ]).then(([staged, active, stagedParent, activeParent]) => ({
             isDirectory: staged.isDirectory(),
             sameDirectory: staged.dev === active.dev && staged.ino === active.ino,
+            sameParent:
+              stagedParent.dev === activeParent.dev && stagedParent.ino === activeParent.ino,
           }));
           replacementAttempts.push(observation);
           await observation;
@@ -147,10 +150,10 @@ it("makes one refresh copy when a code query finds the analysis not current and 
     expect(replacementAttempts).toHaveLength(1);
     const [attempt] = replacementAttempts;
     if (attempt === undefined) throw new Error("CodeGraph generation was not observed");
-    const { targetPath, isDirectory, sameDirectory } = await attempt;
+    const { isDirectory, sameDirectory, sameParent } = await attempt;
     expect(isDirectory).toBe(true);
     expect(sameDirectory).toBe(false);
-    expect(path.dirname(targetPath)).toBe(path.dirname(path.resolve(fixture.analysis)));
+    expect(sameParent).toBe(true);
     expect(await readFile(activeSource, "utf8")).toBe(priorSource);
   } finally {
     await fixture.dispose();
