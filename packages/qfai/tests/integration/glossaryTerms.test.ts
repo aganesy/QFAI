@@ -294,3 +294,18 @@ describe("the scope and the edges of the check", () => {
     expect(scanFailures.length).toBeGreaterThan(0);
   });
 });
+
+describe("a rejected word that holds a glossary term", () => {
+  // QFAI:EX-0001-0317-12
+  it("is still reported, while the term alone is not", async () => {
+    await put(glossaryFile, glossary([["user", "A person who signs in.", "end user", ""]]));
+    await put(
+      storyFile,
+      "# US-0001-0001: Sign in\n\n## User Story\nThe end user signs in. A user leaves.\n",
+    );
+    const found = await findings("sdd", "QFAI-STORY-022");
+    expect(found.map((item) => [item.file, item.loc?.line, item.refs])).toEqual([
+      [storyFile, 4, ["end user", "user"]],
+    ]);
+  });
+});

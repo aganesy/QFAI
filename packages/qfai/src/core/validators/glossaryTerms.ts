@@ -106,15 +106,18 @@ function synonymsOf(glossary: Glossary): Synonym[] {
 }
 
 /**
- * The text with every glossary term blanked, so a rejected word inside the term that is to be
- * used, such as "account" in "account holder", is not reported.
+ * Where each glossary term occurs in the text, so a rejected word inside the term that is to be
+ * used, such as "account" in "account holder", is not reported, while a rejected word that holds
+ * a term, such as "end user" beside the term "user", still is.
  */
-function blankTerms(text: string, terms: RegExp[]): string {
-  let out = text;
+function termRanges(text: string, terms: RegExp[]): [number, number][] {
+  const ranges: [number, number][] = [];
   for (const term of terms) {
-    out = out.replace(term, (match) => match.replace(/[^\n]/g, " "));
+    for (const match of text.matchAll(term)) {
+      ranges.push([match.index, match.index + match[0].length]);
+    }
   }
-  return out;
+  return ranges;
 }
 
 /** The 1-based line of each offset, from the offsets where lines start. */
@@ -143,12 +146,15 @@ function synonymHits(
   synonyms: Synonym[],
   terms: RegExp[],
 ): { line: number; synonym: Synonym }[] {
-  const searched = blankTerms(text, terms);
-  const starts = lineStarts(searched);
+  const ranges = termRanges(text, terms);
+  const starts = lineStarts(text);
   const hits: { line: number; synonym: Synonym }[] = [];
   for (const synonym of synonyms) {
-    for (const match of searched.matchAll(synonym.pattern)) {
-      hits.push({ line: lineOf(starts, match.index), synonym });
+    for (const match of text.matchAll(synonym.pattern)) {
+      const from = match.index;
+      const to = from + match[0].length;
+      if (ranges.some(([termFrom, termTo]) => termFrom <= from && to <= termTo)) continue;
+      hits.push({ line: lineOf(starts, from), synonym });
     }
   }
   return hits.sort((a, b) => a.line - b.line);
@@ -156,7 +162,6 @@ function synonymHits(
 
 function termPatterns(glossary: Glossary): RegExp[] {
   const terms = [...new Set(glossary.rows.map((row) => row.term).filter((term) => term !== ""))];
-  // Longer terms first, so "account holder" is blanked before "account" could be.
   return terms.sort((a, b) => b.length - a.length).map((term) => wordPattern(term, "giu"));
 }
 

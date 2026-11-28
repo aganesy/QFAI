@@ -18,7 +18,7 @@ Feature: Hold the story tree and test titles to the glossary's terms
     When `qfai validate` runs in the `sdd`, `verify` or `full` profile
     Then prose of a document under `paths.specsDir` or `paths.contractsDir` that holds one of those words as a whole word, in any case, raises `QFAI-STORY-022` at error naming the file, the line, the word and the row's term
     And the glossary itself, `decisions.md`, every decision page, `open-questions.md`, the deliberation records, code blocks and code spans raise none
-    And a word inside an occurrence of a glossary term raises none
+    And a word inside an occurrence of a glossary term raises none, while a rejected word that holds a term is still reported
     And the other six profiles raise none
     And a phrase wrapped across a line break is reported at its first line
     And an empty Avoid cell raises none, and `validation.staleTerms` keeps its own warning, so a word in both lists raises both findings
