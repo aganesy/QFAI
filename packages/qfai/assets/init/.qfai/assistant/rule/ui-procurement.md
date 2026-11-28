@@ -37,7 +37,10 @@ Per screen region, stop at the first rung that holds.
    the region's first use. When a region later appears on a second screen
    and no shared component serves it, extract one then. Either
    way, wrap whatever rung 2, 3 or 4 supplied and use it on every screen,
-   rather than authoring the region again.
+   rather than authoring the region again. A part
+   `.qfai/assistant/rule/references/base-components.yaml` describes, such as
+   an error summary or a skip link, is built to its entry the first time,
+   and its component names the entry's `id` in its `@pattern`.
 2. **Does a native platform element do it?** Examples on the web are
    `details` and `summary`, `dialog`, and form validation attributes. A native
    element brings no script, styling or policy cost of its own.

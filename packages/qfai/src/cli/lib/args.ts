@@ -117,6 +117,8 @@ export type ParsedArgs = {
     catalogAction?: "components" | "design";
     /** `--check` for `qfai catalog`: compare with the committed files, write nothing. */
     catalogCheck?: boolean;
+    /** `--brief` for `qfai catalog components`: print a brief of the committed catalogue. */
+    catalogBrief?: boolean;
     /** `--flow <BF-NNNN>` values for `qfai validate`. */
     validateFlowIds: string[];
     /** `--flow <BF-NNNN>` values for `qfai report`. */
@@ -629,6 +631,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(notValidHere("--check"));
         }
         break;
+      case "--brief":
+        if (command === "catalog" && options.catalogAction === "components") {
+          options.catalogBrief = true;
+        } else {
+          markInvalid(notValidHere("--brief"));
+        }
+        break;
       case "--order":
         if (command === "workflow") {
           if (options.workflowOrder === true) {
@@ -877,6 +886,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     options.sessionReviewSince !== undefined
   ) {
     markInvalid("qfai session-review: give --session or --since, not both.");
+  }
+  if (command === "catalog" && options.catalogBrief && options.catalogCheck) {
+    markInvalid("qfai catalog components: give --brief or --check, not both.");
   }
   if (invalidReason === undefined && !options.help) {
     if (command === "catalog" && !options.catalogAction) {

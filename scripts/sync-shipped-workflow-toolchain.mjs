@@ -29,18 +29,32 @@ function readBlock(text, name) {
   if (lines.some((line) => /[\r\n]/u.test(line))) {
     throw new Error(`mixed or unsupported line endings in ${name}. Use LF or CRLF consistently.`);
   }
-  const first = lines.indexOf(SETUP_STEP_PREFIXES[0]);
+  const startMarker = SETUP_STEP_PREFIXES[0];
+  const first = lines.indexOf(startMarker);
+  if (first < 0) {
+    throw new Error(`missing toolchain start marker in ${name}. Expected ${startMarker.trim()}.`);
+  }
+  if (lines.lastIndexOf(startMarker) !== first) {
+    throw new Error(
+      `duplicate toolchain start marker in ${name}. Keep a single ${startMarker.trim()} step.`,
+    );
+  }
   // A de-dented mapping key or comment ends the current sequence just as a
   // following list item does. In particular, the install step can end a job.
   const boundaries = lines.flatMap((line, index) =>
     index >= first && /^ {0,7}\S/u.test(line) ? [{ line, index }] : [],
   );
-  if (
-    first < 0 ||
-    lines.lastIndexOf(SETUP_STEP_PREFIXES[0]) !== first ||
-    !SETUP_STEP_PREFIXES.every((prefix, index) => boundaries[index]?.line.startsWith(prefix))
-  ) {
-    throw new Error(`the six expected toolchain steps are missing or interrupted in ${name}`);
+  for (const [index, prefix] of SETUP_STEP_PREFIXES.entries()) {
+    const observed = boundaries[index];
+    if (observed?.line.startsWith(prefix)) continue;
+    const mismatch =
+      observed === undefined
+        ? "reached the end of the file"
+        : `found ${JSON.stringify(observed.line.trim())} on line ${observed.index + 1}`;
+    throw new Error(
+      `interrupted toolchain sequence in ${name}. Expected ${JSON.stringify(prefix.trim())}, ${mismatch}. ` +
+        "To fix this, keep the six setup steps together and put lane-specific steps after them.",
+    );
   }
   let end = boundaries[SETUP_STEP_PREFIXES.length]?.index ?? lines.length;
   // Leave trailing separators and YAML comments with the destination.
