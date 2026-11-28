@@ -66,20 +66,61 @@ import {
   unresolvedThreads,
 } from "../../../../scripts/pr-threads.mjs";
 
+const REST_PAYLOAD_FLAGS = new Set(["-f", "-F", "--raw-field", "--field", "--input"]);
+const API_VALUE_FLAGS = new Set([
+  ...REST_PAYLOAD_FLAGS,
+  "-X",
+  "--method",
+  "--cache",
+  "--hostname",
+  "-H",
+  "--header",
+  "-p",
+  "--preview",
+  "-q",
+  "--jq",
+  "-t",
+  "--template",
+]);
+
+function apiEndpoint(args: readonly string[]): string | undefined {
+  for (let index = 0; index < args.length; index++) {
+    const argument = args[index];
+    if (argument === undefined) break;
+    if (argument === "--") return args[index + 1];
+    if (!argument.startsWith("-")) return argument;
+    if (API_VALUE_FLAGS.has(argument)) index++;
+  }
+  return undefined;
+}
+
+function isRestWrite(args: readonly string[]): boolean {
+  let hasPayload = false;
+  for (let index = 0; index < args.length; index++) {
+    const flag = args[index];
+    if (flag === undefined || flag === "--") break;
+    if (flag === "--method" || flag.startsWith("--method=") || flag.startsWith("-X")) {
+      const value =
+        flag === "--method" || flag === "-X"
+          ? args[index + 1]
+          : flag.replace(/^(?:--method=|-X=?)/u, "");
+      const method = value?.toUpperCase();
+      return method === undefined ? hasPayload : method !== "GET" && method !== "HEAD";
+    }
+    if (REST_PAYLOAD_FLAGS.has(flag)) hasPayload = true;
+    if (API_VALUE_FLAGS.has(flag)) index++;
+  }
+  return hasPayload;
+}
+
 function deferralWrites(): string[] {
   return calls.list
     .filter(([command, operation, ...args]) => {
       if (command !== "gh" || operation !== "api") return false;
-      if (args.includes("graphql")) {
+      if (apiEndpoint(args) === "graphql") {
         return args.some((argument) => /^query=\s*mutation\b/u.test(argument));
       }
-      const methodFlag = args.findIndex((argument) => argument === "--method" || argument === "-X");
-      const method = methodFlag >= 0 ? args[methodFlag + 1]?.toUpperCase() : undefined;
-      return method === undefined
-        ? args.some((argument) =>
-            ["-f", "-F", "--raw-field", "--field", "--input"].includes(argument),
-          )
-        : method !== "GET" && method !== "HEAD";
+      return isRestWrite(args);
     })
     .map((call) => call.join(" "));
 }
@@ -322,6 +363,44 @@ describe("retrying a deferral that stopped part way", () => {
   afterEach(() => {
     calls.list.length = 0;
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    ["--method=GET", "--method=POST"],
+    ["-XGET", "-XPOST"],
+    ["-X=GET", "-X=POST"],
+  ])("distinguishes a parameterized %s read from an attached write", (readFlag, writeFlag) => {
+    const endpoint = "repos/example/project/issues/40/comments";
+    const write = ["gh", "api", endpoint, writeFlag];
+    calls.list.push(["gh", "api", endpoint, readFlag, "-F", "per_page=100"], write);
+    expect(deferralWrites()).toEqual([write.join(" ")]);
+  });
+
+  it("ignores method-shaped input filenames before a REST method flag", () => {
+    const endpoint = "repos/example/project/issues/40/comments";
+    const read = ["gh", "api", endpoint, "--input", "-XPOST", "--method=GET"];
+    const write = ["gh", "api", endpoint, "--input", "-XGET", "-XPOST"];
+    calls.list.push(read, write);
+    expect(deferralWrites()).toEqual([write.join(" ")]);
+  });
+
+  it("distinguishes the GraphQL endpoint from a REST input filename", () => {
+    const endpoint = "repos/example/project/issues/40/comments";
+    const restWrite = ["gh", "api", "--input", "graphql", endpoint, "--method=POST"];
+    const restRead = ["gh", "api", endpoint, "--input", "graphql", "--method", "GET"];
+    const graphqlWrite = ["gh", "api", "-X", "POST", "graphql", "-f", "query=mutation { record }"];
+    const graphqlRead = [
+      "gh",
+      "api",
+      "-X",
+      "POST",
+      "graphql",
+      "-f",
+      "query=query { viewer { login } }",
+    ];
+    calls.list.push(restWrite, restRead, graphqlWrite, graphqlRead);
+
+    expect(deferralWrites()).toEqual([restWrite.join(" "), graphqlWrite.join(" ")]);
   });
 
   const answer = (isResolved: boolean, replies: string[]): string =>
